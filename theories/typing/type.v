@@ -395,10 +395,10 @@ Class Copy `{!typeG Σ} (t : type) := {
   copy_shr_acc κ tid E F l q :
     lftE ∪ ↑shrN ⊆ E → shr_locsE l (t.(ty_size) + 1) ⊆ F →
     lft_ctx -∗ t.(ty_shr) κ tid l -∗ na_own tid F -∗ q.[κ] ={E}=∗
-       ∃ q', na_own tid (F ∖ shr_locsE l t.(ty_size)) ∗
-         ▷(l ↦∗{q'}: t.(ty_own) tid) ∗
-      (na_own tid (F ∖ shr_locsE l t.(ty_size)) -∗ ▷l ↦∗{q'}: t.(ty_own) tid
-                                  ={E}=∗ na_own tid F ∗ q.[κ])
+       ∃ q' vl, na_own tid (F ∖ shr_locsE l t.(ty_size)) ∗
+         l ↦∗{q'} vl ∗ ▷t.(ty_own) tid vl ∗
+      (na_own tid (F ∖ shr_locsE l t.(ty_size)) -∗ l ↦∗{q'} vl
+       ={E}=∗ na_own tid F ∗ q.[κ])
 }.
 Existing Instances copy_persistent.
 Instance: Params (@Copy) 2 := {}.
@@ -489,16 +489,9 @@ Section type.
     iIntros (st κ tid E ? l q ? HF) "#LFT #Hshr Htok Hlft".
     iDestruct (na_own_acc with "Htok") as "[$ Htok]"; first solve_ndisj.
     iDestruct "Hshr" as (vl) "[Hf Hown]".
-    iMod (frac_bor_acc with "LFT Hf Hlft") as (q') "[Hmt Hclose]"; first solve_ndisj.
-    iModIntro. iExists _. iDestruct "Hmt" as "[Hmt1 Hmt2]".
-    iSplitL "Hmt1"; first by auto with iFrame.
-    iIntros "Htok2 Hmt1". iDestruct "Hmt1" as (vl') "[Hmt1 #Hown']".
-    iDestruct ("Htok" with "Htok2") as "$".
-    iAssert (▷ ⌜length vl = length vl'⌝)%I as ">%".
-    { iNext. iDestruct (st_size_eq with "Hown") as %->.
-      iDestruct (st_size_eq with "Hown'") as %->. done. }
-    iCombine "Hmt1" "Hmt2" as "Hmt". rewrite heap_mapsto_vec_op // Qp_div_2.
-    iDestruct "Hmt" as "[>% Hmt]". subst. by iApply "Hclose".
+    iMod (frac_bor_acc with "LFT Hf Hlft") as (q') "[>Hmt Hclose]"; first solve_ndisj.
+    iModIntro. iExists _, _. iFrame "Hmt Hown". iIntros "Htok2".
+    iDestruct ("Htok" with "Htok2") as "$". iIntros "Hmt". by iApply "Hclose".
   Qed.
 
   (** Send and Sync types *)

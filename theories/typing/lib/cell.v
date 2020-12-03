@@ -56,21 +56,22 @@ Section cell.
     iIntros (κ tid E F l q ??) "#LFT #Hshr Htl Htok". iExists 1%Qp. simpl in *.
     (* Size 0 needs a special case as we can't keep the thread-local invariant open. *)
     destruct (ty_size ty) as [|sz] eqn:Hsz; simpl in *.
-    { iMod (na_bor_acc with "LFT Hshr Htok Htl") as "(Hown & Htl & Hclose)"; [solve_ndisj..|].
+    { iMod (na_bor_acc with "LFT Hshr Htok Htl") as "(Hown & Htl & Hclose)";
+        [solve_ndisj..|].
       iDestruct "Hown" as (vl) "[H↦ #Hown]".
-      simpl. assert (F ∖ ∅ = F) as -> by set_solver+.
+      assert (F ∖ ∅ = F) as -> by set_solver+.
       iDestruct (ty_size_eq with "Hown") as "#>%". rewrite ->Hsz in *.
       iMod ("Hclose" with "[H↦] Htl") as "[$ $]".
       { iExists vl. by iFrame. }
-      iModIntro. iSplitL "".
-      { iNext. iExists vl. destruct vl; last done. iFrame "Hown".
-        by iApply heap_mapsto_vec_nil. }
-      by iIntros "$ _". }
+      iModIntro. iExists vl. iSplitL "".
+      { destruct vl; last done. by iApply heap_mapsto_vec_nil. }
+      iFrame "Hown". by iIntros "$ _". }
     (* Now we are in the non-0 case. *)
-    iMod (na_bor_acc with "LFT Hshr Htok Htl") as "($ & Htl & Hclose)"; [solve_ndisj..|].
+    iMod (na_bor_acc with "LFT Hshr Htok Htl") as "(H & Htl & Hclose)"; [solve_ndisj..|].
+    iDestruct "H" as (vl) "[>Hvl #Hown]". iExists vl.
     iDestruct (na_own_acc with "Htl") as "($ & Hclose')"; first by set_solver.
-    iIntros "!> Htl Hown". iPoseProof ("Hclose'" with "Htl") as "Htl".
-    by iMod ("Hclose" with "Hown Htl") as "[$ $]".
+    iIntros "{$Hvl $Hown} !> Htl Hvl". iPoseProof ("Hclose'" with "Htl") as "Htl".
+    iMod ("Hclose" with "[Hvl] Htl") as "[$ $]"=>//. iExists vl; auto.
   Qed.
 
   Global Instance cell_send ty :

@@ -87,12 +87,11 @@ Section typing.
     rewrite typed_read_eq. iIntros (Hcopy Halive) "!#".
     iIntros ([[]|] tid F qL ?) "#LFT #HE Htl HL #Hshr"; try done.
     iMod (Halive with "HE HL") as (q) "[Hκ Hclose]"; first solve_ndisj.
-    iMod (copy_shr_acc with "LFT Hshr Htl Hκ") as (q') "(Htl & H↦ & Hcl)"; first solve_ndisj.
+    iMod (copy_shr_acc with "LFT Hshr Htl Hκ")
+      as (q' vl) "(Htl & H↦ & #Hown & Hcl)"; first solve_ndisj.
     { rewrite ->shr_locsE_shrN. solve_ndisj. }
-    iDestruct "H↦" as (vl) "[>Hmt #Hown]". iModIntro. iExists _, _, _.
-    iFrame "∗#". iSplit; first done. iIntros "Hmt".
-    iMod ("Hcl" with "Htl [Hmt]") as "[$ Hκ]"; first by iExists _; iFrame.
-    iApply ("Hclose" with "Hκ").
+    iExists _, _, _. iIntros "!> {$∗ $#}". iSplit; first done. iIntros "H↦".
+    iMod ("Hcl" with "Htl H↦") as "[$ Hκ]". iApply ("Hclose" with "Hκ").
   Qed.
 End typing.
 

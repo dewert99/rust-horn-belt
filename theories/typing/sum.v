@@ -182,16 +182,15 @@ Section sum.
       edestruct nth_in_or_default as [| ->]; [by eapply List.Forall_forall| ].
       split; first by apply _. iIntros (????????) "? []".
     - intros κ tid E F l q ? HF.
-      iIntros "#LFT #H Htl [Htok1 Htok2]".
-      setoid_rewrite split_sum_mt. iDestruct "H" as (i) "[Hshr0 Hshr]".
-      iMod (frac_bor_acc with "LFT Hshr0 Htok1") as (q'1) "[>Hown Hclose]"; first solve_ndisj.
-      iAssert ((∃ vl, is_pad i tyl vl)%I) with "[#]" as %[vl Hpad].
-      { iDestruct "Hown" as "[_ Hpad]". iDestruct "Hpad" as (vl) "[_ %]".
-        eauto. }
-      iMod (@copy_shr_acc _ _ (nth i tyl emp0) with "LFT Hshr Htl Htok2")
-        as (q'2) "(Htl & HownC & Hclose')"; try done.
+      iIntros "#LFT #H Htl [Htok1 Htok2]". iDestruct "H" as (i) "[Hfrac Hshr]".
+      iMod (frac_bor_acc with "LFT Hfrac Htok1")
+        as (q'1) "[>[H↦i Hpad] Hclose]"; first solve_ndisj.
+      iDestruct "Hpad" as (pad) "[Hpad %]".
+      assert (Copy (nth i tyl emp0)).
       { edestruct nth_in_or_default as [| ->]; first by eapply List.Forall_forall.
         split; first by apply _. iIntros (????????) "? []". }
+      iMod (@copy_shr_acc _ _ (nth i tyl emp0) with "LFT Hshr Htl Htok2")
+        as (q'2 vl) "(Htl & H↦C & #HownC & Hclose')"; try done.
       { rewrite <-HF. simpl. rewrite <-union_subseteq_r.
         apply shr_locsE_subseteq. lia. }
       iDestruct (na_own_acc with "Htl") as "[$ Htlclose]".
@@ -200,18 +199,17 @@ Section sum.
         - apply shr_locsE_subseteq. lia.
         - set_solver+. }
       destruct (Qp_lower_bound q'1 q'2) as (q' & q'01 & q'02 & -> & ->).
-      rewrite -(heap_mapsto_pred_op _ q' q'02); last (by intros; apply ty_size_eq).
-      rewrite (fractional (Φ := λ q, _ ↦{q} _ ∗ _ ↦∗{q}: _)%I).
-      iDestruct "HownC" as "[HownC1 HownC2]". iDestruct "Hown" as "[Hown1 Hown2]".
-      iExists q'. iModIntro. iSplitL "Hown1 HownC1".
-      + iNext. iExists i. iFrame.
-      + iIntros "Htl H". iDestruct "H" as (i') "[>Hown1 HownC1]".
-        iDestruct ("Htlclose" with "Htl") as "Htl".
-        iDestruct (heap_mapsto_agree with "[Hown1 Hown2]") as "#Heq".
-        { iDestruct "Hown1" as "[$ _]". iDestruct "Hown2" as "[$ _]". }
-        iDestruct "Heq" as %[= ->%Z_of_nat_inj].
-        iMod ("Hclose'" with "Htl [$HownC1 $HownC2]") as "[$ ?]".
-        iMod ("Hclose" with "[$Hown1 $Hown2]") as "$". by iFrame.
+      iExists q', (#i :: vl ++ pad).
+      rewrite heap_mapsto_vec_cons heap_mapsto_vec_app shift_loc_assoc
+              -Nat.add_1_l Nat2Z.inj_add.
+      iDestruct "H↦i" as "[$ H↦if]". iDestruct "H↦C" as "[$ H↦Cf]".
+      iDestruct (ty_size_eq with "HownC") as ">->".
+      iDestruct "Hpad" as "[$ Hpadf]". iSplitR.
+      { iExists _, _, _. iSplitR; [done|]. iFrame "HownC". rewrite /= app_length.
+        iDestruct (ty_size_eq with "HownC") as ">->". auto. }
+      iIntros "!> Htl (H↦i & H↦C & Hpad)". iDestruct ("Htlclose" with "Htl") as "Htl".
+      iMod ("Hclose'" with "Htl [$H↦Cf $H↦C]") as "[$$]". iApply "Hclose".
+      iFrame. iExists pad. by iFrame.
   Qed.
 
   Global Instance sum_send tyl : LstSend tyl → Send (sum tyl).
