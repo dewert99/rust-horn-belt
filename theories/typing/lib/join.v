@@ -58,7 +58,7 @@ Section join.
       - by rewrite big_sepL_singleton tctx_hasty_val send_change_tid.
       - iIntros (r) "Htl Hϝ1 Hret".
         wp_rec. iApply (finish_spec with "[$Hfin Hret Hϝ1]"); last auto.
-        rewrite right_id. iFrame. by iApply @send_change_tid. }
+        rewrite (right_id static). iFrame. by iApply @send_change_tid. }
     iNext. iIntros (c) "Hjoin". wp_let. wp_let.
     iMod (lctx_lft_alive_tok ϝ with "HE HL") as (qϝ2) "(Hϝ2 & HL & Hclose2)";
       [solve_typing..|].

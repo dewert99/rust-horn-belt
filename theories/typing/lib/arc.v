@@ -780,7 +780,7 @@ Section arc.
       { unfold P2. auto with iFrame. }
       wp_apply (drop_weak_spec with "[//] Htok"). unlock. iIntros ([]); last first.
       { iIntros "_". wp_if. unlock. iFrame. iExists (_::_). rewrite heap_mapsto_vec_cons.
-        iFrame. iExists 1%nat, _, []. rewrite /= right_id_L Max.max_0_r.
+        iFrame. iExists 1%nat, _, []. rewrite /= !right_id_L Max.max_0_r.
         auto 10 with iFrame. }
       iIntros "([H† H1] & H2 & H3)". iDestruct "H1" as (vl1) "[H1 Heq]".
       iDestruct "Heq" as %<-. wp_if.
@@ -788,7 +788,7 @@ Section arc.
       { simpl. lia. }
       { rewrite 2!heap_mapsto_vec_cons shift_loc_assoc. auto with iFrame. }
       iFrame. iIntros "_". iExists (_::_). rewrite heap_mapsto_vec_cons. iFrame.
-      iExists 1%nat, _, []. rewrite right_id_L. iFrame. iSplit; [by auto|simpl].
+      iExists 1%nat, _, []. rewrite !right_id_L. iFrame. iSplit; [by auto|simpl].
       auto with lia. }
     iIntros (?) "Hr". wp_seq.
     (* Finish up the proof. *)

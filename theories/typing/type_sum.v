@@ -274,7 +274,7 @@ Section case.
     elctx_sat E L (ty_outlives_E (sum tyl) α).
   Proof.
     intro Hsat. eapply eq_ind; first done. clear Hsat. rewrite /ty_outlives_E /=.
-    induction Wf as [|ty [] ?? IH]=>//=. rewrite IH fmap_app //.
+    induction Wf as [|ty ??? IH]=>//=. rewrite IH fmap_app //.
   Qed.
 End case.
 

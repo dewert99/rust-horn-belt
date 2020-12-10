@@ -153,7 +153,7 @@ Section product.
 
   Lemma outlives_product ty1 ty2 ϝ `{!TyWf ty1, !TyWf ty2} :
     ty_outlives_E (product [ty1; ty2]) ϝ = ty_outlives_E ty1 ϝ ++ ty_outlives_E ty2 ϝ.
-  Proof. rewrite /product /ty_outlives_E /= fmap_app //. Qed.
+  Proof. rewrite /product /ty_outlives_E /= fmap_app right_id //. Qed.
 
   Global Instance product_type_ne n: Proper (Forall2 (type_dist2 n) ==> type_dist2 n) product.
   Proof. intros ??. induction 1=>//=. by f_equiv. Qed.
@@ -249,7 +249,7 @@ Section typing.
     elctx_sat E L (ty_outlives_E (Π tyl) α).
   Proof.
     intro Hsat. eapply eq_ind; first done. clear Hsat. rewrite /ty_outlives_E /=.
-    induction Wf as [|ty [] ?? IH]=>//=. rewrite IH fmap_app //.
+    induction Wf as [|ty ??? IH]=>//=. rewrite IH fmap_app //.
   Qed.
 End typing.
 
