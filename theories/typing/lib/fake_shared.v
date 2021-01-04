@@ -8,7 +8,7 @@ Section fake_shared.
   Definition fake_shared_box : val :=
     funrec: <> ["x"] := Skip ;; return: ["x"].
 
-  Lemma fake_shared_box_type ty `{!TyWf ty} :
+  Lemma fake_shared_box_type ty :
     typed_val fake_shared_box
       (fn(∀ '(α, β), ∅; &shr{α}(&shr{β} ty)) → &shr{α}(box ty)).
   Proof.
@@ -37,7 +37,7 @@ Section fake_shared.
   Definition fake_shared_uniq : val :=
     funrec: <> ["x"] := Skip ;; return: ["x"].
 
-  Lemma fake_shared_uniq_type ty `{!TyWf ty} :
+  Lemma fake_shared_uniq_type ty :
     typed_val fake_shared_box
       (fn(∀ '(α, β), ∅; &shr{α}(&shr{β} ty)) → &shr{α}(&uniq{β} ty)).
   Proof.
@@ -55,7 +55,7 @@ Section fake_shared.
       { iApply frac_bor_iff; last done. iIntros "!>!# *".
         rewrite heap_mapsto_vec_singleton. iSplit; auto. }
       iDestruct "H" as "#H". iIntros "!# * % $". iApply step_fupd_intro. set_solver.
-      simpl. iApply ty_shr_mono; last done. iApply lft_intersect_incl_l. }
+      simpl. by iApply ty_shr_mono. }
     do 2 wp_seq.
     iApply (type_type [] _ _ [ x ◁ box (&shr{α}(&uniq{β} ty)) ]
             with "[] LFT [] Hna HL Hk [HT]"); last first.

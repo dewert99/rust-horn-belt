@@ -218,7 +218,7 @@ Section type_context.
     subtype E L ty1 ty2 → tctx_incl E L [p ◁ ty1] [p ◁ ty2].
   Proof.
     iIntros (Hst ??) "#LFT #HE HL [H _]".
-    iDestruct "H" as (v) "[% H]". iDestruct (Hst with "HL HE") as "#(_ & Ho & _)". 
+    iDestruct "H" as (v) "[% H]". iDestruct (Hst with "HL HE") as "#(_ & _ & Ho & _)".
     iFrame "HL". iApply big_sepL_singleton. iExists _. iFrame "%". by iApply "Ho".
   Qed.
 

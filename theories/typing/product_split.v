@@ -69,7 +69,7 @@ Section product_split.
     clear Hp. destruct tyl.
     { assert (eqtype E L (ptr ty) (ptr (product2 ty unit))) as [Hincl _].
       { rewrite right_id. done. }
-      iDestruct (Hincl with "HL HE") as "#(_ & #Heq & _)".
+      iDestruct (Hincl with "HL HE") as "#(_ & _ & #Heq & _)".
       iFrame. iClear "IH Htyl". iExists #l. rewrite product_nil. iSplitR; first done.
       by iApply "Heq". }
     iMod ("IH" with "[] HL [Htyl]") as "(HL & Htyl)"; first done.
@@ -88,16 +88,16 @@ Section product_split.
   Proof.
     iIntros (tid q) "#LFT _ $ H".
     rewrite tctx_interp_singleton tctx_interp_cons tctx_interp_singleton.
-    iDestruct "H" as ([[]|]) "[#Hp H]"; try done.
+    iDestruct "H" as ([[]|]) "[#Hp H]"=>//=.
     iDestruct "H" as "[H >H†]". iDestruct "H" as (vl) "[>H↦ H]".
     iDestruct "H" as (vl1 vl2) "(>% & H1 & H2)". subst.
     rewrite heap_mapsto_vec_app -freeable_sz_split.
     iDestruct "H†" as "[H†1 H†2]". iDestruct "H↦" as "[H↦1 H↦2]".
     iDestruct (ty_size_eq with "H1") as "#>EQ".
     iDestruct "EQ" as %->. iSplitL "H↦1 H†1 H1".
-    + iExists _. iFrame "#∗". iExists _. by iFrame.
+    + iExists _. iFrame "#∗". simpl. iFrame. iExists _. by iFrame.
     + iExists _. iSplitR; first (by simpl; iDestruct "Hp" as %->).
-      iFrame. iExists _. by iFrame.
+      simpl. iFrame. iExists _. by iFrame.
   Qed.
 
   Lemma tctx_merge_own_prod2 E L p n ty1 ty2 :
@@ -106,10 +106,10 @@ Section product_split.
   Proof.
     iIntros (tid q) "#LFT _ $ H".
     rewrite tctx_interp_singleton tctx_interp_cons tctx_interp_singleton.
-    iDestruct "H" as "[H1 H2]". iDestruct "H1" as ([[]|]) "(Hp1 & H1)"; try done.
+    iDestruct "H" as "[H1 H2]". iDestruct "H1" as ([[]|]) "(Hp1 & H1)"=>//=.
     iDestruct "H1" as "(H↦1 & H†1)".
     iDestruct "H2" as (v2) "(Hp2 & H2)". simpl. iDestruct "Hp1" as %Hρ1.
-    rewrite Hρ1. iDestruct "Hp2" as %[=<-]. iDestruct "H2" as "[H↦2 H†2]".
+    rewrite Hρ1. iDestruct "Hp2" as %[=<-]. simpl. iDestruct "H2" as "[H↦2 H†2]".
     iExists #l. iSplitR; first done. rewrite /= -freeable_sz_split. iFrame.
     iDestruct "H↦1" as (vl1) "[H↦1 H1]". iDestruct "H↦2" as (vl2) "[H↦2 H2]".
     iExists (vl1 ++ vl2). rewrite heap_mapsto_vec_app. iFrame.
@@ -143,10 +143,13 @@ Section product_split.
   Proof.
     iIntros (tid q) "#LFT _ $ H".
     rewrite tctx_interp_singleton tctx_interp_cons tctx_interp_singleton.
-    iDestruct "H" as ([[]|]) "[Hp H]"; try done. iDestruct "Hp" as %Hp.
-    rewrite /= split_prod_mt. iMod (bor_sep with "LFT H") as "[H1 H2]"; first solve_ndisj.
+    iDestruct "H" as ([[]|] Hp) "[#Hout H]"=>//. rewrite split_prod_mt.
+    iMod (bor_sep with "LFT H") as "[H1 H2]"; first solve_ndisj.
     rewrite /tctx_elt_interp /=.
-    iSplitL "H1"; iExists _; (iSplitR; first by rewrite Hp); auto.
+    iSplitL "H1"; iExists _; (iSplitR; first by rewrite Hp); iFrame;
+      iApply lft_incl_trans; rewrite // lft_intersect_list_app.
+    - iApply lft_intersect_incl_l.
+    - iApply lft_intersect_incl_r.
   Qed.
 
   Lemma tctx_merge_uniq_prod2 E L p κ ty1 ty2 :
@@ -155,15 +158,17 @@ Section product_split.
   Proof.
     iIntros (tid q) "#LFT _ $ H".
     rewrite tctx_interp_singleton tctx_interp_cons tctx_interp_singleton.
-    iDestruct "H" as "[H1 H2]". iDestruct "H1" as ([[]|]) "[Hp1 H1]"; try done.
-    iDestruct "Hp1" as %Hp1. iDestruct "H2" as (v2) "(Hp2 & H2)". rewrite /= Hp1.
-    iDestruct "Hp2" as %[=<-]. iExists #l. iFrame "%".
-    iMod (bor_combine with "LFT H1 H2") as "H"; first solve_ndisj. by rewrite /= split_prod_mt.
+    iDestruct "H" as "[H1 H2]". iDestruct "H1" as ([[]|] Hp1) "[#Hout1 H1]"=>//.
+    rewrite /tctx_elt_interp /= Hp1. iDestruct "H2" as (v2 [=<-]) "[#Hout2 H2]".
+    iExists #l. iSplitR; [done|]. iSplitR.
+    - rewrite lft_intersect_list_app. by iApply lft_incl_glb.
+    - iMod (bor_combine with "LFT H1 H2") as "H"; first solve_ndisj.
+      by rewrite /= split_prod_mt.
   Qed.
 
   Lemma uniq_is_ptr κ ty tid (vl : list val) :
     ty_own (&uniq{κ}ty) tid vl -∗ ⌜∃ l : loc, vl = [(#l) : val]⌝.
-  Proof. iIntros "H". destruct vl as [|[[]|][]]; eauto. Qed.
+  Proof. iIntros "[? H]". destruct vl as [|[[]|][]]; eauto. Qed.
 
   Lemma tctx_split_uniq_prod E L κ tyl p :
     tctx_incl E L [p ◁ &uniq{κ}(product tyl)]
@@ -192,8 +197,7 @@ Section product_split.
   Proof.
     iIntros (tid q) "#LFT _ $ H".
     rewrite tctx_interp_singleton tctx_interp_cons tctx_interp_singleton.
-    iDestruct "H" as ([[]|]) "[Hp H]"; try iDestruct "H" as "[]".
-    iDestruct "H" as "[H1 H2]". iDestruct "Hp" as %Hp.
+    iDestruct "H" as ([[]|] Hp) "H"=>//=. iDestruct "H" as "[H1 H2]".
     by iSplitL "H1"; iExists _; (iSplitR; first by rewrite /= Hp).
   Qed.
 
@@ -203,9 +207,9 @@ Section product_split.
   Proof.
     iIntros (tid q) "#LFT _ $ H".
     rewrite tctx_interp_singleton tctx_interp_cons tctx_interp_singleton.
-    iDestruct "H" as "[H1 H2]". iDestruct "H1" as ([[]|]) "[Hp1 Hown1]"; try done.
-    iDestruct "Hp1" as %Hp1. iDestruct "H2" as ([[]|]) "[Hp2 Hown2]"; try done.
-    rewrite /= Hp1. iDestruct "Hp2" as %[=<-]. iExists #l. by iFrame.
+    iDestruct "H" as "[H1 H2]". iDestruct "H1" as ([[]|] Hp1) "Hown1"=>//.
+    iDestruct "H2" as ([[]|] Hp2) "Hown2"; try done.
+    rewrite /= Hp1 in Hp2. injection Hp2 as <-. iExists #l. simpl. by iFrame.
   Qed.
 
   Lemma shr_is_ptr κ ty tid (vl : list val) :
@@ -302,7 +306,7 @@ End product_split.
 
 (* We do not want unification to try to unify the definition of these
    types with anything in order to try splitting or merging. *)
-Hint Opaque own_ptr uniq_bor shr_bor tctx_extract_hasty : lrust_typing lrust_typing_merge.
+Hint Opaque tctx_extract_hasty : lrust_typing lrust_typing_merge.
 
 (* We make sure that splitting is tried before borrowing, so that not
    the entire product is borrowed when only a part is needed. *)

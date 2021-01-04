@@ -22,6 +22,7 @@ Section ref.
   Program Definition ref (α : lft) (ty : type) :=
     tc_opaque
     {| ty_size := 2;
+       ty_lfts := α :: ty.(ty_lfts); ty_E := ty.(ty_E) ++ ty_outlives_E ty α;
        ty_own tid vl :=
          match vl return _ with
          | [ #(LitLoc lv);  #(LitLoc lrc) ] =>
@@ -38,7 +39,7 @@ Section ref.
              &na{κ, tid, refcell_refN}(own γ (◯ reading_stR q ν)) |}%I.
   Next Obligation. iIntros (???[|[[]|][|[[]|][]]]) "?"; auto. Qed.
   Next Obligation.
-    iIntros (α ty E κ l tid q ?) "#LFT Hb Htok".
+    iIntros (α ty E κ l tid q ?) "#LFT #Hl Hb Htok".
     iMod (bor_exists with "LFT Hb") as (vl) "Hb". done.
     iMod (bor_sep with "LFT Hb") as "[H↦ Hb]". done.
     iMod (bor_fracture (λ q, l ↦∗{q} vl)%I with "LFT H↦") as "#H↦". done.
@@ -69,13 +70,20 @@ Section ref.
     - by iApply na_bor_shorten.
   Qed.
 
-  Global Instance ref_wf α ty `{!TyWf ty} : TyWf (ref α ty) :=
-    { ty_lfts := [α]; ty_wf_E := ty.(ty_wf_E) ++ ty_outlives_E ty α }.
-
   Global Instance ref_type_contractive α : TypeContractive (ref α).
-  Proof. solve_type_proper. Qed.
+  Proof.
+    split.
+    - apply (type_lft_morphism_add _ α [α] []) => ?.
+      + iApply lft_equiv_refl.
+      + by rewrite elctx_interp_app /= elctx_interp_ty_outlives_E
+                   /= /elctx_interp /= left_id right_id.
+    - done.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs tid [|[[|lv|]|][|[[|lrc|]|][]]]=>//=.
+      by setoid_rewrite Hs.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. simpl. by setoid_rewrite Hs.
+  Qed.
   Global Instance ref_ne α : NonExpansive (ref α).
-  Proof. apply type_contractive_ne, _. Qed.
+  Proof. solve_ne_type. Qed.
 
   Global Instance ref_mono E L :
     Proper (flip (lctx_lft_incl E L) ==> subtype E L ==> subtype E L) ref.
@@ -83,8 +91,9 @@ Section ref.
     iIntros (α1 α2 Hα ty1 ty2 Hty q) "HL".
     iDestruct (Hty with "HL") as "#Hty". iDestruct (Hα with "HL") as "#Hα".
     iIntros "!# #HE". iDestruct ("Hα" with "HE") as "Hα1α2".
-    iDestruct ("Hty" with "HE") as "(%&#Ho&#Hs)". iSplit; [|iSplit; iModIntro].
-    - done.
+    iDestruct ("Hty" with "HE") as "(%&#Hl&#Ho&#Hs)".
+    iSplit; [done|iSplit; [|iSplit; iModIntro]].
+    - simpl. by iApply lft_intersect_mono.
     - iIntros (tid [|[[]|][|[[]|][]]]) "H"=>//=.
       iDestruct "H" as (ν q' γ β ty') "(#Hshr & #H⊑ & #Hinv & Htok & Hown)".
       iExists ν, q', γ, β, ty'. iFrame "∗#". iSplit.

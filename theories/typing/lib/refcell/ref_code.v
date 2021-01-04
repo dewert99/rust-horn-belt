@@ -44,7 +44,7 @@ Section ref_functions.
       letalloc: "r" <-{2} !"x'" in
       delete [ #1; "x"];; return: ["r"].
 
-  Lemma ref_clone_type ty `{!TyWf ty} :
+  Lemma ref_clone_type ty :
     typed_val ref_clone (fn(∀ '(α, β), ∅; &shr{α}(ref β ty)) → ref β ty).
 
   Proof.
@@ -104,7 +104,7 @@ Section ref_functions.
       letalloc: "r" <- "r'" in
       delete [ #1; "x"];; return: ["r"].
 
-  Lemma ref_deref_type ty `{!TyWf ty} :
+  Lemma ref_deref_type ty :
     typed_val ref_deref
       (fn(∀ '(α, β), ∅; &shr{α}(ref β ty)) → &shr{α}ty).
   Proof.
@@ -141,7 +141,7 @@ Section ref_functions.
       delete [ #2; "x"];;
       let: "r" := new [ #0] in return: ["r"].
 
-  Lemma ref_drop_type ty `{!TyWf ty} :
+  Lemma ref_drop_type ty :
     typed_val ref_drop (fn(∀ α, ∅; ref α ty) → unit).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -204,7 +204,7 @@ Section ref_functions.
       "ref" <- "r'";;
       return: ["ref"].
 
-  Lemma ref_map_type ty1 ty2 call_once fty `{!TyWf ty1, !TyWf ty2, !TyWf fty} :
+  Lemma ref_map_type ty1 ty2 call_once fty :
     (* fty : for<'a>, FnOnce(&'a ty1) -> &'a ty2, as witnessed by the impl call_once *)
     typed_val call_once (fn(∀ α, ∅; fty, &shr{α}ty1) → &shr{α}ty2) →
     typed_val (ref_map call_once) (fn(∀ α, ∅; ref α ty1, fty) → ref α ty2).
@@ -278,8 +278,7 @@ Section ref_functions.
 
       return: ["refs"].
 
-  Lemma ref_map_split_type ty ty1 ty2 call_once fty
-        `{!TyWf ty, !TyWf ty1, !TyWf ty2, !TyWf fty} :
+  Lemma ref_map_split_type ty ty1 ty2 call_once fty :
     (* fty : for<'a>, FnOnce(&'a ty) -> (&'a ty1, &'a ty2),
        as witnessed by the impl call_once *)
     typed_val call_once

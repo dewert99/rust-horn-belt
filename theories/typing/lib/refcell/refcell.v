@@ -55,19 +55,6 @@ Section refcell_inv.
         else       (* Immutably borrowed. *) ty.(ty_shr) (α ⊓ ν) tid (l +ₗ 1)
       end)%I.
 
-  Global Instance refcell_inv_type_ne n tid l γ α :
-    Proper (type_dist2 n ==> dist n) (refcell_inv tid l γ α).
-  Proof.
-    solve_proper_core
-      ltac:(fun _ => exact: type_dist2_S || f_type_equiv || f_contractive || f_equiv).
-  Qed.
-
-  Global Instance refcell_inv_ne tid l γ α : NonExpansive (refcell_inv tid l γ α).
-  Proof.
-    intros n ???. (* TODO: f_equiv takes forever here, what is going on? *)
-    eapply refcell_inv_type_ne, type_dist_dist2. done.
-  Qed.
-
   Lemma refcell_inv_proper E L ty1 ty2 q :
     eqtype E L ty1 ty2 →
     llctx_interp L q -∗ ∀ tid l γ α, □ (elctx_interp E -∗
@@ -77,7 +64,7 @@ Section refcell_inv.
     (*             It would easily gain from some automation. *)
     rewrite eqtype_unfold. iIntros (Hty) "HL".
     iDestruct (Hty with "HL") as "#Hty". iIntros "* !# #HE H".
-    iDestruct ("Hty" with "HE") as "(% & #Hown & #Hshr)".
+    iDestruct ("Hty" with "HE") as "(% & #Hout & #Hown & #Hshr)".
     iAssert (□ (&{α}((l +ₗ 1) ↦∗: ty_own ty1 tid) -∗
                 &{α}((l +ₗ 1) ↦∗: ty_own ty2 tid)))%I as "#Hb".
     { iIntros "!# H". iApply bor_iff; last done.
@@ -106,18 +93,20 @@ Section refcell.
   Program Definition refcell (ty : type) :=
     tc_opaque
     {| ty_size := S ty.(ty_size);
+       ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own tid vl :=
          match vl return _ with
          | #(LitInt z) :: vl' => ty.(ty_own) tid vl'
          | _ => False
          end%I;
        ty_shr κ tid l :=
-         (∃ α γ, κ ⊑ α ∗ &na{α, tid, refcell_invN}(refcell_inv tid l γ α ty))%I |}.
+         (∃ α γ, κ ⊑ α ∗ α ⊑ ty.(ty_lft) ∗
+                 &na{α, tid, refcell_invN}(refcell_inv tid l γ α ty))%I |}.
   Next Obligation.
     iIntros (??[|[[]|]]); try iIntros "[]". rewrite ty_size_eq /=. by iIntros (->).
   Qed.
   Next Obligation.
-    iIntros (ty E κ l tid q ?) "#LFT Hb Htok".
+    iIntros (ty E κ l tid q ?) "#LFT #Hout Hb Htok".
     iMod (bor_acc_cons with "LFT Hb Htok") as "[H Hclose]". done.
     iDestruct "H" as ([|[[| |n]|]vl]) "[H↦ H]"; try iDestruct "H" as ">[]".
     iDestruct "H" as "Hown".
@@ -135,7 +124,7 @@ Section refcell.
     { iMod ("Hclose" with "[] HQ") as "[Hb $]".
       - iIntros "!> H !>". iNext. iDestruct "H" as (γ st) "(H & _ & _)". eauto.
       - iMod (bor_exists with "LFT Hb") as (γ) "Hb". done.
-        iExists κ, γ. iSplitR. by iApply lft_incl_refl. by iApply bor_na. }
+        iExists κ, γ. iSplitR. by iApply lft_incl_refl. by iSplitR; [|iApply bor_na]. }
     clear dependent n. iDestruct "H" as ([|n|n]) "Hn"; try lia.
     - iFrame. iMod (own_alloc (● None)) as (γ) "Hst"; first by apply auth_auth_valid.
       iExists γ, None. by iFrame.
@@ -146,7 +135,8 @@ Section refcell.
       iMod (rebor _ _ (κ ⊓ ν) with "LFT [] Hvl") as "[Hvl Hh]". done.
       { iApply lft_intersect_incl_l. }
       iDestruct (lft_intersect_acc with "Htok' Htok1") as (q') "[Htok Hclose]".
-      iMod (ty_share with "LFT Hvl Htok") as "[Hshr Htok]". done.
+      iMod (ty_share with "LFT [] Hvl Htok") as "[Hshr Htok]". done.
+      { iApply lft_incl_trans; [|done]. iApply lft_intersect_incl_l. }
       iDestruct ("Hclose" with "Htok") as "[$ Htok]".
       iExists γ, _. iFrame "Hst Hn Hshr".
       iSplitR "Htok2"; last by iExists _; iFrame; rewrite Qp_div_2.
@@ -161,22 +151,31 @@ Section refcell.
   Qed.
   Next Obligation.
     iIntros (?????) "#Hκ H". iDestruct "H" as (α γ) "[#??]".
-    iExists _, _. iFrame. iApply lft_incl_trans; auto.
+    iExists _, _. iFrame. by iApply lft_incl_trans.
   Qed.
-
-  Global Instance refcell_wf ty `{!TyWf ty} : TyWf (refcell ty) :=
-    { ty_lfts := ty.(ty_lfts); ty_wf_E := ty.(ty_wf_E) }.
 
   Global Instance refcell_type_ne : TypeNonExpansive refcell.
   Proof.
-    constructor;
-      solve_proper_core ltac:(fun _ => exact: type_dist2_S || (eapply refcell_inv_type_ne; try reflexivity) ||
-                                              f_type_equiv || f_contractive || f_equiv).
+    split.
+    - apply (type_lft_morphism_add _ static [] []) => ?.
+      + rewrite left_id. iApply lft_equiv_refl.
+      + by rewrite /elctx_interp /= left_id right_id.
+    - by move=>/= ?? ->.
+    - intros. by destruct vl as [|[[]|]]=>/=.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. rewrite /= /refcell_inv.
+      repeat ((eapply dist_le; [apply Ho|lia]) || (eapply dist_le; [apply Hs|lia]) ||
+               apply equiv_dist, lft_incl_equiv_proper_r, Hl || f_contractive || f_equiv).
   Qed.
 
   Global Instance refcell_ne : NonExpansive refcell.
   Proof.
-    constructor; solve_proper_core ltac:(fun _ => (eapply ty_size_ne; try reflexivity) || f_equiv).
+    rewrite /refcell /refcell_inv /=. intros n ty1 ty2 Hty12. split.
+    - by rewrite /= Hty12.
+    - apply Hty12.
+    - apply Hty12.
+    - rewrite /= ![X in X {| ty_own := _ |}]/ty_own.
+      intros. do 3 f_equiv. apply Hty12.
+    - simpl. intros. repeat (apply Hty12 || f_equiv).
   Qed.
 
   Global Instance refcell_mono E L : Proper (eqtype E L ==> subtype E L) refcell.
@@ -187,13 +186,13 @@ Section refcell.
     iDestruct (EQ' with "HL") as "#EQ'".
     iDestruct (refcell_inv_proper with "HL") as "#Hty1ty2"; first done.
     iDestruct (refcell_inv_proper with "HL") as "#Hty2ty1"; first by symmetry.
-    iIntros "!# #HE". iDestruct ("EQ'" with "HE") as "(% & #Hown & #Hshr)".
-    iSplit; [|iSplit; iIntros "!# * H"].
-    - iPureIntro. simpl. congruence.
+    iIntros "!# #HE". iDestruct ("EQ'" with "HE") as "(% & #[??] & #Hown & #Hshr)".
+    iSplit; [by simpl; auto|iSplit; [done|iSplit; iIntros "!# * H /="]].
     - destruct vl as [|[[]|]]=>//=. by iApply "Hown".
-    - simpl. iDestruct "H" as (a γ) "[Ha H]". iExists a, γ. iFrame.
-      iApply na_bor_iff; last done. iNext; iModIntro; iSplit; iIntros "H".
-      by iApply "Hty1ty2". by iApply "Hty2ty1".
+    - iDestruct "H" as (a γ) "(Ha & #? & H)". iExists a, γ. iFrame. iSplitR.
+      + by iApply lft_incl_trans.
+      + iApply na_bor_iff; last done. iNext; iModIntro; iSplit; iIntros "H".
+        by iApply "Hty1ty2". by iApply "Hty2ty1".
   Qed.
   Lemma refcell_mono' E L ty1 ty2 :
     eqtype E L ty1 ty2 → subtype E L (refcell ty1) (refcell ty2).

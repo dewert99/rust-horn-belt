@@ -17,7 +17,7 @@ Section rwlockreadguard_functions.
       letalloc: "r" <- "r'" in
       delete [ #1; "x"];; return: ["r"].
 
-  Lemma rwlockreadguard_deref_type ty `{!TyWf ty} :
+  Lemma rwlockreadguard_deref_type ty :
     typed_val rwlockreadguard_deref
       (fn(∀ '(α, β), ∅; &shr{α}(rwlockreadguard β ty)) → &shr{α} ty).
   Proof.
@@ -57,7 +57,7 @@ Section rwlockreadguard_functions.
         let: "r" := new [ #0] in return: ["r"]
       else "loop" [].
 
-  Lemma rwlockreadguard_drop_type ty `{!TyWf ty} :
+  Lemma rwlockreadguard_drop_type ty :
     typed_val rwlockreadguard_drop (fn(∀ α, ∅; rwlockreadguard α ty) → unit).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".

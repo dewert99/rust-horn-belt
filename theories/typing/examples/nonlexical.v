@@ -13,19 +13,18 @@ From lrust.typing Require Import typing lib.option.
 *)
 
 Section non_lexical.
-  Context `{!typeG Σ} (HashMap K V : type)
-          `{!TyWf hashmap, !TyWf K, !TyWf V, !Copy K}
+  Context `{!typeG Σ} (HashMap K V : type) `{!Copy K}
           (defaultv get_mut insert: val).
 
   Hypothesis defaultv_type :
     typed_val defaultv (fn(∅) → V).
 
   Hypothesis get_mut_type :
-    typed_val get_mut (fn(∀ '(α, β), ∅; &uniq{α} hashmap, &shr{β} K) →
+    typed_val get_mut (fn(∀ '(α, β), ∅; &uniq{α} HashMap, &shr{β} K) →
                        option (&uniq{α} V)).
 
   Hypothesis insert_type :
-    typed_val insert (fn(∀ α, ∅; &uniq{α} hashmap, K, V) → option V).
+    typed_val insert (fn(∀ α, ∅; &uniq{α} HashMap, K, V) → option V).
 
   Definition get_default : val :=
     funrec: <> ["map"; "key"] :=
@@ -73,7 +72,7 @@ Section non_lexical.
       return: ["r"].
 
     Lemma get_default_type :
-      typed_val get_default (fn(∀ m, ∅; &uniq{m} hashmap, K) → &uniq{m} V).
+      typed_val get_default (fn(∀ m, ∅; &uniq{m} HashMap, K) → &uniq{m} V).
     Proof.
       intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
         iIntros (m ϝ ret p). inv_vec p=>map key. simpl_subst.

@@ -14,7 +14,7 @@ Section swap.
       delete [ #1; "p1"];; delete [ #1; "p2"];;
       let: "r" := new [ #0] in return: ["r"].
 
-  Lemma swap_type τ `{!TyWf τ} :
+  Lemma swap_type τ :
     typed_val (swap τ) (fn(∀ α, ∅; &uniq{α} τ, &uniq{α} τ) → unit).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#". iIntros (α ϝ ret p).
@@ -26,10 +26,12 @@ Section swap.
     iMod (lctx_lft_alive_tok α with "HE HL") as (qα) "([Hα1 Hα2] & HL & Hclose)";
       [solve_typing..|].
     iDestruct (uniq_is_ptr with "H1'") as (l1) "#H1eq". iDestruct "H1eq" as %[=->].
+    iDestruct "H1'" as "[#H1o H1']".
     iMod (bor_acc with "LFT H1' Hα1") as "[H1' Hclose1]"=>//.
     iDestruct "H1'" as (vl1) "[>H↦1 H1']".
     iDestruct (τ.(ty_size_eq) with "H1'") as "#>%".
     iDestruct (uniq_is_ptr with "H2'") as (l2) "#H2eq". iDestruct "H2eq" as %[=->].
+    iDestruct "H2'" as "[#H2o H2']".
     iMod (bor_acc with "LFT H2' Hα2") as "[H2' Hclose2]"=>//.
     iDestruct "H2'" as (vl2) "[>H↦2 H2']".
     iDestruct (τ.(ty_size_eq) with "H2'") as "#>%".

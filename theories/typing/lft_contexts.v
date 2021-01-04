@@ -38,6 +38,9 @@ Section lft_contexts.
   Global Instance elctx_interp_persistent E :
     Persistent (elctx_interp E).
   Proof. apply _. Qed.
+  Lemma elctx_interp_app (E1 E2 : elctx) :
+    elctx_interp (E1 ++ E2) ⊣⊢ elctx_interp E1 ∗ elctx_interp E2.
+  Proof. apply big_sepL_app. Qed.
 
   (* Local lifetime contexts. *)
   Definition llctx_elt_interp (x : llctx_elt) (q : Qp) : iProp Σ :=

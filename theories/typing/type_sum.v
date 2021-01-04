@@ -19,7 +19,7 @@ Section case.
   Proof.
     iIntros (Hel tid) "#LFT #HE Hna HL HC HT". wp_bind p.
     rewrite tctx_interp_cons. iDestruct "HT" as "[Hp HT]".
-    iApply (wp_hasty with "Hp"). iIntros ([[]|] Hv) "Hp"; try done.
+    iApply (wp_hasty with "Hp"). iIntros ([[]|] Hv) "Hp //".
     iDestruct "Hp" as "[H↦ Hf]". iDestruct "H↦" as (vl) "[H↦ Hown]".
     iDestruct "Hown" as (i vl' vl'') "(>% & >EQlen & Hown)". subst.
     simpl ty_size. iDestruct "EQlen" as %[=EQlen]. rewrite -EQlen. simpl length.
@@ -65,7 +65,7 @@ Section case.
   Proof.
     iIntros (Halive Hel tid) "#LFT #HE Hna HL HC HT". wp_bind p.
     rewrite tctx_interp_cons. iDestruct "HT" as "[Hp HT]".
-    iApply (wp_hasty with "Hp"). iIntros ([[]|] Hv) "Hp"; try iDestruct "Hp" as "[]".
+    iApply (wp_hasty with "Hp"). iIntros ([[]|] Hv) "[#Hout Hp]"; try done.
     iMod (Halive with "HE HL") as (q) "[Htok Hclose]". done.
     iMod (bor_acc_cons with "LFT Hp Htok") as "[H↦ Hclose']". done.
     iDestruct "H↦" as (vl) "[H↦ Hown]".
@@ -90,6 +90,11 @@ Section case.
       iMod ("Hclose" with "Htok") as "HL".
       iApply (Hety with "LFT HE Hna HL HC").
       rewrite !tctx_interp_cons !tctx_hasty_val' /= ?Hv //. iFrame.
+      iApply lft_incl_trans; [done|]. clear -EQty. iClear "#".
+      iInduction tyl as [|ty0 tyl] "IH" forall (i EQty)=>//.
+      rewrite /= lft_intersect_list_app. destruct i.
+      + inversion EQty. subst. iApply lft_intersect_incl_l.
+      + iApply lft_incl_trans; [|by iApply "IH"]. iApply lft_intersect_incl_r.
     - iMod ("Hclose'" with "[] [H↦i H↦vl' H↦vl'' Hown]") as "[Hb Htok]";
         [by iIntros "!>$"| |].
       { iExists (#i::vl'++vl'').
@@ -97,7 +102,7 @@ Section case.
         iExists i, vl', vl''. rewrite nth_lookup EQty. auto. }
       iMod ("Hclose" with "Htok") as "HL".
       iApply (Hety with "LFT HE Hna HL HC").
-      rewrite !tctx_interp_cons !tctx_hasty_val' /= ?Hv //. iFrame.
+      rewrite !tctx_interp_cons !tctx_hasty_val' /= ?Hv //. iFrame "∗#".
   Qed.
 
   Lemma type_case_uniq E L C T T' p κ tyl el :
@@ -118,7 +123,7 @@ Section case.
   Proof.
     iIntros (Halive Hel tid) "#LFT #HE Hna HL HC HT". wp_bind p.
     rewrite tctx_interp_cons. iDestruct "HT" as "[Hp HT]".
-    iApply (wp_hasty with "Hp"). iIntros ([[]|] Hv) "Hp"; try done.
+    iApply (wp_hasty with "Hp"). iIntros ([[]|] Hv) "Hp //".
     iDestruct "Hp" as (i) "[#Hb Hshr]".
     iMod (Halive with "HE HL") as (q) "[Htok Hclose]". done.
     iMod (frac_bor_acc with "LFT Hb Htok") as (q') "[[H↦i H↦vl''] Hclose']". done.
@@ -269,12 +274,13 @@ Section case.
     by iApply type_seq; [eapply type_sum_memcpy_instr, Hr|done|done].
   Qed.
 
-  Lemma ty_outlives_E_elctx_sat_sum E L tyl {Wf : TyWfLst tyl} α:
+  Lemma ty_outlives_E_elctx_sat_sum E L tyl α:
     elctx_sat E L (tyl_outlives_E tyl α) →
     elctx_sat E L (ty_outlives_E (sum tyl) α).
   Proof.
-    intro Hsat. eapply eq_ind; first done. clear Hsat. rewrite /ty_outlives_E /=.
-    induction Wf as [|ty ??? IH]=>//=. rewrite IH fmap_app //.
+    intro Hsat. eapply eq_ind; [done|]. clear Hsat.
+    rewrite /tyl_outlives_E /ty_outlives_E /=.
+    induction tyl as [|?? IH]=>//=. by rewrite IH fmap_app.
   Qed.
 End case.
 

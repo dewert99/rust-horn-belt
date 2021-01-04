@@ -13,7 +13,7 @@ Section join_handle.
     (∀ tid, (box ty).(ty_own) tid [v])%I.
 
   Program Definition join_handle (ty : type) :=
-    {| ty_size := 1;
+    {| ty_size := 1; ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own _ vl :=
          match vl return _ with
          | [ #(LitLoc l) ] => lang.lib.spawn.join_handle spawnN l (join_inv ty)
@@ -21,20 +21,18 @@ Section join_handle.
          end%I;
        ty_shr κ _ l := True%I |}.
   Next Obligation. by iIntros (ty tid [|[[]|][]]) "H". Qed.
-  Next Obligation. iIntros "* _ _ _ $". auto. Qed.
+  Next Obligation. iIntros "* _ _ _ _ $". auto. Qed.
   Next Obligation. iIntros (?) "**"; auto. Qed.
 
-  Global Instance join_handle_wf ty `{!TyWf ty} : TyWf (join_handle ty) :=
-    { ty_lfts := ty.(ty_lfts); ty_wf_E := ty.(ty_wf_E) }.
-
   Lemma join_handle_subtype ty1 ty2 :
-    ▷ type_incl ty1 ty2 -∗ type_incl (join_handle ty1) (join_handle ty2).
+    type_incl ty1 ty2 -∗ type_incl (join_handle ty1) (join_handle ty2).
   Proof.
-    iIntros "#Hincl". iSplit; first done. iSplit; iModIntro.
+    iIntros "#Hincl". iSplit; first done. iSplit; [|iSplit; iModIntro].
+    - iDestruct "Hincl" as "[_ [Hout _]]". by iApply "Hout".
     - iIntros "* Hvl". destruct vl as [|[[|vl|]|] [|]]; try done.
       simpl. iApply (join_handle_impl with "[] Hvl"). clear tid.
       iIntros "!# * Hown" (tid).
-      iDestruct (box_type_incl with "Hincl") as "{Hincl} (_ & Hincl & _)".
+      iDestruct (box_type_incl with "Hincl") as "{Hincl} (_ & _ & Hincl & _)".
       iApply "Hincl". done.
     - iIntros "* _". auto.
   Qed.
@@ -51,11 +49,22 @@ Section join_handle.
 
   Global Instance join_handle_type_contractive : TypeContractive join_handle.
   Proof.
-    constructor;
-      solve_proper_core ltac:(fun _ => progress unfold join_inv || exact: type_dist2_dist || f_type_equiv || f_contractive || f_equiv).
+    split=>//.
+    - apply (type_lft_morphism_add _ static [] [])=>?.
+      + rewrite left_id. iApply lft_equiv_refl.
+      + by rewrite /elctx_interp /= left_id right_id.
+    - move=> ??? Hsz ?? Ho ?? [|[[|l|]|] []] //=.
+      rewrite /join_inv /box /own_ptr ![X in X {| ty_own := _ |}]/ty_own Hsz.
+      repeat (apply Ho || f_contractive || f_equiv).
   Qed.
+
   Global Instance join_handle_ne : NonExpansive join_handle.
-  Proof. apply type_contractive_ne, _. Qed.
+  Proof.
+    intros n ty1 ty2 Hty12. constructor; [done|apply Hty12..| |done].
+    intros tid vs.
+    rewrite /join_handle /join_inv /box /own_ptr ![X in X {| ty_own := _ |}]/ty_own.
+    repeat (apply Hty12 || f_equiv).
+  Qed.
 
   Global Instance join_handle_send ty :
     Send (join_handle ty).
@@ -76,8 +85,7 @@ Section spawn.
       letalloc: "r" <- "join" in
       return: ["r"].
 
-  Lemma spawn_type fty retty call_once `{!TyWf fty, !TyWf retty}
-        `(!Send fty, !Send retty) :
+  Lemma spawn_type fty retty call_once `(!Send fty, !Send retty) :
     typed_val call_once (fn(∅; fty) → retty) → (* fty : FnOnce() -> retty, as witnessed by the impl call_once *)
     let E ϝ := ty_outlives_E fty static ++ ty_outlives_E retty static in
     typed_val (spawn call_once) (fn(E; fty) → join_handle retty).
@@ -113,7 +121,7 @@ Section spawn.
       let: "r" := spawn.join ["c'"] in
       delete [ #1; "c"];; return: ["r"].
 
-  Lemma join_type retty `{!TyWf retty} :
+  Lemma join_type retty :
     typed_val join (fn(∅; join_handle retty) → retty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".

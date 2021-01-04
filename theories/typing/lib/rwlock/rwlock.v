@@ -47,19 +47,6 @@ Section rwlock_inv.
       | _ => (* Locked for write. *) True
       end)%I.
 
-  Global Instance rwlock_inv_type_ne n tid_own tid_shr l γ α :
-    Proper (type_dist2 n ==> dist n) (rwlock_inv tid_own tid_shr l γ α).
-  Proof.
-    solve_proper_core
-      ltac:(fun _ => exact: type_dist2_S || f_type_equiv || f_contractive || f_equiv).
-  Qed.
-
-  Global Instance rwlock_inv_ne tid_own tid_shr l γ α :
-    NonExpansive (rwlock_inv tid_own tid_shr l γ α).
-  Proof.
-    intros n ???. eapply rwlock_inv_type_ne, type_dist_dist2. done.
-  Qed.
-
   Lemma rwlock_inv_proper E L ty1 ty2 q :
     eqtype E L ty1 ty2 →
     llctx_interp L q -∗ ∀ tid_own tid_shr l γ α, □ (elctx_interp E -∗
@@ -70,7 +57,7 @@ Section rwlock_inv.
               It would easily gain from some automation. *)
     rewrite eqtype_unfold. iIntros (Hty) "HL".
     iDestruct (Hty with "HL") as "#Hty". iIntros "* !# #HE H".
-    iDestruct ("Hty" with "HE") as "(% & #Hown & #Hshr)".
+    iDestruct ("Hty" with "HE") as "(% & #Hl & #Hown & #Hshr)".
     iAssert (□ (&{α}((l +ₗ 1) ↦∗: ty_own ty1 tid_own) -∗
                 &{α}((l +ₗ 1) ↦∗: ty_own ty2 tid_own)))%I as "#Hb".
     { iIntros "!# H". iApply bor_iff; last done.
@@ -114,20 +101,21 @@ Section rwlock.
   *)
 
   Program Definition rwlock (ty : type) :=
-    {| ty_size := S ty.(ty_size);
+    {| ty_size := S ty.(ty_size); ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own tid vl :=
          match vl return _ with
          | #(LitInt z) :: vl' => ⌜-1 ≤ z⌝ ∗ ty.(ty_own) tid vl'
          | _ => False
          end%I;
        ty_shr κ tid l :=
-         (∃ α γ, κ ⊑ α ∗ &at{α,rwlockN}(rwlock_inv tid tid l γ α ty))%I |}.
+         (∃ α γ, κ ⊑ α ∗ α ⊑ ty.(ty_lft) ∗
+                 &at{α,rwlockN}(rwlock_inv tid tid l γ α ty))%I |}.
   Next Obligation.
     iIntros (??[|[[]|]]); try iIntros "[]". rewrite ty_size_eq.
     iIntros "[_ %] !% /=". congruence.
   Qed.
   Next Obligation.
-    iIntros (ty E κ l tid q ?) "#LFT Hb Htok".
+    iIntros (ty E κ l tid q ?) "#LFT #? Hb Htok".
     iMod (bor_acc_cons with "LFT Hb Htok") as "[H Hclose]". done.
     iDestruct "H" as ([|[[| |n]|]vl]) "[H↦ H]"; try iDestruct "H" as ">[]".
     iDestruct "H" as "[>% Hown]".
@@ -146,8 +134,8 @@ Section rwlock.
       - iIntros "!> H !>". iNext. iDestruct "H" as (γ st) "(H & _ & _)".
         iExists _. iIntros "{$H}!%". destruct st as [[|[[]?]|]|]; simpl; lia.
       - iMod (bor_exists with "LFT Hb") as (γ) "Hb". done.
-        iExists κ, γ. iSplitR. by iApply lft_incl_refl. iApply bor_share; try done.
-        solve_ndisj. }
+        iExists κ, γ. iSplitR; [by iApply lft_incl_refl|]. iSplitR; [done|].
+        iApply bor_share; try done. solve_ndisj. }
     clear dependent n. iDestruct "H" as ([|n|[]]) "[Hn >%]"; try lia.
     - iFrame. iMod (own_alloc (● None)) as (γ) "Hst"; first by apply auth_auth_valid.
       iExists γ, None. by iFrame.
@@ -157,7 +145,8 @@ Section rwlock.
       iMod (rebor _ _ (κ ⊓ ν) with "LFT [] Hvl") as "[Hvl Hh]". done.
       { iApply lft_intersect_incl_l. }
       iDestruct (lft_intersect_acc with "Htok' Htok1") as (q') "[Htok Hclose]".
-      iMod (ty_share with "LFT Hvl Htok") as "[Hshr Htok]". done.
+      iMod (ty_share with "LFT [] Hvl Htok") as "[Hshr Htok]". done.
+      { iApply lft_incl_trans; [|done]. iApply lft_intersect_incl_l. }
       iDestruct ("Hclose" with "Htok") as "[$ Htok]".
       iExists γ, _. iFrame "Hst Hn". iExists _, _. iIntros "{$Hshr}".
       iSplitR; first by auto. iFrame "Htok2". iSplitR; first done.
@@ -171,19 +160,26 @@ Section rwlock.
     iExists _, _. iFrame. iApply lft_incl_trans; auto.
   Qed.
 
-  Global Instance rwlock_wf ty `{!TyWf ty} : TyWf (rwlock ty) :=
-    { ty_lfts := ty.(ty_lfts); ty_wf_E := ty.(ty_wf_E) }.
-
   Global Instance rwlock_type_ne : TypeNonExpansive rwlock.
   Proof.
-    constructor;
-      solve_proper_core ltac:(fun _ => exact: type_dist2_S || (eapply rwlock_inv_type_ne; try reflexivity) ||
-                                              f_type_equiv || f_contractive || f_equiv).
+    split.
+    - apply (type_lft_morphism_add _ static [] []) => ?.
+      + rewrite left_id. iApply lft_equiv_refl.
+      + by rewrite /elctx_interp /= left_id right_id.
+    - by move=>/= ?? ->.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs tid [|[[| |]|]vl]=>//=. by rewrite Ho.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. rewrite /= /rwlock_inv.
+      repeat (apply dist_S, Ho || apply dist_S, Hs ||
+              apply equiv_dist, lft_incl_equiv_proper_r, Hl ||
+              f_contractive || f_equiv).
   Qed.
 
   Global Instance rwlock_ne : NonExpansive rwlock.
   Proof.
-    constructor; solve_proper_core ltac:(fun _ => (eapply ty_size_ne; try reflexivity) || f_equiv).
+    unfold rwlock, rwlock_inv. intros n ty1 ty2 Hty12.
+    split; simpl; try by rewrite Hty12.
+    - intros tid [|[[| |]|]vl]=>//=. by rewrite Hty12.
+    - intros κ tid l. repeat (apply Hty12 || f_equiv).
   Qed.
 
   Global Instance rwlock_mono E L : Proper (eqtype E L ==> subtype E L) rwlock.
@@ -194,13 +190,14 @@ Section rwlock.
     iDestruct (EQ' with "HL") as "#EQ'".
     iDestruct (rwlock_inv_proper with "HL") as "#Hty1ty2"; first done.
     iDestruct (rwlock_inv_proper with "HL") as "#Hty2ty1"; first by symmetry.
-    iIntros "!# #HE". iDestruct ("EQ'" with "HE") as "(% & #Hown & #Hshr)".
-    iSplit; [|iSplit; iIntros "!# * H"].
+    iIntros "!# #HE". iDestruct ("EQ'" with "HE") as "(% & #[??] & #Hown & #Hshr)".
+    iSplit; [|iSplit; [done|iSplit; iIntros "!# * H"]].
     - iPureIntro. simpl. congruence.
     - destruct vl as [|[[]|]]; try done. iDestruct "H" as "[$ H]". by iApply "Hown".
-    - iDestruct "H" as (a γ) "[Ha H]". iExists a, γ. iFrame.
-      iApply at_bor_iff; last done. iNext; iModIntro; iSplit; iIntros "H".
-      by iApply "Hty1ty2". by iApply "Hty2ty1".
+    - iDestruct "H" as (a γ) "[Ha #[??]]". iExists a, γ. iFrame. iSplit.
+      + by iApply lft_incl_trans.
+      + iApply at_bor_iff; last done. iNext; iModIntro; iSplit; iIntros "H".
+        by iApply "Hty1ty2". by iApply "Hty2ty1".
   Qed.
   Lemma rwlock_mono' E L ty1 ty2 :
     eqtype E L ty1 ty2 → subtype E L (rwlock ty1) (rwlock ty2).

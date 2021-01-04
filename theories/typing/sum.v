@@ -1,7 +1,7 @@
 From iris.proofmode Require Import tactics.
 From iris.algebra Require Import list.
 From iris.bi Require Import fractional.
-From lrust.typing Require Export type.
+From lrust.typing Require Export lft_contexts type.
 Set Default Proof Using "Type".
 
 Section sum.
@@ -11,12 +11,11 @@ Section sum.
      convertible to it---and in particular, we can pattern-match on it
      (as in, pattern-match in the language of lambda-rust, not in Coq). *)
   Program Definition emp0 : type :=
-    {| ty_size := 1%nat;
-       ty_own tid vl := False%I;
-       ty_shr κ tid l := False%I |}.
+    {| ty_size := 1%nat; ty_lfts := []; ty_E := [];
+       ty_own tid vl := False%I; ty_shr κ tid l := False%I |}.
   Next Obligation. iIntros (tid vl) "[]". Qed.
   Next Obligation.
-    iIntros (E κ l tid ??) "#LFT Hown Htok".
+    iIntros (E κ l tid ??) "#LFT _ Hown Htok".
     iMod (bor_acc with "LFT Hown Htok") as "[>H _]"; first done.
     iDestruct "H" as (?) "[_ []]".
   Qed.
@@ -53,6 +52,7 @@ Section sum.
 
   Program Definition sum (tyl : list type) :=
     {| ty_size := S (max_list_with ty_size tyl);
+       ty_lfts := tyl_lfts tyl; ty_E := tyl_E tyl;
        ty_own tid vl :=
          (∃ (i : nat) vl' vl'', ⌜vl = #i :: vl' ++ vl''⌝ ∗
                                 ⌜length vl = S (max_list_with ty_size tyl)⌝ ∗
@@ -68,10 +68,18 @@ Section sum.
     subst. done.
   Qed.
   Next Obligation.
-    intros tyl E κ l tid. iIntros (??) "#LFT Hown Htok". rewrite split_sum_mt.
+    intros tyl E κ l tid. iIntros (??) "#LFT #Houtlives Hown Htok". rewrite split_sum_mt.
     iMod (bor_exists with "LFT Hown") as (i) "Hown"; first solve_ndisj.
     iMod (bor_sep with "LFT Hown") as "[Hmt Hown]"; first solve_ndisj.
-    iMod ((nth i tyl emp0).(ty_share) with "LFT Hown Htok") as "[#Hshr $]"; try done.
+    iMod ((nth i tyl emp0).(ty_share) with "LFT [] Hown Htok") as "[#Hshr $]"; try done.
+    { destruct (decide (i < length tyl)%nat) as [Hi|].
+      - iApply lft_incl_trans; [done|]. iClear "Houtlives LFT".
+        iInduction tyl as [|ty tyl] "IH" forall (i Hi); [simpl in Hi; lia|].
+        simpl in Hi. rewrite /= lft_intersect_list_app. destruct i.
+        + iApply lft_intersect_incl_l.
+        + iApply lft_incl_trans; [|iApply "IH"; auto with lia].
+          iApply lft_intersect_incl_r.
+      - rewrite nth_overflow; [|lia]. iApply lft_incl_static. }
     iMod (bor_fracture with "LFT [Hmt]") as "H'"; first solve_ndisj; last eauto.
     by iFrame.
   Qed.
@@ -81,27 +89,6 @@ Section sum.
     iSplitL "Hown0".
     - by iApply (frac_bor_shorten with "Hord").
     - iApply ((nth i tyl emp0).(ty_shr_mono) with "Hord"); done.
-  Qed.
-
-  Global Instance sum_wf tyl `{!TyWfLst tyl} : TyWf (sum tyl) :=
-    { ty_lfts := tyl_lfts tyl; ty_wf_E := tyl_wf_E tyl }.
-
-  Global Instance sum_type_ne n : Proper (Forall2 (type_dist2 n) ==> type_dist2 n) sum.
-  Proof.
-    intros x y EQ.
-    assert (EQmax : max_list_with ty_size x = max_list_with ty_size y).
-    { induction EQ as [|???? EQ _ IH]=>//=.
-      rewrite IH. f_equiv. apply EQ. }
-    (* TODO: If we had the right lemma relating nth, (Forall2 R) and R, we should
-       be able to make this more automatic. *)
-    assert (EQnth :∀ i, type_dist2 n (nth i x emp0) (nth i y emp0)).
-    { clear EQmax. induction EQ as [|???? EQ _ IH]=>-[|i] //=. }
-    constructor; simpl.
-    - by rewrite EQmax.
-    - intros tid vl. destruct n as [|n]=> //=. rewrite /ty_own /= EQmax.
-      solve_proper_core ltac:(fun _ => exact:EQnth || f_type_equiv || f_equiv).
-    - intros κ tid l. unfold is_pad. rewrite EQmax.
-      solve_proper_core ltac:(fun _ => exact:EQnth || f_type_equiv || f_equiv).
   Qed.
 
   Global Instance sum_ne : NonExpansive sum.
@@ -116,10 +103,112 @@ Section sum.
     { clear EQmax. induction EQ as [|???? EQ _ IH]=>-[|i] //=. }
     constructor; simpl.
     - by rewrite EQmax.
+    - clear -EQ. induction EQ as [|???? EQ _ IH]=>//=.
+      rewrite /tyl_lfts /=. f_equiv; [|done]. apply EQ.
+    - clear -EQ. induction EQ as [|???? EQ _ IH]=>//=.
+      rewrite /tyl_E /=. f_equiv; [|done]. apply EQ.
     - intros tid vl. rewrite EQmax.
       solve_proper_core ltac:(fun _ => exact:EQnth || f_equiv).
     - intros κ tid l. unfold is_pad. rewrite EQmax.
       solve_proper_core ltac:(fun _ => exact:EQnth || (eapply ty_size_ne; try reflexivity) || f_equiv).
+  Qed.
+
+  Lemma product_lft_morphism Tl:
+    Forall TypeLftMorphism Tl →
+    TypeLftMorphism (λ ty, sum ((λ T, T ty) <$> Tl)).
+  Proof.
+    intros HTl.
+    assert (let s ty := sum ((λ T, T ty) <$> Tl) in
+        (∃ α βs E, (∀ ty, ⊢ ty_lft (s ty) ≡ₗ α ⊓ ty_lft ty) ∧
+            (∀ ty, elctx_interp (s ty).(ty_E) ⊣⊢
+                   elctx_interp E ∗ elctx_interp ty.(ty_E) ∗
+                   [∗ list] β ∈ βs, β ⊑ ty_lft ty)) ∨
+        (∃ α E, (∀ ty, ⊢ ty_lft (s ty) ≡ₗ α) ∧
+                (∀ ty, elctx_interp (s ty).(ty_E) ⊣⊢ elctx_interp E)))
+      as [(?&?&?&?&?)|(?&?&?&?)]; [|by eleft|by eright].
+    simpl. induction HTl as [|T Tl HT HTl [(α & βs & E & Hα & HE)|(α & E & Hα & HE)]]=>/=.
+    - right. exists static, []. split=>_ //. iApply lft_equiv_refl.
+    - setoid_rewrite lft_intersect_list_app.
+      destruct HT as [α' βs' E' Hα' HE'|α' E' Hα' HE'].
+      + left. exists (α' ⊓ α), (βs' ++ βs), (E' ++ E). split.
+        * intros ty. iApply lft_equiv_trans.
+          { iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα]. }
+          rewrite -!assoc (comm (⊓) (ty_lft ty) (α ⊓ _)) -!assoc.
+          repeat iApply lft_intersect_equiv_proper; try iApply lft_equiv_refl.
+          iApply lft_intersect_equiv_idemp.
+        * intros ty.
+          rewrite /tyl_E /= !elctx_interp_app HE' HE big_sepL_app -!assoc.
+          iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
+      + left. exists (α' ⊓ α), βs, (E' ++ E). split.
+        * intros ty. rewrite -assoc.
+          iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
+        * intros ty.
+          by rewrite /tyl_E /= !elctx_interp_app HE' HE -!assoc.
+    - setoid_rewrite lft_intersect_list_app.
+      destruct HT as [α' βs' E' Hα' HE'|α' E' Hα' HE'].
+      + left. exists (α' ⊓ α), βs', (E' ++ E). split.
+        * intros ty. rewrite -!assoc (comm (⊓) α (ty_lft ty)) !assoc.
+          iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
+        * intros ty. rewrite /tyl_E /= !elctx_interp_app HE' HE -!assoc.
+          iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
+      + right. exists (α' ⊓ α), (E' ++ E). split.
+        * intros. iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
+        * intros. by rewrite /tyl_E /= !elctx_interp_app HE HE'.
+  Qed.
+
+  Global Instance sum_type_ne Tl:
+    TypeListNonExpansive Tl → TypeNonExpansive (sum ∘ Tl).
+  Proof.
+    intros (Tl' & HTlTl' & HTl').
+    eapply type_ne_ext; last first.
+    { intros ty. by rewrite /= HTlTl'. }
+    clear Tl HTlTl'.
+    assert (Hsz0 : ∀ ty1 ty2, ty_size ty1 = ty_size ty2 →
+      max_list_with ty_size ((λ T, T ty1) <$> Tl') =
+      max_list_with ty_size ((λ T, T ty2) <$> Tl')).
+    { intros ty1 ty2 Hsz.
+      induction HTl' as [|T Tl' HT HTl' IH]=>//=. rewrite IH. f_equal. by apply HT. }
+    split.
+    - apply product_lft_morphism. eapply Forall_impl; [done|]. apply _.
+    - intros. simpl. f_equiv. auto.
+    - move=> n ty1 ty2 Hsz Hl HE Ho Hs tid vl /=. f_equiv=>i. do 6 f_equiv.
+      + do 3 f_equiv. by apply Hsz0.
+      + rewrite !nth_lookup !list_lookup_fmap.
+        rewrite ->Forall_lookup in HTl'. specialize (HTl' i).
+        destruct (Tl' !! i)=>//=. by apply HTl'.
+    - move=> n ty1 ty2 Hsz Hl HE Ho Hs κ tid l /=. f_equiv=>i.
+      rewrite /is_pad !nth_lookup !list_lookup_fmap.
+      rewrite ->Forall_lookup in HTl'. specialize (HTl' i).
+      destruct (Tl' !! i); [|by rewrite !right_absorb]. simpl.
+      repeat ((by apply HTl') || (by apply Hsz0) || f_equiv).
+  Qed.
+
+  (* TODO : get rid of this duplication *)
+  Global Instance sum_type_ne_cont Tl:
+    TypeListContractive Tl → TypeContractive (sum ∘ Tl).
+  Proof.
+    intros (Tl' & HTlTl' & HTl').
+    eapply type_contractive_ext; last first.
+    { intros ty. by rewrite /= HTlTl'. }
+    clear Tl HTlTl'.
+    assert (Hsz0 : ∀ ty1 ty2,
+      max_list_with ty_size ((λ T, T ty1) <$> Tl') =
+      max_list_with ty_size ((λ T, T ty2) <$> Tl')).
+    { intros ty1 ty2.
+      induction HTl' as [|T Tl' HT HTl' IH]=>//=. rewrite IH. f_equal. by apply HT. }
+    split.
+    - apply product_lft_morphism. eapply Forall_impl; [done|]. apply _.
+    - intros. simpl. f_equiv. auto.
+    - move=> n ty1 ty2 Hsz Hl HE Ho Hs tid vl /=. f_equiv=>i. do 6 f_equiv.
+      + do 3 f_equiv. by apply Hsz0.
+      + rewrite !nth_lookup !list_lookup_fmap.
+        rewrite ->Forall_lookup in HTl'. specialize (HTl' i).
+        destruct (Tl' !! i)=>//=. by apply HTl'.
+    - move=> n ty1 ty2 Hsz Hl HE Ho Hs κ tid l /=. f_equiv=>i.
+      rewrite /is_pad !nth_lookup !list_lookup_fmap.
+      rewrite ->Forall_lookup in HTl'. specialize (HTl' i).
+      destruct (Tl' !! i); [|by rewrite !right_absorb]. simpl.
+      repeat ((by apply HTl') || (by apply Hsz0) || f_equiv).
   Qed.
 
   Global Instance sum_mono E L :
@@ -144,17 +233,26 @@ Section sum.
         { rewrite lookup_zip_with. erewrite Hl1. simpl.
           rewrite Hl2 /=. done. }
         rewrite (nth_lookup_Some tyl2 _ _ ty2) //. }
-    clear -Hleq. iClear "∗". iSplit; last iSplit.
+    apply Forall2_length in Htyl.
+    clear -Hleq Htyl. iSplit; [|iSplit; [|iSplit]].
     - simpl. by rewrite Hleq.
-    - iModIntro. iIntros (tid vl) "H". iDestruct "H" as (i vl' vl'') "(% & % & Hown)".
+    - iClear (Hleq) "Hty".
+      iInduction tyl1 as [|ty1 tyl1 IH] "IH" forall (tyl2 Htyl);
+           destruct tyl2 as [|ty2 tyl2]=>//=.
+      + iApply lft_incl_refl.
+      + iDestruct "Htyl" as "[Hty Htyl]".
+        rewrite !lft_intersect_list_app.
+        iApply lft_intersect_mono; [|by iApply "IH"; auto].
+        iDestruct "Hty" as "(_ & $ & _ & _)".
+    - iModIntro. iIntros (tid vl) "H". iDestruct "H" as (i vl' vl'') "(-> & % & Hown)".
       iExists i, vl', vl''. iSplit; first done.
       iSplit; first by rewrite -Hleq.
-      iDestruct ("Hty" $! i) as "(_ & #Htyi & _)". by iApply "Htyi".
+      iDestruct ("Hty" $! i) as "(_ & _ & #Htyi & _)". by iApply "Htyi".
     - iModIntro. iIntros (κ tid l) "H". iDestruct "H" as (i) "(Hmt & Hshr)".
       iExists i. iSplitR "Hshr".
       + rewrite /is_pad -Hleq. iDestruct ("Hty" $! i) as "(Hlen & _)".
         iDestruct "Hlen" as %<-. done.
-      + iDestruct ("Hty" $! i) as "(_ & _ & #Htyi)". by iApply "Htyi".
+      + iDestruct ("Hty" $! i) as "(_ & _ & _ & #Htyi)". by iApply "Htyi".
   Qed.
   Lemma sum_mono' E L tyl1 tyl2 :
     Forall2 (subtype E L) tyl1 tyl2 → subtype E L (sum tyl1) (sum tyl2).
@@ -238,5 +336,4 @@ End sum.
 Notation "Σ[ ty1 ; .. ; tyn ]" :=
   (sum (cons ty1%T (..(cons tyn%T nil)..))) : lrust_type_scope.
 
-Hint Opaque sum : lrust_typing lrust_typing_merge.
 Hint Resolve sum_mono' sum_proper' : lrust_typing.

@@ -9,35 +9,35 @@ Section cell.
   Context `{!typeG Σ}.
 
   Program Definition cell (ty : type) :=
-    {| ty_size := ty.(ty_size);
+    {| ty_size := ty.(ty_size); ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own := ty.(ty_own);
        ty_shr κ tid l := (&na{κ, tid, shrN.@l}(l ↦∗: ty.(ty_own) tid))%I |}.
   Next Obligation. apply ty_size_eq. Qed.
   Next Obligation.
-    iIntros (ty E κ l tid q ?) "#LFT Hown $". by iApply (bor_na with "Hown").
+    iIntros (ty E κ l tid q ?) "#LFT #Hout Hown $". by iApply (bor_na with "Hown").
   Qed.
   Next Obligation.
     iIntros (ty ?? tid l) "#H⊑ H". by iApply (na_bor_shorten with "H⊑").
   Qed.
 
-  Global Instance cell_wf ty `{!TyWf ty} : TyWf (cell ty) :=
-    { ty_lfts := ty.(ty_lfts); ty_wf_E := ty.(ty_wf_E) }.
-
   Global Instance cell_type_ne : TypeNonExpansive cell.
-  Proof. solve_type_proper. Qed.
+  Proof.
+    split=>//.
+    - apply (type_lft_morphism_add _ static [] []).
+      + intros. rewrite left_id. iApply lft_equiv_refl.
+      + intros. by rewrite /elctx_interp /= left_id right_id.
+    - intros. simpl. do 4 (f_contractive || f_equiv). simpl in *. done.
+  Qed.
 
   Global Instance cell_ne : NonExpansive cell.
-  Proof.
-    constructor;
-      solve_proper_core ltac:(fun _ => (eapply ty_size_ne; try reflexivity) || f_equiv).
-  Qed.
+  Proof. solve_ne_type. Qed.
 
   Global Instance cell_mono E L : Proper (eqtype E L ==> subtype E L) cell.
   Proof.
     move=>?? /eqtype_unfold EQ. iIntros (?) "HL".
     iDestruct (EQ with "HL") as "#EQ". iIntros "!# #HE".
-    iDestruct ("EQ" with "HE") as "(% & #Hown & #Hshr)".
-    iSplit; [done|iSplit; iIntros "!# * H"].
+    iDestruct ("EQ" with "HE") as "(% & #[Hout1 Hout2] & #Hown & #Hshr)".
+    iSplit; [done|iSplit; [done|iSplit; iIntros "!# * H"]].
     - iApply ("Hown" with "H").
     - iApply na_bor_iff; last done. iNext; iModIntro; iSplit; iIntros "H";
       iDestruct "H" as (vl) "[??]"; iExists vl; iFrame; by iApply "Hown".
@@ -87,7 +87,7 @@ Section typing.
   (* Constructing a cell. *)
   Definition cell_new : val := funrec: <> ["x"] := return: ["x"].
 
-  Lemma cell_new_type ty `{!TyWf ty} : typed_val cell_new (fn(∅; ty) → cell ty).
+  Lemma cell_new_type ty : typed_val cell_new (fn(∅; ty) → cell ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
       iIntros (_ ϝ ret arg). inv_vec arg=>x. simpl_subst.
@@ -98,7 +98,7 @@ Section typing.
   (* The other direction: getting ownership out of a cell. *)
   Definition cell_into_inner : val := funrec: <> ["x"] := return: ["x"].
 
-  Lemma cell_into_inner_type ty `{!TyWf ty} :
+  Lemma cell_into_inner_type ty :
     typed_val cell_into_inner (fn(∅; cell ty) → ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -110,7 +110,7 @@ Section typing.
   Definition cell_get_mut : val :=
     funrec: <> ["x"] := return: ["x"].
 
-  Lemma cell_get_mut_type ty `{!TyWf ty} :
+  Lemma cell_get_mut_type ty :
     typed_val cell_get_mut (fn(∀ α, ∅; &uniq{α} (cell ty)) → &uniq{α} ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -122,7 +122,7 @@ Section typing.
   Definition cell_from_mut : val :=
     funrec: <> ["x"] := return: ["x"].
 
-  Lemma cell_from_mut_type ty `{!TyWf ty} :
+  Lemma cell_from_mut_type ty :
     typed_val cell_from_mut (fn(∀ α, ∅; &uniq{α} ty) → &uniq{α} (cell ty)).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -134,7 +134,7 @@ Section typing.
   Definition cell_into_box : val :=
     funrec: <> ["x"] := return: ["x"].
 
-  Lemma cell_into_box_type ty `{!TyWf ty} :
+  Lemma cell_into_box_type ty :
     typed_val cell_into_box (fn(∅;box (cell ty)) → box ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -146,7 +146,7 @@ Section typing.
   Definition cell_from_box : val :=
     funrec: <> ["x"] := return: ["x"].
 
-  Lemma cell_from_box_type ty `{!TyWf ty} :
+  Lemma cell_from_box_type ty :
     typed_val cell_from_box (fn(∅; box ty) → box (cell ty)).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -162,7 +162,7 @@ Section typing.
       letalloc: "r" <-{ty.(ty_size)} !"x'" in
       delete [ #1; "x"];; return: ["r"].
 
-  Lemma cell_get_type ty `{!TyWf ty} `(!Copy ty) :
+  Lemma cell_get_type ty `(!Copy ty) :
     typed_val (cell_get ty) (fn(∀ α, ∅; &shr{α} (cell ty)) → ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -184,7 +184,7 @@ Section typing.
       "c'" <-{ty.(ty_size)} !"x";;
       delete [ #1; "c"] ;; delete [ #ty.(ty_size); "x"] ;; return: ["r"].
 
-  Lemma cell_replace_type ty `{!TyWf ty} :
+  Lemma cell_replace_type ty :
     typed_val (cell_replace ty) (fn(∀ α, ∅; &shr{α}(cell ty), ty) → ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -237,7 +237,7 @@ Section typing.
       letalloc: "r" <- "x'" in
       delete [ #1; "x"];; return: ["r"].
 
-  Lemma fake_shared_cell_type ty `{!TyWf ty} :
+  Lemma fake_shared_cell_type ty :
     typed_val fake_shared_cell (fn(∀ α, ∅; &uniq{α} ty) → &shr{α}(cell ty)).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".

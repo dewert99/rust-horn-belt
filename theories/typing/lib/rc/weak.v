@@ -11,7 +11,7 @@ Section weak.
   Context `{!typeG Σ, !rcG Σ}.
 
   Program Definition weak (ty : type) :=
-    {| ty_size := 1;
+    {| ty_size := 1; ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own tid vl :=
          match vl return _ with
          | [ #(LitLoc l) ] => ∃ γ ν, rc_persist tid ν γ l ty ∗ own γ weak_tok
@@ -24,7 +24,7 @@ Section weak.
     |}%I.
   Next Obligation. by iIntros (ty tid [|[[]|][]]) "H". Qed.
   Next Obligation.
-    iIntros (ty E κ l tid q ?) "#LFT Hb Htok".
+    iIntros (ty E κ l tid q ?) "#LFT #? Hb Htok".
     iMod (bor_exists with "LFT Hb") as (vl) "Hb"; first done.
     iMod (bor_sep with "LFT Hb") as "[H↦ Hb]"; first done.
     (* Ideally, we'd change ty_shr to say "l ↦{q} #l" in the fractured borrow,
@@ -64,24 +64,48 @@ Section weak.
     iExists _, _. iFrame. by iApply na_bor_shorten.
   Qed.
 
-  Global Instance weak_wf ty `{!TyWf ty} : TyWf (weak ty) :=
-    { ty_lfts := ty.(ty_lfts); ty_wf_E := ty.(ty_wf_E) }.
-
   Global Instance weak_type_contractive : TypeContractive weak.
-  Proof.
-    constructor;
-      solve_proper_core ltac:(fun _ => exact: type_dist2_S || exact: type_dist2_dist ||
-                                       f_type_equiv || f_contractive || f_equiv).
+    split.
+    - apply (type_lft_morphism_add _ static [] [])=>?.
+      + rewrite left_id. iApply lft_equiv_refl.
+      + by rewrite /elctx_interp /= left_id right_id.
+    - done.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs tid vl. destruct vl as [|[[|l|]|] [|]]=>//=.
+      rewrite /rc_persist /type_incl Hsz.
+      assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      assert (∀ α l, ty1.(ty_shr) (α ⊓ ty_lft ty1) tid l ≡{n}≡
+                     ty2.(ty_shr) (α ⊓ ty_lft ty2) tid l) as Hs'.
+      { intros. rewrite Hs. apply equiv_dist.
+        by iSplit; iApply ty_shr_mono; iDestruct Hl' as "[??]". }
+      simpl. repeat (apply Ho || apply dist_S, Hs || apply Hs' ||
+                     apply equiv_dist, lft_incl_equiv_proper_l, Hl ||
+                     f_contractive || f_equiv).
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. rewrite /= /weak /rc_persist /type_incl Hsz.
+      assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      assert (∀ l α, dist_later n (ty1.(ty_shr) (α ⊓ ty_lft ty1) tid (l +ₗ 2))
+                              (ty2.(ty_shr) (α ⊓ ty_lft ty2) tid (l +ₗ 2))) as Hs'.
+      { intros. rewrite Hs. apply dist_dist_later, equiv_dist.
+        by iSplit; iApply ty_shr_mono; iDestruct Hl' as "[??]". }
+      simpl. repeat (apply Ho || apply dist_S, Hs || apply Hs' ||
+                     apply equiv_dist, lft_incl_equiv_proper_l, Hl ||
+                     f_contractive || f_equiv).
   Qed.
 
   Global Instance weak_ne : NonExpansive weak.
-  Proof. apply type_contractive_ne, _. Qed.
+    unfold weak, rc_persist, type_incl.
+    intros n x y Hxy. constructor; [done|by apply Hxy..| |].
+    - intros. rewrite ![X in X {| ty_own := _ |}]/ty_own /=.
+      solve_proper_core ltac:(fun _ => eapply ty_size_ne || eapply ty_lfts_ne || f_equiv).
+    - solve_proper_core ltac:(fun _ => eapply ty_size_ne || eapply ty_lfts_ne || f_equiv).
+  Qed.
 
   Lemma weak_subtype ty1 ty2 :
     type_incl ty1 ty2 -∗ type_incl (weak ty1) (weak ty2).
   Proof.
-    iIntros "#Hincl". iPoseProof "Hincl" as "(Hsz & #Hoincl & #Hsincl)".
-    iSplit; first done. iSplit; iModIntro.
+    iIntros "#Hincl". iPoseProof "Hincl" as "(Hsz & #Hl & #Hoincl & #Hsincl)".
+    iSplit; [done|]. iSplit; [done|]. iSplit; iModIntro.
     - iIntros "* Hvl". destruct vl as [|[[|vl|]|] [|]]; try done.
       iDestruct "Hvl" as (γ ν) "(#Hpersist & Htok)".
       iExists _, _. iFrame "Htok". by iApply rc_persist_type_incl.
@@ -122,7 +146,7 @@ Section code.
     cont: "k" [] :=
       delete [ #1; "w" ];; return: ["r"].
 
-  Lemma rc_upgrade_type ty `{!TyWf ty} :
+  Lemma rc_upgrade_type ty :
     typed_val rc_upgrade (fn(∀ α, ∅; &shr{α}(weak ty)) → option (rc ty)).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -230,7 +254,7 @@ Section code.
       "r" <- "rc''";;
       delete [ #1; "rc" ];; return: ["r"].
 
-  Lemma rc_downgrade_type ty `{!TyWf ty} :
+  Lemma rc_downgrade_type ty :
     typed_val rc_downgrade (fn(∀ α, ∅; &shr{α}(rc ty)) → weak ty).
   Proof.
     (* TODO : this is almost identical to rc_clone *)
@@ -293,7 +317,7 @@ Section code.
       "r" <- "w''";;
       delete [ #1; "w" ];; return: ["r"].
 
-  Lemma weak_clone_type ty `{!TyWf ty} :
+  Lemma weak_clone_type ty :
     typed_val weak_clone (fn(∀ α, ∅; &shr{α}(weak ty)) → weak ty).
   Proof.
     (* TODO : this is almost identical to rc_clone *)
@@ -370,7 +394,7 @@ Section code.
       let: "r" := new [ #0] in
       delete [ #1; "w"];; return: ["r"].
 
-  Lemma weak_drop_type ty `{!TyWf ty} :
+  Lemma weak_drop_type ty :
     typed_val (weak_drop ty) (fn(∅; weak ty) → unit).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -445,7 +469,7 @@ Section code.
       "w" <- "rcbox";;
       return: ["w"].
 
-  Lemma weak_new_type ty `{!TyWf ty} :
+  Lemma weak_new_type ty :
     typed_val (weak_new ty) (fn(∅) → weak ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".

@@ -18,9 +18,21 @@ End lifetime.
 
 Notation lft_intersect_list l := (foldr (⊓) static l).
 
+Lemma lft_intersect_list_app l1 l2 :
+  lft_intersect_list (l1 ++ l2) = lft_intersect_list l1 ⊓ lft_intersect_list l2.
+Proof.
+  induction l1 as [|? l1 IH].
+  - by rewrite /= left_id.
+  - by rewrite /= IH assoc.
+Qed.
+
 Instance lft_inhabited : Inhabited lft := populate static.
 
 Canonical lftO := leibnizO lft.
+
+Definition lft_equiv `{!invG Σ, !lftG Σ} (κ κ':lft) : iProp Σ :=
+  κ ⊑ κ' ∗ κ' ⊑ κ.
+Infix "≡ₗ" := lft_equiv (at level 70) : bi_scope.
 
 Section derived.
 Context `{!invG Σ, !lftG Σ}.
@@ -223,4 +235,39 @@ Proof.
     iDestruct (lft_tok_dead with "Hκ H†") as "[]".
 Qed.
 
+Lemma lft_equiv_refl κ : ⊢ κ ≡ₗ κ.
+Proof. iSplit; iApply lft_incl_refl. Qed.
+Lemma lft_equiv_sym κ κ' : κ ≡ₗ κ' -∗ κ' ≡ₗ κ.
+Proof. iIntros "[??]". by iSplit. Qed.
+Lemma lft_equiv_trans κ κ' κ'' : κ ≡ₗ κ' -∗ κ' ≡ₗ κ'' -∗ κ ≡ₗ κ''.
+Proof. iIntros "#[??] #[??]". by iSplit; iApply lft_incl_trans. Qed.
+
+Lemma lft_intersect_equiv_proper κ1 κ2 κ3 κ4 :
+  κ1 ≡ₗ κ3 -∗ κ2 ≡ₗ κ4 -∗ κ1 ⊓ κ2 ≡ₗ κ3 ⊓ κ4.
+Proof. iIntros "#[??] #[??]". iSplit; by iApply lft_intersect_mono. Qed.
+
+Lemma lft_intersect_equiv_idemp κ : ⊢ κ ⊓ κ ≡ₗ κ.
+Proof.
+  iSplit; [iApply lft_intersect_incl_r|iApply lft_incl_glb; iApply lft_incl_refl].
+Qed.
+
+Lemma lft_incl_equiv_proper κ1 κ2 κ3 κ4 :
+  (⊢ κ1 ≡ₗ κ3) → (⊢ κ2 ≡ₗ κ4) → κ1 ⊑ κ2 ⊣⊢ κ3 ⊑ κ4.
+Proof.
+  intros H1 H2. iDestruct H1 as "[??]". iDestruct H2 as "[??]".
+  by iSplit; iIntros "#H";
+  (iApply lft_incl_trans; [|iApply lft_incl_trans]; [|iApply "H"|]).
+Qed.
+
+Lemma lft_incl_equiv_proper_l κ1 κ2 κ3 :
+  (⊢ κ1 ≡ₗ κ3) → κ1 ⊑ κ2 ⊣⊢ κ3 ⊑ κ2.
+Proof.
+  intros. apply lft_incl_equiv_proper; [done|]. iApply lft_equiv_refl.
+Qed.
+
+Lemma lft_incl_equiv_proper_r κ1 κ2 κ3 :
+  (⊢ κ2 ≡ₗ κ3) → κ1 ⊑ κ2 ⊣⊢ κ1 ⊑ κ3.
+Proof.
+  intros. apply lft_incl_equiv_proper; [|done]. iApply lft_equiv_refl.
+Qed.
 End derived.

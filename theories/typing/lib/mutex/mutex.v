@@ -25,13 +25,13 @@ Section mutex.
   *)
 
   Program Definition mutex (ty : type) :=
-    {| ty_size := 1 + ty.(ty_size);
+    {| ty_size := 1 + ty.(ty_size); ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own tid vl :=
          match vl return _ with
          | #(LitInt z) :: vl' =>
            ⌜∃ b, z = Z_of_bool b⌝ ∗ ty.(ty_own) tid vl'
          | _ => False end;
-       ty_shr κ tid l := ∃ κ', κ ⊑ κ' ∗
+       ty_shr κ tid l := ∃ κ', κ ⊑ κ' ∗ κ' ⊑ ty.(ty_lft) ∗
            &at{κ, mutexN} (lock_proto l (&{κ'}((l +ₗ 1) ↦∗: ty.(ty_own) tid)))
     |}%I.
   Next Obligation.
@@ -39,7 +39,7 @@ Section mutex.
     iIntros "[_ %] !% /=". congruence.
   Qed.
   Next Obligation.
-    iIntros (ty E κ l tid q ?) "#LFT Hbor Htok".
+    iIntros (ty E κ l tid q ?) "#LFT #? Hbor Htok".
     iMod (bor_acc_cons with "LFT Hbor Htok") as "[H Hclose]"; first done.
     iDestruct "H" as ([|[[| |n]|]vl]) "[H↦ H]"; try iDestruct "H" as ">[]".
     rewrite heap_mapsto_vec_cons. iDestruct "H↦" as ">[Hl H↦]".
@@ -62,45 +62,50 @@ Section mutex.
     { clear b. iIntros "!> Hproto !>".
       iDestruct (lock_proto_destroy with "Hproto") as (b) "[Hl _]".
       eauto 10 with iFrame. }
-    iFrame "Htok". iExists κ.
+    iFrame "Htok". iExists κ. iFrame "#".
     iMod (bor_share with "Hl") as "$"; [solve_ndisj..|].
     iApply lft_incl_refl.
   Qed.
   Next Obligation.
     iIntros (ty κ κ' tid l) "#Hincl H".
-    iDestruct "H" as (κ'') "(#Hlft & #Hlck)".
-    iExists _. by iSplit; [iApply lft_incl_trans|iApply at_bor_shorten].
+    iDestruct "H" as (κ'') "(#Hlft & #? & #Hlck)".
+    iExists _. iSplit; [|iSplit].
+    - by iApply lft_incl_trans.
+    - done.
+    - by iApply at_bor_shorten.
   Qed.
-
-  Global Instance mutex_wf ty `{!TyWf ty} : TyWf (mutex ty) :=
-    { ty_lfts := ty.(ty_lfts); ty_wf_E := ty.(ty_wf_E) }.
 
   Global Instance mutex_type_ne : TypeNonExpansive mutex.
   Proof.
-    constructor;
-      solve_proper_core ltac:(fun _ => exact: type_dist2_S ||
-                                              f_type_equiv || f_contractive || f_equiv).
+    split.
+    - apply (type_lft_morphism_add _ static [] []) => ?.
+      + rewrite left_id. iApply lft_equiv_refl.
+      + by rewrite /elctx_interp /= left_id right_id.
+    - by move=>/= ?? ->.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs tid [|[[| |]|]vl]=>//=. by rewrite Ho.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. simpl.
+      repeat (apply dist_S, Ho || apply equiv_dist, lft_incl_equiv_proper_r, Hl ||
+              f_contractive || f_equiv).
   Qed.
 
   Global Instance mutex_ne : NonExpansive mutex.
-  Proof.
-    constructor; solve_proper_core ltac:(fun _ => (eapply ty_size_ne; try reflexivity) || f_equiv).
-  Qed.
+  Proof. solve_ne_type. Qed.
 
   Global Instance mutex_mono E L : Proper (eqtype E L ==> subtype E L) mutex.
   Proof.
     move=>ty1 ty2 /eqtype_unfold EQ. iIntros (?) "HL".
     iDestruct (EQ with "HL") as "#EQ". iIntros "!# #HE". clear EQ.
-    iDestruct ("EQ" with "HE") as "(% & #Howni & _) {EQ}".
-    iSplit; last iSplit.
-    - simpl. iPureIntro. f_equiv. done.
-    - iIntros "!# * Hvl". destruct vl as [|[[| |n]|]vl]; try done.
-      simpl. iDestruct "Hvl" as "[$ Hvl]". by iApply "Howni".
-    - iIntros "!# * Hshr". iDestruct "Hshr" as (κ') "[Hincl Hshr]".
-      iExists _. iFrame "Hincl". iApply (at_bor_iff with "[] Hshr"). iNext.
-      iApply lock_proto_iff_proper. iApply bor_iff_proper. iNext.
-      iApply heap_mapsto_pred_iff_proper.
-      iModIntro; iIntros; iSplit; iIntros; by iApply "Howni".
+    iDestruct ("EQ" with "HE") as "(% & [#? #?] & #Howni & _) {EQ}".
+    iSplit; [by simpl; auto|iSplit; [done|iSplit]].
+    - iIntros "!# * Hvl". destruct vl as [|[[| |n]|]vl]=>//=.
+      iDestruct "Hvl" as "[$ Hvl]". by iApply "Howni".
+    - iIntros "!# * Hshr". iDestruct "Hshr" as (κ') "(#Hincl & #Hincl' & #Hshr)".
+      iExists _. iFrame "Hincl". iSplit.
+      + by iApply lft_incl_trans.
+      + iApply (at_bor_iff with "[] Hshr"). iNext.
+        iApply lock_proto_iff_proper. iApply bor_iff_proper. iNext.
+        iApply heap_mapsto_pred_iff_proper.
+        iModIntro; iIntros; iSplit; iIntros; by iApply "Howni".
   Qed.
 
   Global Instance mutex_proper E L :
@@ -117,8 +122,8 @@ Section mutex.
   Global Instance mutex_sync ty :
     Send ty → Sync (mutex ty).
   Proof.
-    iIntros (???? l) "Hshr". iDestruct "Hshr" as (κ') "[Hincl Hshr]".
-    iExists _. iFrame "Hincl". iApply (at_bor_iff with "[] Hshr"). iNext.
+    iIntros (???? l) "Hshr". iDestruct "Hshr" as (κ') "(#? & #? & Hshr)".
+    iExists _. iFrame "#". iApply (at_bor_iff with "[] Hshr"). iNext.
     iApply lock_proto_iff_proper. iApply bor_iff_proper. iNext.
     iApply heap_mapsto_pred_iff_proper.
     iModIntro; iIntros; iSplit; iIntros; by iApply send_change_tid.
@@ -135,7 +140,7 @@ Section code.
       mklock_unlocked ["m" +ₗ #0];;
       delete [ #ty.(ty_size); "x"];; return: ["m"].
 
-  Lemma mutex_new_type ty `{!TyWf ty} :
+  Lemma mutex_new_type ty :
     typed_val (mutex_new ty) (fn(∅; ty) → mutex ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -174,7 +179,7 @@ Section code.
       "x" <-{ty.(ty_size)} !("m" +ₗ #1);;
       delete [ #(mutex ty).(ty_size); "m"];; return: ["x"].
 
-  Lemma mutex_into_inner_type ty `{!TyWf ty} :
+  Lemma mutex_into_inner_type ty :
     typed_val (mutex_into_inner ty) (fn(∅; mutex ty) → ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -213,7 +218,7 @@ Section code.
       "m" <- ("m'" +ₗ #1);;
       return: ["m"].
 
-  Lemma mutex_get_mut_type ty `{!TyWf ty} :
+  Lemma mutex_get_mut_type ty :
     typed_val mutex_get_mut (fn(∀ α, ∅; &uniq{α}(mutex ty)) → &uniq{α} ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -222,7 +227,8 @@ Section code.
     (* Go to Iris *)
     iIntros (tid) "#LFT #HE Hna HL Hk [Hm [Hm' _]]".
     rewrite !tctx_hasty_val [[m]]lock.
-    destruct m' as [[|lm'|]|]; try done. simpl.
+    iDestruct "Hm'" as "[#? Hm']".
+    destruct m' as [[|lm'|]|]=>//=.
     iMod (lctx_lft_alive_tok α with "HE HL") as (qα) "(Hα & HL & Hclose1)";
       [solve_typing..|].
     iMod (bor_acc_cons with "LFT Hm' Hα") as "[Hm' Hclose2]"; first done.
@@ -239,7 +245,7 @@ Section code.
     iApply (type_type _ _ _ [ m ◁ own_ptr _ _; #(lm' +ₗ 1) ◁ &uniq{α} ty]
         with "[] LFT HE Hna HL Hk"); last first.
     { rewrite tctx_interp_cons tctx_interp_singleton tctx_hasty_val tctx_hasty_val' //.
-      unlock. iFrame. }
+      unlock. by iFrame. }
     iApply type_assign; [solve_typing..|].
     iApply type_jump; solve_typing.
   Qed.

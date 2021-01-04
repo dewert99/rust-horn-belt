@@ -7,7 +7,9 @@ Section shr_bor.
   Context `{!typeG Σ}.
 
   Program Definition shr_bor (κ : lft) (ty : type) : type :=
-    {| st_own tid vl :=
+    {| st_lfts := κ :: ty.(ty_lfts);
+       st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+       st_own tid vl :=
          match vl return _ with
          | [ #(LitLoc l) ] => ty.(ty_shr) κ tid l
          | _ => False
@@ -15,15 +17,13 @@ Section shr_bor.
   Next Obligation. by iIntros (κ ty tid [|[[]|][]]) "H". Qed.
   Next Obligation. intros κ ty tid [|[[]|][]]; apply _. Qed.
 
-  Global Instance shr_bor_wf κ ty `{!TyWf ty} : TyWf (shr_bor κ ty) :=
-    { ty_lfts := [κ]; ty_wf_E := ty.(ty_wf_E) ++ ty_outlives_E ty κ }.
-
   Lemma shr_type_incl κ1 κ2 ty1 ty2 :
     κ2 ⊑ κ1 -∗ type_incl ty1 ty2 -∗ type_incl (shr_bor κ1 ty1) (shr_bor κ2 ty2).
   Proof.
-    iIntros "#Hκ #[_ [_ Hty]]". iApply type_incl_simple_type. simpl.
-    iIntros "!#" (tid [|[[]|][]]) "H"; try done. iApply "Hty".
-    iApply (ty1.(ty_shr_mono) with "Hκ"). done.
+    iIntros "#Hκ [_ [#Hlft [_ #Hty]]]". iApply type_incl_simple_type=>/=.
+    - by iApply lft_intersect_mono.
+    - iIntros "!#" (tid [|[[]|][]]) "H"=>//=. iApply "Hty".
+      iApply (ty1.(ty_shr_mono) with "Hκ"). done.
   Qed.
 
   Global Instance shr_mono E L :
@@ -45,12 +45,18 @@ Section shr_bor.
 
   Global Instance shr_type_contractive κ : TypeContractive (shr_bor κ).
   Proof.
-    intros n ???. apply: ty_of_st_type_ne. destruct n; first done.
-    solve_type_proper.
+    split.
+    - apply (type_lft_morphism_add _ κ [κ] []) => ?.
+      + iApply lft_equiv_refl.
+      + by rewrite /= elctx_interp_app elctx_interp_ty_outlives_E
+                   /elctx_interp /= left_id right_id.
+    - done.
+    - move=> ??? Hsz Hl HE Ho ?? [|[[|l|]|] []] //=.
+    - move=> ??????? Hs ??? /=. repeat (apply Hs || f_contractive || f_equiv).
   Qed.
 
   Global Instance shr_ne κ : NonExpansive (shr_bor κ).
-  Proof. apply type_contractive_ne, _. Qed.
+  Proof. solve_ne_type. Qed.
 
   Global Instance shr_send κ ty :
     Sync ty → Send (shr_bor κ ty).

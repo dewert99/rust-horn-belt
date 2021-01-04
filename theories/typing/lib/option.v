@@ -7,6 +7,11 @@ Section option.
 
   Definition option (τ : type) := Σ[unit; τ]%T.
 
+  (* We don't declare this as an instance, since Coq is able to infer
+     it automatically. *)
+  Lemma option_type_ne : TypeNonExpansive option.
+  Proof. apply _. Qed.
+
   (* Variant indices. *)
   Definition none := 0%nat.
   Definition some := 1%nat.
@@ -22,7 +27,7 @@ Section option.
     cont: "k" [] :=
       delete [ #1; "o"];; return: ["r"].
 
-  Lemma option_as_mut_type τ `{!TyWf τ} :
+  Lemma option_as_mut_type τ :
     typed_val
       option_as_mut (fn(∀ α, ∅; &uniq{α} (option τ)) → option (&uniq{α}τ)).
   Proof.
@@ -53,7 +58,7 @@ Section option.
         delete [ #(S τ.(ty_size)); "o"];; delete [ #τ.(ty_size); "def"];;
         return: ["r"]].
 
-  Lemma option_unwrap_or_type τ `{!TyWf τ} :
+  Lemma option_unwrap_or_type τ :
     typed_val (option_unwrap_or τ) (fn(∅; option τ, τ) → τ).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -78,7 +83,7 @@ Section option.
         delete [ #(S τ.(ty_size)); "o"];;
         return: ["r"]].
 
-  Lemma option_unwrap_type τ `{!TyWf τ} :
+  Lemma option_unwrap_type τ :
     typed_val (option_unwrap τ) (fn(∅; option τ) → τ).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".

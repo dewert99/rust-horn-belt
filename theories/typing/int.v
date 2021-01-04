@@ -7,15 +7,14 @@ Section int.
   Context `{!typeG Σ}.
 
   Program Definition int : type :=
-    {| st_own tid vl :=
+    {| st_lfts := []; st_E := [];
+       st_own tid vl :=
          match vl return _ with
          | [ #(LitInt z)] => True
          | _ => False
          end%I |}.
   Next Obligation. intros ? [|[[]|] []]; auto. Qed.
   Next Obligation. intros ? [|[[]|] []]; apply _. Qed.
-
-  Global Instance int_wf : TyWf int := { ty_lfts := []; ty_wf_E := [] }.
 
   Global Instance int_send : Send int.
   Proof. done. Qed.

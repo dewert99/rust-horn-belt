@@ -46,6 +46,7 @@ Section own.
 
   Program Definition own_ptr (n : nat) (ty : type) :=
     {| ty_size := 1;
+       ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own tid vl :=
          match vl return _ with
          | [ #(LitLoc l) ] =>
@@ -64,7 +65,7 @@ Section own.
                             ty.(ty_shr) κ tid l' ∗ q.[κ]))%I |}.
   Next Obligation. by iIntros (q ty tid [|[[]|][]]) "H". Qed.
   Next Obligation.
-    move=>n ty N κ l tid ?? /=. iIntros "#LFT Hshr Htok".
+    move=>n ty N κ l tid ?? /=. iIntros "#LFT #Hout Hshr Htok".
     iMod (bor_exists with "LFT Hshr") as (vl) "Hb"; first solve_ndisj.
     iMod (bor_sep with "LFT Hb") as "[Hb1 Hb2]"; first solve_ndisj.
     destruct vl as [|[[|l'|]|][]];
@@ -86,13 +87,11 @@ Section own.
     by iApply (ty.(ty_shr_mono) with "Hκ").
   Qed.
 
-  Global Instance own_ptr_wf n ty `{!TyWf ty} : TyWf (own_ptr n ty) :=
-    { ty_lfts := ty.(ty_lfts); ty_wf_E := ty.(ty_wf_E) }.
-
   Lemma own_type_incl n m ty1 ty2 :
-    ▷ ⌜n = m⌝ -∗ ▷ type_incl ty1 ty2 -∗ type_incl (own_ptr n ty1) (own_ptr m ty2).
+    ▷ ⌜n = m⌝ -∗ type_incl ty1 ty2 -∗ type_incl (own_ptr n ty1) (own_ptr m ty2).
   Proof.
-    iIntros "#Heq (#Hsz & #Ho & #Hs)". iSplit; first done. iSplit; iModIntro.
+    iIntros "#Heq #(Hsz & Hout & Ho & Hs)".
+    iSplit; first done. iSplit; [done|iSplit; iModIntro].
     - iIntros (?[|[[| |]|][]]) "H"; try done. simpl.
       iDestruct "H" as "[Hmt H†]". iNext. iDestruct ("Hsz") as %<-.
       iDestruct "Heq" as %->. iFrame. iApply (heap_mapsto_pred_wand with "Hmt").
@@ -122,15 +121,24 @@ Section own.
   Proof. intros -> *. by apply own_proper. Qed.
 
   Global Instance own_type_contractive n : TypeContractive (own_ptr n).
-  Proof. solve_type_proper. Qed.
+  Proof.
+    split.
+    - apply (type_lft_morphism_add _ static [] []) => ?.
+      + rewrite left_id. iApply lft_equiv_refl.
+      + by rewrite /= /elctx_interp /= left_id right_id.
+    - done.
+    - move=> ??? Hsz ?? Ho ?? [|[[|l|]|] []] //=.
+      rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
+    - move=> ??????? Hs ??? /=. repeat (apply Hs || f_contractive || f_equiv).
+  Qed.
 
   Global Instance own_ne n : NonExpansive (own_ptr n).
-  Proof. apply type_contractive_ne, _. Qed.
+  Proof. solve_ne_type. Qed.
 
   Global Instance own_send n ty :
     Send ty → Send (own_ptr n ty).
   Proof.
-    iIntros (Hsend tid1 tid2 [|[[| |]|][]]) "H"; try done.
+    iIntros (Hsend tid1 tid2 [|[[| |]|][]]) "H //=".
     iDestruct "H" as "[Hm $]". iNext. iApply (heap_mapsto_pred_wand with "Hm").
     iIntros (vl) "?". by iApply Hsend.
   Qed.
@@ -151,7 +159,7 @@ Section box.
   Definition box ty := own_ptr ty.(ty_size) ty.
 
   Lemma box_type_incl ty1 ty2 :
-    ▷ type_incl ty1 ty2 -∗ type_incl (box ty1) (box ty2).
+    type_incl ty1 ty2 -∗ type_incl (box ty1) (box ty2).
   Proof.
     iIntros "#Hincl". iApply own_type_incl; last done.
     iDestruct "Hincl" as "(? & _ & _)". done.
@@ -176,10 +184,19 @@ Section box.
   Proof. intros. by apply box_proper. Qed.
 
   Global Instance box_type_contractive : TypeContractive box.
-  Proof. solve_type_proper. Qed.
+  Proof.
+    split.
+    - apply (type_lft_morphism_add _ static [] []) => ?.
+      + rewrite left_id. iApply lft_equiv_refl.
+      + by rewrite /= /elctx_interp /= left_id right_id.
+    - done.
+    - move=> ??? Hsz ?? Ho ?? [|[[|l|]|] []] //=.
+      rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
+    - move=> ??????? Hs ??? /=. repeat (apply Hs || f_contractive || f_equiv).
+  Qed.
 
   Global Instance box_ne : NonExpansive box.
-  Proof. apply type_contractive_ne, _. Qed.
+  Proof. solve_ne_type. Qed.
 End box.
 
 Section util.
@@ -191,10 +208,10 @@ Section util.
          ⌜v = #l⌝ ∗ ▷ l ↦∗ vl ∗ ▷ ty.(ty_own) tid vl ∗ ▷ freeable_sz n ty.(ty_size) l.
   Proof.
     iSplit.
-    - iIntros "Hown". destruct v as [[|l|]|]; try done.
+    - iIntros "Hown". destruct v as [[|l|]|]=>//=.
       iExists l. iDestruct "Hown" as "[Hown $]". rewrite heap_mapsto_ty_own.
       iDestruct "Hown" as (vl) "[??]". eauto with iFrame.
-    - iIntros "Hown". iDestruct "Hown" as (l vl) "(% & ? & ? & ?)". subst v.
+    - iIntros "Hown". iDestruct "Hown" as (l vl) "(-> & ? & ? & ?)".
       iFrame. iExists _. iFrame.
   Qed.
 
@@ -230,7 +247,7 @@ Section typing.
     Copy ty → ⊢ typed_read E L (own_ptr n ty) ty (own_ptr n ty).
   Proof.
     rewrite typed_read_eq. iIntros (Hsz) "!#".
-    iIntros ([[]|] tid F qL ?) "_ _ $ $ Hown"; try done.
+    iIntros ([[]|] tid F qL ?) "_ _ $ $ Hown //=".
     iDestruct "Hown" as "[H↦ H†]". iDestruct "H↦" as (vl) "[>H↦ #Hown]".
     iExists l, _, _. iFrame "∗#". iSplitR; first done. iIntros "!> Hl !>".
     iExists _. auto.
@@ -240,11 +257,9 @@ Section typing.
     ⊢ typed_read E L (own_ptr n ty) ty (own_ptr n $ uninit ty.(ty_size)).
   Proof.
     rewrite typed_read_eq. iModIntro.
-    iIntros ([[]|] tid F qL ?) "_ _ $ $ Hown"; try done.
+    iIntros ([[]|] tid F qL ?) "_ _ $ $ Hown //=".
     iDestruct "Hown" as "[H↦ H†]". iDestruct "H↦" as (vl) "[>H↦ Hown]".
-    iDestruct (ty_size_eq with "Hown") as "#>%".
-    iExists l, vl, _. iFrame "∗#". iSplitR; first done. iIntros "!> Hl !> !>".
-    iExists _. iFrame. done.
+    iDestruct (ty_size_eq with "Hown") as "#>%". auto 20 with iFrame.
   Qed.
 
   Lemma type_new_instr {E L} (n : Z) :
@@ -252,11 +267,10 @@ Section typing.
     ⊢ let n' := Z.to_nat n in
       typed_instruction_ty E L [] (new [ #n ]%E) (own_ptr n' (uninit n')).
   Proof.
-    iIntros (? tid) "#LFT #HE $ $ _".
-    iApply wp_new; try done. iModIntro.
-    iIntros (l) "(H† & Hlft)". rewrite tctx_interp_singleton tctx_hasty_val.
-    iNext. rewrite freeable_sz_full Z2Nat.id //. iFrame.
-    iExists (repeat #☠ (Z.to_nat n)). iFrame. by rewrite /= repeat_length.
+    iIntros (? tid) "#LFT #HE $ $ _". iApply wp_new=>//=.
+    iIntros (l) "!> (H† & Hlft)".
+    rewrite tctx_interp_singleton (tctx_hasty_val _ (#l)) /= freeable_sz_full Z2Nat.id //.
+    iFrame. iExists (repeat #☠ (Z.to_nat n)). rewrite repeat_length. auto.
   Qed.
 
   Lemma type_new {E L C T} (n' : nat) x (n : Z) e :
@@ -286,7 +300,7 @@ Section typing.
     ⊢ typed_instruction E L [p ◁ own_ptr ty.(ty_size) ty] (delete [ #n; p])%E (λ _, []).
   Proof.
     iIntros (<- tid) "#LFT #HE $ $ Hp". rewrite tctx_interp_singleton.
-    wp_bind p. iApply (wp_hasty with "Hp"). iIntros ([[]|]) "_ Hown"; try done.
+    wp_bind p. iApply (wp_hasty with "Hp"). iIntros ([[]|]) "_ Hown //=".
     iDestruct "Hown" as "[H↦: >H†]". iDestruct "H↦:" as (vl) "[>H↦ Hown]".
     iDestruct (ty_size_eq with "Hown") as "#>EQ".
     iDestruct "EQ" as %<-. iApply (wp_delete with "[-]"); auto.

@@ -7,7 +7,7 @@ Section uninit.
   Context `{!typeG Σ}.
 
   Program Definition uninit_1 : type :=
-    {| st_own tid vl := ⌜length vl = 1%nat⌝%I |}.
+    {| st_lfts := []; st_E := []; st_own tid vl := ⌜length vl = 1%nat⌝%I |}.
   Next Obligation. done. Qed.
 
   Global Instance uninit_1_send : Send uninit_1.
@@ -25,30 +25,28 @@ Section uninit.
     iSplit.
     - iIntros "Hvl".
       iInduction n as [|n] "IH" forall (vl); simpl.
-      + iDestruct "Hvl" as "%". subst vl. done.
+      + by iDestruct "Hvl" as "->".
       + iDestruct "Hvl" as (vl1 vl2) "(% & % & Hprod)".
         destruct vl1 as [|v [|]]; try done. subst vl. simpl.
         iDestruct ("IH" with "Hprod") as "%". iPureIntro. by f_equal.
-    - iIntros "%". subst n. iInduction vl as [|v vl] "IH"; first done.
-      simpl. iExists [v], vl. auto.
+    - iIntros "<-". iInduction vl as [|v vl] "IH"=>//=. iExists [v], vl. auto.
   Qed.
 
   (* We redefine uninit as an alias of uninit0, so that ty_size and ty_own
      compute directly.  We re-use the sharing from the product as that saves a whole
      lot of work. *)
   Program Definition uninit (n : nat) : type :=
-    {| ty_size := n; ty_own tid vl := ⌜length vl = n⌝%I;
-       ty_shr := (uninit0 n).(ty_shr) |}.
+    {| ty_size := n; ty_lfts := []; ty_E := [];
+       ty_own tid vl := ⌜length vl = n⌝%I; ty_shr := (uninit0 n).(ty_shr) |}.
   Next Obligation. iIntros (???) "%". done. Qed.
   Next Obligation.
-    iIntros (???????) "LFT Hvl". iApply (ty_share (uninit0 n) with "LFT"); first done.
+    iIntros (???????) "LFT _ Hvl".
+    iApply (ty_share (uninit0 n) with "LFT []"); first done.
+    { iInduction n as [|n] "IH"; [|done]. iApply lft_incl_static. }
     iApply (bor_iff with "[] Hvl"). iIntros "!> !#". setoid_rewrite uninit0_own.
     iSplit; iIntros; done.
   Qed.
   Next Obligation. intros. by apply ty_shr_mono. Qed.
-
-  Global Instance uninit_wf n : TyWf (uninit n) :=
-    { ty_lfts := []; ty_wf_E := [] }.
 
   Global Instance uninit_copy n : Copy (uninit n).
   Proof.
@@ -72,9 +70,12 @@ Section uninit.
   Lemma uninit_uninit0_eqtype E L n :
     eqtype E L (uninit0 n) (uninit n).
   Proof.
-    apply equiv_eqtype; constructor=>//=.
-    - apply uninit0_sz.
-    - iIntros (??). rewrite uninit0_own. done.
+    apply eqtype_unfold. iIntros (qL) "_ !# _".
+    iSplit; [|iSplit; [|iSplit; iModIntro]].
+    - auto using uninit0_sz.
+    - induction n as [|n IH]=>//. iApply lft_equiv_refl.
+    - iIntros (??). by rewrite uninit0_own.
+    - iIntros (???). by iApply (bi.iff_refl True%I).
   Qed.
 
   Lemma uninit_product_subtype_cons_r {E L} (n : nat) ty tyl :

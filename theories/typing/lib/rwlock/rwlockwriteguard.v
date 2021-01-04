@@ -18,11 +18,13 @@ Section rwlockwriteguard.
 
   Program Definition rwlockwriteguard (α : lft) (ty : type) :=
     {| ty_size := 1;
+       ty_lfts := α :: ty.(ty_lfts); ty_E := ty.(ty_E) ++ ty_outlives_E ty α;
        ty_own tid vl :=
          match vl return _ with
          | [ #(LitLoc l) ] =>
            ∃ γ β tid_shr, &{β}((l +ₗ 1) ↦∗: ty.(ty_own) tid) ∗
-             α ⊑ β ∗ &at{β,rwlockN}(rwlock_inv tid tid_shr l γ β ty) ∗
+             α ⊑ β ∗ β ⊑ ty.(ty_lft) ∗
+             &at{β,rwlockN}(rwlock_inv tid tid_shr l γ β ty) ∗
              own γ (◯ writing_st)
          | _ => False
          end;
@@ -33,7 +35,7 @@ Section rwlockwriteguard.
                ty.(ty_shr) (α ⊓ κ) tid (l' +ₗ 1) ∗ q.[α ⊓ κ] |}%I.
   Next Obligation. by iIntros (???[|[[]|][]]) "?". Qed.
   Next Obligation.
-    iIntros (α ty E κ l tid q HE) "#LFT Hb Htok".
+    iIntros (α ty E κ l tid q HE) "#LFT #Hl Hb Htok".
     iMod (bor_exists with "LFT Hb") as (vl) "Hb". done.
     iMod (bor_sep with "LFT Hb") as "[H↦ Hb]". done.
     iMod (bor_fracture (λ q, l ↦∗{q} vl)%I with "LFT H↦") as "#H↦". done.
@@ -43,12 +45,13 @@ Section rwlockwriteguard.
     iMod (bor_exists with "LFT Hb") as (β) "Hb". done.
     iMod (bor_exists with "LFT Hb") as (tid_shr) "Hb". done.
     iMod (bor_sep with "LFT Hb") as "[Hb H]". done.
-    iMod (bor_sep with "LFT H") as "[Hαβ _]". done.
-    iMod (bor_persistent with "LFT Hαβ Htok") as "[#Hαβ $]". done.
-    iExists _. iFrame "H↦". iApply delay_sharing_nested; try done.
-    (* FIXME: "iApply lft_intersect_mono" only preserves the later on the last
-       goal, as does "iApply (lft_intersect_mono with ">")". *)
-    iNext. iApply lft_intersect_mono. done. iApply lft_incl_refl.
+    iMod (bor_sep with "LFT H") as "[Hαβ H]". done.
+    iMod (bor_sep with "LFT H") as "[Hβty _]". done.
+    iMod (bor_persistent with "LFT Hαβ Htok") as "[#Hαβ Htok]". done.
+    iMod (bor_persistent with "LFT Hβty Htok") as "[#Hβty $]". done.
+    iExists _. iFrame "H↦". iApply delay_sharing_nested=>//.
+    - iNext. iApply lft_incl_trans; [|done]. iApply lft_intersect_incl_l.
+    - iApply bor_shorten; [|done]. iApply lft_intersect_incl_r.
   Qed.
   Next Obligation.
     iIntros (??????) "#? H". iDestruct "H" as (l') "[#Hf #H]".
@@ -62,17 +65,30 @@ Section rwlockwriteguard.
       iApply ty_shr_mono; try done. iApply lft_intersect_mono. iApply lft_incl_refl. done.
   Qed.
 
-  Global Instance rwlockwriteguard_wf α ty `{!TyWf ty} : TyWf (rwlockwriteguard α ty) :=
-    { ty_lfts := [α]; ty_wf_E := ty.(ty_wf_E) ++ ty_outlives_E ty α }.
-
-  Global Instance rwlockwriteguard_type_contractive α : TypeContractive (rwlockwriteguard α).
+  Global Instance rwlockwriteguard_type_contractive α :
+    TypeContractive (rwlockwriteguard α).
   Proof.
-    constructor;
-      solve_proper_core ltac:(fun _ => exact: type_dist2_S || (eapply rwlock_inv_type_ne; try reflexivity) ||
-                                              f_type_equiv || f_contractive || f_equiv).
+    split.
+    - apply (type_lft_morphism_add _ α [α] []) => ?.
+      + iApply lft_equiv_refl.
+      + by rewrite elctx_interp_app elctx_interp_ty_outlives_E
+                   /elctx_interp /= left_id right_id.
+    - done.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs tid [|[[]|][]]=>//=. unfold rwlock_inv.
+      repeat (apply dist_S, Hs || apply dist_S, Ho || apply Ho ||
+              apply equiv_dist, lft_incl_equiv_proper_r, Hl ||
+              f_contractive || f_equiv).
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. simpl.
+      repeat (apply Hs || f_contractive || f_equiv).
   Qed.
+
   Global Instance rwlockwriteguard_ne α : NonExpansive (rwlockwriteguard α).
-  Proof. apply type_contractive_ne, _. Qed.
+  Proof.
+    unfold rwlockwriteguard, rwlock_inv. intros n ty1 ty2 Hty12.
+    split=>//=; try by rewrite Hty12.
+    - intros tid [|[[]|][]]=>//=. repeat (apply Hty12 || f_equiv).
+    - intros κ tid l. repeat (apply Hty12 || f_equiv).
+  Qed.
 
   Global Instance rwlockwriteguard_mono E L :
     Proper (flip (lctx_lft_incl E L) ==> eqtype E L ==> subtype E L) rwlockwriteguard.
@@ -82,14 +98,16 @@ Section rwlockwriteguard.
     iDestruct (rwlock_inv_proper with "HL") as "#Hty1ty2"; first done.
     iDestruct (rwlock_inv_proper with "HL") as "#Hty2ty1"; first by symmetry.
     iIntros "!# #HE". iDestruct ("Hα" with "HE") as "Hα1α2".
-    iDestruct ("Hty" with "HE") as "(%&#Ho&#Hs)". iSplit; [|iSplit; iModIntro].
-    - done.
+    iDestruct ("Hty" with "HE") as "(%&#[??]&#Ho&#Hs)".
+    iSplit; [done|iSplit; [|iSplit; iModIntro]].
+    - by iApply lft_intersect_mono.
     - iIntros (tid [|[[]|][]]) "H"; try done.
-      iDestruct "H" as (γ β tid_shr) "(Hb & #H⊑ & #Hinv & Hown)".
-      iExists γ, β, tid_shr. iFrame "∗#". iSplit; last iSplit.
+      iDestruct "H" as (γ β tid_shr) "(Hb & #H⊑ & #Hβty & #Hinv & Hown)".
+      iExists γ, β, tid_shr. iFrame "∗#". iSplit; [|iSplit; [|iSplit]].
       + iApply bor_iff; last done.
         iNext; iModIntro; iSplit; iIntros "H"; iDestruct "H" as (vl) "[??]";
         iExists vl; iFrame; by iApply "Ho".
+      + by iApply lft_incl_trans.
       + by iApply lft_incl_trans.
       + iApply at_bor_iff; try done.
         iIntros "!>!#"; iSplit; iIntros "H". by iApply "Hty1ty2". by iApply "Hty2ty1".

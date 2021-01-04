@@ -17,7 +17,7 @@ Section rwlockwriteguard_functions.
       letalloc: "r" <- "r'" in
       delete [ #1; "x"];; return: ["r"].
 
-  Lemma rwlockwriteguard_deref_type ty `{!TyWf ty} :
+  Lemma rwlockwriteguard_deref_type ty :
     typed_val rwlockwriteguard_deref
       (fn(∀ '(α, β), ∅; &shr{α}(rwlockwriteguard β ty)) → &shr{α} ty).
   Proof.
@@ -61,7 +61,7 @@ Section rwlockwriteguard_functions.
       letalloc: "r" <- "r'" in
       delete [ #1; "x"];; return: ["r"].
 
-  Lemma rwlockwriteguard_derefmut_type ty `{!TyWf ty} :
+  Lemma rwlockwriteguard_derefmut_type ty :
     typed_val rwlockwriteguard_derefmut
       (fn(∀ '(α, β), ∅; &uniq{α}(rwlockwriteguard β ty)) → &uniq{α}ty).
   Proof.
@@ -70,7 +70,7 @@ Section rwlockwriteguard_functions.
     iApply type_deref; [solve_typing..|]. iIntros (x').
     iIntros (tid) "#LFT #HE Hna HL Hk HT". simpl_subst.
     rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val.
-    iDestruct "HT" as "[Hx Hx']". destruct x' as [[|lx'|]|]; try done.
+    iDestruct "HT" as "[Hx [#? Hx']]". destruct x' as [[|lx'|]|]; try done.
     iMod (bor_exists with "LFT Hx'") as (vl) "H". done.
     iMod (bor_sep with "LFT H") as "[H↦ H]". done.
     iMod (lctx_lft_alive_tok α with "HE HL") as (qα) "(Hα & HL & Hclose)"; [solve_typing..|].
@@ -81,8 +81,10 @@ Section rwlockwriteguard_functions.
     iMod (bor_exists with "LFT H") as (δ) "H". done.
     iMod (bor_exists with "LFT H") as (tid_shr) "H". done.
     iMod (bor_sep with "LFT H") as "[Hb H]". done.
-    iMod (bor_sep with "LFT H") as "[Hβδ _]". done.
+    iMod (bor_sep with "LFT H") as "[Hβδ H]". done.
+    iMod (bor_sep with "LFT H") as "[Hβty _]". done.
     iMod (bor_persistent with "LFT Hβδ Hα") as "[#Hβδ Hα]". done.
+    iMod (bor_persistent with "LFT Hβty Hα") as "[#Hβty Hα]". done.
     iMod (bor_acc with "LFT H↦ Hα") as "[H↦ Hcloseα]". done.
     wp_bind (!(LitV lx'))%E. iMod (bor_unnest with "LFT Hb") as "Hb"; first done.
     wp_read. wp_op. wp_let. iMod "Hb".
@@ -91,8 +93,10 @@ Section rwlockwriteguard_functions.
     iApply (type_type _ _ _ [ x ◁ box (uninit 1); #(l +ₗ 1) ◁ &uniq{α}ty]
             with "[] LFT HE Hna HL Hk"); last first.
     { rewrite tctx_interp_cons tctx_interp_singleton tctx_hasty_val tctx_hasty_val' //.
-      iFrame. iApply (bor_shorten with "[] Hb"). iApply lft_incl_glb.
-      by iApply lft_incl_trans. by iApply lft_incl_refl. }
+      iFrame. iSplitR.
+      - repeat iApply lft_incl_trans=>//.
+      - iApply (bor_shorten with "[] Hb"). iApply lft_incl_glb.
+          by iApply lft_incl_trans. by iApply lft_incl_refl. }
     iApply (type_letalloc_1 (&uniq{α}ty)); [solve_typing..|].
     iIntros (r). simpl_subst. iApply type_delete; [solve_typing..|].
     iApply type_jump; solve_typing.
@@ -106,7 +110,7 @@ Section rwlockwriteguard_functions.
       delete [ #1; "x"];;
       let: "r" := new [ #0] in return: ["r"].
 
-  Lemma rwlockwriteguard_drop_type ty `{!TyWf ty} :
+  Lemma rwlockwriteguard_drop_type ty :
     typed_val rwlockwriteguard_drop
               (fn(∀ α, ∅; rwlockwriteguard α ty) → unit).
   Proof.
@@ -117,7 +121,7 @@ Section rwlockwriteguard_functions.
     rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val.
     iDestruct "HT" as "[Hx Hx']".
     destruct x' as [[|lx'|]|]; try done. simpl.
-    iDestruct "Hx'" as (γ β tid_own) "(Hx' & #Hαβ & #Hinv & H◯)".
+    iDestruct "Hx'" as (γ β tid_own) "(Hx' & #Hαβ & #Hβty & #Hinv & H◯)".
     iMod (lctx_lft_alive_tok α with "HE HL") as (qα) "(Hα & HL & Hclose)";
       [solve_typing..|].
     iMod (lft_incl_acc with "Hαβ Hα") as (qβ) "[Hβ Hcloseα]". done.

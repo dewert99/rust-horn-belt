@@ -17,8 +17,7 @@ Section diverging_static.
     cont: "loop" [] :=
       "loop" [].
 
-  Lemma diverging_static_loop_type T F call_once
-        `{!TyWf T, !TyWf F} :
+  Lemma diverging_static_loop_type T F call_once :
     (* F : FnOnce(&'static T), as witnessed by the impl call_once *)
     typed_val call_once (fn(∅; F, &shr{static} T) → unit) →
     typed_val (diverging_static_loop call_once)
@@ -35,8 +34,8 @@ Section diverging_static.
     iMod (lctx_lft_alive_tok α with "HE HL") as (q) "(Hα & _ & _)";
       [solve_typing..|].
     iMod (lft_eternalize with "Hα") as "#Hα".
-    iAssert (type_incl (box (&shr{α} T)) (box (&shr{static} T))) as "#[_ [Hincl _]]".
-    { iApply box_type_incl. iNext. iApply shr_type_incl; first done.
+    iAssert (type_incl (box (&shr{α} T)) (box (&shr{static} T))) as "#[_ [_ [Hincl _]]]".
+    { iApply box_type_incl. iApply shr_type_incl; first done.
       iApply type_incl_refl. }
     wp_let. rewrite tctx_hasty_val.
     iApply (type_call_iris _ [ϝ] () [_; _] with "LFT HE Hna [Hϝ] Hcall [Hx Hf]").

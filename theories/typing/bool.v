@@ -7,15 +7,14 @@ Section bool.
   Context `{!typeG Σ}.
 
   Program Definition bool : type :=
-    {| st_own tid vl :=
+    {| st_lfts := []; st_E := [];
+       st_own tid vl :=
          match vl return _ with
          | [ #(LitInt (0|1))] => True
          | _ => False
          end%I |}.
   Next Obligation. intros ? [|[[| |[|[]|]]|] []]; auto. Qed.
   Next Obligation. intros ? [|[[| |[|[]|]]|] []]; apply _. Qed.
-
-  Global Instance bool_wf : TyWf bool := { ty_lfts := []; ty_wf_E := [] }.
 
   Global Instance bool_send : Send bool.
   Proof. done. Qed.

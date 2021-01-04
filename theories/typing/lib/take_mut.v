@@ -18,7 +18,7 @@ Section code.
       delete [ #1; "x"];;  delete [ #ty.(ty_size); "r"];;
       let: "r" := new [ #0] in return: ["r"].
 
-  Lemma take_type ty fty call_once `{!TyWf ty, !TyWf fty} :
+  Lemma take_type ty fty call_once :
     (* fty : FnOnce(ty) -> ty, as witnessed by the impl call_once *)
     typed_val call_once (fn(∅; fty, ty) → ty) →
     typed_val (take ty call_once) (fn(∀ α, ∅; &uniq{α} ty, fty) → unit).
@@ -31,6 +31,7 @@ Section code.
     (* Switch to Iris. *)
     iIntros (tid) "#LFT #HE Hna HL Hk (Ht & Hf' & Hx & Hx' & Henv & _)".
     rewrite !tctx_hasty_val [[x]]lock [[env]]lock [fn _]lock.
+    iDestruct "Hx'" as "[#Houtx Hx']".
     iDestruct (ownptr_uninit_own with "Ht") as (tl tvl) "(% & >Htl & Htl†)". subst t. simpl.
     destruct x' as [[|lx'|]|]; try done. simpl.
     iMod (lctx_lft_alive_tok α with "HE HL") as (qα) "(Hα & HL & Hclose1)"; [solve_typing..|].

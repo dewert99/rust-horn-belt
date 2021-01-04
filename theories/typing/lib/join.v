@@ -30,7 +30,6 @@ Section join.
       return: ["ret"].
 
   Lemma join_type A B R_A R_B call_once_A call_once_B
-        `{!TyWf A, !TyWf B, !TyWf R_A, !TyWf R_B}
         `(!Send A, !Send B, !Send R_A, !Send R_B) :
     (* A : FnOnce() -> R_A, as witnessed by the impl call_once_A *)
     typed_val call_once_A (fn(∅; A) → R_A) →
@@ -53,7 +52,7 @@ Section join.
       simpl_subst. iIntros (c) "Hfin". iMod na_alloc as (tid') "Htl". wp_let.
       wp_let. unlock. rewrite !tctx_hasty_val.
       iApply (type_call_iris _ [ϝ] () [_] with "LFT HE Htl [Hϝ1] HfA [HenvA]").
-      - rewrite outlives_product. solve_typing.
+      - rewrite /fp_E outlives_product. solve_typing.
       - by rewrite /= (right_id static).
       - by rewrite big_sepL_singleton tctx_hasty_val send_change_tid.
       - iIntros (r) "Htl Hϝ1 Hret".
@@ -64,7 +63,7 @@ Section join.
       [solve_typing..|].
     rewrite !tctx_hasty_val.
     iApply (type_call_iris _ [ϝ] () [_] with "LFT HE Hna [Hϝ2] HfB [HenvB]").
-    { rewrite outlives_product. solve_typing. }
+    { rewrite /fp_E outlives_product. solve_typing. }
     { by rewrite /= (right_id static). }
     { by rewrite big_sepL_singleton tctx_hasty_val. }
     (* The return continuation after calling fB in the main thread. *)

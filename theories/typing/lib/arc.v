@@ -25,24 +25,18 @@ Section arc.
      (* We use this disjunction, and not simply [ty_shr] here, *)
      (*    because [weak_new] cannot prove ty_shr, even for a dead *)
      (*    lifetime. *)
-     (ty.(ty_shr) ν tid (l +ₗ 2) ∨ [†ν]) ∗
+     (ty.(ty_shr) (ν ⊓ ty.(ty_lft)) tid (l +ₗ 2) ∨ [†ν]) ∗
      □ (1.[ν] ={↑lftN ∪ ↑lft_userN ∪ ↑arc_endN}[↑lft_userN]▷=∗
           [†ν] ∗ ▷ (l +ₗ 2) ↦∗: ty.(ty_own) tid ∗ † l…(2 + ty.(ty_size))))%I.
-
-  Global Instance arc_persist_ne tid ν γ l n :
-    Proper (type_dist2 n ==> dist n) (arc_persist tid ν γ l).
-  Proof.
-    unfold arc_persist, P1, P2.
-    solve_proper_core ltac:(fun _ => exact: type_dist2_S || exact: type_dist2_dist ||
-                                     f_type_equiv || f_contractive || f_equiv).
-  Qed.
 
   Lemma arc_persist_type_incl tid ν γ l ty1 ty2:
     type_incl ty1 ty2 -∗ arc_persist tid ν γ l ty1 -∗ arc_persist tid ν γ l ty2.
   Proof.
-    iIntros "#(Heqsz & Hinclo & Hincls) #(?& Hs & Hvs)".
+    iIntros "#(Heqsz & Hl & Hinclo & Hincls) #(?& Hs & Hvs)".
     iDestruct "Heqsz" as %->. iFrame "#". iSplit.
-    - iDestruct "Hs" as "[?|?]"; last auto. iLeft. by iApply "Hincls".
+    - iDestruct "Hs" as "[?|?]"; last auto. iLeft. iApply "Hincls".
+      iApply (ty_shr_mono with "[] [//]").
+      iApply lft_intersect_mono; [iApply lft_incl_refl|done].
     - iIntros "!# Hν". iMod ("Hvs" with "Hν") as "H". iModIntro. iNext.
       iMod "H" as "($ & H & $)". iDestruct "H" as (vl) "[??]". iExists _.
       iFrame. by iApply "Hinclo".
@@ -67,20 +61,25 @@ Section arc.
        ▷ (l +ₗ 2) ↦∗: ty.(ty_own) tid)%I.
   Definition shared_arc_own l ty tid : iProp Σ:=
     (∃ γ ν q, arc_persist tid ν γ l ty ∗ arc_tok γ q ∗ q.[ν])%I.
-  Lemma arc_own_share E l ty tid :
+  Lemma arc_own_share E l ty tid q :
     ↑lftN ⊆ E →
-    lft_ctx -∗ full_arc_own l ty tid ={E}=∗ shared_arc_own l ty tid.
+    lft_ctx -∗ (q).[ty.(ty_lft)] -∗ full_arc_own l ty tid
+    ={E}=∗ (q).[ty.(ty_lft)] ∗ shared_arc_own l ty tid.
   Proof.
-    iIntros (?) "#LFT (Hl1 & Hl2 & H† & Hown)".
+    iIntros (?) "#LFT Htok (Hl1 & Hl2 & H† & Hown)".
     iMod (lft_create with "LFT") as (ν) "[Hν #Hν†]"=>//.
     (* TODO: We should consider changing the statement of
        bor_create to dis-entangle the two masks such that this is no
       longer necessary. *)
     iApply fupd_trans. iApply (fupd_mask_mono (↑lftN))=>//.
     iMod (bor_create _ ν with "LFT Hown") as "[HP HPend]"=>//. iModIntro.
-    iMod (ty_share with "LFT HP Hν") as "[#? Hν]"; first solve_ndisj.
+    iDestruct (lft_intersect_acc with "Hν Htok") as (q') "[Htok Hclose]".
+    iMod (ty_share with "LFT [] [HP] Htok") as "[#? Htok]"; first solve_ndisj.
+    { iApply lft_intersect_incl_r. }
+    { iApply (bor_shorten with "[] HP"). iApply lft_intersect_incl_l. }
+    iDestruct ("Hclose" with "Htok") as "[Hν $]".
     iMod (create_arc (P1 ν) (P2 l ty.(ty_size)) arc_invN with "Hl1 Hl2 Hν")
-      as (γ q') "(#? & ? & ?)".
+      as (γ q'') "(#? & ? & ?)".
     iExists _, _, _. iFrame "∗#". iCombine "H†" "HPend" as "H".
     iMod (inv_alloc arc_endN _ ([†ν] ∨ _)%I with "[H]") as "#INV";
       first by iRight; iApply "H". iIntros "!> !# Hν".
@@ -98,7 +97,7 @@ Section arc.
   Qed.
 
   Program Definition arc (ty : type) :=
-    {| ty_size := 1;
+    {| ty_size := 1; ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own tid vl :=
          match vl return _ with
          | [ #(LitLoc l) ] => full_arc_own l ty tid ∨ shared_arc_own l ty tid
@@ -112,7 +111,7 @@ Section arc.
     |}%I.
   Next Obligation. by iIntros (ty tid [|[[]|][]]) "H". Qed.
   Next Obligation.
-    iIntros (ty E κ l tid q ?) "#LFT Hb Htok".
+    iIntros (ty E κ l tid q ?) "#LFT #Hincl Hb Htok".
     iMod (bor_exists with "LFT Hb") as (vl) "Hb"; first done.
     iMod (bor_sep with "LFT Hb") as "[H↦ Hb]"; first done.
     (* Ideally, we'd change ty_shr to say "l ↦{q} #l" in the fractured borrow,
@@ -126,16 +125,20 @@ Section arc.
     set (C := (∃ _ _ _, _ ∗ _ ∗ &at{_,_} _)%I).
     iMod (inv_alloc shrN _ (idx_bor_own 1 i ∨ C)%I
           with "[Hpbown]") as "#Hinv"; first by iLeft.
-    iIntros "!> !# * % Htok".
+    iIntros "!> !#" (F q' ?) "Htok".
     iMod (inv_acc with "Hinv") as "[INV Hclose1]"; first solve_ndisj.
     iDestruct "INV" as "[>Hbtok|#Hshr]".
     - iAssert (&{κ} _)%I with "[Hbtok]" as "Hb".
       { rewrite bor_unfold_idx. iExists _. by iFrame. }
-      iClear "H↦ Hinv Hpb".
-      iMod (bor_acc_cons with "LFT Hb Htok") as "[HP Hclose2]"; first solve_ndisj.
-      iModIntro. iNext. iAssert (shared_arc_own l' ty tid)%I with "[>HP]" as "HX".
-      { iDestruct "HP" as "[?|$]"; last done. iApply arc_own_share; solve_ndisj. }
-      iDestruct "HX" as (γ ν q') "[#Hpersist H]".
+      iClear "H↦ Hinv Hpb". iDestruct "Htok" as "[Htok1 Htok2]".
+      iMod (bor_acc_cons with "LFT Hb Htok1") as "[HP Hclose2]"; first solve_ndisj.
+      iModIntro. iNext.
+      iAssert (shared_arc_own l' ty tid ∗ (q' / 2).[κ])%I with "[>HP Htok2]" as "[HX $]".
+      { iDestruct "HP" as "[?|$]"; last done.
+        iMod (lft_incl_acc with "Hincl Htok2") as (q'') "[Htok Hclose]"; first solve_ndisj.
+        iMod (arc_own_share with "LFT Htok [$]") as "[Htok $]"; first solve_ndisj.
+        by iApply "Hclose". }
+      iDestruct "HX" as (γ ν q'') "[#Hpersist H]".
       iMod ("Hclose2" with "[] H") as "[HX $]"; first by unfold shared_arc_own; auto 10.
       iAssert C with "[>HX]" as "#$".
       { iExists _, _, _. iFrame "Hpersist".
@@ -160,24 +163,46 @@ Section arc.
     - by iApply at_bor_shorten.
   Qed.
 
-  Global Instance arc_wf ty `{!TyWf ty} : TyWf (arc ty) :=
-    { ty_lfts := ty.(ty_lfts); ty_wf_E := ty.(ty_wf_E) }.
-
   Global Instance arc_type_contractive : TypeContractive arc.
   Proof.
-    constructor=>/=; unfold arc, full_arc_own, shared_arc_own;
-      solve_proper_core ltac:(fun _ => exact: type_dist2_S || exact: type_dist2_dist ||
-                                       f_type_equiv || f_contractive || f_equiv).
+    split.
+    - apply (type_lft_morphism_add _ static [] [])=>?.
+      + rewrite left_id. iApply lft_equiv_refl.
+      + by rewrite /elctx_interp /= left_id right_id.
+    - done.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs tid vl. destruct vl as [|[[|l|]|] [|]]=>//=.
+      rewrite /full_arc_own /shared_arc_own /arc_persist Hsz.
+      assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      assert (∀ α, ty1.(ty_shr) (α ⊓ ty_lft ty1) tid (l +ₗ 2) ≡{n}≡
+                   ty2.(ty_shr) (α ⊓ ty_lft ty2) tid (l +ₗ 2)) as Hs'.
+      { intros. rewrite Hs. apply equiv_dist.
+        by iSplit; iApply ty_shr_mono; iDestruct Hl' as "[??]". }
+      repeat (apply Ho || apply dist_S, Ho || apply Hs' || f_contractive || f_equiv).
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. rewrite /= /arc_persist Hsz.
+      assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      assert (∀ l α, dist_later n (ty1.(ty_shr) (α ⊓ ty_lft ty1) tid (l +ₗ 2))
+                              (ty2.(ty_shr) (α ⊓ ty_lft ty2) tid (l +ₗ 2))) as Hs'.
+      { intros. rewrite Hs. apply dist_dist_later, equiv_dist.
+        by iSplit; iApply ty_shr_mono; iDestruct Hl' as "[??]". }
+      repeat (apply dist_S, Ho || apply Hs' || f_contractive || f_equiv).
   Qed.
 
   Global Instance arc_ne : NonExpansive arc.
-  Proof. apply type_contractive_ne, _. Qed.
+  Proof.
+    unfold arc, full_arc_own, shared_arc_own, arc_persist.
+    intros n x y Hxy. constructor; [done|by apply Hxy..| |].
+    - intros. rewrite ![X in X {| ty_own := _ |}]/ty_own.
+      solve_proper_core ltac:(fun _ => eapply ty_size_ne || eapply ty_lfts_ne || f_equiv).
+    - solve_proper_core ltac:(fun _ => eapply ty_size_ne || eapply ty_lfts_ne || f_equiv).
+  Qed.
 
   Lemma arc_subtype ty1 ty2 :
     type_incl ty1 ty2 -∗ type_incl (arc ty1) (arc ty2).
   Proof.
-    iIntros "#Hincl". iPoseProof "Hincl" as "(#Hsz & #Hoincl & #Hsincl)".
-    iSplit; first done. iSplit; iModIntro.
+    iIntros "#Hincl". iPoseProof "Hincl" as "(#Hsz & Hl & #Hoincl & #Hsincl)".
+    iSplit; [done|]. iSplit; [done|]. iSplit; iModIntro.
     - iIntros "* Hvl". destruct vl as [|[[|vl|]|] [|]]; try done.
       iDestruct "Hvl" as "[(Hl1 & Hl2 & H† & Hc) | Hvl]".
       { iLeft. iFrame. iDestruct "Hsz" as %->.
@@ -220,7 +245,7 @@ Section arc.
 
   (* Model of weak *)
   Program Definition weak (ty : type) :=
-    {| ty_size := 1;
+    {| ty_size := 1; ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own tid vl :=
          match vl return _ with
          | [ #(LitLoc l) ] => ∃ γ ν, arc_persist tid ν γ l ty ∗ weak_tok γ
@@ -233,7 +258,7 @@ Section arc.
     |}%I.
   Next Obligation. by iIntros (ty tid [|[[]|][]]) "H". Qed.
   Next Obligation.
-    iIntros (ty E κ l tid q ?) "#LFT Hb Htok".
+    iIntros (ty E κ l tid q ?) "#LFT Hincl Hb Htok".
     iMod (bor_exists with "LFT Hb") as (vl) "Hb"; first done.
     iMod (bor_sep with "LFT Hb") as "[H↦ Hb]"; first done.
     (* Ideally, we'd change ty_shr to say "l ↦{q} #l" in the fractured borrow,
@@ -273,24 +298,45 @@ Section arc.
     iExists _, _. iModIntro. iFrame. by iApply at_bor_shorten.
   Qed.
 
-  Global Instance weak_wf ty `{!TyWf ty} : TyWf (weak ty) :=
-    { ty_lfts := ty.(ty_lfts); ty_wf_E := ty.(ty_wf_E) }.
-
   Global Instance weak_type_contractive : TypeContractive weak.
   Proof.
-    constructor;
-      solve_proper_core ltac:(fun _ => exact: type_dist2_S || exact: type_dist2_dist ||
-                                       f_type_equiv || f_contractive || f_equiv).
+    split.
+    - apply (type_lft_morphism_add _ static [] [])=>?.
+      + rewrite left_id. iApply lft_equiv_refl.
+      + by rewrite /elctx_interp /= left_id right_id.
+    - done.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs tid vl. destruct vl as [|[[|l|]|] [|]]=>//=.
+      rewrite /arc_persist Hsz.
+      assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      assert (∀ α, ty1.(ty_shr) (α ⊓ ty_lft ty1) tid (l +ₗ 2) ≡{n}≡
+                   ty2.(ty_shr) (α ⊓ ty_lft ty2) tid (l +ₗ 2)) as Hs'.
+      { intros. rewrite Hs. apply equiv_dist.
+        by iSplit; iApply ty_shr_mono; iDestruct Hl' as "[??]". }
+      repeat (apply Ho || apply dist_S, Ho || apply Hs' || f_contractive || f_equiv).
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. rewrite /= /arc_persist Hsz.
+      assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      assert (∀ l α, dist_later n (ty1.(ty_shr) (α ⊓ ty_lft ty1) tid (l +ₗ 2))
+                              (ty2.(ty_shr) (α ⊓ ty_lft ty2) tid (l +ₗ 2))) as Hs'.
+      { intros. rewrite Hs. apply dist_dist_later, equiv_dist.
+        by iSplit; iApply ty_shr_mono; iDestruct Hl' as "[??]". }
+      repeat (apply dist_S, Ho || apply Hs' || f_contractive || f_equiv).
   Qed.
 
   Global Instance weak_ne : NonExpansive weak.
-  Proof. apply type_contractive_ne, _. Qed.
+  Proof.
+    unfold weak, arc_persist. intros n x y Hxy. constructor; [done|by apply Hxy..| |].
+    - intros. rewrite ![X in X {| ty_own := _ |}]/ty_own.
+      solve_proper_core ltac:(fun _ => eapply ty_size_ne || eapply ty_lfts_ne || f_equiv).
+    - solve_proper_core ltac:(fun _ => eapply ty_size_ne || eapply ty_lfts_ne || f_equiv).
+  Qed.
 
   Lemma weak_subtype ty1 ty2 :
     type_incl ty1 ty2 -∗ type_incl (weak ty1) (weak ty2).
   Proof.
     iIntros "#Hincl". iPoseProof "Hincl" as "(#Hsz & #Hoincl & #Hsincl)".
-    iSplit; first done. iSplit; iModIntro.
+    iSplit; [done|]. iSplit; [done|]. iSplit; iModIntro.
     - iIntros "* Hvl". destruct vl as [|[[|vl|]|] [|]]; try done.
       iDestruct "Hvl" as (γ ν) "(#Hpersist & Htk)".
       iExists _, _. iFrame "#∗". by iApply arc_persist_type_incl.
@@ -337,7 +383,7 @@ Section arc.
       "arc" <- "arcbox";;
       delete [ #ty.(ty_size); "x"];; return: ["arc"].
 
-  Lemma arc_new_type ty `{!TyWf ty} :
+  Lemma arc_new_type ty :
     typed_val (arc_new ty) (fn(∅; ty) → arc ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -379,7 +425,7 @@ Section arc.
       "w" <- "arcbox";;
       return: ["w"].
 
-  Lemma weak_new_type ty `{!TyWf ty} :
+  Lemma weak_new_type ty :
     typed_val (weak_new ty) (fn(∅) → weak ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -420,7 +466,7 @@ Section arc.
       "x" <- (!"arc'" +ₗ #2);;
       delete [ #1; "arc" ];; return: ["x"].
 
-  Lemma arc_deref_type ty `{!TyWf ty} :
+  Lemma arc_deref_type ty :
     typed_val arc_deref (fn(∀ α, ∅; &shr{α}(arc ty)) → &shr{α}ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -450,7 +496,9 @@ Section arc.
         with "[] LFT HE Hna HL Hk [-]"); last first.
     { rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val tctx_hasty_val' //.
       unlock. iFrame "Hrcx". iFrame "Hx†". iExists [_]. rewrite heap_mapsto_vec_singleton.
-      iFrame "Hx". by iApply ty_shr_mono. }
+      iFrame "Hx". iApply (ty_shr_mono with "[] Hshr").
+      iApply lft_incl_glb; [done|]. iApply elctx_interp_ty_outlives_E.
+      rewrite !elctx_interp_app /=. iDestruct "HE" as "(_ & [[_ $] _] & _)". }
     iApply type_delete; [solve_typing..|].
     iApply type_jump; solve_typing.
   Qed.
@@ -464,7 +512,7 @@ Section arc.
       "r" <- strong_count ["arc''"];;
       delete [ #1; "arc" ];; return: ["r"].
 
-  Lemma arc_strong_count_type ty `{!TyWf ty} :
+  Lemma arc_strong_count_type ty :
     typed_val arc_strong_count (fn(∀ α, ∅; &shr{α}(arc ty)) → int).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -507,7 +555,7 @@ Section arc.
       "r" <- weak_count ["arc''"];;
       delete [ #1; "arc" ];; return: ["r"].
 
-  Lemma arc_weak_count_type ty `{!TyWf ty} :
+  Lemma arc_weak_count_type ty :
     typed_val arc_weak_count (fn(∀ α, ∅; &shr{α}(arc ty)) → int).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -552,7 +600,7 @@ Section arc.
       "r" <- "arc''";;
       delete [ #1; "arc" ];; return: ["r"].
 
-  Lemma arc_clone_type ty `{!TyWf ty} :
+  Lemma arc_clone_type ty :
     typed_val arc_clone (fn(∀ α, ∅; &shr{α}(arc ty)) → arc ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -596,7 +644,7 @@ Section arc.
       "r" <- "w''";;
       delete [ #1; "w" ];; return: ["r"].
 
-  Lemma weak_clone_type ty `{!TyWf ty} :
+  Lemma weak_clone_type ty :
     typed_val weak_clone (fn(∀ α, ∅; &shr{α}(weak ty)) → weak ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -640,7 +688,7 @@ Section arc.
       "r" <- "arc''";;
       delete [ #1; "arc" ];; return: ["r"].
 
-  Lemma downgrade_type ty `{!TyWf ty} :
+  Lemma downgrade_type ty :
     typed_val downgrade (fn(∀ α, ∅; &shr{α}(arc ty)) → weak ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -687,7 +735,7 @@ Section arc.
         "r" <-{Σ none} ();;
         delete [ #1; "w" ];; return: ["r"].
 
-  Lemma upgrade_type ty `{!TyWf ty} :
+  Lemma upgrade_type ty :
     typed_val upgrade (fn(∀ α, ∅; &shr{α}(weak ty)) → option (arc ty)).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -745,7 +793,7 @@ Section arc.
        else #☠);;
       delete [ #1; "arc"];; return: ["r"].
 
-  Lemma arc_drop_type ty `{!TyWf ty} :
+  Lemma arc_drop_type ty :
     typed_val (arc_drop ty) (fn(∅; arc ty) → option ty).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -755,8 +803,17 @@ Section arc.
     iApply (type_sum_unit (option ty)); [solve_typing..|].
     iIntros (tid) "#LFT #HE Hna HL Hk [Hr [Hrcx [Hrc' _]]]".
     rewrite !tctx_hasty_val. destruct rc' as [[|rc'|]|]=>//=.
-    iAssert (shared_arc_own rc' ty tid)%I with "[>Hrc']" as "Hrc'".
-    { iDestruct "Hrc'" as "[?|$]"; last done. iApply arc_own_share; solve_ndisj. }
+    iAssert (shared_arc_own rc' ty tid ∗ llctx_interp [ϝ ⊑ₗ []] 1)%I
+      with "[>Hrc' HL]" as "[Hrc' HL]".
+    { iDestruct "Hrc'" as "[?|$]"; last done.
+      iMod (lctx_lft_alive_tok ty.(ty_lft) with "HE HL")
+        as (?) "(Htok & HL & Hclose)"; [done| |].
+      { change (ty_outlives_E (arc ty)) with (ty_outlives_E ty).
+        eapply (lctx_lft_alive_incl _ _ ϝ); first solve_typing.
+        iIntros (?) "_ !#". rewrite !elctx_interp_app /=.
+        iIntros "(_ & _ & [? _] & _ & _)". by iApply elctx_interp_ty_outlives_E. }
+      iMod (arc_own_share with "LFT Htok [$]") as "[Htok $]"; first solve_ndisj.
+      by iApply ("Hclose" with "Htok"). }
     iDestruct "Hrc'" as (γ ν q) "(#Hpersist & Htok & Hν)".
     wp_bind (drop_arc _). iApply (drop_arc_spec with "[] [$Htok Hν]");
       [by iDestruct "Hpersist" as "[$?]"|done|].
@@ -808,7 +865,7 @@ Section arc.
        else #☠);;
       delete [ #1; "arc"];; return: ["r"].
 
-  Lemma weak_drop_type ty `{!TyWf ty} :
+  Lemma weak_drop_type ty :
     typed_val (weak_drop ty) (fn(∅; weak ty) → unit).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -851,7 +908,7 @@ Section arc.
         "r" <-{Σ 1} "arc'";;
         delete [ #1; "arc"];; return: ["r"].
 
-  Lemma arc_try_unwrap_type ty `{!TyWf ty} :
+  Lemma arc_try_unwrap_type ty :
     typed_val (arc_try_unwrap ty) (fn(∅; arc ty) → Σ[ ty; arc ty ]).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -861,8 +918,17 @@ Section arc.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
     iIntros (tid) "#LFT #HE Hna HL Hk [Hrcx [Hrc' [Hr _]]]".
     rewrite !tctx_hasty_val [[rcx]]lock [[r]]lock. destruct rc' as [[|rc'|]|]=>//=.
-    iAssert (shared_arc_own rc' ty tid)%I with "[>Hrc']" as "Hrc'".
-    { iDestruct "Hrc'" as "[?|$]"; last done. iApply arc_own_share; solve_ndisj. }
+    iAssert (shared_arc_own rc' ty tid ∗ llctx_interp [ϝ ⊑ₗ []] 1)%I
+      with "[>Hrc' HL]" as "[Hrc' HL]".
+    { iDestruct "Hrc'" as "[?|$]"; last done.
+      iMod (lctx_lft_alive_tok ty.(ty_lft) with "HE HL")
+        as (?) "(Htok & HL & Hclose)"; [done| |].
+      { change (ty_outlives_E (arc ty)) with (ty_outlives_E ty).
+        eapply (lctx_lft_alive_incl _ _ ϝ); first solve_typing.
+        iIntros (?) "_ !#". rewrite !elctx_interp_app /=.
+        iIntros "(_ & _ & [?_] & _ & _)". by iApply elctx_interp_ty_outlives_E. }
+      iMod (arc_own_share with "LFT Htok [$]") as "[Htok $]"; first solve_ndisj.
+      by iApply ("Hclose" with "Htok"). }
     iDestruct "Hrc'" as (γ ν q) "(#Hpersist & Htok & Hν)".
     wp_apply (try_unwrap_spec with "[] [Hν Htok]");
       [by iDestruct "Hpersist" as "[$?]"|iFrame|].
@@ -925,7 +991,7 @@ Section arc.
         "r" <-{Σ none} ();;
         delete [ #1; "arc"];; return: ["r"].
 
-  Lemma arc_get_mut_type ty `{!TyWf ty} :
+  Lemma arc_get_mut_type ty :
     typed_val arc_get_mut (fn(∀ α, ∅; &uniq{α}(arc ty)) → option (&uniq{α}ty)).
   Proof.
     intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
@@ -933,7 +999,8 @@ Section arc.
     iApply (type_new 2); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
     iIntros (tid) "#LFT #HE Hna HL Hk [Hrcx [Hrc' [Hr _]]]".
-    rewrite !tctx_hasty_val [[rcx]]lock [[r]]lock. destruct rc' as [[|rc'|]|]=>//=.
+    rewrite !tctx_hasty_val [[rcx]]lock [[r]]lock.
+    iDestruct "Hrc'" as "[#? Hrc']". destruct rc' as [[|rc'|]|]=>//=.
     iMod (lctx_lft_alive_tok α with "HE HL") as (q) "(Hα & HL & Hclose1)";
       [solve_typing..|].
     iMod (bor_exists with "LFT Hrc'") as (rcvl) "Hrc'"=>//.
@@ -942,30 +1009,33 @@ Section arc.
       iMod (bor_persistent with "LFT Hrc Hα") as "[>[] ?]".
     rewrite heap_mapsto_vec_singleton.
     iMod (bor_acc with "LFT Hrc'↦ Hα") as "[Hrc'↦ Hclose2]"=>//. wp_read.
-    iMod ("Hclose2" with "Hrc'↦") as "[_ Hα]".
-    iMod (bor_acc_cons with "LFT Hrc Hα") as "[Hrc Hclose2]"=>//. wp_let.
-    iAssert (shared_arc_own rc ty tid)%I with "[>Hrc]" as "Hrc".
-    { iDestruct "Hrc" as "[Hrc|$]"=>//. by iApply arc_own_share. }
+    iMod ("Hclose2" with "Hrc'↦") as "[_ [Hα1 Hα2]]".
+    iMod (bor_acc_cons with "LFT Hrc Hα1") as "[Hrc Hclose2]"=>//. wp_let.
+    iAssert (shared_arc_own rc ty tid ∗ (q / 2).[α])%I with "[>Hrc Hα2]" as "[Hrc Hα2]".
+    { iDestruct "Hrc" as "[Hrc|$]"=>//.
+      iMod (lft_incl_acc with "[//] Hα2") as (q') "[Htok Hclose]"; [solve_ndisj|].
+      iMod (arc_own_share with "LFT Htok Hrc") as "[Htok $]"; [solve_ndisj|].
+      by iApply "Hclose". }
     iDestruct "Hrc" as (γ ν q') "[#(Hi & Hs & #Hc) Htoks]".
     wp_apply (is_unique_spec with "Hi Htoks"). iIntros ([]) "H"; wp_if.
     - iDestruct "H" as "(Hrc & Hrc1 & Hν)". iSpecialize ("Hc" with "Hν"). wp_bind Skip.
       iApply wp_mask_mono; last iApply (wp_step_fupd with "Hc"); first done.
       { (* FIXME [solve_ndisj] fails *) set_solver-. }
       wp_seq. iIntros "(#Hν & Hown & H†) !>". wp_seq.
-      iMod ("Hclose2" with "[Hrc Hrc1 H†] Hown") as "[Hb Hα]".
+      iMod ("Hclose2" with "[Hrc Hrc1 H†] Hown") as "[Hb Hα1]".
       { iIntros "!> Hown !>". iLeft. iFrame. }
-      iMod ("Hclose1" with "Hα HL") as "HL".
+      iMod ("Hclose1" with "[$Hα1 $Hα2] HL") as "HL".
       iApply (type_type _ _ _ [ rcx ◁ box (uninit 1); #rc +ₗ #2 ◁ &uniq{α}ty;
                                 r ◁ box (uninit 2) ]
               with "[] LFT HE Hna HL Hk [-]"); last first.
       { rewrite 2!tctx_interp_cons tctx_interp_singleton !tctx_hasty_val
-                tctx_hasty_val' //. unlock. iFrame. }
+                tctx_hasty_val' //. unlock. by iFrame. }
       iApply (type_sum_assign (option (&uniq{α}ty))); [solve_typing..|].
       iApply type_delete; [solve_typing..|].
       iApply type_jump; solve_typing.
-    - iMod ("Hclose2" with "[] [H]") as "[_ Hα]";
+    - iMod ("Hclose2" with "[] [H]") as "[_ Hα1]";
         [by iIntros "!> H"; iRight; iApply "H"|iExists _, _, _; iFrame "∗#"|].
-      iMod ("Hclose1" with "Hα HL") as "HL".
+      iMod ("Hclose1" with "[$Hα1 $Hα2] HL") as "HL".
       iApply (type_type _ _ _ [ rcx ◁ box (uninit 1); r ◁ box (uninit 2) ]
               with "[] LFT HE Hna HL Hk [-]"); last first.
       { rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val. unlock. iFrame. }
@@ -1012,7 +1082,7 @@ Section arc.
          delete [ #1; "arc"];; return: ["r"]
        ]).
 
-  Lemma arc_make_mut_type ty `{!TyWf ty} clone :
+  Lemma arc_make_mut_type ty clone :
     typed_val clone (fn(∀ α, ∅; &shr{α}ty) → ty) →
     typed_val (arc_make_mut ty clone) (fn(∀ α, ∅; &uniq{α}(arc ty)) → &uniq{α} ty).
   Proof.
@@ -1021,15 +1091,19 @@ Section arc.
     iApply (type_new 1); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
     iIntros (tid) "#LFT #HE Hna HL Hk [Hrcx [Hrc' [Hr _]]]".
-    rewrite !tctx_hasty_val [[rcx]]lock [[r]]lock. destruct rc' as [[|rc'|]|]=>//=.
+    rewrite !tctx_hasty_val [[rcx]]lock [[r]]lock.
+    iDestruct "Hrc'" as "[#? Hrc']". destruct rc' as [[|rc'|]|]=>//=.
     iMod (lctx_lft_alive_tok α with "HE HL") as (q) "([Hα1 Hα2] & HL & Hclose1)";
       [solve_typing..|].
     iMod (bor_acc_cons with "LFT Hrc' Hα1") as "[Hrc' Hclose2]"=>//.
     iDestruct "Hrc'" as (rcvl) "[Hrc'↦ Hrc]".
     destruct rcvl as [|[[|rc|]|][|]]; try by iDestruct "Hrc" as ">[]".
     rewrite heap_mapsto_vec_singleton. wp_read.
-    iAssert (shared_arc_own rc ty tid)%I with "[>Hrc]" as "Hrc".
-    { iDestruct "Hrc" as "[Hrc|$]"=>//. by iApply arc_own_share. }
+    iAssert (shared_arc_own rc ty tid ∗ (q / 2).[α])%I with "[>Hrc Hα2]" as "[Hrc Hα2]".
+    { iDestruct "Hrc" as "[Hrc|$]"=>//.
+      iMod (lft_incl_acc with "[//] Hα2") as (q') "[Htok Hclose]"; [solve_ndisj|].
+      iMod (arc_own_share with "LFT Htok Hrc") as "[Htok $]"; [solve_ndisj|].
+      by iApply "Hclose". }
     iDestruct "Hrc" as (γ ν q') "[#(Hi & Hs & #Hc) Htoks]". wp_let.
     wp_apply (try_unwrap_full_spec with "Hi Htoks"). iIntros (x).
     pose proof (fin_to_nat_lt x). destruct (fin_to_nat x) as [|[|[]]]; last lia.
@@ -1046,7 +1120,7 @@ Section arc.
                                 r ◁ box (uninit 1) ]
               with "[] LFT HE Hna HL Hk [-]"); last first.
       { rewrite 2!tctx_interp_cons tctx_interp_singleton !tctx_hasty_val
-                tctx_hasty_val' //. unlock. iFrame. }
+                tctx_hasty_val' //. unlock. by iFrame. }
       iApply type_assign; [solve_typing..|].
       iApply type_delete; [solve_typing..|].
       iApply type_jump; solve_typing.
@@ -1071,7 +1145,7 @@ Section arc.
                                 r ◁ box (uninit 1) ]
               with "[] LFT HE Hna HL Hk [-]"); last first.
       { rewrite 2!tctx_interp_cons tctx_interp_singleton !tctx_hasty_val
-                tctx_hasty_val' //. unlock. iFrame. }
+                tctx_hasty_val' //. unlock. by iFrame. }
       iApply type_assign; [solve_typing..|].
       iApply type_delete; [solve_typing..|].
       iApply type_jump; solve_typing.
@@ -1083,17 +1157,18 @@ Section arc.
       { iApply (Hclone _ [] with "LFT HE Hna"); rewrite /llctx_interp /tctx_interp //. }
       clear Hclone clone. iIntros (clone) "(Hna & _ & [Hclone _])". rewrite tctx_hasty_val.
       iDestruct "Hs" as "[Hs|Hν']"; last by iDestruct (lft_tok_dead with "Hν Hν'") as "[]".
-      iDestruct (lft_intersect_acc with "Hα2 Hν") as (q'') "[Hαν Hclose3]".
-      rewrite -[α ⊓ ν](right_id_L).
-      iApply (type_call_iris _ [α ⊓ ν] (α ⊓ ν) [_] with
+      iDestruct (lft_intersect_acc with "Hν Hα2") as (q'') "[Hαν Hclose3]".
+      rewrite -[ν ⊓ α](right_id_L).
+      iApply (type_call_iris _ [ν ⊓ α] (ν ⊓ α) [_] with
               "LFT HE Hna Hαν Hclone [Hl H†]"); [solve_typing| |].
       { rewrite big_sepL_singleton tctx_hasty_val' //. rewrite /= freeable_sz_full.
         iFrame. iExists [_]. rewrite heap_mapsto_vec_singleton. iFrame.
-        iApply ty_shr_mono; last done. iApply lft_intersect_incl_r. }
+        iApply ty_shr_mono; last done. iApply lft_intersect_mono; [|done].
+        iApply lft_incl_refl. }
       iIntros ([[|cl|]|]) "Hna Hαν Hcl //". wp_rec.
       iDestruct "Hcl" as "[Hcl Hcl†]". iDestruct "Hcl" as (vl) "[Hcl↦ Hown]".
       iDestruct (ty_size_eq with "Hown") as %Hsz.
-      iDestruct ("Hclose3" with "Hαν") as "[Hα2 Hν]".
+      iDestruct ("Hclose3" with "Hαν") as "[Hν Hα2]".
       wp_apply wp_new=>//. lia. iIntros (l') "(Hl'† & Hl')". wp_let. wp_op.
       rewrite shift_loc_0. rewrite -!lock Nat2Z.id.
       rewrite !heap_mapsto_vec_cons shift_loc_assoc.
@@ -1114,7 +1189,7 @@ Section arc.
                                 r ◁ box (uninit 1); rcx ◁ box (uninit 1) ]
               with "[] LFT HE Hna HL Hk [-]"); last first.
       { rewrite 3!tctx_interp_cons tctx_interp_singleton !tctx_hasty_val
-                !tctx_hasty_val' //. unlock. iFrame. iRight.
+                !tctx_hasty_val' //. unlock. iFrame "∗#". iRight.
         iExists _, _, _. iFrame "∗#". }
       iApply type_letalloc_1; [solve_typing..|]. iIntros (rcold). simpl_subst.
       iApply type_let. apply arc_drop_type. solve_typing. iIntros (drop). simpl_subst.

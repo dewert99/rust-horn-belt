@@ -17,6 +17,7 @@ Section rwlockreadguard.
 
   Program Definition rwlockreadguard (α : lft) (ty : type) :=
     {| ty_size := 1;
+       ty_lfts := α :: ty.(ty_lfts); ty_E := ty.(ty_E) ++ ty_outlives_E ty α;
        ty_own tid vl :=
          match vl return _ with
          | [ #(LitLoc l) ] =>
@@ -32,7 +33,7 @@ Section rwlockreadguard.
            ▷ ty.(ty_shr) (α ⊓ κ) tid (l' +ₗ 1) |}%I.
   Next Obligation. intros α ty tid [|[[]|] []]; auto. Qed.
   Next Obligation.
-    iIntros (α ty E κ l tid q ?) "#LFT Hb Htok".
+    iIntros (α ty E κ l tid q ?) "#LFT #Hl Hb Htok".
     iMod (bor_exists with "LFT Hb") as (vl) "Hb". done.
     iMod (bor_sep with "LFT Hb") as "[H↦ Hb]". done.
     iMod (bor_fracture (λ q, l ↦∗{q} vl)%I with "LFT H↦") as "#H↦". done.
@@ -62,17 +63,27 @@ Section rwlockreadguard.
     iApply lft_incl_refl.
   Qed.
 
-  Global Instance rwlockreadguard_wf α ty `{!TyWf ty} : TyWf (rwlockreadguard α ty) :=
-    { ty_lfts := [α]; ty_wf_E := ty.(ty_wf_E) ++ ty_outlives_E ty α }.
-
   Global Instance rwlockreadguard_type_contractive α : TypeContractive (rwlockreadguard α).
   Proof.
-    constructor;
-      solve_proper_core ltac:(fun _ => exact: type_dist2_S || (eapply rwlock_inv_type_ne; try reflexivity) ||
-                                              f_type_equiv || f_contractive || f_equiv).
+    split.
+    - apply (type_lft_morphism_add _ α [α] []) => ?.
+      + iApply lft_equiv_refl.
+      + by rewrite elctx_interp_app elctx_interp_ty_outlives_E
+                   /elctx_interp /= left_id right_id.
+    - done.
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs tid [|[[]|][]]=>//=. unfold rwlock_inv.
+      repeat (apply Hs || apply dist_S, Hs || apply dist_S, Ho ||
+              f_contractive || f_equiv).
+    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. simpl. by setoid_rewrite Hs.
   Qed.
+
   Global Instance rwlockreadguard_ne α : NonExpansive (rwlockreadguard α).
-  Proof. apply type_contractive_ne, _. Qed.
+  Proof.
+    unfold rwlockreadguard, rwlock_inv. intros n ty1 ty2 Hty12.
+    split=>//=; try by rewrite Hty12.
+    - intros tid [|[[]|][]]=>//=. repeat (apply Hty12 || f_equiv).
+    - intros κ tid l. repeat (apply Hty12 || f_equiv).
+  Qed.
 
   (* The rust type is not covariant, although it probably could (cf. refcell).
      This would require changing the definition of the type, though. *)
@@ -84,8 +95,9 @@ Section rwlockreadguard.
     iDestruct (rwlock_inv_proper with "HL") as "#Hty1ty2"; first done.
     iDestruct (rwlock_inv_proper with "HL") as "#Hty2ty1"; first by symmetry.
     iIntros "!# #HE". iDestruct ("Hα" with "HE") as "Hα1α2".
-    iDestruct ("Hty" with "HE") as "(%&#Ho&#Hs)". iSplit; [|iSplit; iModIntro].
-    - done.
+    iDestruct ("Hty" with "HE") as "(%&#?&#Ho&#Hs)".
+    iSplit; [done|iSplit; [|iSplit; iModIntro]].
+    - by iApply lft_intersect_mono.
     - iIntros (tid [|[[]|][]]) "H"; try done.
       iDestruct "H" as (ν q' γ β tid_own) "(#Hshr & #H⊑ & #Hinv & Htok & Hown)".
       iExists ν, q', γ, β, tid_own. iFrame "∗#". iSplit; last iSplit.
