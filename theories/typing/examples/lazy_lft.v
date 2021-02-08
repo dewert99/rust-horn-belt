@@ -10,10 +10,10 @@ Section lazy_lft.
       Newlft;;
       let: "t" := new [ #2] in let: "f" := new [ #1] in let: "g" := new [ #1] in
       let: "42" := #42 in "f" <- "42";;
-      "t" +ₗ #0 <- "f";; "t" +ₗ #1 <- "f";;
+      Share;; "t" +ₗ #0 <- "f";; "t" +ₗ #1 <- "f";;
       let: "t0'" := !("t" +ₗ #0) in "t0'";;
       let: "23" := #23 in "g" <- "23";;
-      "t" +ₗ #1 <- "g";;
+      Share;; "t" +ₗ #1 <- "g";;
       let: "r" := new [ #0] in
       Endlft;; delete [ #2; "t"];; delete [ #1; "f"];; delete [ #1; "g"];; return: ["r"].
 
@@ -28,12 +28,14 @@ Section lazy_lft.
     iApply type_new; [solve_typing..|]. iIntros (g). simpl_subst.
     iApply type_int. iIntros (v42). simpl_subst.
     iApply type_assign; [solve_typing..|].
+    iApply (type_share f _ α); [solve_typing..|].
     iApply (type_assign _ (&shr{α}_)); [solve_typing..|].
     iApply type_assign; [solve_typing..|].
     iApply type_deref; [solve_typing..|]. iIntros (t0'). simpl_subst.
     iApply type_letpath; [solve_typing|]. iIntros (dummy). simpl_subst.
     iApply type_int. iIntros (v23). simpl_subst.
     iApply type_assign; [solve_typing..|].
+    iApply (type_share g _ α); [solve_typing..|].
     iApply (type_assign _ (&shr{α}int)); [solve_typing..|].
     iApply type_new; [solve_typing..|]. iIntros (r). simpl_subst.
     iApply type_endlft; [solve_typing..|].

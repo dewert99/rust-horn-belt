@@ -25,8 +25,8 @@ Section typing.
 
   Lemma type_int_instr (z : Z) : typed_val #z int.
   Proof.
-    iIntros (E L tid) "_ _ $ $ _". iApply wp_value.
-    by rewrite tctx_interp_singleton tctx_hasty_val' //.
+    iIntros (E L tid) "_ _ _ $ $ _". iMod persistent_time_receipt_0 as "#H0".
+    iApply wp_value. rewrite tctx_interp_singleton tctx_hasty_val' //. auto.
   Qed.
 
   Lemma type_int (z : Z) E L C T x e :
@@ -38,10 +38,10 @@ Section typing.
   Lemma type_plus_instr E L p1 p2 :
     ⊢ typed_instruction_ty E L [p1 ◁ int; p2 ◁ int] (p1 + p2) int.
   Proof.
-    iIntros (tid) "_ _ $ $ [Hp1 [Hp2 _]]".
-    wp_apply (wp_hasty with "Hp1"). iIntros ([[]|]) "_ H1"; try done.
-    wp_apply (wp_hasty with "Hp2"). iIntros ([[]|]) "_ H2"; try done.
-    wp_op. by rewrite tctx_interp_singleton tctx_hasty_val' //.
+    iIntros (tid) "_ _ _ $ $ [Hp1 [Hp2 _]]". iMod persistent_time_receipt_0 as "#H0".
+    wp_apply (wp_hasty with "Hp1"). iIntros (? [[]|]) "_ _ H1"; try done.
+    wp_apply (wp_hasty with "Hp2"). iIntros (? [[]|]) "_ _ H2"; try done.
+    wp_op. rewrite tctx_interp_singleton tctx_hasty_val' //. auto.
   Qed.
 
   Lemma type_plus E L C T T' p1 p2 x e :
@@ -54,10 +54,10 @@ Section typing.
   Lemma type_minus_instr E L p1 p2 :
     ⊢ typed_instruction_ty E L [p1 ◁ int; p2 ◁ int] (p1 - p2) int.
   Proof.
-    iIntros (tid) "_ _ $ $ [Hp1 [Hp2 _]]".
-    wp_apply (wp_hasty with "Hp1"). iIntros ([[]|]) "_ H1"; try done.
-    wp_apply (wp_hasty with "Hp2"). iIntros ([[]|]) "_ H2"; try done.
-    wp_op. by rewrite tctx_interp_singleton tctx_hasty_val' //.
+    iIntros (tid) "_ _ _ $ $ [Hp1 [Hp2 _]]". iMod persistent_time_receipt_0 as "#H0".
+    wp_apply (wp_hasty with "Hp1"). iIntros (? [[]|]) "_ _ H1"; try done.
+    wp_apply (wp_hasty with "Hp2"). iIntros (? [[]|]) "_ _ H2"; try done.
+    wp_op. rewrite tctx_interp_singleton tctx_hasty_val' //. auto.
   Qed.
 
   Lemma type_minus E L C T T' p1 p2 x e :
@@ -70,10 +70,10 @@ Section typing.
   Lemma type_le_instr E L p1 p2 :
     ⊢ typed_instruction_ty E L [p1 ◁ int; p2 ◁ int] (p1 ≤ p2) bool.
   Proof.
-    iIntros (tid) "_ _ $ $ [Hp1 [Hp2 _]]".
-    wp_apply (wp_hasty with "Hp1"). iIntros ([[]|]) "_ H1"; try done.
-    wp_apply (wp_hasty with "Hp2"). iIntros ([[]|]) "_ H2"; try done.
-    wp_op; case_bool_decide; by rewrite tctx_interp_singleton tctx_hasty_val' //.
+    iIntros (tid) "_ _ _ $ $ [Hp1 [Hp2 _]]". iMod persistent_time_receipt_0 as "#H0".
+    wp_apply (wp_hasty with "Hp1"). iIntros (? [[]|]) "_ _ H1"; try done.
+    wp_apply (wp_hasty with "Hp2"). iIntros (? [[]|]) "_ _ H2"; try done.
+    wp_op; case_bool_decide; rewrite tctx_interp_singleton tctx_hasty_val' //; auto.
   Qed.
 
   Lemma type_le E L C T T' p1 p2 x e :

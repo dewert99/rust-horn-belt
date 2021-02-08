@@ -47,9 +47,10 @@ Section refcell_inv.
       match st return _ with
       | None =>
         (* Not borrowed. *)
-        &{α}((l +ₗ 1) ↦∗: ty.(ty_own) tid)
+        ∃ depth, ⧖depth ∗ &{α}((l +ₗ 1) ↦∗: ty.(ty_own) depth tid)
       | Some (ν, rw, q, _) =>
-        (1.[ν] ={↑lftN ∪ ↑lft_userN}[↑lft_userN]▷=∗ &{α}((l +ₗ 1) ↦∗: ty.(ty_own) tid)) ∗
+        (1.[ν] ={↑lftN ∪ ↑lft_userN}[↑lft_userN]▷=∗
+          ∃ depth, ⧖depth ∗ &{α}((l +ₗ 1) ↦∗: ty.(ty_own) depth tid)) ∗
         (∃ q', ⌜(q + q')%Qp = 1%Qp⌝ ∗ q'.[ν]) ∗
         if rw then (* Mutably borrowed. *) True
         else       (* Immutably borrowed. *) ty.(ty_shr) (α ⊓ ν) tid (l +ₗ 1)

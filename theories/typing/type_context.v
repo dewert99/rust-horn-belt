@@ -64,22 +64,23 @@ Section type_context.
 
   (** Type context element *)
   Definition tctx_elt_interp (tid : thread_id) (x : tctx_elt) : iProp Σ :=
-    match x with
-    | p ◁ ty => ∃ v, ⌜eval_path p = Some v⌝ ∗ ty.(ty_own) tid [v]
-    | p ◁{κ} ty => ∃ v, ⌜eval_path p = Some v⌝ ∗
-                             ([†κ] ={⊤}=∗ ty.(ty_own) tid [v])
-    end%I.
+      match x with
+      | p ◁ ty =>
+        ∃ v depth, ⧖depth ∗ ⌜eval_path p = Some v⌝ ∗ ty.(ty_own) depth tid [v]
+      | p ◁{κ} ty => ∃ v, ⌜eval_path p = Some v⌝ ∗
+                  ([†κ] ={⊤}=∗ ∃ depth, ⧖depth ∗ ty.(ty_own) depth tid [v])
+      end%I.
 
   (* Block tctx_elt_interp from reducing with simpl when x is a constructor. *)
   Global Arguments tctx_elt_interp : simpl never.
 
   Lemma tctx_hasty_val tid (v : val) ty :
-    tctx_elt_interp tid (v ◁ ty) ⊣⊢ ty.(ty_own) tid [v].
+    tctx_elt_interp tid (v ◁ ty) ⊣⊢ ∃ depth, ⧖depth ∗ ty.(ty_own) depth tid [v].
   Proof.
     rewrite /tctx_elt_interp eval_path_of_val. iSplit.
-    - iIntros "H". iDestruct "H" as (?) "[EQ ?]".
-      iDestruct "EQ" as %[=->]. done.
-    - iIntros "?". iExists _. auto.
+    - iIntros "H". iDestruct "H" as (??) "(#Ht & EQ & ?)".
+      iDestruct "EQ" as %[=->]. eauto.
+    - iDestruct 1 as (depth) "[??]". eauto.
   Qed.
 
   Lemma tctx_elt_interp_hasty_path p1 p2 ty tid :
@@ -89,7 +90,7 @@ Section type_context.
 
   Lemma tctx_hasty_val' tid p (v : val) ty :
     eval_path p = Some v →
-    tctx_elt_interp tid (p ◁ ty) ⊣⊢ ty.(ty_own) tid [v].
+    tctx_elt_interp tid (p ◁ ty) ⊣⊢ ∃ depth, ⧖depth ∗ ty.(ty_own) depth tid [v].
   Proof.
     intros ?. rewrite -tctx_hasty_val. apply tctx_elt_interp_hasty_path.
     rewrite eval_path_of_val. done.
@@ -97,18 +98,16 @@ Section type_context.
 
   Lemma wp_hasty E tid p ty Φ :
     tctx_elt_interp tid (p ◁ ty) -∗
-    (∀ v, ⌜eval_path p = Some v⌝ -∗ ty.(ty_own) tid [v] -∗ Φ v) -∗
+    (∀ depth v, ⧖depth -∗ ⌜eval_path p = Some v⌝ -∗ ty.(ty_own) depth tid [v] -∗ Φ v) -∗
     WP p @ E {{ Φ }}.
   Proof.
-    iIntros "Hty HΦ". iDestruct "Hty" as (v) "[% Hown]".
+    iIntros "Hty HΦ". iDestruct "Hty" as (v depth) "(Hdepth & % & Hown)".
     iApply (wp_wand with "[]"). { iApply wp_eval_path. done. }
-    iIntros (v') "%". subst v'. iApply ("HΦ" with "[] Hown"). by auto.
+    iIntros (v') "%". subst v'. by iApply ("HΦ" with "Hdepth [] Hown").
   Qed.
 
   Lemma closed_hasty tid p ty : tctx_elt_interp tid (p ◁ ty) -∗ ⌜Closed [] p⌝.
-  Proof.
-    iIntros "H". iDestruct "H" as (?) "[% _]". eauto using eval_path_closed.
-  Qed.
+  Proof. iDestruct 1 as (??) "(_ & % & _)". eauto using eval_path_closed. Qed.
 
   (** Type context *)
   Definition tctx_interp (tid : thread_id) (T : tctx) : iProp Σ :=
@@ -157,8 +156,8 @@ Section type_context.
   Proof.
     iIntros (HT Hty ??). rewrite !tctx_interp_cons.
     iIntros "[Hty HT]". iSplitR "HT".
-    - iDestruct "Hty" as (?) "[% Hty]". iExists _. iSplit; first done.
-      by iApply Hty.
+    - iDestruct "Hty" as (??) "(? & % & Hty)". iExists _, _.
+      iSplit; first done. iSplit; first done. by iApply Hty.
     - by iApply HT.
   Qed.
 
@@ -218,8 +217,9 @@ Section type_context.
     subtype E L ty1 ty2 → tctx_incl E L [p ◁ ty1] [p ◁ ty2].
   Proof.
     iIntros (Hst ??) "#LFT #HE HL [H _]".
-    iDestruct "H" as (v) "[% H]". iDestruct (Hst with "HL HE") as "#(_ & _ & Ho & _)".
-    iFrame "HL". iApply big_sepL_singleton. iExists _. iFrame "%". by iApply "Ho".
+    iDestruct "H" as (v depth) "(? & % & H)".
+    iDestruct (Hst with "HL HE") as "#(_ & _ & Ho & _)". iFrame "HL".
+    iApply big_sepL_singleton. iExists _, _. iFrame "%∗". by iApply "Ho".
   Qed.
 
   (* Extracting from a type context. *)
@@ -300,7 +300,7 @@ Section type_context.
   Proof.
     iIntros (H12 tid) "#H†". rewrite !tctx_interp_cons. iIntros "[H HT1]".
     iMod (H12 with "H† HT1") as "$". iDestruct "H" as (v) "[% H]".
-    iExists (v). by iMod ("H" with "H†") as "$".
+    iMod ("H" with "H†") as (depth) "[??]". iExists v, depth. auto.
   Qed.
 
   Global Instance unblock_tctx_cons κ T1 T2 x :

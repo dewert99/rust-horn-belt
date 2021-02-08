@@ -42,39 +42,43 @@ Section join.
     iApply type_let; [apply HfA|solve_typing|]. iIntros (fA); simpl_subst.
     iApply type_let; [apply HfB|solve_typing|]. iIntros (fB); simpl_subst.
     (* Drop to Iris. *)
-    iIntros (tid) "#LFT #HE Hna HL Hk (HfB & HfA & HenvA & HenvB & _)".
+    iIntros (tid) "#LFT #TIME #HE Hna HL Hk (HfB & HfA & HenvA & HenvB & _)".
     iMod (lctx_lft_alive_tok ϝ with "HE HL") as (qϝ1) "(Hϝ1 & HL & Hclose1)";
       [solve_typing..|].
     (* FIXME: using wp_apply here breaks calling solve_to_val. *)
     wp_bind (spawn _).
-    iApply ((spawn_spec joinN (λ v, (box R_A).(ty_own) tid [v] ∗ (qϝ1).[ϝ])%I) with "[HfA HenvA Hϝ1]").
+    iApply ((spawn_spec joinN (λ v,
+                        tctx_elt_interp tid (v ◁ box R_A) ∗ (qϝ1).[ϝ])%I)
+              with "[HfA HenvA Hϝ1]").
     { (* The new thread. *)
       simpl_subst. iIntros (c) "Hfin". iMod na_alloc as (tid') "Htl". wp_let.
-      wp_let. unlock. rewrite !tctx_hasty_val.
-      iApply (type_call_iris _ [ϝ] () [_] with "LFT HE Htl [Hϝ1] HfA [HenvA]").
+      wp_let. unlock. rewrite !tctx_hasty_val. iDestruct "HfA" as (?) "[_ HfA]".
+      iApply (type_call_iris _ [ϝ] () [_] with "LFT TIME HE Htl [Hϝ1] HfA [HenvA]").
       - rewrite /fp_E outlives_product. solve_typing.
       - by rewrite /= (right_id static).
-      - by rewrite big_sepL_singleton tctx_hasty_val send_change_tid.
-      - iIntros (r) "Htl Hϝ1 Hret".
+      - iDestruct "HenvA" as (?) "HenvA".
+        rewrite big_sepL_singleton tctx_hasty_val send_change_tid. auto.
+      - iIntros (r depth') "Htl Hϝ1 #Hdepth' Hret".
         wp_rec. iApply (finish_spec with "[$Hfin Hret Hϝ1]"); last auto.
-        rewrite (right_id static). iFrame. by iApply @send_change_tid. }
+        rewrite (right_id static). iFrame. rewrite tctx_hasty_val.
+        iExists _. iFrame "Hdepth'". by iApply @send_change_tid. }
     iNext. iIntros (c) "Hjoin". wp_let. wp_let.
     iMod (lctx_lft_alive_tok ϝ with "HE HL") as (qϝ2) "(Hϝ2 & HL & Hclose2)";
       [solve_typing..|].
-    rewrite !tctx_hasty_val.
-    iApply (type_call_iris _ [ϝ] () [_] with "LFT HE Hna [Hϝ2] HfB [HenvB]").
+    rewrite !tctx_hasty_val. iDestruct "HfB" as (?) "[_ HfB]".
+    iApply (type_call_iris _ [ϝ] () [_] with "LFT TIME HE Hna [Hϝ2] HfB [HenvB]").
     { rewrite /fp_E outlives_product. solve_typing. }
     { by rewrite /= (right_id static). }
     { by rewrite big_sepL_singleton tctx_hasty_val. }
     (* The return continuation after calling fB in the main thread. *)
-    iIntros (retB) "Hna Hϝ2 HretB". rewrite /= (right_id static).
+    iIntros (retB depth') "Hna Hϝ2 Hdepth' HretB". rewrite /= (right_id static).
     iMod ("Hclose2" with "Hϝ2 HL") as "HL". wp_rec.
     wp_apply (join_spec with "Hjoin"). iIntros (retA) "[HretA Hϝ1]".
     iMod ("Hclose1" with "Hϝ1 HL") as "HL". wp_let.
     (* Switch back to type system mode. *)
     iApply (type_type _ _ _ [ retA ◁ box R_A; retB ◁ box R_B ]
-        with "[] LFT HE Hna HL Hk [-]"); last first.
-    { rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val. iFrame. }
+        with "[] LFT TIME HE Hna HL Hk [-]"); last first.
+    { rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val. auto with iFrame. }
     iApply (type_new_subtype (Π[uninit R_A.(ty_size); uninit R_B.(ty_size)]));
       (* FIXME: solve_typing should handle this without any aid. *)
       rewrite ?Z_nat_add; [solve_typing..|].

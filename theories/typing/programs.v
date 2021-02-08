@@ -9,7 +9,7 @@ Section typing.
   (* This is an iProp because it is also used by the function type. *)
   Definition typed_body (E : elctx) (L : llctx) (C : cctx) (T : tctx)
                         (e : expr) : iProp Σ :=
-    (∀ tid, lft_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗ llctx_interp L 1 -∗
+    (∀ tid, lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗ llctx_interp L 1 -∗
                cctx_interp tid C -∗ tctx_interp tid T -∗
                WP e {{ _, cont_postcondition }})%I.
   Global Arguments typed_body _ _ _ _ _%E.
@@ -33,9 +33,9 @@ Section typing.
            (typed_body E L).
   Proof.
     intros C1 C2 HC T1 T2 HT e ? <-. iIntros "H".
-    iIntros (tid) "#LFT #HE Htl HL HC HT".
+    iIntros (tid) "#LFT #TIME #HE Htl HL HC HT".
     iMod (HT with "LFT HE HL HT") as "(HL & HT)".
-    iApply ("H" with "LFT HE Htl HL [HC] HT").
+    iApply ("H" with "LFT TIME HE Htl HL [HC] HT").
     by iApply (HC with "LFT HE HC").
   Qed.
 
@@ -47,7 +47,7 @@ Section typing.
   (** Instruction *)
   Definition typed_instruction (E : elctx) (L : llctx)
              (T1 : tctx) (e : expr) (T2 : val → tctx) : iProp Σ :=
-    (∀ tid, lft_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
+    (∀ tid, lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
               llctx_interp L 1 -∗ tctx_interp tid T1 -∗
               WP e {{ v, na_own tid ⊤ ∗
                          llctx_interp L 1 ∗ tctx_interp tid (T2 v) }})%I.
@@ -55,11 +55,11 @@ Section typing.
 
   (** Writing and Reading **)
   Definition typed_write_def (E : elctx) (L : llctx) (ty1 ty ty2 : type) : iProp Σ :=
-    (□ ∀ v tid F qL, ⌜lftE ∪ (↑lrustN) ⊆ F⌝ →
-      lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗ ty1.(ty_own) tid [v] ={F}=∗
+    (□ ∀ v depth tid F qL, ⌜lftE ∪ (↑lrustN) ⊆ F⌝ →
+      lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗ ty1.(ty_own) depth tid [v] ={F}=∗
         ∃ (l : loc) vl, ⌜length vl = ty.(ty_size) ∧ v = #l⌝ ∗ l ↦∗ vl ∗
-          (▷ l ↦∗: ty.(ty_own) tid ={F}=∗
-            llctx_interp L qL ∗ ty2.(ty_own) tid [v]))%I.
+          (▷ l ↦∗: ty.(ty_own) depth tid -∗ ⧖(S depth) ={F}=∗
+            llctx_interp L qL ∗ ty2.(ty_own) (S depth) tid [v]))%I.
   Definition typed_write_aux : seal (@typed_write_def). by eexists. Qed.
   Definition typed_write := typed_write_aux.(unseal).
   Definition typed_write_eq : @typed_write = @typed_write_def := typed_write_aux.(seal_eq).
@@ -75,12 +75,12 @@ Section typing.
      that nobody could possibly have changed the vl (because only half the
      fraction was given). So we go with the definition that is easier to prove. *)
   Definition typed_read_def (E : elctx) (L : llctx) (ty1 ty ty2 : type) : iProp Σ :=
-    (□ ∀ v tid F qL, ⌜lftE ∪ ↑lrustN ⊆ F⌝ →
+    (□ ∀ v depth tid F qL, ⌜lftE ∪ ↑lrustN ⊆ F⌝ →
       lft_ctx -∗ elctx_interp E -∗ na_own tid F -∗
-      llctx_interp L qL -∗ ty1.(ty_own) tid [v] ={F}=∗
-        ∃ (l : loc) vl q, ⌜v = #l⌝ ∗ l ↦∗{q} vl ∗ ▷ ty.(ty_own) tid vl ∗
+      llctx_interp L qL -∗ ty1.(ty_own) depth tid [v] ={F}=∗
+        ∃ (l : loc) vl q, ⌜v = #l⌝ ∗ l ↦∗{q} vl ∗ ▷ ty.(ty_own) depth tid vl ∗
               (l ↦∗{q} vl ={F}=∗ na_own tid F ∗
-                              llctx_interp L qL ∗ ty2.(ty_own) tid [v]))%I.
+                              llctx_interp L qL ∗ ty2.(ty_own) depth tid [v]))%I.
   Definition typed_read_aux : seal (@typed_read_def). by eexists. Qed.
   Definition typed_read := typed_read_aux.(unseal).
   Definition typed_read_eq : @typed_read = @typed_read_def := typed_read_aux.(seal_eq).
@@ -115,9 +115,9 @@ Section typing_rules.
     (⊢ typed_body ((κ1 ⊑ₑ κ2) :: (κ2 ⊑ₑ κ1) :: E) L C T e) →
     ⊢ typed_body E ((κ1 ⊑ₗ [κ2]) :: L) C T e.
   Proof.
-    iIntros (He tid) "#LFT #HE Htl [Hκ HL] HC HT".
+    iIntros (He tid) "#LFT #TIME #HE Htl [Hκ HL] HC HT".
     iMod (lctx_equalize_lft with "LFT Hκ") as "[Hκ1 Hκ2]".
-    iApply (He with "LFT [Hκ1 Hκ2 HE] Htl HL HC HT").
+    iApply (He with "LFT TIME [Hκ1 Hκ2 HE] Htl HL HC HT").
     rewrite /elctx_interp /=. by iFrame.
   Qed.
 
@@ -127,11 +127,12 @@ Section typing_rules.
     (∀ v : val, typed_body E L C (T2 v ++ T) (subst' xb v e')) -∗
     typed_body E L C (T1 ++ T) (let: xb := e in e').
   Proof.
-    iIntros (Hc) "He He'". iIntros (tid) "#LFT #HE Htl HL HC HT". rewrite tctx_interp_app.
+    iIntros (Hc) "He He'". iIntros (tid) "#LFT #TIME #HE Htl HL HC HT".
+    rewrite tctx_interp_app.
     iDestruct "HT" as "[HT1 HT]". wp_bind e. iApply (wp_wand with "[He HL HT1 Htl]").
-    { iApply ("He" with "LFT HE Htl HL HT1"). }
+    { iApply ("He" with "LFT TIME HE Htl HL HT1"). }
     iIntros (v) "/= (Htl & HL & HT2)". wp_let.
-    iApply ("He'" with "LFT HE Htl HL HC [HT2 HT]").
+    iApply ("He'" with "LFT TIME HE Htl HL HC [HT2 HT]").
     rewrite tctx_interp_app. by iFrame.
   Qed.
 
@@ -164,10 +165,10 @@ Section typing_rules.
     (∀ κ, typed_body E ((κ ⊑ₗ κs) :: L) C T e) -∗
     typed_body E L C T (Newlft ;; e).
   Proof.
-    iIntros (Hc) "He". iIntros (tid) "#LFT #HE Htl HL HC HT".
+    iIntros (Hc) "He". iIntros (tid) "#LFT #TIME #HE Htl HL HC HT".
     iMod (lft_create with "LFT") as (Λ) "[Htk #Hinh]"; first done.
     set (κ' := lft_intersect_list κs). wp_seq.
-    iApply ("He" $! (κ' ⊓ Λ) with "LFT HE Htl [HL Htk] HC HT").
+    iApply ("He" $! (κ' ⊓ Λ) with "LFT TIME HE Htl [HL Htk] HC HT").
     rewrite /llctx_interp /=. iFrame "HL".
     iExists Λ. iSplit; first done. iFrame. done.
   Qed.
@@ -178,21 +179,21 @@ Section typing_rules.
     Closed [] e → UnblockTctx κ T1 T2 →
     typed_body E L C T2 e -∗ typed_body E ((κ ⊑ₗ κs) :: L) C T1 (Endlft ;; e).
   Proof.
-    iIntros (Hc Hub) "He". iIntros (tid) "#LFT #HE Htl [Hκ HL] HC HT".
+    iIntros (Hc Hub) "He". iIntros (tid) "#LFT #TIME #HE Htl [Hκ HL] HC HT".
     iDestruct "Hκ" as (Λ) "(% & Htok & #Hend)".
     iSpecialize ("Hend" with "Htok"). wp_bind Endlft.
     iApply (wp_mask_mono _ (↑lftN ∪ ↑lft_userN)); first done.
     iApply (wp_step_fupd with "Hend"); first set_solver-. wp_seq.
-    iIntros "#Hdead !>". wp_seq. iApply ("He" with "LFT HE Htl HL HC [> -]").
+    iIntros "#Hdead !>". wp_seq. iApply ("He" with "LFT TIME HE Htl HL HC [> -]").
     iApply (Hub with "[] HT"). simpl in *. subst κ. rewrite -lft_dead_or. auto.
   Qed.
 
   Lemma type_path_instr {E L} p ty :
     ⊢ typed_instruction_ty E L [p ◁ ty] p ty.
   Proof.
-    iIntros (?) "_ _ $$ [? _]".
-    iApply (wp_hasty with "[-]"). done. iIntros (v) "_ Hv".
-    rewrite tctx_interp_singleton. iExists v. iFrame. by rewrite eval_path_of_val.
+    iIntros (?) "_ _ _ $$ [? _]".
+    iApply (wp_hasty with "[-]"). done. iIntros (depth v) "Hdepth _ Hv".
+    rewrite tctx_interp_singleton. iExists v, depth. iFrame. by rewrite eval_path_of_val.
   Qed.
 
   Lemma type_letpath {E L} ty C T T' x p e :
@@ -206,19 +207,21 @@ Section typing_rules.
     (⊢ typed_write E L ty1 ty ty1') →
     (⊢ typed_instruction E L [p1 ◁ ty1; p2 ◁ ty] (p1 <- p2) (λ _, [p1 ◁ ty1'])).
   Proof.
-    iIntros (Hwrt tid) "#LFT #HE $ HL".
+    iIntros (Hwrt tid) "#LFT #TIME #HE $ HL".
     rewrite tctx_interp_cons tctx_interp_singleton. iIntros "[Hp1 Hp2]".
-    wp_bind p1. iApply (wp_hasty with "Hp1"). iIntros (v1) "% Hown1".
-    wp_bind p2. iApply (wp_hasty with "Hp2"). iIntros (v2) "_ Hown2".
-    rewrite typed_write_eq in Hwrt.
-    iMod (Hwrt with "[] LFT HE HL Hown1") as (l vl) "([% %] & Hl & Hclose)"; first done.
+    wp_bind p1. iApply (wp_hasty with "Hp1"). iIntros (depth1 v1) "Hdepth1 % Hown1".
+    wp_bind p2. iApply (wp_hasty with "Hp2"). iIntros (depth2 v2) "Hdepth2 _ Hown2".
+    iCombine "Hdepth1 Hdepth2" as "Hdepth". rewrite -persistent_time_receipt_sep.
+    iApply wp_fupd. rewrite typed_write_eq in Hwrt.
+    iMod (Hwrt with "[] LFT HE HL [> Hown1]") as (l vl) "([% %] & Hl & Hclose)"; first done.
+    { iApply (ty_own_depth_mono _ _ (depth1 `max` depth2) with "Hown1"). lia. }
+    iApply (wp_persistent_time_receipt with "TIME Hdepth")=>//.
     subst v1. iDestruct (ty_size_eq with "Hown2") as "#Hsz". iDestruct "Hsz" as %Hsz.
     rewrite <-Hsz in *. destruct vl as [|v[|]]; try done.
-    rewrite heap_mapsto_vec_singleton. iApply wp_fupd. wp_write.
-    rewrite -heap_mapsto_vec_singleton.
-    iMod ("Hclose" with "[Hl Hown2]") as "($ & Hown)".
-    { iExists _. iFrame. }
-    rewrite tctx_interp_singleton tctx_hasty_val' //.
+    rewrite heap_mapsto_vec_singleton. wp_write. rewrite -heap_mapsto_vec_singleton.
+    iIntros "#Hdepth". iMod ("Hclose" with "[> Hl Hown2] Hdepth") as "($ & Hown)".
+    { iExists _. iFrame. iApply (ty_own_depth_mono with "Hown2"); lia. }
+    rewrite tctx_interp_singleton tctx_hasty_val' //. eauto.
   Qed.
 
   Lemma type_assign {E L} ty1 ty ty1' C T T' p1 p2 e:
@@ -233,9 +236,9 @@ Section typing_rules.
     ty.(ty_size) = 1%nat → (⊢ typed_read E L ty1 ty ty1') →
     (⊢ typed_instruction E L [p ◁ ty1] (!p) (λ v, [p ◁ ty1'; v ◁ ty])).
   Proof.
-    iIntros (Hsz Hread tid) "#LFT #HE Htl HL Hp".
+    iIntros (Hsz Hread tid) "#LFT #TIME #HE Htl HL Hp".
     rewrite tctx_interp_singleton. wp_bind p. iApply (wp_hasty with "Hp").
-    iIntros (v) "% Hown".
+    iIntros (depth v) "#Hdepth % Hown".
     rewrite typed_read_eq in Hread.
     iMod (Hread with "[] LFT HE Htl HL Hown") as
         (l vl q) "(% & Hl & Hown & Hclose)"; first done.
@@ -244,7 +247,7 @@ Section typing_rules.
     rewrite heap_mapsto_vec_singleton. iApply wp_fupd. wp_read.
     iMod ("Hclose" with "Hl") as "($ & $ & Hown2)".
     rewrite tctx_interp_cons tctx_interp_singleton tctx_hasty_val tctx_hasty_val' //.
-    by iFrame.
+    iSplitR "Hown"; eauto.
   Qed.
 
   Lemma type_deref {E L} ty1 C T T' ty ty1' x p e:
@@ -259,27 +262,33 @@ Section typing_rules.
   Lemma type_memcpy_iris E L qL tid ty ty1 ty1' ty2 ty2' (n : Z) p1 p2 :
     Z.of_nat (ty.(ty_size)) = n →
     typed_write E L ty1 ty ty1' -∗ typed_read E L ty2 ty ty2' -∗
-    {{{ lft_ctx ∗ elctx_interp E ∗ na_own tid ⊤ ∗ llctx_interp L qL ∗
+    {{{ lft_ctx ∗ time_ctx ∗ elctx_interp E ∗ na_own tid ⊤ ∗ llctx_interp L qL ∗
         tctx_elt_interp tid (p1 ◁ ty1) ∗ tctx_elt_interp tid (p2 ◁ ty2) }}}
       (p1 <-{n} !p2)
     {{{ RET #☠; na_own tid ⊤ ∗ llctx_interp L qL ∗
                  tctx_elt_interp tid (p1 ◁ ty1') ∗ tctx_elt_interp tid (p2 ◁ ty2') }}}.
   Proof.
     iIntros (<-) "#Hwrt #Hread !#".
-    iIntros (Φ) "(#LFT & #HE & Htl & [HL1 HL2] & [Hp1 Hp2]) HΦ".
-    wp_bind p1. iApply (wp_hasty with "Hp1"). iIntros (v1) "% Hown1".
-    wp_bind p2. iApply (wp_hasty with "Hp2"). iIntros (v2) "% Hown2".
-    rewrite typed_write_eq typed_read_eq.
-    iMod ("Hwrt" with "[] LFT HE HL1 Hown1")
+    iIntros (Φ) "(#LFT & #TIME & #HE & Htl & [HL1 HL2] & [Hp1 Hp2]) HΦ".
+    wp_bind p1. iApply (wp_hasty with "Hp1"). iIntros (depth1 v1) "Hdepth1 % Hown1".
+    wp_bind p2. iApply (wp_hasty with "Hp2"). iIntros (depth2 v2) "Hdepth2 % Hown2".
+    iCombine "Hdepth1 Hdepth2" as "Hdepth". rewrite -persistent_time_receipt_sep.
+    iApply wp_fupd. rewrite typed_write_eq typed_read_eq.
+    iMod ("Hwrt" with "[] LFT HE HL1 [> Hown1]")
       as (l1 vl1) "([% %] & Hl1 & Hcl1)"; first done.
+    { iApply (ty_own_depth_mono _ _ (depth1 `max` depth2) with "Hown1"). lia. }
     iMod ("Hread" with "[] LFT HE Htl HL2 Hown2")
       as (l2 vl2 q2) "(% & Hl2 & Hown2 & Hcl2)"; first done.
-    iDestruct (ty_size_eq with "Hown2") as "#>%". subst v1 v2. iApply wp_fupd.
+    iApply (wp_persistent_time_receipt with "TIME Hdepth")=>//.
+    iDestruct (ty_size_eq with "Hown2") as "#>%". subst v1 v2.
     iApply (wp_memcpy with "[$Hl1 $Hl2]"); try congruence; [].
-    iNext. iIntros "[Hl1 Hl2]". iApply ("HΦ" with "[> -]"). rewrite !tctx_hasty_val' //.
-    iMod ("Hcl1" with "[Hl1 Hown2]") as "($ & $)".
-    { iExists _. iFrame. }
-    iMod ("Hcl2" with "Hl2") as "($ & $ & $)". done.
+    iNext. iIntros "[Hl1 Hl2] #Hdepth".
+    iMod ("Hcl1" with "[> Hl1 Hown2] Hdepth") as "[? H1]".
+    { iExists _. iFrame. iApply (ty_own_depth_mono with "Hown2"). lia. }
+    iMod ("Hcl2" with "Hl2") as "(? & ? & H2)".
+    iApply "HΦ". iFrame. rewrite !tctx_hasty_val' //.
+    iSplitL "H1"; [by eauto with iFrame|]. iExists _. iFrame.
+    iApply persistent_time_receipt_mono; [|done]. lia.
   Qed.
 
   Lemma type_memcpy_instr {E L} ty ty1 ty1' ty2 ty2' (n : Z) p1 p2 :
@@ -289,8 +298,8 @@ Section typing_rules.
     ⊢ typed_instruction E L [p1 ◁ ty1; p2 ◁ ty2] (p1 <-{n} !p2)
                       (λ _, [p1 ◁ ty1'; p2 ◁ ty2']).
   Proof.
-    iIntros (Hsz Hwrt Hread tid) "#LFT #HE Htl HL HT".
-    iApply (type_memcpy_iris with "[] [] [$LFT $Htl $HE $HL HT]"); try done.
+    iIntros (Hsz Hwrt Hread tid) "#LFT #TIME #HE Htl HL HT".
+    iApply (type_memcpy_iris with "[] [] [$LFT $TIME $Htl $HE $HL HT]"); try done.
     { by rewrite tctx_interp_cons tctx_interp_singleton. }
     rewrite tctx_interp_cons tctx_interp_singleton. auto.
   Qed.

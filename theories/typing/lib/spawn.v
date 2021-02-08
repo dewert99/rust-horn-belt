@@ -10,18 +10,21 @@ Section join_handle.
   Context `{!typeG Σ, !spawnG Σ}.
 
   Definition join_inv (ty : type) (v : val) :=
-    (∀ tid, (box ty).(ty_own) tid [v])%I.
+    (∀ tid, tctx_elt_interp tid (v ◁ box ty))%I.
 
   Program Definition join_handle (ty : type) :=
     {| ty_size := 1; ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
-       ty_own _ vl :=
+       ty_own _ _ vl :=
          match vl return _ with
          | [ #(LitLoc l) ] => lang.lib.spawn.join_handle spawnN l (join_inv ty)
          | _ => False
          end%I;
        ty_shr κ _ l := True%I |}.
-  Next Obligation. by iIntros (ty tid [|[[]|][]]) "H". Qed.
-  Next Obligation. iIntros "* _ _ _ _ $". auto. Qed.
+  Next Obligation. by iIntros (ty depth tid [|[[]|][]]) "H". Qed.
+  Next Obligation. done. Qed.
+  Next Obligation.
+    iIntros "* _ _ _ _ ? !>". iApply step_fupdN_intro; [done|by iFrame].
+  Qed.
   Next Obligation. iIntros (?) "**"; auto. Qed.
 
   Lemma join_handle_subtype ty1 ty2 :
@@ -31,7 +34,9 @@ Section join_handle.
     - iDestruct "Hincl" as "[_ [Hout _]]". by iApply "Hout".
     - iIntros "* Hvl". destruct vl as [|[[|vl|]|] [|]]; try done.
       simpl. iApply (join_handle_impl with "[] Hvl"). clear tid.
-      iIntros "!# * Hown" (tid).
+      iIntros "!# * Hown" (tid). iSpecialize ("Hown" $! tid).
+      rewrite /tctx_elt_interp /=. iDestruct "Hown" as (??) "(?&?&?)".
+      iExists _, _. iFrame.
       iDestruct (box_type_incl with "Hincl") as "{Hincl} (_ & _ & Hincl & _)".
       iApply "Hincl". done.
     - iIntros "* _". auto.
@@ -53,22 +58,24 @@ Section join_handle.
     - apply (type_lft_morphism_add _ static [] [])=>?.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /elctx_interp /= left_id right_id.
-    - move=> ??? Hsz ?? Ho ?? [|[[|l|]|] []] //=.
-      rewrite /join_inv /box /own_ptr ![X in X {| ty_own := _ |}]/ty_own Hsz.
+    - move=> ??? Hsz ?? Ho ??? [|[[|l|]|] []] //=.
+      rewrite /join_inv /tctx_elt_interp /box /own_ptr
+              ![X in X {| ty_own := _ |}]/ty_own Hsz.
       repeat (apply Ho || f_contractive || f_equiv).
   Qed.
 
   Global Instance join_handle_ne : NonExpansive join_handle.
   Proof.
     intros n ty1 ty2 Hty12. constructor; [done|apply Hty12..| |done].
-    intros tid vs.
-    rewrite /join_handle /join_inv /box /own_ptr ![X in X {| ty_own := _ |}]/ty_own.
+    intros depth tid vs.
+    rewrite /join_handle /join_inv /tctx_elt_interp /box /own_ptr
+            ![X in X {| ty_own := _ |}]/ty_own.
     repeat (apply Hty12 || f_equiv).
   Qed.
 
   Global Instance join_handle_send ty :
     Send (join_handle ty).
-  Proof. iIntros (???) "$ //". Qed.
+  Proof. iIntros (????) "$ //". Qed.
   Global Instance join_handle_sync ty : Sync (join_handle ty).
   Proof. iIntros (????) "_ //". Qed.
 End join_handle.
@@ -96,19 +103,22 @@ Section spawn.
     iApply (type_let _ _ _ _ ([f' ◁ _; env ◁ _])
                      (λ j, [j ◁ join_handle retty])); try solve_typing; [|].
     { (* The core of the proof: showing that spawn is safe. *)
-      iIntros (tid) "#LFT #HE $ $ [Hf' [Henv _]]". rewrite !tctx_hasty_val [fn _]lock.
-      iApply (spawn_spec _ (join_inv retty) with "[-]"); last first.
+      iIntros (tid) "#LFT #TIME #HE $ $ [Hf' [Henv _]]". rewrite !tctx_hasty_val [fn _]lock.
+      iApply wp_fupd. iApply (spawn_spec _ (join_inv retty) with "[-]"); last first.
       { iIntros "!> *". rewrite tctx_interp_singleton tctx_hasty_val.
-        iIntros "?". by iFrame. }
+        iIntros "?". iExists 0%nat. iMod persistent_time_receipt_0 as "$". by iFrame. }
       simpl_subst. iIntros (c) "Hfin". iMod na_alloc as (tid') "Htl". wp_let. wp_let.
-      unlock. iApply (type_call_iris _ [] () [_] with "LFT HE Htl [] Hf' [Henv]");
+      iDestruct "Hf'" as (?) "[_ Hf']".
+      unlock. iApply (type_call_iris _ [] () [_] with "LFT TIME HE Htl [] Hf' [Henv]");
       (* The `solve_typing` here shows that, because we assume that `fty` and `retty`
          outlive `static`, the implicit requirmeents made by `call_once` are satisifed. *)
         [solve_typing|iApply (lft_tok_static 1%Qp)| |].
-      - by rewrite big_sepL_singleton tctx_hasty_val send_change_tid.
-      - iIntros (r) "Htl _ Hret".
+      - iDestruct "Henv" as (?) "?".
+        rewrite big_sepL_singleton tctx_hasty_val send_change_tid. eauto.
+      - iIntros (r depth') "Htl _ #Hdepth' Hret".
         wp_rec. iApply (finish_spec with "[$Hfin Hret]"); last auto.
-        iIntros (?). by iApply @send_change_tid. }
+        iIntros (?). rewrite tctx_hasty_val. iExists _. iFrame "Hdepth'".
+        by iApply @send_change_tid. }
     iIntros (v). simpl_subst.
     iApply type_new; [solve_typing..|]. iIntros (r). simpl_subst.
     iApply type_assign; [solve_typing..|].
@@ -129,11 +139,12 @@ Section spawn.
     iApply type_deref; [solve_typing..|]. iIntros (c'); simpl_subst.
     iApply (type_let _ _ _ _ ([c' ◁ _])
                              (λ r, [r ◁ box retty])); try solve_typing; [|].
-    { iIntros (tid) "#LFT _ $ $".
+    { iIntros (tid) "#LFT #TIME _ $ $".
       rewrite tctx_interp_singleton tctx_hasty_val. iIntros "Hc".
+      iDestruct "Hc" as (depth) "[Hdepth Hc]".
       destruct c' as [[|c'|]|]; try done.
       iApply (join_spec with "Hc"). iNext. iIntros "* Hret".
-      rewrite tctx_interp_singleton tctx_hasty_val. done. }
+      by rewrite tctx_interp_singleton. }
     iIntros (r); simpl_subst. iApply type_delete; [solve_typing..|].
     iApply type_jump; solve_typing.
   Qed.

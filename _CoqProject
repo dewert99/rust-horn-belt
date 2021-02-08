@@ -20,6 +20,7 @@ theories/lifetime/na_borrow.v
 theories/lifetime/frac_borrow.v
 theories/lang/adequacy.v
 theories/lang/heap.v
+theories/lang/time.v
 theories/lang/lang.v
 theories/lang/lifting.v
 theories/lang/notation.v

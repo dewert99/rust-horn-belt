@@ -35,6 +35,7 @@ Section non_lexical.
 
       Newlft;;
       letalloc: "map0" <- "map'" in
+      Share;;
       letalloc: "key0" <- "key" in
       letcall: "o" := "get_mut" ["map0"; "key0"]%E in
       Endlft;;
@@ -55,6 +56,7 @@ Section non_lexical.
 
         Newlft;;
         letalloc: "map0" <- "map'" in
+        Share;;
         letalloc: "key0" <- "key" in
         letcall: "r'" := "get_mut" ["map0"; "key0"]%E in
         Endlft;;
@@ -82,6 +84,7 @@ Section non_lexical.
       iApply (type_newlft [m]). iIntros (κ).
       iApply (type_newlft [ϝ]). iIntros (α).
       iApply (type_letalloc_1 (&uniq{κ}_)); [solve_typing..|]. iIntros (map0). simpl_subst.
+      iApply (type_share key _ α); [solve_typing..|].
       iApply (type_letalloc_1 (&shr{α}K)); [solve_typing..|]. iIntros (key0). simpl_subst.
       iApply (type_letcall (κ, α)); [solve_typing..|]. iIntros (o). simpl_subst.
       iApply type_endlft.
@@ -97,7 +100,7 @@ Section non_lexical.
           iApply (type_newlft [ϝ]). iIntros (β). clear map0 key0.
           iApply (type_letalloc_1 (&uniq{β}_)); [solve_typing..|].
             iIntros (map0). simpl_subst.
-          iApply (type_letalloc_n _(box K)); [solve_typing..|]. iIntros (key0). simpl_subst.
+          iApply (type_letalloc_n _ (box K)); [solve_typing..|]. iIntros (key0). simpl_subst.
           iApply type_let; [iApply defaultv_type|solve_typing|].
             iIntros (defaultv'). simpl_subst.
           iApply (type_letcall ()); [solve_typing..|]. iIntros (default0). simpl_subst.
@@ -107,6 +110,7 @@ Section non_lexical.
           iApply (type_newlft [ϝ]). iIntros (γ). clear map0 key0.
           iApply (type_letalloc_1 (&uniq{m}_)); [solve_typing..|].
             iIntros (map0). simpl_subst.
+          iApply (type_share key _ γ); [solve_typing..|].
           iApply (type_letalloc_1 (&shr{γ}K)); [solve_typing..|].
             iIntros (key0). simpl_subst.
           iApply (type_letcall (m, γ)); [solve_typing..|]. iIntros (r'). simpl_subst.

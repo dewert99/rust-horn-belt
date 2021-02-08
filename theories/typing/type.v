@@ -1,4 +1,4 @@
-From iris.algebra Require Import numbers list.
+From iris.algebra Require Import numbers list lib.excl_auth.
 From iris.base_logic.lib Require Export na_invariants.
 From lrust.lang Require Export proofmode notation.
 From lrust.lifetime Require Export frac_borrow.
@@ -10,7 +10,8 @@ Class typeG Σ := TypeG {
   type_heapG :> lrustG Σ;
   type_lftG :> lftG Σ;
   type_na_invG :> na_invG Σ;
-  type_frac_borrowG :> frac_borG Σ
+  type_frac_borrowG :> frac_borG Σ;
+  type_excl_auth_inG :> inG Σ (excl_authR natO)
 }.
 
 Definition lftE : coPset := ↑lftN.
@@ -23,12 +24,14 @@ Record type `{!typeG Σ} :=
   { ty_size : nat;
     ty_lfts : list lft;
     ty_E : elctx;
-    ty_own : thread_id → list val → iProp Σ;
+    ty_own : nat → thread_id → list val → iProp Σ;
     ty_shr : lft → thread_id → loc → iProp Σ;
 
     ty_shr_persistent κ tid l : Persistent (ty_shr κ tid l);
 
-    ty_size_eq tid vl : ty_own tid vl -∗ ⌜length vl = ty_size⌝;
+    ty_size_eq depth tid vl : ty_own depth tid vl -∗ ⌜length vl = ty_size⌝;
+    ty_own_depth_mono depth1 depth2 tid vl :
+      (depth1 ≤ depth2)%nat → ty_own depth1 tid vl -∗ ty_own depth2 tid vl;
     (* The mask for starting the sharing does /not/ include the
        namespace N, for allowing more flexibility for the user of
        this type (typically for the [own] type). AFAIK, there is no
@@ -42,9 +45,10 @@ Record type `{!typeG Σ} :=
        nicer (they would otherwise require a "∨ □|=>[†κ]"), and (b) so that
        we can have emp == sum [].
      *)
-    ty_share E κ l tid q : lftE ⊆ E →
+    ty_share E depth κ l tid q : lftE ⊆ E →
       lft_ctx -∗ κ ⊑ lft_intersect_list ty_lfts -∗
-      &{κ} (l ↦∗: ty_own tid) -∗ q.[κ] ={E}=∗ ty_shr κ tid l ∗ q.[κ];
+      &{κ} (l ↦∗: ty_own depth tid) -∗ q.[κ]
+       ={E}=∗ |={E}▷=>^depth |={E}=> ty_shr κ tid l ∗ q.[κ];
     ty_shr_mono κ κ' tid l :
       κ' ⊑ κ -∗ ty_shr κ tid l -∗ ty_shr κ' tid l
   }.
@@ -55,9 +59,17 @@ Instance: Params (@ty_E) 2 := {}.
 Instance: Params (@ty_own) 2 := {}.
 Instance: Params (@ty_shr) 2 := {}.
 
-Arguments ty_own {_ _} !_ _ _ / : simpl nomatch.
+Arguments ty_own {_ _} !_ _ _ _ / : simpl nomatch.
 
 Notation ty_lft ty := (lft_intersect_list ty.(ty_lfts)).
+
+Lemma ty_own_mt_depth_mono `{!typeG Σ} ty depth1 depth2 tid l :
+  (depth1 ≤ depth2)%nat →
+  l ↦∗: ty.(ty_own) depth1 tid -∗ l ↦∗: ty.(ty_own) depth2 tid.
+Proof.
+  iIntros (?) "H". iDestruct "H" as (vl) "[??]".
+  iExists vl. iFrame. by iApply ty_own_depth_mono.
+Qed.
 
 Definition ty_outlives_E `{!typeG Σ} ty (κ : lft) : elctx :=
   (λ α, κ ⊑ₑ α) <$> ty.(ty_lfts).
@@ -119,23 +131,25 @@ Instance: Params (@st_own) 2 := {}.
 Program Definition ty_of_st `{!typeG Σ} (st : simple_type) : type :=
   {| ty_size := 1;
      ty_lfts := st.(st_lfts); ty_E := st.(st_E);
-     ty_own := st.(st_own);
+     ty_own _ := st.(st_own);
      (* [st.(st_own) tid vl] needs to be outside of the fractured
          borrow, otherwise I do not know how to prove the shr part of
          [subtype_shr_mono]. *)
-     ty_shr := λ κ tid l,
-               (∃ vl, &frac{κ} (λ q, l ↦∗{q} vl) ∗ ▷ st.(st_own) tid vl)%I
+     ty_shr κ tid l :=
+       (∃ vl, &frac{κ} (λ q, l ↦∗{q} vl) ∗ ▷ st.(st_own) tid vl)%I
   |}.
 Next Obligation. intros. apply st_size_eq. Qed.
+Next Obligation. auto. Qed.
 Next Obligation.
-  iIntros (?? st E κ l tid ??) "#LFT _ Hmt Htok".
+  iIntros (?? st E depth κ l tid ??) "#LFT _ Hmt Hκ !>".
+  iApply step_fupdN_intro=>//. iIntros "!>".
   iMod (bor_exists with "LFT Hmt") as (vl) "Hmt"; first solve_ndisj.
   iMod (bor_sep with "LFT Hmt") as "[Hmt Hown]"; first solve_ndisj.
-  iMod (bor_persistent with "LFT Hown Htok") as "[Hown $]"; first solve_ndisj.
+  iMod (bor_persistent with "LFT Hown Hκ") as "[Hown $]"; first solve_ndisj.
   iMod (bor_fracture with "LFT [Hmt]") as "Hfrac"; by eauto with iFrame.
 Qed.
 Next Obligation.
-  iIntros (?? st κ κ' tid l) "#Hord H".
+  iIntros (?? st κ κ' tid l)  "#Hord H".
   iDestruct "H" as (vl) "[#Hf #Hown]".
   iExists vl. iFrame "Hown". by iApply (frac_bor_shorten with "Hord").
 Qed.
@@ -155,7 +169,7 @@ Section ofe.
       ty1.(ty_size) = ty2.(ty_size) →
       ty1.(ty_lfts) = ty2.(ty_lfts) →
       ty1.(ty_E) = ty2.(ty_E) →
-      (∀ tid vs, ty1.(ty_own) tid vs ≡ ty2.(ty_own) tid vs) →
+      (∀ depth tid vs, ty1.(ty_own) depth tid vs ≡ ty2.(ty_own) depth tid vs) →
       (∀ κ tid l, ty1.(ty_shr) κ tid l ≡ ty2.(ty_shr) κ tid l) →
       type_equiv' ty1 ty2.
   Instance type_equiv : Equiv type := type_equiv'.
@@ -164,22 +178,24 @@ Section ofe.
       ty1.(ty_size) = ty2.(ty_size) →
       ty1.(ty_lfts) = ty2.(ty_lfts) →
       ty1.(ty_E) = ty2.(ty_E) →
-      (∀ tid vs, ty1.(ty_own) tid vs ≡{n}≡ ty2.(ty_own) tid vs) →
+      (∀ depth tid vs, ty1.(ty_own) depth tid vs ≡{n}≡ ty2.(ty_own) depth tid vs) →
       (∀ κ tid l, ty1.(ty_shr) κ tid l ≡{n}≡ ty2.(ty_shr) κ tid l) →
       type_dist' n ty1 ty2.
   Instance type_dist : Dist type := type_dist'.
 
   Let T := prodO (prodO (prodO (prodO
     natO (listO lftO)) (listO (prodO lftO lftO)))
-    (thread_id -d> list val -d> iPropO Σ))
+    (nat -d> thread_id -d> list val -d> iPropO Σ))
     (lft -d> thread_id -d> loc -d> iPropO Σ).
   Let P (x : T) : Prop :=
     (∀ κ tid l, Persistent (x.2 κ tid l)) ∧
-    (∀ tid vl, x.1.2 tid vl -∗ ⌜length vl = x.1.1.1.1⌝) ∧
-    (∀ E κ l tid q, lftE ⊆ E →
+    (∀ depth tid vl, x.1.2 depth tid vl -∗ ⌜length vl = x.1.1.1.1⌝) ∧
+    (∀ depth1 depth2 tid vl,
+        (depth1 ≤ depth2)%nat → x.1.2 depth1 tid vl -∗ x.1.2 depth2 tid vl) ∧
+    (∀ E depth κ l tid q, lftE ⊆ E →
       lft_ctx -∗ κ ⊑ lft_intersect_list x.1.1.1.2 -∗
-      &{κ} (l ↦∗: λ vs, x.1.2 tid vs) -∗
-      q.[κ] ={E}=∗ x.2 κ tid l ∗ q.[κ]) ∧
+      &{κ} (l ↦∗: λ vs, x.1.2 depth tid vs) -∗
+      q.[κ] ={E}=∗ |={E}▷=>^depth |={E}=> x.2 κ tid l ∗ q.[κ]) ∧
     (∀ κ κ' tid l, κ' ⊑ κ -∗ x.2 κ tid l -∗ x.2 κ' tid l).
 
   Definition type_unpack (ty : type) : T :=
@@ -233,10 +249,11 @@ Section ofe.
     induction EQ as [|???? EQ _ IH]=>//=. by rewrite EQ IH.
   Qed.
   Global Instance ty_own_ne n:
-    Proper (dist n ==> eq ==> eq ==> dist n) ty_own.
-  Proof. intros ?? EQ ??-> ??->. apply EQ. Qed.
-  Global Instance ty_own_proper : Proper ((≡) ==> eq ==> eq ==> (≡)) ty_own.
-  Proof. intros ?? EQ ??-> ??->. apply EQ. Qed.
+    Proper (dist n ==> eq ==> eq ==> eq ==> dist n) ty_own.
+  Proof. intros ?? EQ ??-> ??-> ??->. apply EQ. Qed.
+  Global Instance ty_own_proper :
+    Proper ((≡) ==> eq ==> eq ==> eq ==> (≡)) ty_own.
+  Proof. intros ?? EQ ??-> ??-> ??->. apply EQ. Qed.
   Global Instance ty_shr_ne n :
     Proper (dist n ==> eq ==> eq ==> eq ==> dist n) ty_shr.
   Proof. intros ?? EQ ??-> ??-> ??->. apply EQ. Qed.
@@ -248,32 +265,34 @@ Section ofe.
     St_equiv :
       ty1.(ty_lfts) = ty2.(ty_lfts) →
       ty1.(ty_E) = ty2.(ty_E) →
-      (∀ tid vs, ty1.(ty_own) tid vs ≡ ty2.(ty_own) tid vs) →
+      (∀ depth tid vs, ty1.(ty_own) depth tid vs ≡ ty2.(ty_own) depth tid vs) →
       st_equiv' ty1 ty2.
   Instance st_equiv : Equiv simple_type := st_equiv'.
   Inductive st_dist' (n : nat) (ty1 ty2 : simple_type) : Prop :=
     St_dist :
       ty1.(ty_lfts) = ty2.(ty_lfts) →
       ty1.(ty_E) = ty2.(ty_E) →
-      (∀ tid vs, ty1.(ty_own) tid vs ≡{n}≡ (ty2.(ty_own) tid vs)) →
+      (∀ depth tid vs, ty1.(ty_own) depth tid vs ≡{n}≡ (ty2.(ty_own) depth tid vs)) →
       st_dist' n ty1 ty2.
   Instance st_dist : Dist simple_type := st_dist'.
 
   Definition st_ofe_mixin : OfeMixin simple_type.
   Proof.
     apply (iso_ofe_mixin ty_of_st); split=>EQ.
-    - split=>//=; try apply EQ. intros ???. repeat apply EQ || f_equiv.
+    - split=>//=; try apply EQ. intros ???. destruct EQ as [_ _ EQ].
+      repeat eapply (EQ 0%nat) || f_equiv.
     - split; apply EQ.
-    - split=>//=; try apply EQ. intros ???. repeat apply EQ || f_equiv.
+    - split=>//=; try apply EQ. intros ???. destruct EQ as [_ _ EQ].
+      repeat eapply (EQ 0%nat) || f_equiv.
     - split; apply EQ.
   Qed.
   Canonical Structure stO : ofeT := OfeT simple_type st_ofe_mixin.
 
   Global Instance st_own_ne n :
     Proper (dist n ==> eq ==> eq ==> dist n) st_own.
-  Proof. intros ?? EQ ??-> ??->. apply EQ. Qed.
+  Proof. intros ?? [_ _ EQ] ??-> ??->. apply (EQ 0%nat). Qed.
   Global Instance st_own_proper : Proper ((≡) ==> eq ==> eq ==> (≡)) st_own.
-  Proof. intros ?? EQ ??-> ??->. apply EQ. Qed.
+  Proof. intros ?? [_ _ EQ] ??-> ??->. apply (EQ 0%nat). Qed.
 
   Global Instance ty_of_st_ne : NonExpansive ty_of_st.
   Proof.
@@ -371,16 +390,16 @@ Class TypeContractive `{!typeG Σ} (T : type -> type): Prop := {
     ty1.(ty_size) = ty2.(ty_size) →
     (⊢ ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) →
     elctx_interp (ty1.(ty_E)) ≡ elctx_interp (ty2.(ty_E)) →
-    (∀ tid vl, dist_later n (ty1.(ty_own) tid vl) (ty2.(ty_own) tid vl)) →
+    (∀ depth tid vl, dist_later n (ty1.(ty_own) depth tid vl) (ty2.(ty_own) depth tid vl)) →
     (∀ κ tid l, ty1.(ty_shr) κ tid l ≡{n}≡ ty2.(ty_shr) κ tid l) →
-    (∀ tid vl, (T ty1).(ty_own) tid vl ≡{n}≡ (T ty2).(ty_own) tid vl);
+    (∀ depth tid vl, (T ty1).(ty_own) depth tid vl ≡{n}≡ (T ty2).(ty_own) depth tid vl);
 
   type_contractive_ty_shr n ty1 ty2 :
     ty1.(ty_size) = ty2.(ty_size) →
     (⊢ ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) →
     elctx_interp (ty1.(ty_E)) ≡ elctx_interp (ty2.(ty_E)) →
-    (∀ tid vl, match n with S (S n) =>
-        ty1.(ty_own) tid vl ≡{n}≡ ty2.(ty_own) tid vl | _ => True end) →
+    (∀ depth tid vl, match n with S (S n) =>
+        ty1.(ty_own) depth tid vl ≡{n}≡ ty2.(ty_own) depth tid vl | _ => True end) →
     (∀ κ tid l, dist_later n (ty1.(ty_shr) κ tid l) (ty2.(ty_shr) κ tid l)) →
     (∀ κ tid l, (T ty1).(ty_shr) κ tid l ≡{n}≡ (T ty2).(ty_shr) κ tid l);
 }.
@@ -395,18 +414,19 @@ Class TypeNonExpansive `{!typeG Σ} (T : type -> type): Prop := {
     ty1.(ty_size) = ty2.(ty_size) →
     (⊢ ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) →
     elctx_interp (ty1.(ty_E)) ≡ elctx_interp (ty2.(ty_E)) →
-    (∀ tid vl, ty1.(ty_own) tid vl ≡{n}≡ ty2.(ty_own) tid vl) →
+    (∀ depth tid vl, ty1.(ty_own) depth tid vl ≡{n}≡ ty2.(ty_own) depth tid vl) →
     (∀ κ tid l, ty1.(ty_shr) κ tid l ≡{S n}≡ ty2.(ty_shr) κ tid l) →
-    (∀ tid vl, (T ty1).(ty_own) tid vl ≡{n}≡ (T ty2).(ty_own) tid vl);
+    (∀ depth tid vl, (T ty1).(ty_own) depth tid vl ≡{n}≡ (T ty2).(ty_own) depth tid vl);
 
   type_non_expansive_ty_shr n ty1 ty2 :
     ty1.(ty_size) = ty2.(ty_size) →
     (⊢ ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) →
     elctx_interp (ty1.(ty_E)) ≡ elctx_interp (ty2.(ty_E)) →
-    (∀ tid vl, dist_later n (ty1.(ty_own) tid vl) (ty2.(ty_own) tid vl)) →
+    (∀ depth tid vl, dist_later n (ty1.(ty_own) depth tid vl) (ty2.(ty_own) depth tid vl)) →
     (∀ κ tid l, ty1.(ty_shr) κ tid l ≡{n}≡ ty2.(ty_shr) κ tid l) →
     (∀ κ tid l, (T ty1).(ty_shr) κ tid l ≡{n}≡ (T ty2).(ty_shr) κ tid l);
 }.
+
 
 Class TypeNonExpansiveList `{!typeG Σ} (T : list type → type): Prop := {
   type_list_non_expansive_ne (Tl : list (type → type)) :
@@ -546,12 +566,12 @@ Fixpoint shr_locsE (l : loc) (n : nat) : coPset :=
   end.
 
 Class Copy `{!typeG Σ} (t : type) := {
-  copy_persistent tid vl : Persistent (t.(ty_own) tid vl);
-  copy_shr_acc κ tid E F l q :
+  copy_persistent depth tid vl : Persistent (t.(ty_own) depth tid vl);
+  copy_shr_acc depth κ tid E F l q :
     lftE ∪ ↑shrN ⊆ E → shr_locsE l (t.(ty_size) + 1) ⊆ F →
     lft_ctx -∗ t.(ty_shr) κ tid l -∗ na_own tid F -∗ q.[κ] ={E}=∗
        ∃ q' vl, na_own tid (F ∖ shr_locsE l t.(ty_size)) ∗
-         l ↦∗{q'} vl ∗ ▷t.(ty_own) tid vl ∗
+         l ↦∗{q'} vl ∗ ▷t.(ty_own) depth tid vl ∗
       (na_own tid (F ∖ shr_locsE l t.(ty_size)) -∗ l ↦∗{q'} vl
        ={E}=∗ na_own tid F ∗ q.[κ])
 }.
@@ -565,7 +585,8 @@ Global Instance lst_copy_cons `{!typeG Σ} ty tys :
   Copy ty → LstCopy tys → LstCopy (ty :: tys) := List.Forall_cons _ _ _.
 
 Class Send `{!typeG Σ} (t : type) :=
-  send_change_tid tid1 tid2 vl : t.(ty_own) tid1 vl -∗ t.(ty_own) tid2 vl.
+  send_change_tid depth tid1 tid2 vl :
+    t.(ty_own) depth tid1 vl -∗ t.(ty_own) depth tid2 vl.
 Instance: Params (@Send) 2 := {}.
 
 Class LstSend `{!typeG Σ} (tys : list type) := lst_send : Forall Send tys.
@@ -641,7 +662,7 @@ Section type.
 
   Global Program Instance ty_of_st_copy st : Copy (ty_of_st st).
   Next Obligation.
-    iIntros (st κ tid E ? l q ? HF) "#LFT #Hshr Htok Hlft /=".
+    iIntros (st depth κ tid E ? l q ? HF) "#LFT #Hshr Htok Hlft /=".
     iDestruct (na_own_acc with "Htok") as "[$ Htok]"; first solve_ndisj.
     iDestruct "Hshr" as (vl) "[Hf Hown]".
     iMod (frac_bor_acc with "LFT Hf Hlft") as (q') "[>Hmt Hclose]"; first solve_ndisj.
@@ -653,7 +674,7 @@ Section type.
   Global Instance send_equiv : Proper (equiv ==> impl) Send.
   Proof.
     intros ty1 ty2 [EQsz%leibniz_equiv EQlfts EQE EQown EQshr] Hty1.
-    rewrite /Send=>???. rewrite -!EQown. auto.
+    rewrite /Send=>????. rewrite -!EQown. auto.
   Qed.
 
   Global Instance sync_equiv : Proper (equiv ==> impl) Sync.
@@ -665,11 +686,11 @@ Section type.
   Global Instance ty_of_st_sync st : Send (ty_of_st st) → Sync (ty_of_st st).
   Proof.
     iIntros (Hsend κ tid1 tid2 l) "/=". iDestruct 1 as (vl) "[Hm Hown]".
-    iExists vl. iFrame "Hm". iNext. by iApply Hsend.
+    iExists vl. iFrame "Hm". iNext. by iApply (Hsend 0%nat).
   Qed.
 
-  Lemma send_change_tid' t tid1 tid2 vl :
-    Send t → t.(ty_own) tid1 vl ≡ t.(ty_own) tid2 vl.
+  Lemma send_change_tid' t depth tid1 tid2 vl :
+    Send t → t.(ty_own) depth tid1 vl ≡ t.(ty_own) depth tid2 vl.
   Proof.
     intros ?. apply: anti_symm; apply send_change_tid.
   Qed.
@@ -684,7 +705,7 @@ End type.
 Definition type_incl `{!typeG Σ} (ty1 ty2 : type) : iProp Σ :=
     (⌜ty1.(ty_size) = ty2.(ty_size)⌝ ∗
      (ty2.(ty_lft) ⊑ ty1.(ty_lft)) ∗
-     (□ ∀ tid vl, ty1.(ty_own) tid vl -∗ ty2.(ty_own) tid vl) ∗
+     (□ ∀ depth tid vl, ty1.(ty_own) depth tid vl -∗ ty2.(ty_own) depth tid vl) ∗
      (□ ∀ κ tid l, ty1.(ty_shr) κ tid l -∗ ty2.(ty_shr) κ tid l))%I.
 Instance: Params (@type_incl) 2 := {}.
 
@@ -718,7 +739,7 @@ Section subtyping.
     iSplit; first (iPureIntro; etrans; done).
     iSplit; [|iSplit].
     - iApply lft_incl_trans. iApply "Hl23". iApply "Hl12".
-    - iIntros "!# %% ?". iApply "Ho23". iApply "Ho12". done.
+    - iIntros "!# %%% ?". iApply "Ho23". iApply "Ho12". done.
     - iIntros "!# %%% ?". iApply "Hs23". iApply "Hs12". done.
   Qed.
 
@@ -762,7 +783,7 @@ Section subtyping.
     (∀ qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
       (⌜ty1.(ty_size) = ty2.(ty_size)⌝ ∗
       (ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) ∗
-      (□ ∀ tid vl, ty1.(ty_own) tid vl ↔ ty2.(ty_own) tid vl) ∗
+      (□ ∀ depth tid vl, ty1.(ty_own) depth tid vl ↔ ty2.(ty_own) depth tid vl) ∗
       (□ ∀ κ tid l, ty1.(ty_shr) κ tid l ↔ ty2.(ty_shr) κ tid l)))).
   Proof.
     split.
@@ -840,8 +861,9 @@ End subtyping.
 Section type_util.
   Context `{!typeG Σ}.
 
-  Lemma heap_mapsto_ty_own l ty tid :
-    l ↦∗: ty_own ty tid ⊣⊢ ∃ (vl : vec val ty.(ty_size)), l ↦∗ vl ∗ ty_own ty tid vl.
+  Lemma heap_mapsto_ty_own l ty depth tid :
+    l ↦∗: ty.(ty_own) depth tid ⊣⊢
+      ∃ (vl : vec val ty.(ty_size)), l ↦∗ vl ∗ ty.(ty_own) depth tid vl.
   Proof.
     iSplit.
     - iIntros "H". iDestruct "H" as (vl) "[Hl Hown]".

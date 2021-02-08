@@ -11,7 +11,7 @@ Section uninit.
   Next Obligation. done. Qed.
 
   Global Instance uninit_1_send : Send uninit_1.
-  Proof. iIntros (tid1 tid2 vl) "H". done. Qed.
+  Proof. iIntros (depth tid1 tid2 vl) "H". done. Qed.
 
   Definition uninit0 (n : nat) : type :=
     Π (replicate n uninit_1).
@@ -19,8 +19,8 @@ Section uninit.
   Lemma uninit0_sz n : ty_size (uninit0 n) = n.
   Proof. induction n=>//=. by f_equal. Qed.
 
-  Lemma uninit0_own n tid vl :
-    ty_own (uninit0 n) tid vl ⊣⊢ ⌜length vl = n⌝.
+  Lemma uninit0_own n depth tid vl :
+    (uninit0 n).(ty_own) depth tid vl ⊣⊢ ⌜length vl = n⌝.
   Proof.
     iSplit.
     - iIntros "Hvl".
@@ -37,10 +37,11 @@ Section uninit.
      lot of work. *)
   Program Definition uninit (n : nat) : type :=
     {| ty_size := n; ty_lfts := []; ty_E := [];
-       ty_own tid vl := ⌜length vl = n⌝%I; ty_shr := (uninit0 n).(ty_shr) |}.
+       ty_own depth tid vl := ⌜length vl = n⌝%I; ty_shr := (uninit0 n).(ty_shr) |}.
   Next Obligation. iIntros (???) "%". done. Qed.
+  Next Obligation. iIntros (??????). auto. Qed.
   Next Obligation.
-    iIntros (???????) "LFT _ Hvl".
+    iIntros (????????) "LFT _ Hvl".
     iApply (ty_share (uninit0 n) with "LFT []"); first done.
     { iInduction n as [|n] "IH"; [|done]. iApply lft_incl_static. }
     iApply (bor_iff with "[] Hvl"). iIntros "!> !#". setoid_rewrite uninit0_own.
@@ -57,14 +58,14 @@ Section uninit.
   Qed.
 
   Global Instance uninit_send n : Send (uninit n).
-  Proof. iIntros (???) "?". done. Qed.
+  Proof. iIntros (????) "?". done. Qed.
 
   Global Instance uninit_sync n : Sync (uninit n).
   Proof. apply product_sync, Forall_replicate, _. Qed.
 
   (* Unfolding lemma, kep only for backwards compatibility. *)
-  Lemma uninit_own n tid vl :
-    (uninit n).(ty_own) tid vl ⊣⊢ ⌜length vl = n⌝.
+  Lemma uninit_own n depth tid vl :
+    (uninit n).(ty_own) depth tid vl ⊣⊢ ⌜length vl = n⌝.
   Proof. done. Qed.
 
   Lemma uninit_uninit0_eqtype E L n :
@@ -74,7 +75,7 @@ Section uninit.
     iSplit; [|iSplit; [|iSplit; iModIntro]].
     - auto using uninit0_sz.
     - induction n as [|n IH]=>//. iApply lft_equiv_refl.
-    - iIntros (??). by rewrite uninit0_own.
+    - iIntros (???). by rewrite uninit0_own.
     - iIntros (???). by iApply (bi.iff_refl True%I).
   Qed.
 

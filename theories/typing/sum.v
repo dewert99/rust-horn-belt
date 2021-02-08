@@ -12,11 +12,12 @@ Section sum.
      (as in, pattern-match in the language of lambda-rust, not in Coq). *)
   Program Definition emp0 : type :=
     {| ty_size := 1%nat; ty_lfts := []; ty_E := [];
-       ty_own tid vl := False%I; ty_shr κ tid l := False%I |}.
-  Next Obligation. iIntros (tid vl) "[]". Qed.
+       ty_own depth tid vl := False%I; ty_shr κ tid l := False%I |}.
+  Next Obligation. iIntros (???) "[]". Qed.
+  Next Obligation. iIntros (?????) "[]". Qed.
   Next Obligation.
-    iIntros (E κ l tid ??) "#LFT _ Hown Htok".
-    iMod (bor_acc with "LFT Hown Htok") as "[>H _]"; first done.
+    iIntros (E depth κ l tid ??) "#LFT _ Hown Htok !>". iApply step_fupdN_intro=>//.
+    iIntros "!>". iMod (bor_acc with "LFT Hown Htok") as "[>H _]"; first done.
     iDestruct "H" as (?) "[_ []]".
   Qed.
   Next Obligation. iIntros (κ κ' tid l) "#Hord []". Qed.
@@ -24,14 +25,14 @@ Section sum.
   Definition is_pad i tyl (vl : list val) : iProp Σ :=
     ⌜((nth i tyl emp0).(ty_size) + length vl)%nat = (max_list_with ty_size tyl)⌝%I.
 
-  Lemma split_sum_mt l tid q tyl :
+  Lemma split_sum_mt l depth tid q tyl :
     (l ↦∗{q}: λ vl,
          ∃ (i : nat) vl' vl'', ⌜vl = #i :: vl' ++ vl''⌝ ∗
                                ⌜length vl = S (max_list_with ty_size tyl)⌝ ∗
-                               ty_own (nth i tyl emp0) tid vl')%I
+                               (nth i tyl emp0).(ty_own) depth tid vl')%I
     ⊣⊢ ∃ (i : nat), (l ↦{q} #i ∗
                      (l +ₗ (S $ (nth i tyl emp0).(ty_size))) ↦∗{q}: is_pad i tyl) ∗
-                              (l +ₗ 1) ↦∗{q}: (nth i tyl emp0).(ty_own) tid.
+                              (l +ₗ 1) ↦∗{q}: (nth i tyl emp0).(ty_own) depth tid.
   Proof.
     iSplit; iIntros "H".
     - iDestruct "H" as (vl) "[Hmt Hown]". iDestruct "Hown" as (i vl' vl'') "(% & % & Hown)".
@@ -53,10 +54,10 @@ Section sum.
   Program Definition sum (tyl : list type) :=
     {| ty_size := S (max_list_with ty_size tyl);
        ty_lfts := tyl_lfts tyl; ty_E := tyl_E tyl;
-       ty_own tid vl :=
+       ty_own depth tid vl :=
          (∃ (i : nat) vl' vl'', ⌜vl = #i :: vl' ++ vl''⌝ ∗
                                 ⌜length vl = S (max_list_with ty_size tyl)⌝ ∗
-                                (nth i tyl emp0).(ty_own) tid vl')%I;
+                                (nth i tyl emp0).(ty_own) depth tid vl')%I;
        ty_shr κ tid l :=
          (∃ (i : nat),
            &frac{κ} (λ q, l ↦{q} #i ∗
@@ -64,14 +65,19 @@ Section sum.
                (nth i tyl emp0).(ty_shr) κ tid (l +ₗ 1))%I
     |}.
   Next Obligation.
-    iIntros (tyl tid vl) "Hown". iDestruct "Hown" as (i vl' vl'') "(%&%&_)".
+    iIntros (tyl depth tid vl) "Hown". iDestruct "Hown" as (i vl' vl'') "(%&%&_)".
     subst. done.
   Qed.
   Next Obligation.
-    intros tyl E κ l tid. iIntros (??) "#LFT #Houtlives Hown Htok". rewrite split_sum_mt.
+    move=>tyl depth1 depth2 tid vl Hdepth /=.
+    iDestruct 1 as (i vl' vl'' -> [= EQl]) "?". iExists _, _, _. rewrite /= EQl.
+    do 2 (iSplitR; [done|]). by iApply ty_own_depth_mono.
+  Qed.
+  Next Obligation.
+    intros tyl E depth κ l tid. iIntros (??) "#LFT #Houtlives Hown Htok". rewrite split_sum_mt.
     iMod (bor_exists with "LFT Hown") as (i) "Hown"; first solve_ndisj.
     iMod (bor_sep with "LFT Hown") as "[Hmt Hown]"; first solve_ndisj.
-    iMod ((nth i tyl emp0).(ty_share) with "LFT [] Hown Htok") as "[#Hshr $]"; try done.
+    iMod ((nth i tyl emp0).(ty_share) with "LFT [] Hown Htok") as "H"; try done.
     { destruct (decide (i < length tyl)%nat) as [Hi|].
       - iApply lft_incl_trans; [done|]. iClear "Houtlives LFT".
         iInduction tyl as [|ty tyl] "IH" forall (i Hi); [simpl in Hi; lia|].
@@ -80,6 +86,7 @@ Section sum.
         + iApply lft_incl_trans; [|iApply "IH"; auto with lia].
           iApply lft_intersect_incl_r.
       - rewrite nth_overflow; [|lia]. iApply lft_incl_static. }
+    iModIntro. iApply (step_fupdN_wand with "H"). iIntros ">[#Hshr $]".
     iMod (bor_fracture with "LFT [Hmt]") as "H'"; first solve_ndisj; last eauto.
     by iFrame.
   Qed.
@@ -171,7 +178,7 @@ Section sum.
     split.
     - apply product_lft_morphism. eapply Forall_impl; [done|]. apply _.
     - intros. simpl. f_equiv. auto.
-    - move=> n ty1 ty2 Hsz Hl HE Ho Hs tid vl /=. f_equiv=>i. do 6 f_equiv.
+    - move=> n ty1 ty2 Hsz Hl HE Ho Hs depth tid vl /=. f_equiv=>i. do 6 f_equiv.
       + do 3 f_equiv. by apply Hsz0.
       + rewrite !nth_lookup !list_lookup_fmap.
         rewrite ->Forall_lookup in HTl'. specialize (HTl' i).
@@ -199,7 +206,7 @@ Section sum.
     split.
     - apply product_lft_morphism. eapply Forall_impl; [done|]. apply _.
     - intros. simpl. f_equiv. auto.
-    - move=> n ty1 ty2 Hsz Hl HE Ho Hs tid vl /=. f_equiv=>i. do 6 f_equiv.
+    - move=> n ty1 ty2 Hsz Hl HE Ho Hs depth tid vl /=. f_equiv=>i. do 6 f_equiv.
       + do 3 f_equiv. by apply Hsz0.
       + rewrite !nth_lookup !list_lookup_fmap.
         rewrite ->Forall_lookup in HTl'. specialize (HTl' i).
@@ -244,7 +251,7 @@ Section sum.
         rewrite !lft_intersect_list_app.
         iApply lft_intersect_mono; [|by iApply "IH"; auto].
         iDestruct "Hty" as "(_ & $ & _ & _)".
-    - iModIntro. iIntros (tid vl) "H". iDestruct "H" as (i vl' vl'') "(-> & % & Hown)".
+    - iModIntro. iIntros (depth tid vl) "H". iDestruct "H" as (i vl' vl'') "(-> & % & Hown)".
       iExists i, vl', vl''. iSplit; first done.
       iSplit; first by rewrite -Hleq.
       iDestruct ("Hty" $! i) as "(_ & _ & #Htyi & _)". by iApply "Htyi".
@@ -274,19 +281,19 @@ Section sum.
   Global Instance sum_copy tyl : LstCopy tyl → Copy (sum tyl).
   Proof.
     intros HFA. split.
-    - intros tid vl.
-      cut (∀ i vl', Persistent (ty_own (nth i tyl emp0) tid vl')). by apply _.
+    - intros depth tid vl.
+      cut (∀ i vl', Persistent ((nth i tyl emp0).(ty_own) depth tid vl')). by apply _.
       intros. apply @copy_persistent.
       edestruct nth_in_or_default as [| ->]; [by eapply List.Forall_forall| ].
-      split; first by apply _. iIntros (????????) "? []".
-    - intros κ tid E F l q ? HF.
+      split; first by apply _. iIntros (?????????) "? []".
+    - intros depth κ tid E F l q ? HF.
       iIntros "#LFT #H Htl [Htok1 Htok2]". iDestruct "H" as (i) "[Hfrac Hshr]".
       iMod (frac_bor_acc with "LFT Hfrac Htok1")
         as (q'1) "[>[H↦i Hpad] Hclose]"; first solve_ndisj.
       iDestruct "Hpad" as (pad) "[Hpad %]".
       assert (Copy (nth i tyl emp0)).
       { edestruct nth_in_or_default as [| ->]; first by eapply List.Forall_forall.
-        split; first by apply _. iIntros (????????) "? []". }
+        split; first by apply _. iIntros (?????????) "? []". }
       iMod (@copy_shr_acc _ _ (nth i tyl emp0) with "LFT Hshr Htl Htok2")
         as (q'2 vl) "(Htl & H↦C & #HownC & Hclose')"; try done.
       { rewrite <-HF. simpl. rewrite <-union_subseteq_r.
@@ -312,10 +319,12 @@ Section sum.
 
   Global Instance sum_send tyl : LstSend tyl → Send (sum tyl).
   Proof.
-    iIntros (Hsend tid1 tid2 vl) "H". iDestruct "H" as (i vl' vl'') "(% & % & Hown)".
-    iExists _, _, _. iSplit; first done. iSplit; first done. iApply @send_change_tid; last done.
+    iIntros (Hsend depth tid1 tid2 vl) "H".
+    iDestruct "H" as (i vl' vl'') "(% & % & Hown)".
+    iExists _, _, _. iSplit; first done. iSplit; first done.
+    iApply @send_change_tid; last done.
     edestruct nth_in_or_default as [| ->]; first by eapply List.Forall_forall.
-    iIntros (???) "[]".
+    iIntros (????) "[]".
   Qed.
 
   Global Instance sum_sync tyl : LstSync tyl → Sync (sum tyl).

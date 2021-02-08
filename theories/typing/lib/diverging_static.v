@@ -27,7 +27,7 @@ Section diverging_static.
       iIntros (α ϝ ret arg). inv_vec arg=>x f. simpl_subst.
     iApply type_let; [apply Hf|solve_typing|]. iIntros (call); simpl_subst.
     (* Drop to Iris *)
-    iIntros (tid) "#LFT #HE Hna HL Hk (Hcall & Hx & Hf & _)".
+    iIntros (tid) "#LFT #TIME #HE Hna HL Hk (Hcall & Hx & Hf & _)".
     (* We need a ϝ token to show that we can call F despite it being non-'static. *)
     iMod (lctx_lft_alive_tok ϝ with "HE HL") as (qϝ) "(Hϝ & HL & _)";
       [solve_typing..|].
@@ -37,15 +37,15 @@ Section diverging_static.
     iAssert (type_incl (box (&shr{α} T)) (box (&shr{static} T))) as "#[_ [_ [Hincl _]]]".
     { iApply box_type_incl. iApply shr_type_incl; first done.
       iApply type_incl_refl. }
-    wp_let. rewrite tctx_hasty_val.
-    iApply (type_call_iris _ [ϝ] () [_; _] with "LFT HE Hna [Hϝ] Hcall [Hx Hf]").
+    wp_let. rewrite (tctx_hasty_val _ call). iDestruct "Hcall" as (?) "[_ Hcall]".
+    iApply (type_call_iris _ [ϝ] () [_; _] with "LFT TIME HE Hna [Hϝ] Hcall [Hx Hf]").
     - solve_typing.
     - by rewrite /= (right_id static).
     - simpl. iFrame. iSplit; last done. rewrite !tctx_hasty_val.
-      iApply "Hincl". done.
-    - iClear "Hα Hincl". iIntros (r) "Htl Hϝ1 Hret". wp_rec.
+      iDestruct "Hx" as (?) "[??]". iExists _. iFrame. iApply "Hincl". done.
+    - iClear "Hα Hincl". iIntros (r depth') "Htl Hϝ1 Hdepth Hret". wp_rec.
       (* Go back to the type system. *)
-      iApply (type_type _ [] _ [] with "[] LFT HE Htl [] Hk [-]"); last first.
+      iApply (type_type _ [] _ [] with "[] LFT TIME HE Htl [] Hk [-]"); last first.
       { rewrite /tctx_interp /=. done. }
       { rewrite /llctx_interp /=. done. }
       iApply (type_cont [] [] (λ _, [])).

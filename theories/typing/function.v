@@ -63,16 +63,16 @@ Section fn.
   Proof.
     intros HTl HT.
     assert (∀ n' ty1 ty2, ty1.(ty_size) = ty2.(ty_size) → (⊢ ty_lft ty1 ≡ₗ ty_lft ty2) →
-             elctx_interp (ty_E ty1) ≡ elctx_interp (ty_E ty2) →
-             (∀ tid vl, dist_later n' (ty1.(ty_own) tid vl) (ty2.(ty_own) tid vl)) →
+             elctx_interp ty1.(ty_E) ≡ elctx_interp ty2.(ty_E) →
+             (∀ depth tid vl, dist_later n' (ty1.(ty_own) depth tid vl) (ty2.(ty_own) depth tid vl)) →
              (∀ κ tid l, ty1.(ty_shr) κ tid l ≡{n'}≡ ty2.(ty_shr) κ tid l) →
              ∀ vl,
-               (fn (λ x, FP (E x) (Tl x ty1) (T x ty1))).(ty_own) xH vl ≡{n'}≡
-               (fn (λ x, FP (E x) (Tl x ty2) (T x ty2))).(ty_own) xH vl) as Hown.
+               (fn (λ x, FP (E x) (Tl x ty1) (T x ty1))).(ty_own) 0 xH vl ≡{n'}≡
+               (fn (λ x, FP (E x) (Tl x ty2) (T x ty2))).(ty_own) 0 xH vl) as Hown.
     { rewrite /fn /fp_E /typed_body /=.
       intros n' ty1 ty2 Hsz Hl HE Ho Hs vl. do 14 (f_contractive || f_equiv).
       intros x. destruct (HTl x) as (Tl' & EQTl & HTl').
-      do 11 (f_contractive || f_equiv); [|do 3 f_equiv].
+      do 12 (f_contractive || f_equiv); [|do 3 f_equiv].
       + apply equiv_dist.
         rewrite /fp_E /= !elctx_interp_app !EQTl /tyl_E /tyl_outlives_E.
         clear Tl HTl EQTl. (do 2 f_equiv); [|f_equiv; [|f_equiv]].
@@ -88,7 +88,7 @@ Section fn.
           by iApply type_lft_morphism_lft_equiv_proper.
       + rewrite !cctx_interp_singleton /=. do 5 f_equiv.
         rewrite !tctx_interp_singleton /tctx_elt_interp.
-        do 3 f_equiv. apply box_type_contractive.
+        do 6 f_equiv. apply box_type_contractive.
         * by apply HT.
         * by iApply type_lft_morphism_lft_equiv_proper.
         * apply type_lft_morphism_elctx_interp_proper=>//. apply _.
@@ -98,7 +98,8 @@ Section fn.
         rewrite !EQTl !list_lookup_fmap /tctx_elt_interp.
         destruct (Tl' !! k) as [T'|] eqn:EQT'; [simpl|done].
         eapply Forall_lookup in HTl'; [|done].
-        f_equiv. intros [[]|]; rewrite ?right_absorb //=. do 3 f_equiv.
+        f_equiv; intros [[]|]; f_equiv; intros [|]; try by rewrite ?right_absorb.
+        simpl. do 4 f_equiv.
         * do 3 f_equiv. by eapply HTl'.
         * by f_equiv; apply HTl'. }
     split.
@@ -112,8 +113,8 @@ Section fn.
     Proper (pointwise_relation A (fn_params_dist n') ==> dist n') fn.
   Proof.
     intros x y Hxy. apply ty_of_st_ne. split=>/=; [done..|].
-    intros _ vs. unfold typed_body, tctx_interp.
-    do 29 (apply Hxy || eapply fp_E_ne || f_equiv || done).
+    intros _ _ vs. unfold typed_body, tctx_interp.
+    do 30 (apply Hxy || eapply fp_E_ne || f_equiv || done).
     - rewrite !cctx_interp_singleton /=. do 5 f_equiv.
       rewrite !tctx_interp_singleton /tctx_elt_interp.
       repeat (apply Hxy || f_equiv).
@@ -187,16 +188,17 @@ Section typing.
     - iApply lft_incl_refl.
     - iIntros (_ vl) "Hf". iDestruct "Hf" as (fb kb xb e ?) "[-> [<- #Hf]]".
       iExists fb, kb, xb, e, _. iSplit; [done|]. iSplit; [done|]. iNext.
-      rewrite /typed_body. iIntros (x ϝ k xl) "!# * #LFT #HE' Htl HL HC HT".
+      rewrite /typed_body. iIntros (x ϝ k xl) "!# * #LFT #TIME #HE' Htl HL HC HT".
       iDestruct ("Hcons" with "[$]") as "#(HE & Htys & Hty)".
-      iApply ("Hf" with "LFT HE Htl HL [HC] [HT]").
+      iApply ("Hf" with "LFT TIME HE Htl HL [HC] [HT]").
       + unfold cctx_interp. iIntros (elt) "Helt".
         iDestruct "Helt" as %->%elem_of_list_singleton. iIntros (ret) "Htl HL HT".
         unfold cctx_elt_interp.
         iApply ("HC" $! (_ ◁cont(_, _)) with "[%] Htl HL [> -]").
         { by apply elem_of_list_singleton. }
         rewrite /tctx_interp !big_sepL_singleton /=.
-        iDestruct "HT" as (v) "[HP Hown]". iExists v. iFrame "HP".
+        iDestruct "HT" as (v depth) "(Hdepth & HP & Hown)".
+        iExists v, depth. iFrame "HP Hdepth".
         iDestruct (box_type_incl with "[$Hty]") as "(_ & _ & #Hincl & _)".
           by iApply "Hincl".
       + iClear "Hf". rewrite /tctx_interp
@@ -205,7 +207,7 @@ Section typing.
            !zip_with_fmap_r !(zip_with_zip (λ _ _, (_ ∘ _) _ _)) !big_sepL_fmap.
         iApply (big_sepL_impl with "HT"). iIntros "!#".
         iIntros (i [p [ty1' ty2']]) "#Hzip H /=".
-        iDestruct "H" as (v) "[? Hown]". iExists v. iFrame.
+        iDestruct "H" as (v depth) "(? & Hdepth & Hown)". iExists v, depth. iFrame.
         rewrite !lookup_zip_with.
         iDestruct "Hzip" as %(? & ? & ([? ?] & (? & Hty'1 &
           (? & Hty'2 & [=->->])%bind_Some)%bind_Some & [=->->->])%bind_Some)%bind_Some.
@@ -235,18 +237,19 @@ Section typing.
         p (k : expr) (fp : A → fn_params (length ps)) :
     (∀ ϝ, elctx_sat (((λ κ, ϝ ⊑ₑ κ) <$> κs) ++ E) L (fp_E (fp x) ϝ)) →
     AsVal k →
-    lft_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗ llctx_interp L qL -∗
+    lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗ llctx_interp L qL -∗
     qκs.[lft_intersect_list κs] -∗
     tctx_elt_interp tid (p ◁ fn fp) -∗
     ([∗ list] y ∈ zip_with TCtx_hasty ps (box <$> vec_to_list (fp x).(fp_tys)),
                    tctx_elt_interp tid y) -∗
-    (∀ ret, na_own tid top -∗ llctx_interp L qL -∗ qκs.[lft_intersect_list κs] -∗
-             (box (fp x).(fp_ty)).(ty_own) tid [ret] -∗
-             WP k [of_val ret] {{ _, cont_postcondition }}) -∗
+    (∀ ret depth,
+        na_own tid ⊤ -∗ llctx_interp L qL -∗ qκs.[lft_intersect_list κs] -∗
+        ⧖depth -∗ (box (fp x).(fp_ty)).(ty_own) depth tid [ret] -∗
+        WP k [of_val ret] {{ _, cont_postcondition }}) -∗
     WP (call: p ps → k) {{ _, cont_postcondition }}.
   Proof.
-    iIntros (HE [k' <-]) "#LFT #HE Htl HL Hκs Hf Hargs Hk".
-    wp_apply (wp_hasty with "Hf"). iIntros (v) "% Hf".
+    iIntros (HE [k' <-]) "#LFT #TIME #HE Htl HL Hκs Hf Hargs Hk".
+    wp_apply (wp_hasty with "Hf"). iIntros (depth v) "Hdepth % Hf".
     iApply (wp_app_vec _ _ (_::_) ((λ v, ⌜v = (λ: ["_r"], (#☠ ;; #☠) ;; k' ["_r"])%V⌝):::
                vmap (λ ty (v : val), tctx_elt_interp tid (v ◁ box ty)) (fp x).(fp_tys))%I
             with "[Hargs]").
@@ -256,7 +259,8 @@ Section typing.
       iInduction ps as [|p ps] "IH" forall (tys); first by simpl.
       simpl in tys. inv_vec tys=>ty tys. simpl.
       iDestruct "Hargs" as "[HT Hargs]". iSplitL "HT".
-      + iApply (wp_hasty with "HT"). iIntros (?). rewrite tctx_hasty_val. iIntros "? $".
+      + iApply (wp_hasty with "HT"). iIntros (??) "???".
+        rewrite tctx_hasty_val. auto.
       + iApply "IH". done.
     - simpl. change (@length expr ps) with (length ps).
       iIntros (vl'). inv_vec vl'=>kv vl; csimpl.
@@ -268,8 +272,8 @@ Section typing.
       iMod (bor_create _ ϝ with "LFT Hκs") as "[Hκs HκsI]"; first done.
       iDestruct (frac_bor_lft_incl with "LFT [>Hκs]") as "#Hκs".
       { iApply (bor_fracture with "LFT"); first done. by rewrite Qp_mul_1_r. }
-      iApply ("Hf" with "LFT [] Htl [Htk] [Hk HκsI HL]").
-      + iApply "HE'". iIntros "{$# Hf Hinh HE' LFT HE %}".
+      iApply ("Hf" with "LFT TIME [] Htl [Htk] [Hk HκsI HL]").
+      + iApply "HE'". iIntros "{$# Hf Hinh HE' LFT TIME HE %}".
         iInduction κs as [|κ κs] "IH"=> //=. iSplitL.
         { iApply lft_incl_trans; first done. iApply lft_intersect_incl_l. }
         iApply "IH". iModIntro. iApply lft_incl_trans; first done.
@@ -284,7 +288,8 @@ Section typing.
         iApply (wp_mask_mono _ (↑lftN ∪ ↑lft_userN)); first done.
         iApply (wp_step_fupd with "Hinh"); [set_solver-..|]. wp_seq.
         iIntros "#Htok !>". wp_seq. iMod ("HκsI" with "Htok") as ">Hκs".
-        iApply ("Hk" with "Htl HL Hκs"). rewrite tctx_hasty_val. done.
+        rewrite tctx_hasty_val. iDestruct "Hret" as (?) "[#? Hret]".
+        by iApply ("Hk" with "Htl HL Hκs").
       + rewrite /tctx_interp vec_to_list_map !zip_with_fmap_r
                 (zip_with_zip (λ v ty, (v, _))) zip_with_zip !big_sepL_fmap.
         iApply (big_sepL_mono' with "Hvl"); last done. by iIntros (i [v ty']).
@@ -294,19 +299,21 @@ Section typing.
         f (k : expr) (fp : A → fn_params (length ps)) :
     (∀ ϝ, elctx_sat (((λ κ, ϝ ⊑ₑ κ) <$> κs) ++ E) [] (fp_E (fp x) ϝ)) →
     AsVal k →
-    lft_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
+    lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
     qκs.[lft_intersect_list κs] -∗
-    (fn fp).(ty_own) tid [f] -∗
+    (fn fp).(ty_own) 0 tid [f] -∗
     ([∗ list] y ∈ zip_with TCtx_hasty ps (box <$> vec_to_list (fp x).(fp_tys)),
                    tctx_elt_interp tid y) -∗
-    (∀ ret, na_own tid top -∗ qκs.[lft_intersect_list κs] -∗
-             (box (fp x).(fp_ty)).(ty_own) tid [ret] -∗
+    (∀ ret depth, na_own tid ⊤ -∗ qκs.[lft_intersect_list κs] -∗
+             ⧖depth -∗ (box (fp x).(fp_ty)).(ty_own) depth tid [ret] -∗
              WP k [of_val ret] {{ _, cont_postcondition }}) -∗
     WP (call: f ps → k) {{ _, cont_postcondition }}.
   Proof.
-    iIntros (HE Hk') "#LFT #HE Htl Hκs Hf Hargs Hk". rewrite -tctx_hasty_val.
-    iApply (type_call_iris' with "LFT HE Htl [] Hκs Hf Hargs [Hk]"); [done..| |].
+    iIntros (HE Hk') "#LFT #TIME #HE Htl Hκs Hf Hargs Hk".
+    iMod persistent_time_receipt_0 as "#?".
+    iApply (type_call_iris' with "LFT TIME HE Htl [] Hκs [Hf] Hargs [Hk]"); [done|..].
     - instantiate (1 := 1%Qp). by rewrite /llctx_interp.
+    - rewrite tctx_hasty_val. auto.
     - iIntros "* Htl _". iApply "Hk". done.
   Qed.
 
@@ -320,13 +327,13 @@ Section typing.
                 T)
                (call: p ps → k).
   Proof.
-    iIntros (Hκs HE tid) "#LFT #HE Htl HL HC (Hf & Hargs & HT)".
+    iIntros (Hκs HE tid) "#LFT #TIME #HE Htl HL HC (Hf & Hargs & HT)".
     iMod (lctx_lft_alive_tok_list _ _ κs with "HE HL") as (q) "(Hκs & HL & Hclose)"; [done..|].
-    iApply (type_call_iris' with "LFT HE Htl HL Hκs Hf Hargs"); [done|].
-    iIntros (r) "Htl HL Hκs Hret". iMod ("Hclose" with "Hκs HL") as "HL".
+    iApply (type_call_iris' with "LFT TIME HE Htl HL Hκs Hf Hargs"); [done|].
+    iIntros (r depth) "Htl HL Hκs Hdepth Hret". iMod ("Hclose" with "Hκs HL") as "HL".
     iSpecialize ("HC" with "[]"); first by (iPureIntro; apply elem_of_list_singleton).
     iApply ("HC" $! [#r] with "Htl HL").
-    rewrite tctx_interp_cons tctx_hasty_val. iFrame.
+    rewrite tctx_interp_cons tctx_hasty_val. auto with iFrame.
   Qed.
 
   (* Specialized type_call':  Adapted for use by solve_typing; fixed "list of
@@ -398,12 +405,13 @@ Section typing.
                      (subst_v (fb :: BNamed "return" :: argsb) (f ::: k ::: args) e)) -∗
     typed_instruction_ty E L T ef (fn fp).
   Proof.
-    iIntros (<- ->) "#Hbody /=". iIntros (tid) "#LFT _ $ $ #HT". iApply wp_value.
-    rewrite tctx_interp_singleton. iLöb as "IH". iExists _. iSplit.
-    { simpl. rewrite decide_left. done. }
+    iIntros (<- ->) "#Hbody /=". iIntros (tid) "#LFT #TIME _ $ $ #HT".
+    iMod persistent_time_receipt_0 as "#?". iApply wp_value.
+    rewrite tctx_interp_singleton. iLöb as "IH". iExists _, 0%nat.
+    iSplit; [done|]. iSplit; [by rewrite /= decide_left|].
     iExists fb, _, argsb, e, _. iSplit. done. iSplit. done. iNext.
-    iIntros (x ϝ k args) "!#". iIntros (tid') "_ HE Htl HL HC HT'".
-    iApply ("Hbody" with "LFT HE Htl HL HC").
+    iIntros (x ϝ k args) "!#". iIntros (tid') "_ _ HE Htl HL HC HT'".
+    iApply ("Hbody" with "LFT TIME HE Htl HL HC").
     rewrite tctx_interp_cons tctx_interp_app. iFrame "HT' IH".
     by iApply sendc_change_tid.
   Qed.

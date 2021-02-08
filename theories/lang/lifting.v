@@ -1,21 +1,27 @@
 From iris.proofmode Require Import tactics.
 From iris.program_logic Require Export weakestpre.
 From iris.program_logic Require Import ectx_lifting.
-From lrust.lang Require Export lang heap.
+From lrust.lang Require Export lang heap time.
 From lrust.lang Require Import tactics.
 Set Default Proof Using "Type".
 Import uPred.
 
 Class lrustG Σ := LRustG {
   lrustG_invG : invG Σ;
-  lrustG_gen_heapG :> heapG Σ
+  lrustG_gen_heapG :> heapG Σ;
+  lrustG_gen_timeG :> timeG Σ
 }.
 
-Instance lrustG_irisG `{!lrustG Σ} : irisG lrust_lang Σ := {
+Program Instance lrustG_irisG `{!lrustG Σ} : irisG lrust_lang Σ := {
   iris_invG := lrustG_invG;
-  state_interp σ κs _ := heap_ctx σ;
+  state_interp σ stepcnt κs _ := (heap_ctx σ ∗ time_interp stepcnt)%I;
   fork_post _ := True%I;
+  lsteps_per_pstep n := n
 }.
+Next Obligation.
+  intros. iIntros "/= [$ H]". by iMod (time_interp_step with "H") as "$".
+Qed.
+
 Global Opaque iris_invG.
 
 Ltac inv_lit :=
@@ -66,14 +72,69 @@ Implicit Types P Q : iProp Σ.
 Implicit Types e : expr.
 Implicit Types ef : option expr.
 
+Lemma wp_step_fupdN_time_receipt n m E1 E2 e P Φ :
+  TCEq (to_val e) None → E2 ⊆ E1 → ↑timeN ⊆ E1 →
+  time_ctx -∗ ⧖n -∗ ⧗m -∗ (|={E1,E2}=> |={∅}▷=>^(S (n + m)) |={E2,E1}=> P) -∗
+  WP e @ E2 {{ v, ⧗m -∗ P ={E1}=∗ Φ v }} -∗
+  WP e @ E1 {{ Φ }}.
+Proof.
+  iIntros (???) "#TIME #Hn Hm HP Hwp".
+  iApply (wp_step_fupdN with "[] Hm HP Hwp")=>//. iIntros (????) "Hm [_ Ht]".
+  iMod (time_receipt_le with "TIME Ht Hn Hm") as "[% ?]"=>//.
+  iApply fupd_mask_weaken; [set_solver+|]. iPureIntro. simpl. lia.
+Qed.
+
+Lemma wp_step_fupdN_persistent_time_receipt n E1 E2 e P Φ :
+  TCEq (to_val e) None → E2 ⊆ E1 → ↑timeN ⊆ E1 →
+  time_ctx -∗ ⧖n -∗ (|={E1,E2}=> |={∅}▷=>^(S n) |={E2,E1}=> P) -∗
+  WP e @ E2 {{ v, P ={E1}=∗ Φ v }} -∗
+  WP e @ E1 {{ Φ }}.
+Proof.
+  iIntros (???) "#TIME #Hn HP Hwp".
+  iApply (wp_step_fupdN_time_receipt _ _ E1 E2 with "TIME Hn [>] [HP] [Hwp]")=>//.
+  - by iMod cumulative_time_receipt_0 as "$".
+  - by rewrite -plus_n_O.
+  - iApply (wp_wand with "Hwp"). iIntros (?) "$". auto.
+Qed.
+
+(* FIXME : we need to unfold WP *)
+Lemma wp_cumulative_time_receipt E e Φ :
+  TCEq (to_val e) None → ↑timeN ⊆ E →
+  time_ctx -∗
+  WP e @ (E∖↑timeN) {{ v, ⧗1 -∗ Φ v }} -∗
+  WP e @ E {{ Φ }}.
+Proof.
+  rewrite !wp_unfold /wp_pre /=. iIntros (-> ?) "#TIME Hwp".
+  iIntros (?????) "[Hσ Ht]".
+  iMod (step_cumulative_time_receipt with "TIME Ht") as "[Ht Hclose]"=>//.
+  iMod ("Hwp" $! _ _ _ [] 0%nat with "[$]") as "[$ Hwp]".
+  iIntros "!>" (e2 σ2 efs stp). iMod ("Hwp" $! e2 σ2 efs stp) as "Hwp".
+  iIntros "!> !>". iMod "Hwp". iModIntro.
+  iApply (step_fupdN_wand with "Hwp"). iIntros ">([$ Ht] & Hwp & $)".
+  iMod ("Hclose" with "Ht") as "[$ ?]".
+  iApply (wp_wand with "[Hwp]"); [iApply (wp_mask_mono with "Hwp"); solve_ndisj|].
+  iIntros "!> % H". by iApply "H".
+Qed.
+
+Lemma wp_persistent_time_receipt n E e Φ :
+  TCEq (to_val e) None → ↑timeN ⊆ E →
+  time_ctx -∗
+  ⧖n -∗ WP e @ (E∖↑timeN) {{ v, ⧖(S n) -∗ Φ v }} -∗
+  WP e @ E {{ Φ }}.
+Proof.
+  iIntros. iApply wp_fupd. iApply wp_cumulative_time_receipt=>//.
+  iApply (wp_wand with "[$]"). iIntros (?) "HΦ ?". iApply "HΦ".
+  by iApply (cumulative_persistent_time_receipts _ 1 with "[//] [$]").
+Qed.
+
 (** Base axioms for core primitives of the language: Stateless reductions *)
 Lemma wp_fork E e :
   {{{ ▷ WP e {{ _, True }} }}} Fork e @ E {{{ RET LitV LitPoison; True }}}.
 Proof.
   iIntros (?) "?HΦ". iApply wp_lift_atomic_head_step; [done|].
-  iIntros (σ1 κ κs n) "Hσ !>"; iSplit; first by eauto.
+  iIntros (σ1 stepcnt κ κs n) "[Hσ Ht] !>"; iSplit; first by eauto.
   iNext; iIntros (v2 σ2 efs Hstep); inv_head_step. iFrame.
-  iModIntro. by iApply "HΦ".
+  iMod (time_interp_step with "Ht") as "$". by iApply "HΦ".
 Qed.
 
 (** Pure reductions *)
@@ -140,11 +201,11 @@ Lemma wp_alloc E (n : Z) :
   {{{ l (sz: nat), RET LitV $ LitLoc l; ⌜n = sz⌝ ∗ †l…sz ∗ l ↦∗ repeat (LitV LitPoison) sz }}}.
 Proof.
   iIntros (? Φ) "_ HΦ". iApply wp_lift_atomic_head_step_no_fork; auto.
-  iIntros (σ1 κ κs n') "Hσ !>"; iSplit; first by auto.
+  iIntros (σ1 stepcnt κ κs n') "[Hσ Ht] !>"; iSplit; first by auto.
   iNext; iIntros (v2 σ2 efs Hstep); inv_head_step.
-  iMod (heap_alloc with "Hσ") as "[Hσ Hl]"; [done..|].
-  iModIntro; iSplit=> //. iFrame.
-  iApply ("HΦ" $! _ (Z.to_nat n)). iFrame. iPureIntro. rewrite Z2Nat.id; lia.
+  iMod (heap_alloc with "Hσ") as "[$ Hl]"; [done..|].
+  iMod (time_interp_step with "Ht") as "$".
+  iModIntro; iSplit=> //. iApply ("HΦ" $! _ (Z.to_nat n)). auto with lia iFrame.
 Qed.
 
 Lemma wp_free E (n:Z) l vl :
@@ -154,8 +215,9 @@ Lemma wp_free E (n:Z) l vl :
   {{{ RET LitV LitPoison; True }}}.
 Proof.
   iIntros (? Φ) "[>Hmt >Hf] HΦ". iApply wp_lift_atomic_head_step_no_fork; auto.
-  iIntros (σ1 κ κs n') "Hσ".
+  iIntros (σ1 stepcnt κ κs n') "[Hσ Ht]".
   iMod (heap_free _ _ _ n with "Hσ Hmt Hf") as "(% & % & Hσ)"=>//.
+  iMod (time_interp_step with "Ht") as "$".
   iModIntro; iSplit; first by auto.
   iNext; iIntros (v2 σ2 efs Hstep); inv_head_step.
   iModIntro; iSplit=> //. iFrame. iApply "HΦ"; auto.
@@ -166,7 +228,9 @@ Lemma wp_read_sc E l q v :
   {{{ RET v; l ↦{q} v }}}.
 Proof.
   iIntros (?) ">Hv HΦ". iApply wp_lift_atomic_head_step_no_fork; auto.
-  iIntros (σ1 κ κs n) "Hσ". iDestruct (heap_read with "Hσ Hv") as %[m ?].
+  iIntros (σ1 stepcnt κ κs n) "[Hσ Ht]".
+  iDestruct (heap_read with "Hσ Hv") as %[m ?].
+  iMod (time_interp_step with "Ht") as "$".
   iModIntro; iSplit; first by eauto.
   iNext; iIntros (v2 σ2 efs Hstep); inv_head_step.
   iModIntro; iSplit=> //. iFrame. by iApply "HΦ".
@@ -176,15 +240,17 @@ Lemma wp_read_na E l q v :
   {{{ ▷ l ↦{q} v }}} Read Na1Ord (Lit $ LitLoc l) @ E
   {{{ RET v; l ↦{q} v }}}.
 Proof.
-  iIntros (Φ) ">Hv HΦ". iApply wp_lift_head_step; auto. iIntros (σ1 κ κs n) "Hσ".
+  iIntros (Φ) ">Hv HΦ". iApply wp_lift_head_step; auto.
+  iIntros (σ1 stepcnt κ κs n) "[Hσ Ht]".
   iMod (heap_read_na with "Hσ Hv") as (m) "(% & Hσ & Hσclose)".
   iMod (fupd_intro_mask' _ ∅) as "Hclose"; first set_solver.
   iModIntro; iSplit; first by eauto.
   iNext; iIntros (e2 σ2 efs Hstep); inv_head_step. iMod "Hclose" as "_".
-  iModIntro. iFrame "Hσ". iSplit; last done.
-  clear dependent σ1 n.
-  iApply wp_lift_atomic_head_step_no_fork; auto.
-  iIntros (σ1 κ' κs' n') "Hσ". iMod ("Hσclose" with "Hσ") as (n) "(% & Hσ & Hv)".
+  iMod (time_interp_step with "Ht") as "$". iIntros "!> {$Hσ}". iSplit; last done.
+  clear dependent σ1 n. iApply wp_lift_atomic_head_step_no_fork; auto.
+  iIntros (σ1 stepcnt' κ' κs' n') "[Hσ Ht]".
+  iMod (time_interp_step with "Ht") as "$".
+  iMod ("Hσclose" with "Hσ") as (n) "(% & Hσ & Hv)".
   iModIntro; iSplit; first by eauto.
   iNext; iIntros (e2 σ2 efs Hstep) "!>"; inv_head_step.
   iFrame "Hσ". iSplit; [done|]. by iApply "HΦ".
@@ -196,9 +262,9 @@ Lemma wp_write_sc E l e v v' :
   {{{ RET LitV LitPoison; l ↦ v }}}.
 Proof.
   iIntros (<- Φ) ">Hv HΦ". iApply wp_lift_atomic_head_step_no_fork; auto.
-  iIntros (σ1 κ κs n) "Hσ". iDestruct (heap_read_1 with "Hσ Hv") as %?.
+  iIntros (σ1 stepcnt κ κs n) "[Hσ Ht]". iDestruct (heap_read_1 with "Hσ Hv") as %?.
   iMod (heap_write _ _ _  v with "Hσ Hv") as "[Hσ Hv]".
-  iModIntro; iSplit; first by eauto.
+  iMod (time_interp_step with "Ht") as "$". iModIntro; iSplit; first by eauto.
   iNext; iIntros (v2 σ2 efs Hstep); inv_head_step.
   iModIntro; iSplit=> //. iFrame. by iApply "HΦ".
 Qed.
@@ -209,15 +275,16 @@ Lemma wp_write_na E l e v v' :
   {{{ RET LitV LitPoison; l ↦ v }}}.
 Proof.
   iIntros (<- Φ) ">Hv HΦ".
-  iApply wp_lift_head_step; auto. iIntros (σ1 κ κs n) "Hσ".
+  iApply wp_lift_head_step; auto. iIntros (σ1 stepcnt κ κs n) "[Hσ Ht]".
   iMod (heap_write_na with "Hσ Hv") as "(% & Hσ & Hσclose)".
   iMod (fupd_intro_mask' _ ∅) as "Hclose"; first set_solver.
   iModIntro; iSplit; first by eauto.
   iNext; iIntros (e2 σ2 efs Hstep); inv_head_step. iMod "Hclose" as "_".
-  iModIntro. iFrame "Hσ". iSplit; last done.
+  iMod (time_interp_step with "Ht") as "$". iModIntro. iFrame "Hσ". iSplit; last done.
   clear dependent σ1. iApply wp_lift_atomic_head_step_no_fork; auto.
-  iIntros (σ1 κ' κs' n') "Hσ". iMod ("Hσclose" with "Hσ") as "(% & Hσ & Hv)".
-  iModIntro; iSplit; first by eauto.
+  iIntros (σ1 stepcnt' κ' κs' n') "[Hσ Ht]".
+  iMod ("Hσclose" with "Hσ") as "(% & Hσ & Hv)".
+  iMod (time_interp_step with "Ht") as "$". iModIntro; iSplit; first by eauto.
   iNext; iIntros (e2 σ2 efs Hstep) "!>"; inv_head_step.
   iFrame "Hσ". iSplit; [done|]. by iApply "HΦ".
 Qed.
@@ -230,7 +297,9 @@ Lemma wp_cas_int_fail E l q z1 e2 lit2 zl :
 Proof.
   iIntros (<- ? Φ) ">Hv HΦ".
   iApply wp_lift_atomic_head_step_no_fork; auto.
-  iIntros (σ1 κ κs n) "Hσ". iDestruct (heap_read with "Hσ Hv") as %[m ?].
+  iIntros (σ1 stepcnt κ κs n) "[Hσ Ht]".
+  iDestruct (heap_read with "Hσ Hv") as %[m ?].
+  iMod (time_interp_step with "Ht") as "$".
   iModIntro; iSplit; first by eauto.
   iNext; iIntros (v2 σ2 efs Hstep); inv_head_step; inv_lit.
   iModIntro; iSplit=> //. iFrame. by iApply "HΦ".
@@ -244,7 +313,9 @@ Lemma wp_cas_suc E l lit1 e2 lit2 :
 Proof.
   iIntros (<- ? Φ) ">Hv HΦ".
   iApply wp_lift_atomic_head_step_no_fork; auto.
-  iIntros (σ1 κ κs n) "Hσ". iDestruct (heap_read_1 with "Hσ Hv") as %?.
+  iIntros (σ1 stepcnt κ κs n) "[Hσ Ht]".
+  iDestruct (heap_read_1 with "Hσ Hv") as %?.
+  iMod (time_interp_step with "Ht") as "$".
   iModIntro; iSplit; first (destruct lit1; by eauto).
   iNext; iIntros (v2 σ2 efs Hstep); inv_head_step; [inv_lit|].
   iMod (heap_write with "Hσ Hv") as "[$ Hv]".
@@ -274,9 +345,11 @@ Lemma wp_cas_loc_fail E l q q' q1 l1 v1' e2 lit2 l' vl' :
 Proof.
   iIntros (<- ? Φ) "(>Hl & >Hl' & >Hl1) HΦ".
   iApply wp_lift_atomic_head_step_no_fork; auto.
-  iIntros (σ1 κ κs n) "Hσ". iDestruct (heap_read with "Hσ Hl") as %[nl ?].
+  iIntros (σ1 stepcnt κ κs n) "[Hσ Ht]".
+  iDestruct (heap_read with "Hσ Hl") as %[nl ?].
   iDestruct (heap_read with "Hσ Hl'") as %[nl' ?].
   iDestruct (heap_read with "Hσ Hl1") as %[nl1 ?].
+  iMod (time_interp_step with "Ht") as "$".
   iModIntro; iSplit; first by eauto.
   iNext; iIntros (v2 σ2 efs Hstep); inv_head_step; inv_lit.
   iModIntro; iSplit=> //. iFrame. iApply "HΦ"; iFrame.
@@ -292,7 +365,9 @@ Lemma wp_cas_loc_nondet E l l1 e2 l2 ll :
 Proof.
   iIntros (<- Φ) ">Hv HΦ".
   iApply wp_lift_atomic_head_step_no_fork; auto.
-  iIntros (σ1 κ κs n) "Hσ". iDestruct (heap_read_1 with "Hσ Hv") as %?.
+  iIntros (σ1 stepcnt κ κs n) "[Hσ Ht]".
+  iDestruct (heap_read_1 with "Hσ Hv") as %?.
+  iMod (time_interp_step with "Ht") as "$".
   iModIntro; iSplit; first (destruct (decide (ll = l1)) as [->|]; by eauto).
   iNext; iIntros (v2 σ2 efs Hstep); inv_head_step; last lia.
   - inv_lit. iModIntro; iSplit; [done|]; iFrame "Hσ".
@@ -313,12 +388,14 @@ Proof.
       [done|solve_exec_safe|solve_exec_puredet|].
     iApply wp_value. by iApply Hpost.
   - iApply wp_lift_atomic_head_step_no_fork; subst=>//.
-    iIntros (σ1 κ κs n') "Hσ1". iModIntro. inv_head_step.
-    iSplitR.
+    iIntros (σ1 stepcnt κ κs n') "[Hσ1 Ht]".
+    iMod (time_interp_step with "Ht") as "$".
+    iModIntro. inv_head_step. iSplitR.
     { iPureIntro. repeat eexists. econstructor. eapply BinOpEqFalse. by auto. }
     (* We need to do a little gymnastics here to apply Hne now and strip away a
        ▷ but also have the ↦s. *)
-    iAssert ((▷ ∃ q v, l1 ↦{q} v) ∧ (▷ ∃ q v, l2 ↦{q} v) ∧ ▷ Φ (LitV false))%I with "[HP]" as "HP".
+    iAssert ((▷ ∃ q v, l1 ↦{q} v) ∧ (▷ ∃ q v, l2 ↦{q} v) ∧ ▷ Φ (LitV false))%I
+      with "[HP]" as "HP".
     { iSplit; last iSplit.
       + iExists _, _. by iApply Hl1.
       + iExists _, _. by iApply Hl2.
@@ -346,7 +423,8 @@ Proof.
   induction el as [|e el IH]=>/= vs Ql; inv_vec Ql; simpl.
   - iIntros "_ H". iSpecialize ("H" $! [#]). rewrite !app_nil_r /=. by iApply "H".
   - iIntros (Q Ql) "[He Hl] HΦ".
-    change (App (of_val vf) ((of_val <$> vs) ++ e :: el)) with (fill_item (AppRCtx vf vs el) e).
+    change (App (of_val vf) ((of_val <$> vs) ++ e :: el))
+      with (fill_item (AppRCtx vf vs el) e).
     iApply wp_bind. iApply (wp_wand with "He"). iIntros (v) "HQ /=".
     rewrite cons_middle (assoc app) -(fmap_app _ _ [v]).
     iApply (IH _ _ with "Hl"). iIntros "* Hvl". rewrite -assoc.

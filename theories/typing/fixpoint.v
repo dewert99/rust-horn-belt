@@ -44,7 +44,8 @@ Section S.
 
   Lemma Tn_cauchy n i :
     (n ≤ i)%nat →
-    (∀ tid vl, dist_later n ((Tn (2 + i)).(ty_own) tid vl) ((Tn (2 + n)).(ty_own) tid vl)) ∧
+    (∀ depth tid vl, dist_later n ((Tn (2 + i)).(ty_own) depth tid vl)
+                                  ((Tn (2 + n)).(ty_own) depth tid vl)) ∧
     (∀ κ tid l, (Tn (2 + i)).(ty_shr) κ tid l ≡{n}≡ (Tn (2 + n)).(ty_shr) κ tid l).
   Proof using HT.
     revert i. unfold Tn. induction n as [|n IH]=>i Hni /=.
@@ -59,11 +60,11 @@ Section S.
   Qed.
   Program Definition own_shr_chain :=
     {| chain_car n := ((Tn (3 + n)).(ty_own), (Tn (3 + n)).(ty_shr)) :
-               prodO (thread_id -d> list val -d> iPropO Σ)
+               prodO (nat -d> thread_id -d> list val -d> iPropO Σ)
                      (lft -d> thread_id -d> loc -d> iPropO Σ) |}.
   Next Obligation.
     intros n i Hni. split=>/=.
-    - intros ??. apply (Tn_cauchy (S _)). lia.
+    - intros ???. apply (Tn_cauchy (S _)). lia.
     - intros ???. apply dist_S, Tn_cauchy. lia.
   Qed.
 
@@ -75,8 +76,9 @@ Section S.
     intros. rewrite ty_size_eq /Tn /=. iIntros "-> !%".
     apply type_contractive_ty_size.
   Qed.
+  Next Obligation. intros. by apply ty_own_depth_mono. Qed.
   Next Obligation.
-    iIntros (???????) " #LFT #Hκ /=". iApply (ty_share with "LFT")=>//.
+    iIntros (????????) " #LFT #Hκ /=". iApply (ty_share with "LFT")=>//.
     iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const n 0) as "[_ $]".
   Qed.
   Next Obligation. intros n. apply ty_shr_mono. Qed.
@@ -93,6 +95,11 @@ Section S.
     intros. apply @limit_preserving.
     - apply limit_preserving_entails; [|solve_proper]. intros ??? EQ. apply EQ.
     - intros n. apply (Tn' _).(ty_size_eq).
+  Qed.
+  Next Obligation.
+    intros. apply @limit_preserving.
+    - apply limit_preserving_entails=>??? EQ; apply EQ.
+    - intros n. by apply ty_own_depth_mono.
   Qed.
   Next Obligation.
     intros. apply @limit_preserving.
@@ -119,8 +126,9 @@ Lemma fixpoint_unfold_eqtype `{!typeG Σ} (T : type → type) {HT: TypeContracti
   eqtype E L (type_fixpoint T) (T (type_fixpoint T)).
 Proof.
   intros. apply eqtype_unfold=>qL.
-  assert (Ho : ∀ n tid vl, (T $ fixpoint_defs.Tn T (3 + n)).(ty_own) tid vl ≡
-                           (T $ fixpoint_defs.Tn' T (3 + n)).(ty_own) tid vl).
+  assert (Ho : ∀ n depth tid vl,
+     (T $ fixpoint_defs.Tn T (3 + n)).(ty_own) depth tid vl ≡
+     (T $ fixpoint_defs.Tn' T (3 + n)).(ty_own) depth tid vl).
   { intros. apply equiv_dist=>n'. apply HT=>//.
     - apply HT.
     - apply (fixpoint_defs.Tn_ty_lft_const T (3 + n) 0).
@@ -133,7 +141,8 @@ Proof.
     - apply (fixpoint_defs.Tn_ty_E_const T (1 + n) 0).
     - destruct n' as [|[|n']]=>//. }
   assert (Ho' :
-    ∀ tid vl, (type_fixpoint T).(ty_own) tid vl ≡ (T (type_fixpoint T)).(ty_own) tid vl).
+    ∀ depth tid vl,
+      (type_fixpoint T).(ty_own) depth tid vl ≡ (T (type_fixpoint T)).(ty_own) depth tid vl).
   { intros. apply equiv_dist=>n. etrans; [apply dist_S, conv_compl|].
     rewrite /= (Ho n). symmetry. apply HT=>//.
     - iApply lft_equiv_refl.
@@ -244,7 +253,7 @@ Section fixpoint.
   Proof.
     intros ?. assert (∀ n, Copy (fixpoint_defs.Tn T n)); [by induction n; apply _|].
     split; rewrite /type_fixpoint /=.
-    - intros tid vl. eapply @limit_preserving; [|simpl; apply _].
+    - intros depth tid vl. eapply @limit_preserving; [|simpl; apply _].
       apply limit_preserving_Persistent=>??? EQ. apply EQ.
     - pattern (compl (fixpoint_defs.own_shr_chain T)). eapply @limit_preserving.
       { repeat apply limit_preserving_forall=>?.
@@ -260,7 +269,7 @@ Section fixpoint.
     (∀ `(!Send ty), Send (T ty)) → Send (type_fixpoint T).
   Proof.
     intros ?. assert (∀ n, Send (fixpoint_defs.Tn T n)); [by induction n; apply _|].
-    rewrite /type_fixpoint => tid1 tid2 vl /=. eapply @limit_preserving.
+    rewrite /type_fixpoint => depth tid1 tid2 vl /=. eapply @limit_preserving.
     - apply limit_preserving_entails=>??? EQ; apply EQ.
     - intros n. simpl. apply send_change_tid.
   Qed.
@@ -323,7 +332,7 @@ Section subtyping.
             let ty1 := (fixpoint_defs.Tn T1 n) in
             let ty2 := (fixpoint_defs.Tn T2 n) in
             ⌜ty_size ty1 = ty_size ty2⌝ ∗ ty_lft ty1 ≡ₗ ty_lft ty2
-            ∗ □ (∀ tid vl, ty1.(ty_own) tid vl ↔ ty2.(ty_own) tid vl)
+            ∗ □ (∀ depth tid vl, ty1.(ty_own) depth tid vl ↔ ty2.(ty_own) depth tid vl)
             ∗ □ (∀ κ tid l, ty1.(ty_shr) κ tid l ↔ ty2.(ty_shr) κ tid l))).
     { rewrite intuitionistically_into_persistently -Hwand_forall
               persistently_forall. apply forall_intro=>n.

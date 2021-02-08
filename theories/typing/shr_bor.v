@@ -51,7 +51,7 @@ Section shr_bor.
       + by rewrite /= elctx_interp_app elctx_interp_ty_outlives_E
                    /elctx_interp /= left_id right_id.
     - done.
-    - move=> ??? Hsz Hl HE Ho ?? [|[[|l|]|] []] //=.
+    - move=> ??? Hsz Hl HE Ho ??? [|[[|l|]|] []] //=.
     - move=> ??????? Hs ??? /=. repeat (apply Hs || f_contractive || f_equiv).
   Qed.
 
@@ -60,7 +60,7 @@ Section shr_bor.
 
   Global Instance shr_send κ ty :
     Sync ty → Send (shr_bor κ ty).
-  Proof. by iIntros (Hsync tid1 tid2 [|[[]|][]]) "H"; try iApply Hsync. Qed.
+  Proof. by iIntros (Hsync depth tid1 tid2 [|[[]|][]]) "H"; try iApply Hsync. Qed.
 End shr_bor.
 
 Notation "&shr{ κ }" := (shr_bor κ) (format "&shr{ κ }") : lrust_type_scope.
@@ -81,17 +81,17 @@ Section typing.
     tctx_incl E L [p ◁ &shr{κ}ty] [p ◁ &shr{κ'}ty; p ◁{κ} &shr{κ}ty].
   Proof.
     iIntros (Hκκ' tid ?) "#LFT #HE HL [H _]". iDestruct (Hκκ' with "HL HE") as "#Hκκ'".
-    iFrame. rewrite /tctx_interp /=.
-    iDestruct "H" as ([[]|]) "[% #Hshr]"; try done. iModIntro. iSplit.
-    - iExists _. iSplit. done. by iApply (ty_shr_mono with "Hκκ' Hshr").
-    - iSplit=> //. iExists _. auto.
+    iFrame. rewrite /tctx_interp /=. simpl.
+    iDestruct "H" as ([[]|] depth) "(? & % & #Hshr)"; try done. iModIntro. iSplit.
+    - iExists _, _. do 2 (iSplit; [done|]). by iApply (ty_shr_mono with "Hκκ' Hshr").
+    - iSplit=> //. iExists _. auto 10.
   Qed.
 
   Lemma read_shr E L κ ty :
     Copy ty → lctx_lft_alive E L κ → ⊢ typed_read E L (&shr{κ}ty) ty (&shr{κ}ty).
   Proof.
     rewrite typed_read_eq. iIntros (Hcopy Halive) "!#".
-    iIntros ([[]|] tid F qL ?) "#LFT #HE Htl HL #Hshr"; try done.
+    iIntros ([[]|] depth tid F qL ?) "#LFT #HE Htl HL #Hshr"; try done.
     iMod (Halive with "HE HL") as (q) "[Hκ Hclose]"; first solve_ndisj.
     iMod (copy_shr_acc with "LFT Hshr Htl Hκ")
       as (q' vl) "(Htl & H↦ & #Hown & Hcl)"; first solve_ndisj.
