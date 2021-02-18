@@ -74,19 +74,19 @@ Implicit Types ef : option expr.
 
 Lemma wp_step_fupdN_time_receipt n m E1 E2 e P Φ :
   TCEq (to_val e) None → E2 ⊆ E1 → ↑timeN ⊆ E1 →
-  time_ctx -∗ ⧖n -∗ ⧗m -∗ (|={E1,E2}=> |={∅}▷=>^(S (n + m)) |={E2,E1}=> P) -∗
+  time_ctx -∗ ⧖n -∗ ⧗m -∗ (|={E1∖E2,∅}=> |={∅}▷=>^(S (n + m)) |={∅,E1∖E2}=> P) -∗
   WP e @ E2 {{ v, ⧗m -∗ P ={E1}=∗ Φ v }} -∗
   WP e @ E1 {{ Φ }}.
 Proof.
   iIntros (???) "#TIME #Hn Hm HP Hwp".
-  iApply (wp_step_fupdN with "[] Hm HP Hwp")=>//. iIntros (????) "Hm [_ Ht]".
+  iApply (wp_step_fupdN' with "[] Hm HP Hwp")=>//. iIntros (????) "Hm [_ Ht]".
   iMod (time_receipt_le with "TIME Ht Hn Hm") as "[% ?]"=>//.
   iApply fupd_mask_weaken; [set_solver+|]. iPureIntro. simpl. lia.
 Qed.
 
 Lemma wp_step_fupdN_persistent_time_receipt n E1 E2 e P Φ :
   TCEq (to_val e) None → E2 ⊆ E1 → ↑timeN ⊆ E1 →
-  time_ctx -∗ ⧖n -∗ (|={E1,E2}=> |={∅}▷=>^(S n) |={E2,E1}=> P) -∗
+  time_ctx -∗ ⧖n -∗ (|={E1∖E2,∅}=> |={∅}▷=>^(S n) |={∅, E1∖E2}=> P) -∗
   WP e @ E2 {{ v, P ={E1}=∗ Φ v }} -∗
   WP e @ E1 {{ Φ }}.
 Proof.

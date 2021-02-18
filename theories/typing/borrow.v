@@ -49,7 +49,7 @@ Section borrow.
     iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME Hdepth3 [H]");
       [done..| |].
     { (* TODO : lemma for handling masks properly here. *)
-      iInduction depth3 as [|depth3] "IH"; simpl.
+      rewrite difference_empty_L. iInduction depth3 as [|depth3] "IH"; simpl.
       - iMod "H". iMod (fupd_intro_mask' ⊤ ∅) as "Hclose"; [done|].
         repeat iModIntro. iMod "Hclose" as "_". iApply "H".
       - iMod "H". iMod (fupd_intro_mask' ⊤ ∅) as "Hclose"; [done|].
