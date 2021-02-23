@@ -210,7 +210,7 @@ Section ofe.
     - intros [[[[??] ?] ?] ?]. by constructor=>//;
       eapply leibniz_equiv,  (discrete_iff _ _).
   Qed.
-  Canonical Structure typeO : ofeT := OfeT type type_ofe_mixin.
+  Canonical Structure typeO : ofe := Ofe type type_ofe_mixin.
 
   Global Instance ty_size_ne n : Proper (dist n ==> eq) ty_size.
   Proof. intros ?? EQ. apply EQ. Qed.
@@ -286,7 +286,7 @@ Section ofe.
       repeat eapply (EQ 0%nat) || f_equiv.
     - split; apply EQ.
   Qed.
-  Canonical Structure stO : ofeT := OfeT simple_type st_ofe_mixin.
+  Canonical Structure stO : ofe := Ofe simple_type st_ofe_mixin.
 
   Global Instance st_own_ne n :
     Proper (dist n ==> eq ==> eq ==> dist n) st_own.

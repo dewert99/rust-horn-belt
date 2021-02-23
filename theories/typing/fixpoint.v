@@ -104,7 +104,9 @@ Section S.
   Next Obligation.
     intros. apply @limit_preserving.
     - apply limit_preserving_entails; [solve_proper|].
-      intros ??? EQ. repeat (apply EQ || f_equiv).
+      intros ??? EQ. do 4 f_equiv; [do 2 f_equiv; apply EQ|].
+      induction depth as [|depth IH]; simpl; [|by rewrite IH].
+      do 2 f_equiv; apply EQ.
     - intros n. by apply (Tn' _).(ty_share).
   Qed.
   Next Obligation.

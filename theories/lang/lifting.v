@@ -16,7 +16,7 @@ Program Instance lrustG_irisG `{!lrustG Σ} : irisG lrust_lang Σ := {
   iris_invG := lrustG_invG;
   state_interp σ stepcnt κs _ := (heap_ctx σ ∗ time_interp stepcnt)%I;
   fork_post _ := True%I;
-  lsteps_per_pstep n := n
+  num_laters_per_step n := n
 }.
 Next Obligation.
   intros. iIntros "/= [$ H]". by iMod (time_interp_step with "H") as "$".
@@ -74,14 +74,17 @@ Implicit Types ef : option expr.
 
 Lemma wp_step_fupdN_time_receipt n m E1 E2 e P Φ :
   TCEq (to_val e) None → E2 ⊆ E1 → ↑timeN ⊆ E1 →
-  time_ctx -∗ ⧖n -∗ ⧗m -∗ (|={E1∖E2,∅}=> |={∅}▷=>^(S (n + m)) |={∅,E1∖E2}=> P) -∗
-  WP e @ E2 {{ v, ⧗m -∗ P ={E1}=∗ Φ v }} -∗
+  time_ctx -∗ ⧖n -∗
+    (⧗m ∧ ((|={E1∖E2,∅}=> |={∅}▷=>^(S (n + m)) |={∅,E1∖E2}=> P) ∗
+           WP e @ E2 {{ v, P ={E1}=∗ Φ v }})) -∗
   WP e @ E1 {{ Φ }}.
 Proof.
-  iIntros (???) "#TIME #Hn Hm HP Hwp".
-  iApply (wp_step_fupdN' with "[] Hm HP Hwp")=>//. iIntros (????) "Hm [_ Ht]".
-  iMod (time_receipt_le with "TIME Ht Hn Hm") as "[% ?]"=>//.
-  iApply fupd_mask_weaken; [set_solver+|]. iPureIntro. simpl. lia.
+  iIntros (???) "#TIME #Hn H".
+  iApply (wp_step_fupdN (S (n + m)) _ _ E2)=>//. iSplit.
+  - iIntros "* [_ Ht]". iMod (time_receipt_le with "TIME Ht Hn [H]") as "[% ?]"=>//.
+    + iDestruct "H" as "[$ _]".
+    + iApply fupd_mask_weaken; [|iIntros "_ !> !% /="; lia]; set_solver+.
+  - iDestruct "H" as "[_ $]".
 Qed.
 
 Lemma wp_step_fupdN_persistent_time_receipt n E1 E2 e P Φ :
@@ -91,10 +94,8 @@ Lemma wp_step_fupdN_persistent_time_receipt n E1 E2 e P Φ :
   WP e @ E1 {{ Φ }}.
 Proof.
   iIntros (???) "#TIME #Hn HP Hwp".
-  iApply (wp_step_fupdN_time_receipt _ _ E1 E2 with "TIME Hn [>] [HP] [Hwp]")=>//.
-  - by iMod cumulative_time_receipt_0 as "$".
-  - by rewrite -plus_n_O.
-  - iApply (wp_wand with "Hwp"). iIntros (?) "$". auto.
+  iApply (wp_step_fupdN_time_receipt _ _ E1 E2 with "TIME Hn [> -]")=>//.
+  iMod cumulative_time_receipt_0 as "$". iFrame. by rewrite -plus_n_O.
 Qed.
 
 (* FIXME : we need to unfold WP *)
@@ -243,8 +244,7 @@ Proof.
   iIntros (Φ) ">Hv HΦ". iApply wp_lift_head_step; auto.
   iIntros (σ1 stepcnt κ κs n) "[Hσ Ht]".
   iMod (heap_read_na with "Hσ Hv") as (m) "(% & Hσ & Hσclose)".
-  iMod (fupd_intro_mask' _ ∅) as "Hclose"; first set_solver.
-  iModIntro; iSplit; first by eauto.
+  iApply fupd_mask_intro; first set_solver. iIntros "Hclose". iSplit; first by eauto.
   iNext; iIntros (e2 σ2 efs Hstep); inv_head_step. iMod "Hclose" as "_".
   iMod (time_interp_step with "Ht") as "$". iIntros "!> {$Hσ}". iSplit; last done.
   clear dependent σ1 n. iApply wp_lift_atomic_head_step_no_fork; auto.
@@ -277,8 +277,7 @@ Proof.
   iIntros (<- Φ) ">Hv HΦ".
   iApply wp_lift_head_step; auto. iIntros (σ1 stepcnt κ κs n) "[Hσ Ht]".
   iMod (heap_write_na with "Hσ Hv") as "(% & Hσ & Hσclose)".
-  iMod (fupd_intro_mask' _ ∅) as "Hclose"; first set_solver.
-  iModIntro; iSplit; first by eauto.
+  iApply (fupd_mask_intro _ ∅); first set_solver. iIntros "Hclose". iSplit; first by eauto.
   iNext; iIntros (e2 σ2 efs Hstep); inv_head_step. iMod "Hclose" as "_".
   iMod (time_interp_step with "Ht") as "$". iModIntro. iFrame "Hσ". iSplit; last done.
   clear dependent σ1. iApply wp_lift_atomic_head_step_no_fork; auto.

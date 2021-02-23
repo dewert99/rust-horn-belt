@@ -34,6 +34,6 @@ Proof.
   iModIntro. iExists NotStuck, _, [_], _, _. simpl.
   iDestruct (Hwp (LRustG _ _ Hheap Htime) with "TIME") as "$".
   iSplitL; first by auto with iFrame. iIntros ([|e' [|]]? -> ??) "//".
-  iIntros "[??] [?_] _". iApply fupd_mask_weaken; [done|]. iSplit; [|done].
-  iIntros (v2 t2'' [= -> <-]). by rewrite to_of_val.
+  iIntros "[??] [?_] _". iApply fupd_mask_weaken; [|iIntros "_ !>"]; [done|].
+  iSplit; [|done]. iIntros (v2 t2'' [= -> <-]). by rewrite to_of_val.
 Qed.

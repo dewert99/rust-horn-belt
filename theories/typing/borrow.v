@@ -50,10 +50,10 @@ Section borrow.
       [done..| |].
     { (* TODO : lemma for handling masks properly here. *)
       rewrite difference_empty_L. iInduction depth3 as [|depth3] "IH"; simpl.
-      - iMod "H". iMod (fupd_intro_mask' ⊤ ∅) as "Hclose"; [done|].
-        repeat iModIntro. iMod "Hclose" as "_". iApply "H".
-      - iMod "H". iMod (fupd_intro_mask' ⊤ ∅) as "Hclose"; [done|].
-        iIntros "!> !> !>". iMod "Hclose" as "_". iMod "H". iApply ("IH" with "H"). }
+      - iMod "H". iApply fupd_mask_intro; [done|]. iIntros "Hclose !>!>!>!>!>!>".
+        iMod "Hclose" as "_". iApply "H".
+      - iMod "H". iApply fupd_mask_intro; [done|]. iIntros "Hclose !>!>!>".
+        iMod "Hclose" as "_". iMod "H". by iMod ("IH" with "H"). }
     wp_seq. iIntros "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
     rewrite /tctx_interp /= right_id. iExists _, _. iFrame "% Hshr".
     iApply persistent_time_receipt_0.

@@ -84,7 +84,7 @@ Section time.
   Proof. by rewrite /persistent_time_receipt -mono_nat_lb_op own_op. Qed.
   Lemma cumulative_time_receipt_sep n m :
     ⧗(n + m) ⊣⊢ ⧗n ∗ ⧗m.
-  Proof. by rewrite /cumulative_time_receipt -nat_op_plus auth_frag_op own_op. Qed.
+  Proof. by rewrite /cumulative_time_receipt -nat_op auth_frag_op own_op. Qed.
 
   Lemma persistent_time_receipt_0 : ⊢ |==> ⧖0.
   Proof. rewrite /persistent_time_receipt. apply own_unit. Qed.
