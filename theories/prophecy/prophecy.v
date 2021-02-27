@@ -287,7 +287,7 @@ Qed.
 
 (** Prophecy Resolution *)
 
-Local Lemma proph_tok_unres S L ξ q :
+Local Lemma proph_tok_out S L ξ q :
   S :~ L → own proph_name (● S) -∗ q:[ξ] -∗ ⌜ξ ∉ res L⌝.
 Proof.
   move=> Sim. iIntros "Auth Tok".
@@ -315,12 +315,12 @@ Lemma proph_resolve E ξ vπ ζs q : ↑prophN ⊆ E → vπ ./ ζs →
 Proof.
   move: ξ vπ => [Ap i] vπ. set ξ := $(Ap,i). iIntros (? Dep) "? Tok Ptoks".
   iInv prophN as (S) "> [%OkSim Auth]". case OkSim=> L [? Sim].
-  iDestruct (proph_tok_unres with "Auth Tok") as %Outξ; [done|].
+  iDestruct (proph_tok_out with "Auth Tok") as %Outξ; [done|].
   set L' := .{ξ := vπ} :: L. iAssert ⌜∀ζ, ζ ∈ ζs → ζ ∉ res L'⌝%I as %Outζs.
   { iIntros (? In).
     iDestruct (big_sepL_elem_of with "Ptoks") as "Ptok"; [apply In|].
     iDestruct (proph_tok_ne with "Tok Ptok") as %?.
-    iDestruct (proph_tok_unres with "Auth Ptok") as %?; [done|].
+    iDestruct (proph_tok_out with "Auth Ptok") as %?; [done|].
     by rewrite not_elem_of_cons. }
   set S' := add_line ξ (aitem vπ) S.
   iMod (own_update_2 _ _ _ (● S' ⋅ ◯ line ξ (aitem vπ)) with "Auth Tok")
