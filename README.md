@@ -1,12 +1,18 @@
-# LAMBDA-RUST COQ DEVELOPMENT
+# RustHornBelt COQ DEVELOPMENT
 
-This is the Coq development accompanying lambda-Rust.
+This is the Coq development for RustHornBelt (work in progress).
+
+## References
+
+* [RustBelt: Securing the Foundations of the RustProgramming Language](https://people.mpi-sws.org/~dreyer/papers/rustbelt/paper.pdf)
+* [RustHorn: CHC-based Verification for Rust Programs](http://www.kb.is.s.u-tokyo.ac.jp/~yskm24t/papers/esop2020-rust-horn.pdf)
+* [Extensible Functional-Correctness Verification of Rust Programs by the Technique of Prophecy](http://www.kb.is.s.u-tokyo.ac.jp/~yskm24t/papers/master-thesis.pdf)
 
 ## Prerequisites
 
 This version is known to compile with:
 
- - Coq 8.12.0
+ - Coq 8.13.1
  - A development version of [Iris](https://gitlab.mpi-sws.org/iris/iris)
 
 ## Building from source
@@ -29,9 +35,11 @@ followed by `make build-dep`.
 
 ## Structure
 
-* The folder [lang](theories/lang) contains the formalization of the lambda-Rust
+* ~~The folder [lang](theories/lang) contains the formalization of the lambda-Rust
   core language, including the theorem showing that programs with data races get
-  stuck.
+  stuck.~~
+* The folder [prophecy](theories/prophecy) contains the formalization of the
+  prophecy library.
 * The folder [lifetime](theories/lifetime) proves the rules of the lifetime
   logic, including derived constructions like (non-)atomic persistent borrows.
   * The subfolder [model](theories/lifetime/model) proves the core rules, which
@@ -39,18 +47,18 @@ followed by `make build-dep`.
     [lifetime.v](theories/lifetime/lifetime.v).
 * The folder [typing](theories/typing) defines the domain of semantic types,
   interpretations of all the judgments, as well as proofs of all typing rules.
-  * [type.v](theories/typing/type.v) contains the definition of a semantic type.
-  * [programs.v](theories/typing/programs.v) defines the typing judgements for
-    instructions and function bodies.
-  * [soundness.v](theories/typing/soundness.v) contains the main soundness
-    theorem of the type system.
-  * The subfolder [examples](theories/typing/examples) shows how the examples
-    from the technical appendix can be type-checked in Coq.
-  * The subfolder [lib](theories/typing/lib) contains proofs of safety of some
+  * ~~[type.v](theories/typing/type.v) contains the definition of a semantic type.~~
+  * ~~[programs.v](theories/typing/programs.v) defines the typing judgements for
+    instructions and function bodies.~~
+  * ~~[soundness.v](theories/typing/soundness.v) contains the main soundness
+    theorem of the type system.~~
+  * ~~The subfolder [examples](theories/typing/examples) shows how the examples
+    from the technical appendix can be type-checked in Coq.~~
+  * ~~The subfolder [lib](theories/typing/lib) contains proofs of safety of some
     unsafely implement types from the Rust standard library and some user
     crates: `Cell`, `RefCell`, `Rc`, `Arc`, `Mutex`, `RwLock`, `mem::swap`,
     `thread::spawn`, `take_mut::take`, `alias::once` as well as converting `&&T`
-    to `&Box<T>`.
+    to `&Box<T>`.~~
 
 ## Where to Find the Proof Rules From the Paper
 
