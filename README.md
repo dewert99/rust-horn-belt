@@ -35,9 +35,6 @@ followed by `make build-dep`.
 
 ## Structure
 
-* ~~The folder [lang](theories/lang) contains the formalization of the lambda-Rust
-  core language, including the theorem showing that programs with data races get
-  stuck.~~
 * The folder [prophecy](theories/prophecy) contains the formalization of the
   prophecy library.
 * The folder [lifetime](theories/lifetime) proves the rules of the lifetime
@@ -45,6 +42,9 @@ followed by `make build-dep`.
   * The subfolder [model](theories/lifetime/model) proves the core rules, which
     are then sealed behind a module signature in
     [lifetime.v](theories/lifetime/lifetime.v).
+* ~~The folder [lang](theories/lang) contains the formalization of the lambda-Rust
+  core language, including the theorem showing that programs with data races get
+  stuck.~~
 * The folder [typing](theories/typing) defines the domain of semantic types,
   interpretations of all the judgments, as well as proofs of all typing rules.
   * ~~[type.v](theories/typing/type.v) contains the definition of a semantic type.~~
