@@ -8,10 +8,10 @@ From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
 Class typePreG Σ := PreTypeG {
-  type_preG_heapG :> lrustPreG Σ;
+  type_preG_lrustG :> lrustPreG Σ;
   type_preG_lftG :> lftPreG Σ;
   type_preG_na_invG :> na_invG Σ;
-  type_preG_frac_borrowG :> frac_borG Σ;
+  type_preG_frac_borG :> frac_borG Σ;
   type_preG_excl_auth_inG :> inG Σ (excl_authR natO)
 }.
 
