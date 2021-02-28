@@ -28,7 +28,7 @@ Notation "ξ .id" := (ξ.(pv_id)) (at level 2, format "ξ .id").
 Global Instance proph_var_eq_dec : EqDecision proph_var.
 Proof. solve_decision. Qed.
 
-Implicit Type (ξ ζ: proph_var) (ξs ζs : list proph_var).
+Implicit Type (ξ ζ: proph_var) (ξs ζs: list proph_var).
 
 Definition proph_asn := ∀ξ, ξ.ty.
 
@@ -57,7 +57,7 @@ Proof. move=> ?? Eqv. apply Eqv. constructor. Qed.
 Lemma proph_dep_constr {A B} (f: A → B) vπ ξs : vπ ./ ξs → f ∘ vπ ./ ξs.
 Proof. move=> Dep ?? /Dep ?. by apply (f_equal f). Qed.
 
-Local Lemma proph_dep_mono {A} ξs ζs (vπ : _ → A) :
+Local Lemma proph_dep_mono {A} ξs ζs (vπ: _ → A) :
   ξs ⊆ ζs → vπ ./ ξs → vπ ./ ζs.
 Proof. move=> In Dep ?? Eqv. apply Dep => ??. by apply Eqv, In. Qed.
 
@@ -77,11 +77,13 @@ Qed.
 
 Lemma proph_dep_destr {A B} f `{Inj A B (=) (=) f} vπ ξs :
   f ∘ vπ ./ ξs → vπ ./ ξs.
-Proof. move=> Dep ?? /Dep ?. by apply (inj f). Qed.
+Proof. by move=> Dep ?? /Dep/(inj f) ?. Qed.
 
 Lemma proph_dep_destr2 {A B C} f `{Inj2 A B C (=) (=) (=) f} vπ wπ ξs :
   f ∘ vπ ⊛ wπ ./ ξs → vπ ./ ξs ∧ wπ ./ ξs.
-Proof. move=> Dep. split; move=> ?? /Dep ?; by edestruct (inj2 f). Qed.
+Proof.
+  move=> Dep. split; move=> ?? /Dep Eq; apply (inj2 f) in Eq; by inversion Eq.
+Qed.
 
 (** * Prophecy Log *)
 
@@ -184,7 +186,7 @@ Local Definition proph_sim S L :=
   ∀Ap i vπ, S Ap !! i ≡ Some (aitem vπ) ↔ .{$(Ap,i):=vπ} ∈ L.
 Local Notation "S :~ L" := (proph_sim S L) (at level 70, format "S  :~  L").
 
-Implicit Type (φπ ψπ : proph_asn → Prop) (φ ψ : Prop).
+Implicit Type (φπ ψπ: proph_asn → Prop) (φ ψ: Prop).
 
 Section defs.
 Context `{!invG Σ, !prophG Σ}.
@@ -285,7 +287,7 @@ Proof.
   move=> /(elem_of_list_fmap_2 pli_pv) [[[Ap ?]?] [? /Sim Eqv]]. subst.
   move: ValBoth=> /auth_both_valid_discrete [Inc _].
   move/(discrete_fun_included_spec_1 _ _ Ap) in Inc.
-  rewrite /line discrete_fun_lookup_singleton in Inc. simpl in *.
+  rewrite /line discrete_fun_lookup_singleton in Inc. simpl in Inc.
   move: Eqv. move: Inc=> /singleton_included_l [? [-> Inc]]. move=> Eqv.
   apply (inj Some) in Eqv. move: Inc. rewrite Eqv.
   by move=> /Some_csum_included [|[[?[?[_[?]]]]|[?[?[?]]]]].
@@ -319,7 +321,7 @@ Proof.
       singleton_local_update_any => ? _. by apply exclusive_local_update. }
   iModIntro. iSplitL "Auth'"; last first.
   { iModIntro. iSplitR; [|done]. iExists [.{ξ:=vπ}].
-    iSplitR; [|by rewrite big_sepL_singleton].  iPureIntro=> ? Sat.
+    iSplitR; [|by rewrite big_sepL_singleton]. iPureIntro=> ? Sat.
     by inversion Sat. }
   iModIntro. iExists S'. iSplitR; [|done]. iPureIntro. exists L'. split.
   { split; [done| split; [|done]] => ?? Eqv. apply Dep => ? /Outζs ?.
@@ -329,14 +331,14 @@ Proof.
   move=> Bp j ?. rewrite elem_of_cons. case (decide (ξ = $(Bp,j)))=> [Eq|?].
   { inversion Eq. subst.
     rewrite /S' /add_line discrete_fun_lookup_insert lookup_insert. split.
-    - move=> Eqv. left. apply (inj (Some ∘ aitem)) in Eqv. by rewrite Eqv.
+    - move=> /(inj (Some ∘ aitem)) ->. by left.
     - move=> [Eq'|/InLNe ?]; by [dependent destruction Eq'|]. }
   have Eqv : S' Bp !! j ≡ S Bp !! j.
   { rewrite /S' /add_line /discrete_fun_insert.
     case (decide (Ap = Bp))=> [?|?]; [|done]. simpl_eq.
     case (decide (i = j))=> [?|?]; by [subst|rewrite lookup_insert_ne]. }
   rewrite Eqv Sim. split; [by right|].
-  move => [Eq|?]; by [dependent destruction Eq|].
+  move=> [Eq|?]; by [dependent destruction Eq|].
 Qed.
 
 (** Operations on Prophecy Observations *)
@@ -390,7 +392,7 @@ End lemmas.
 
 (** * Prophecy Equalizer *)
 
-Definition proph_eqz `{!invG Σ, !prophG Σ} {A} (uπ vπ : _ → A) : iProp Σ :=
+Definition proph_eqz `{!invG Σ, !prophG Σ} {A} (uπ vπ: _ → A) : iProp Σ :=
   ∀ξs q, ⌜vπ ./ ξs⌝ -∗ q:+[ξs] ={↑prophN}=∗ ⟨π, uπ π = vπ π⟩ ∗ q:+[ξs].
 
 Notation "uπ :== vπ" := (proph_eqz uπ vπ)
@@ -407,10 +409,10 @@ Proof.
   by iMod (proph_resolve with "PROPH Tok Ptoks").
 Qed.
 
-Lemma proph_obs_eqz {A} (uπ vπ : _ → A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
+Lemma proph_obs_eqz {A} (uπ vπ: _ → A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
 Proof. iIntros "?". iIntros (???) "?". iModIntro. by iSplit. Qed.
 
-Lemma proph_eqz_modify {A} (uπ uπ' vπ : _ → A) :
+Lemma proph_eqz_modify {A} (uπ uπ' vπ: _ → A) :
   ⟨π, uπ' π = uπ π⟩ -∗ uπ :== vπ -∗ uπ' :== vπ.
 Proof.
   iIntros "#Obs Eqz". iIntros (???) "Ptoks".

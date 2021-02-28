@@ -8,8 +8,8 @@ Notation ".{[ x := a ]}" := (discrete_fun_singleton x a)
   (at level 5, format ".{[ x  :=  a ]}").
 
 Section ucmra.
-Context `{EqDecision A} {B : A → ucmra}.
-Implicit Type (f g : discrete_fun B) (x y : A).
+Context `{EqDecision A} {B: A → ucmra}.
+Implicit Type (f g: discrete_fun B) (x y: A).
 
 Lemma discrete_fun_insert_insert f x a b :
   .<[x:=a]> $ .<[x:=b]> f ≡ .<[x:=a]> f.
@@ -27,7 +27,7 @@ Qed.
 Lemma discrete_fun_insert_local_update f g x a b :
   (f x, g x) ~l~> (a, b) → (f, g) ~l~> (.<[x:=a]> f, .<[x:=b]> g).
 Proof.
-  move=> /local_update_unital Upd. apply local_update_unital=> n h Val Eqv.
+  move=> /local_update_unital Upd. rewrite local_update_unital => n h Val Eqv.
   destruct (Upd n (h x)) as [??]; [by apply Val|by apply Eqv|]. split.
   - move=> y. rewrite /discrete_fun_insert.
     case (decide (x = y))=> [?|?]; by [subst|].
