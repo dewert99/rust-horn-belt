@@ -38,6 +38,7 @@ theories/lang/lib/arc.v
 theories/lang/lib/tests.v
 theories/typing/base.v
 theories/typing/lft_contexts.v
+theories/typing/uniq_cmra.v
 theories/typing/type.v
 # theories/typing/util.v
 # theories/typing/type_context.v

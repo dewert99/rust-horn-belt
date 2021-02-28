@@ -1,17 +1,18 @@
-From iris.algebra Require Import numbers list lib.excl_auth.
-From iris.base_logic.lib Require Export na_invariants.
+From iris.algebra Require Import numbers list.
+From iris.base_logic Require Export na_invariants.
 From lrust.lang Require Export proofmode notation.
+From lrust.prophecy Require Export prophecy.
 From lrust.lifetime Require Export frac_borrow.
-From lrust.typing Require Export base.
-From lrust.typing Require Import lft_contexts.
+From lrust.typing Require Export base lft_contexts uniq_cmra.
 Set Default Proof Using "Type".
 
 Class typeG Σ := TypeG {
-  type_lrustG :> lrustG Σ;
-  type_lftG :> lftG Σ;
-  type_na_invG :> na_invG Σ;
-  type_frac_borG :> frac_borG Σ;
-  type_excl_auth_inG :> inG Σ (excl_authR natO)
+  type_lrustG:> lrustG Σ;
+  type_prophG:> prophG Σ;
+  type_uniqG:> uniqG Σ;
+  type_lftG:> lftG Σ;
+  type_na_invG:> na_invG Σ;
+  type_frac_borG:> frac_borG Σ;
 }.
 
 Definition lftE : coPset := ↑lftN.
