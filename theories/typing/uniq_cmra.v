@@ -3,7 +3,7 @@ From iris.proofmode Require Import tactics.
 From iris.base_logic Require Import invariants.
 From lrust.prophecy Require Import functions prophecy.
 
-Implicit Type (Ap: ptType) (ξ: proph_var) (ζs: list proph_var) (q: Qp).
+Implicit Type (Ap: ptType) (q: Qp).
 
 (** * Camera for Unique Borrowing *)
 
@@ -51,12 +51,12 @@ Definition proph_ctrl ξ vπd : iProp Σ :=
 
 End defs.
 
-Notation "VO[ ξ ] vπd" := (val_obs ξ vπd)
-  (at level 5, format "VO[ ξ ]  vπd") : bi_scope.
-Local Notation "VO2[ ξ ] vπd" := (val_obs2 ξ vπd)
-  (at level 5, format "VO2[ ξ ]  vπd") : bi_scope.
-Notation "PC[ ξ ] vπd" := (proph_ctrl ξ vπd)
-  (at level 5, format "PC[ ξ ]  vπd") : bi_scope.
+Notation ".VO[ ξ ] vπd" := (val_obs ξ vπd)
+  (at level 5, format ".VO[ ξ ]  vπd") : bi_scope.
+Local Notation ".VO2[ ξ ] vπd" := (val_obs2 ξ vπd)
+  (at level 5, format ".VO2[ ξ ]  vπd") : bi_scope.
+Notation ".PC[ ξ ] vπd" := (proph_ctrl ξ vπd)
+  (at level 5, format ".PC[ ξ ]  vπd") : bi_scope.
 
 (** * Lemmas *)
 
@@ -73,14 +73,14 @@ Proof.
   by move/frac_agree_op_valid.
 Qed.
 
-Local Lemma vo_vo2 ξ vπd : VO[ξ] vπd ∗ VO[ξ] vπd ⊣⊢ VO2[ξ] vπd.
+Local Lemma vo_vo2 ξ vπd : .VO[ξ] vπd ∗ .VO[ξ] vπd ⊣⊢ .VO2[ξ] vπd.
 Proof.
   by rewrite -own_op -auth_frag_op discrete_fun_singleton_op singleton_op /item
     -frac_agree_op Qp_half_half.
 Qed.
 
 Local Lemma vo_pc ξ vπd :
-  VO[ξ] vπd -∗ PC[ξ] vπd -∗ VO2[ξ] vπd ∗ 1:[ξ].
+  .VO[ξ] vπd -∗ .PC[ξ] vπd -∗ .VO2[ξ] vπd ∗ 1:[ξ].
 Proof.
   iIntros "Vo Pc". iDestruct "Pc" as "[[? Tok]|[ExVo2 _]]"; last first.
   { iDestruct "ExVo2" as (?) "Vo2".
@@ -92,10 +92,10 @@ Qed.
 
 Global Instance uniq_ctx_persistent : Persistent uniq_ctx := _.
 
-Global Instance val_obs_timeless ξ vπd : Timeless (VO[ξ] vπd) := _.
+Global Instance val_obs_timeless ξ vπd : Timeless (.VO[ξ] vπd) := _.
 
 Lemma uniq_strip_later ξ vπd :
-  VO[ξ] vπd -∗ ▷ PC[ξ] vπd -∗ ◇ (VO[ξ] vπd ∗ PC[ξ] vπd).
+  .VO[ξ] vπd -∗ ▷ .PC[ξ] vπd -∗ ◇ (.VO[ξ] vπd ∗ .PC[ξ] vπd).
 Proof.
   iIntros "Vo Pc". iDestruct "Pc" as "[> ?|[> ExVo2 _]]"; last first.
   { iDestruct "ExVo2" as (?) "Vo2".
@@ -118,7 +118,7 @@ Notation "PT{ vπ }" := (pval_to_pt vπ) (at level 5, format "PT{ vπ }").
 
 Lemma uniq_intro {A} E (vπ: _ → A) d :
   ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗
-    ∃i, let ξ := $(PT{vπ},i) in VO[ξ] (vπ,d) ∗ PC[ξ] (vπ,d).
+    ∃i, let ξ := $(PT{vπ},i) in .VO[ξ] (vπ,d) ∗ .PC[ξ] (vπ,d).
 Proof.
   iIntros (?) "PROPH ?". iInv uniqN as (S) "> Auth". set Ap := PT{vπ}.
   set I := dom (gset _) (S Ap).
@@ -133,7 +133,7 @@ Proof.
   by iSplitL "Vo'".
 Qed.
 
-Lemma uniq_agree ξ vπd vπd' : VO[ξ] vπd -∗ PC[ξ] vπd' -∗ ⌜vπd = vπd'⌝.
+Lemma uniq_agree ξ vπd vπd' : .VO[ξ] vπd -∗ .PC[ξ] vπd' -∗ ⌜vπd = vπd'⌝.
 Proof.
   iIntros "Vo Pc". iDestruct "Pc" as "[[Own _]|[ExVo2 _]]";
     [|iDestruct "ExVo2" as (?) "Own"];
@@ -141,7 +141,7 @@ Proof.
 Qed.
 
 Lemma uniq_proph_tok ξ vπd :
-  VO[ξ] vπd -∗ PC[ξ] vπd -∗ VO[ξ] vπd ∗ 1:[ξ] ∗ (1:[ξ] -∗ PC[ξ] vπd).
+  .VO[ξ] vπd -∗ .PC[ξ] vπd -∗ .VO[ξ] vπd ∗ 1:[ξ] ∗ (1:[ξ] -∗ .PC[ξ] vπd).
 Proof.
   iIntros "Vo Pc". iDestruct (vo_pc with "Vo Pc") as "[Vo2 Tok]".
   iDestruct (vo_vo2 with "Vo2") as "[Vo Vo']". iSplitL "Vo"; [done|].
@@ -149,7 +149,7 @@ Proof.
 Qed.
 
 Lemma uniq_update E ξ vπd vπd' : ↑uniqN ⊆ E →
-  uniq_ctx -∗ VO[ξ] vπd -∗ PC[ξ] vπd ={E}=∗ VO[ξ] vπd' ∗ PC[ξ] vπd'.
+  uniq_ctx -∗ .VO[ξ] vπd -∗ .PC[ξ] vπd ={E}=∗ .VO[ξ] vπd' ∗ .PC[ξ] vπd'.
 Proof.
   iIntros (?) "? Vo Pc". iDestruct (vo_pc with "Vo Pc") as "[Vo2 Tok]".
   iInv uniqN as (S) "> Auth". set S' := add_line ξ 1 vπd' S.
@@ -157,13 +157,13 @@ Proof.
   { apply auth_update, discrete_fun_singleton_local_update_any,
       singleton_local_update_any => ? _. by apply exclusive_local_update. }
   iModIntro. iSplitR "Vo2 Tok"; [by iExists S'|]. iModIntro.
-  iDestruct (vo_vo2 with "Vo2") as "[Vo Vo']". iSplitL "Vo"; [done|].
-  iLeft. by iSplitL "Vo'".
+  iDestruct (vo_vo2 with "Vo2") as "[Vo ?]". iSplitL "Vo"; [done|]. iLeft.
+  by iSplitR "Tok".
 Qed.
 
 Lemma uniq_resolve E ξ vπ d ζs q : ↑prophN ⊆ E → vπ ./ ζs →
-  proph_ctx -∗ VO[ξ] (vπ,d) -∗ PC[ξ] (vπ,d) -∗ q:+[ζs] ={E}=∗
-    ⟨π, π ξ = vπ π⟩ ∗ PC[ξ] (vπ,d) ∗ q:+[ζs].
+  proph_ctx -∗ .VO[ξ] (vπ,d) -∗ .PC[ξ] (vπ,d) -∗ q:+[ζs] ={E}=∗
+    ⟨π, π ξ = vπ π⟩ ∗ .PC[ξ] (vπ,d) ∗ q:+[ζs].
 Proof.
   iIntros (??) "PROPH Vo Pc Ptoks".
   iDestruct (vo_pc with "Vo Pc") as "[Vo2 Tok]".
@@ -173,8 +173,8 @@ Proof.
 Qed.
 
 Lemma uniq_preresolve E ξ u vπ d ζs q : ↑prophN ⊆ E → u ./ ζs →
-  proph_ctx -∗ VO[ξ] (vπ,d) -∗ PC[ξ] (vπ,d) -∗ q:+[ζs] ={E}=∗
-    ⟨π, π ξ = u π⟩ ∗ q:+[ζs] ∗ (∀vπ' d', u :== vπ' -∗ PC[ξ] (vπ',d')).
+  proph_ctx -∗ .VO[ξ] (vπ,d) -∗ .PC[ξ] (vπ,d) -∗ q:+[ζs] ={E}=∗
+    ⟨π, π ξ = u π⟩ ∗ q:+[ζs] ∗ (∀vπ' d', u :== vπ' -∗ .PC[ξ] (vπ',d')).
 Proof.
   iIntros (??) "PROPH Vo Pc Ptoks".
   iDestruct (vo_pc with "Vo Pc") as "[Vo2 Tok]".
@@ -184,7 +184,7 @@ Proof.
   by iDestruct (proph_eqz_modify with "Obs Eqz") as "?".
 Qed.
 
-Lemma proph_ctrl_eqz ξ vπ d : proph_ctx -∗ PC[ξ] (vπ,d) -∗ (.$ ξ) :== vπ.
+Lemma proph_ctrl_eqz ξ vπ d : proph_ctx -∗ .PC[ξ] (vπ,d) -∗ (.$ ξ) :== vπ.
 Proof.
   iIntros "#? Pc".
   iDestruct "Pc" as "[[_ ?]|[_ ?]]"; by [iApply proph_token_eqz|].
