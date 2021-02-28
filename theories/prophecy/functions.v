@@ -40,8 +40,7 @@ Lemma discrete_fun_singleton_local_update_any f x b a' b' :
 Proof.
   move=> ?.
   rewrite /discrete_fun_singleton -(discrete_fun_insert_insert _ _ b' b).
-  apply discrete_fun_insert_local_update.
-  by rewrite discrete_fun_lookup_insert.
+  apply discrete_fun_insert_local_update. by rewrite discrete_fun_lookup_insert.
 Qed.
 
 End ucmra.
