@@ -57,7 +57,7 @@ followed by `make build-dep`.
   stuck.
 * The folder [typing](theories/typing) defines the domain of semantic types,
   interpretations of all the judgments, as well as proofs of all typing rules.
-  * ~~[type.v](theories/typing/type.v) contains the definition of a semantic type.~~
+  * [type.v](theories/typing/type.v) contains the definition of a semantic type.
   * ~~[programs.v](theories/typing/programs.v) defines the typing judgements for
     instructions and function bodies.~~
   * ~~[soundness.v](theories/typing/soundness.v) contains the main soundness
