@@ -5,7 +5,6 @@ From iris.algebra Require Import auth cmra functions gmap csum frac agree.
 From iris.bi Require Import fractional.
 From iris.proofmode Require Import tactics.
 From iris.base_logic Require Import invariants.
-From iris_string_ident Require Import ltac2_string_ident.
 From lrust.prophecy Require Import functions.
 
 (** * Pointed Type *)
@@ -268,8 +267,8 @@ Qed.
 Lemma proph_intro {Ap} E (I: gset positive) :
   ↑prophN ⊆ E → proph_ctx ={E}=∗ ∃i, ⌜i ∉ I⌝ ∗ 1:[$(Ap,i)].
 Proof.
-  iIntros (?) "?". iInv prophN as (S) "> [%OkSim Auth]".
-  case OkSim=> L [? Sim].
+  iIntros (?) "?". iInv prophN as (S) "> [OkSim Auth]".
+  iDestruct "OkSim" as %[L [? Sim]].
   case (exist_fresh (I ∪ dom _ (S Ap)))
     => [i /not_elem_of_union [? /not_elem_of_dom EqNone]].
   set ξ := $(Ap,i). set S' := add_line ξ (fitem 1) S.
@@ -314,7 +313,7 @@ Lemma proph_resolve E ξ vπ ζs q : ↑prophN ⊆ E → vπ ./ ζs →
   proph_ctx -∗ 1:[ξ] -∗ q:+[ζs] ={E}=∗ ⟨π, π ξ = vπ π⟩ ∗ q:+[ζs].
 Proof.
   move: ξ vπ => [Ap i] vπ. set ξ := $(Ap,i). iIntros (? Dep) "? Tok Ptoks".
-  iInv prophN as (S) "> [%OkSim Auth]". case OkSim=> L [? Sim].
+  iInv prophN as (S) "> [OkSim Auth]". iDestruct "OkSim" as %[L [? Sim]].
   iDestruct (proph_tok_out with "Auth Tok") as %Outξ; [done|].
   set L' := .{ξ := vπ} :: L. iAssert ⌜∀ζ, ζ ∈ ζs → ζ ∉ res L'⌝%I as %Outζs.
   { iIntros (? In).
@@ -356,14 +355,16 @@ Proof. move=> ?. iExists []. by iSplit. Qed.
 
 Lemma proph_obs_weaken φπ ψπ : (∀π, φπ π → ψπ π) → ⟨π, φπ π⟩ -∗ ⟨π, ψπ π⟩.
 Proof.
-  move=> Wkn. iIntros "Obs". iDestruct "Obs" as (L) "[%SatImp ?]".
+  move=> Wkn. iIntros "Obs". iDestruct "Obs" as (L) "[SatImp ?]".
+  iDestruct "SatImp" as %SatImp.
   iExists L. iSplitR; [|done]. iPureIntro=> ??. by apply Wkn, SatImp.
 Qed.
 
 Lemma proph_obs_merge φπ ψπ : ⟨π, φπ π⟩ -∗ ⟨π, ψπ π⟩ -∗ ⟨π, φπ π ∧ ψπ π⟩.
 Proof.
-  iIntros "Obs Obs'". iDestruct "Obs" as (L) "[%SatImp Atoms]".
-  iDestruct "Obs'" as (L') "[%SatImp' Atoms']". iExists (L ++ L').
+  iIntros "Obs Obs'". iDestruct "Obs" as (L) "[SatImp Atoms]".
+  iDestruct "Obs'" as (L') "[SatImp' Atoms']". iDestruct "SatImp" as %SatImp.
+  iDestruct "SatImp'" as %SatImp'. iExists (L ++ L').
   iSplitR; [|by rewrite big_sepL_app; iCombine "Atoms Atoms'" as "?"].
   iPureIntro=> ? /Forall_app [??]. split; by [apply SatImp|apply SatImp'].
 Qed.
@@ -371,8 +372,9 @@ Qed.
 Lemma proph_obs_sat E φπ :
   ↑prophN ⊆ E → proph_ctx -∗ ⟨π, φπ π⟩ ={E}=∗ ⌜∃π₀, φπ π₀⌝.
 Proof.
-  iIntros (?) "? Obs". iDestruct "Obs" as (L') "[%SatImp #Atoms]".
-  iInv prophN as (S) "> [%OkSim Auth]". case OkSim=> L [Ok Sim].
+  iIntros (?) "? Obs". iDestruct "Obs" as (L') "[SatImp #Atoms]".
+  iDestruct "SatImp" as %SatImp. iInv prophN as (S) "> [OkSim Auth]".
+  iDestruct "OkSim" as %[L [Ok Sim]].
   move: (Ok)=> /proph_ok_sat [π /Forall_forall Sat]. iModIntro.
   iAssert ⌜π ◁ L'⌝%I as %?; last first.
   { iSplitL; last first. { iPureIntro. exists π. by apply SatImp. }

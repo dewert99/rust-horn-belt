@@ -13,7 +13,15 @@ This is the Coq development for RustHornBelt (work in progress).
 This version is known to compile with:
 
  - Coq 8.13.1
- - A development version of [Iris](https://gitlab.mpi-sws.org/iris/iris)
+ - The latest version of the branch [step_indexing_controlled_by_ghosts](https://gitlab.mpi-sws.org/iris/iris/-/tree/step_indexing_controlled_by_ghosts) of Iris
+
+The branch [step_indexing_controlled_by_ghosts](https://gitlab.mpi-sws.org/iris/iris/-/tree/step_indexing_controlled_by_ghosts) of Iris is still in the process of being [merged to the master](https://gitlab.mpi-sws.org/iris/iris/-/merge_requests/595).
+
+In order to use this branch of Iris for RustHornBelt, the following is an easy way.
+- Clone the [Iris git repository](https://gitlab.mpi-sws.org/iris/iris) to some local directory, which we write `IRIS` here.
+- In `IRIS`, do `git checkout step_indexing_controlled_by_ghosts` and `make`.
+- Add to `$COQPATH` the directory `IRIS`.
+This works because `IRIS` has the Coq code in the `iris` directory, which coincides with the library name `iris`.
 
 ## Building from source
 
@@ -22,6 +30,8 @@ installing the dependencies.  This requires the following two repositories:
 
     opam repo add coq-released https://coq.inria.fr/opam/released
     opam repo add iris-dev https://gitlab.mpi-sws.org/iris/opam.git
+
+(As mentioned above, actually we don't use Iris registered to opam.)
 
 Once you got opam set up, run `make build-dep` to install the right versions
 of the dependencies.
@@ -42,9 +52,9 @@ followed by `make build-dep`.
   * The subfolder [model](theories/lifetime/model) proves the core rules, which
     are then sealed behind a module signature in
     [lifetime.v](theories/lifetime/lifetime.v).
-* ~~The folder [lang](theories/lang) contains the formalization of the lambda-Rust
+* The folder [lang](theories/lang) contains the formalization of the lambda-Rust
   core language, including the theorem showing that programs with data races get
-  stuck.~~
+  stuck.
 * The folder [typing](theories/typing) defines the domain of semantic types,
   interpretations of all the judgments, as well as proofs of all typing rules.
   * ~~[type.v](theories/typing/type.v) contains the definition of a semantic type.~~

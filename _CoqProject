@@ -20,22 +20,22 @@ theories/lifetime/lifetime.v
 theories/lifetime/at_borrow.v
 theories/lifetime/na_borrow.v
 theories/lifetime/frac_borrow.v
-# theories/lang/adequacy.v
-# theories/lang/heap.v
-# theories/lang/time.v
-# theories/lang/lang.v
-# theories/lang/lifting.v
-# theories/lang/notation.v
-# theories/lang/proofmode.v
-# theories/lang/races.v
-# theories/lang/tactics.v
-# theories/lang/lib/memcpy.v
-# theories/lang/lib/swap.v
-# theories/lang/lib/new_delete.v
-# theories/lang/lib/spawn.v
-# theories/lang/lib/lock.v
-# theories/lang/lib/arc.v
-# theories/lang/lib/tests.v
+theories/lang/adequacy.v
+theories/lang/heap.v
+theories/lang/time.v
+theories/lang/lang.v
+theories/lang/lifting.v
+theories/lang/notation.v
+theories/lang/proofmode.v
+theories/lang/races.v
+theories/lang/tactics.v
+theories/lang/lib/memcpy.v
+theories/lang/lib/swap.v
+theories/lang/lib/new_delete.v
+theories/lang/lib/spawn.v
+theories/lang/lib/lock.v
+theories/lang/lib/arc.v
+theories/lang/lib/tests.v
 # theories/typing/base.v
 # theories/typing/type.v
 # theories/typing/util.v
