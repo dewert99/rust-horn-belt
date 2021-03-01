@@ -82,19 +82,17 @@ Arguments ty_shr {_ _ _} _ _ _ _ _ / : simpl nomatch.
 
 Notation ty_lft ty := (lft_intersect_list ty.(ty_lfts)).
 
-(*
-Lemma ty_own_mt_depth_mono `{!typeG Σ} ty depth1 depth2 tid l :
-  (depth1 ≤ depth2)%nat →
-  l ↦∗: ty.(ty_own) depth1 tid -∗ l ↦∗: ty.(ty_own) depth2 tid.
+Lemma ty_own_mt_depth_mono `{!typeG Σ} {A} (ty: _ A) d d' vπ tid l :
+  d ≤ d' → l ↦∗: ty.(ty_own) (vπ,d) tid -∗ l ↦∗: ty.(ty_own) (vπ,d') tid.
 Proof.
   iIntros (?) "H". iDestruct "H" as (vl) "[??]".
   iExists vl. iFrame. by iApply ty_own_depth_mono.
 Qed.
 
-Definition ty_outlives_E `{!typeG Σ} ty (κ : lft) : elctx :=
+Definition ty_outlives_E `{!typeG Σ} {A} (ty: _ A) (κ: lft) : elctx :=
   (λ α, κ ⊑ₑ α) <$> ty.(ty_lfts).
 
-Lemma ty_outlives_E_elctx_sat `{!typeG Σ} E L ty α β :
+Lemma ty_outlives_E_elctx_sat `{!typeG Σ} {A} E L (ty: _ A) α β :
   ty_outlives_E ty β ⊆+ E →
   lctx_lft_incl E L α β →
   elctx_sat E L (ty_outlives_E ty α).
@@ -107,7 +105,7 @@ Proof.
     + apply IH, Hαβ. etrans; last done. by apply submseteq_cons.
 Qed.
 
-Lemma elctx_interp_ty_outlives_E `{!typeG Σ} ty α :
+Lemma elctx_interp_ty_outlives_E `{!typeG Σ} {A} (ty: _ A) α :
   elctx_interp (ty_outlives_E ty α) ⊣⊢ α ⊑ ty.(ty_lft).
 Proof.
   rewrite /ty_outlives_E /elctx_interp /elctx_elt_interp big_sepL_fmap /=.
@@ -119,6 +117,7 @@ Proof.
          [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
 Qed.
 
+(*
 Definition tyl_lfts `{!typeG Σ} tyl : list lft := concat (ty_lfts <$> tyl).
 Definition tyl_E `{!typeG Σ} tyl : elctx := concat (ty_E <$> tyl).
 Definition tyl_outlives_E `{!typeG Σ} tyl (κ : lft) : elctx :=
