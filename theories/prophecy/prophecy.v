@@ -145,7 +145,7 @@ Qed.
 Local Lemma proph_ok_modify_sat L : .✓ L → ∀π, π ! L ◁ L.
 Proof.
   rewrite /proph_sat. elim L=> [|[ξ vπ] L'] /=; [done|] => IH [? [? /IH ?]] ?.
-  apply Forall_cons. simpl. split; [|done]. rewrite proph_modify_eqv; [|done].
+  apply Forall_cons =>/=. split; [|done]. rewrite proph_modify_eqv; [|done].
   rewrite proph_upd_lookup. symmetry. set L₀ := .{ξ:=vπ} :: L'.
   have Dep': vπ ./~ res L₀ by done. apply Dep', (proph_modify_eqv L₀).
 Qed.
@@ -271,7 +271,7 @@ Proof.
   iModIntro. iSplitL "Auth'"; last first. { iModIntro. iExists i. by iSplit. }
   iModIntro. iExists S'. iSplitR; [|done]. iPureIntro. exists L.
   split; [done|] => Bp j ?. rewrite /S' /add_line /discrete_fun_insert -Sim.
-  case (decide (Ap = Bp))=> [?|?]; [|done]. subst. simpl.
+  case (decide (Ap = Bp))=> [?|?]; [|done]. subst =>/=.
   case (decide (i = j))=> [<-|?]; [|by rewrite lookup_insert_ne].
   rewrite lookup_insert EqNone.
   split; move=> Eqv; [apply (inj Some) in Eqv|]; inversion Eqv.
@@ -287,7 +287,7 @@ Proof.
   move=> /(elem_of_list_fmap_2 pli_pv) [[[Ap ?]?] [? /Sim Eqv]]. subst.
   move: ValBoth=> /auth_both_valid_discrete [Inc _].
   move/(discrete_fun_included_spec_1 _ _ Ap) in Inc.
-  rewrite /line discrete_fun_lookup_singleton in Inc. simpl in Inc.
+  rewrite /line discrete_fun_lookup_singleton /= in Inc.
   move: Eqv. move: Inc=> /singleton_included_l [? [-> Inc]]. move=> Eqv.
   apply (inj Some) in Eqv. move: Inc. rewrite Eqv.
   by move=> /Some_csum_included [|[[?[?[_[?]]]]|[?[?[?]]]]].
@@ -370,12 +370,12 @@ Proof.
   iAssert ⌜π ◁ L'⌝%I as %?; last first.
   { iSplitL; last first. { iPureIntro. exists π. by apply SatImp. }
     iModIntro. iExists S. iSplitR; [|done]. iPureIntro. by exists L. }
-  rewrite /proph_sat Forall_forall. iIntros ([[Ap i] vπ] In). simpl.
+  rewrite /proph_sat Forall_forall. iIntros ([[Ap i] vπ] In) =>/=.
   iAssert (proph_atom .{PVar Ap i := vπ}) with "[Atoms]" as "Atom".
   { iApply big_sepL_elem_of; by [apply In|]. }
-  iDestruct (own_valid_2 with "Auth Atom") as %ValBoth. simpl in ValBoth.
-  iPureIntro. apply (Sat .{PVar Ap i := vπ}), Sim.
-  move: ValBoth=> /auth_both_valid_discrete [Inc Val].
+  iDestruct (own_valid_2 with "Auth Atom") as %ValBoth. iPureIntro.
+  move: ValBoth=> /= /auth_both_valid_discrete [Inc Val].
+  apply (Sat .{PVar Ap i := vπ}), Sim.
   move/(discrete_fun_included_spec_1 _ _ Ap) in Inc.
   rewrite /line discrete_fun_lookup_singleton in Inc.
   move: Inc=> /singleton_included_l [it [Eqv /Some_included [->|Inc]]]; [done|].

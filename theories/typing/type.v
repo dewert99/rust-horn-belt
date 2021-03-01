@@ -195,150 +195,160 @@ Declare Scope lrust_type_scope.
 Delimit Scope lrust_type_scope with T.
 Bind Scope lrust_type_scope with type.
 
-(*
 (* OFE and COFE structures on types and simple types. *)
 Section ofe.
   Context `{!typeG Σ}.
 
-  Inductive type_equiv' (ty1 ty2 : type) : Prop :=
+  Inductive type_equiv' {A} (ty1 ty2: type A) : Prop :=
     Type_equiv :
       ty1.(ty_size) = ty2.(ty_size) →
       ty1.(ty_lfts) = ty2.(ty_lfts) →
       ty1.(ty_E) = ty2.(ty_E) →
-      (∀ depth tid vs, ty1.(ty_own) depth tid vs ≡ ty2.(ty_own) depth tid vs) →
-      (∀ κ tid l, ty1.(ty_shr) κ tid l ≡ ty2.(ty_shr) κ tid l) →
+      (∀ vπd tid vs, ty1.(ty_own) vπd tid vs ≡ ty2.(ty_own) vπd tid vs) →
+      (∀ vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡ ty2.(ty_shr) vπd κ tid l) →
       type_equiv' ty1 ty2.
-  Instance type_equiv : Equiv type := type_equiv'.
-  Inductive type_dist' (n : nat) (ty1 ty2 : type) : Prop :=
+  Instance type_equiv {A} : Equiv (type A) := type_equiv'.
+  Inductive type_dist' {A} (n: nat) (ty1 ty2: type A) : Prop :=
     Type_dist :
       ty1.(ty_size) = ty2.(ty_size) →
       ty1.(ty_lfts) = ty2.(ty_lfts) →
       ty1.(ty_E) = ty2.(ty_E) →
-      (∀ depth tid vs, ty1.(ty_own) depth tid vs ≡{n}≡ ty2.(ty_own) depth tid vs) →
-      (∀ κ tid l, ty1.(ty_shr) κ tid l ≡{n}≡ ty2.(ty_shr) κ tid l) →
+      (∀ vπd tid vs, ty1.(ty_own) vπd tid vs ≡{n}≡ ty2.(ty_own) vπd tid vs) →
+      (∀ vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{n}≡ ty2.(ty_shr) vπd κ tid l) →
       type_dist' n ty1 ty2.
-  Instance type_dist : Dist type := type_dist'.
+  Instance type_dist {A} : Dist (type A) := type_dist'.
 
-  Let T := prodO (prodO (prodO (prodO
+  Let T A := prodO (prodO (prodO (prodO
     natO (listO lftO)) (listO (prodO lftO lftO)))
-    (nat -d> thread_id -d> list val -d> iPropO Σ))
-    (lft -d> thread_id -d> loc -d> iPropO Σ).
-  Let P (x : T) : Prop :=
-    (∀ κ tid l, Persistent (x.2 κ tid l)) ∧
-    (∀ depth tid vl, x.1.2 depth tid vl -∗ ⌜length vl = x.1.1.1.1⌝) ∧
-    (∀ depth1 depth2 tid vl,
-        (depth1 ≤ depth2)%nat → x.1.2 depth1 tid vl -∗ x.1.2 depth2 tid vl) ∧
-    (∀ E depth κ l tid q, lftE ⊆ E →
-      lft_ctx -∗ κ ⊑ lft_intersect_list x.1.1.1.2 -∗
-      &{κ} (l ↦∗: λ vs, x.1.2 depth tid vs) -∗
-      q.[κ] ={E}=∗ |={E}▷=>^depth |={E}=> x.2 κ tid l ∗ q.[κ]) ∧
-    (∀ κ κ' tid l, κ' ⊑ κ -∗ x.2 κ tid l -∗ x.2 κ' tid l).
+    (pval_depth A -d> thread_id -d> list val -d> iPropO Σ))
+    (pval_depth A -d> lft -d> thread_id -d> loc -d> iPropO Σ).
+  Let P {A} (x: T A) : Prop :=
+    (∀vπd κ tid l, Persistent (x.2 vπd κ tid l)) ∧
+    (∀vπd tid vl, x.1.2 vπd tid vl -∗ ⌜length vl = x.1.1.1.1⌝) ∧
+    (∀d d' vπ tid vl, d ≤ d' → x.1.2 (vπ,d) tid vl -∗ x.1.2 (vπ,d') tid vl) ∧
+    (∀d d' vπ κ l tid, d ≤ d' → x.2 (vπ,d) κ l tid -∗ x.2 (vπ,d') κ l tid) ∧
+    (∀κ κ' vπd tid l, κ' ⊑ κ -∗ x.2 vπd κ tid l -∗ x.2 vπd κ' tid l) ∧
+    (∀E vπ d κ l tid q, lftE ⊆ E → lft_ctx -∗
+      κ ⊑ lft_intersect_list x.1.1.1.2 -∗
+      &{κ} (l ↦∗: λ vs, x.1.2 (vπ,d) tid vs) -∗
+      q.[κ] ={E}▷=∗^d |={E}=> x.2 (vπ,d) κ tid l ∗ q.[κ]) ∧
+    (∀E vπ d tid vl κ q, lftE ⊆ E → lft_ctx -∗
+      κ ⊑ lft_intersect_list x.1.1.1.2 -∗ x.1.2 (vπ,d) tid vl -∗ q.[κ]
+      ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
+        (q':+[ξs] ={E}=∗ x.1.2 (vπ,d) tid vl ∗ q.[κ])) ∧
+    (∀E vπ d κ tid l κ' q, lftE ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
+      κ' ⊑ lft_intersect_list x.1.1.1.2 -∗ x.2 (vπ,d) κ tid l -∗ q.[κ']
+      ={E}▷=∗^(S d) ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
+        (q':+[ξs] ={E}=∗ x.2 (vπ,d) κ tid l ∗ q.[κ'])).
 
-  Definition type_unpack (ty : type) : T :=
+  Definition type_unpack {A} (ty: type A) : T A :=
     (ty.(ty_size), ty.(ty_lfts), ty.(ty_E), ty.(ty_own), ty.(ty_shr)).
 
-  Definition type_ofe_mixin : OfeMixin type.
+  Definition type_ofe_mixin {A} : OfeMixin (type A).
   Proof.
-    apply (iso_ofe_mixin type_unpack); unfold type_unpack; split.
-    - by destruct 1 as [-> -> -> ??].
-    - intros [[[[??] ?] ?] ?]. by constructor; try apply leibniz_equiv.
-    - by destruct 1 as [-> -> -> ??].
-    - intros [[[[??] ?] ?] ?]. by constructor=>//;
-      eapply leibniz_equiv,  (discrete_iff _ _).
+    apply (iso_ofe_mixin type_unpack);
+    (rewrite /type_unpack; split; [by move=> [-> -> -> ??]|]);
+    move=> [[[[??]?]?]?]; simpl in *; constructor; try apply leibniz_equiv;
+    try done; by eapply (discrete_iff _ _).
   Qed.
-  Canonical Structure typeO : ofe := Ofe type type_ofe_mixin.
+  Canonical Structure typeO {A} : ofe := Ofe (type A) type_ofe_mixin.
 
-  Global Instance ty_size_ne n : Proper (dist n ==> eq) ty_size.
-  Proof. intros ?? EQ. apply EQ. Qed.
-  Global Instance ty_size_proper : Proper ((≡) ==> eq) ty_size.
-  Proof. intros ?? EQ. apply EQ. Qed.
-  Global Instance ty_lfts_ne n : Proper (dist n ==> eq) ty_lfts.
-  Proof. intros ?? EQ. apply EQ. Qed.
-  Global Instance ty_lfts_proper : Proper ((≡) ==> eq) ty_lfts.
-  Proof. intros ?? EQ. apply EQ. Qed.
-  Global Instance ty_E_ne n : Proper (dist n ==> eq) ty_E.
-  Proof. intros ?? EQ. apply EQ. Qed.
-  Global Instance ty_E_proper : Proper ((≡) ==> eq) ty_E.
-  Proof. intros ?? EQ. apply EQ. Qed.
-  Global Instance ty_outlives_E_ne n : Proper (dist n ==> eq ==> eq) ty_outlives_E.
-  Proof. intros ?? [_ EQ _ _ _]. by rewrite /ty_outlives_E EQ. Qed.
-  Global Instance ty_outlives_E_proper : Proper ((≡) ==> eq ==> eq) ty_outlives_E.
-  Proof. intros ?? [_ EQ _ _ _]. by rewrite /ty_outlives_E EQ. Qed.
-  Global Instance tyl_E_ne n : Proper (dist n ==> eq) tyl_E.
+  Global Instance ty_size_ne {A} n : Proper (dist n ==> (=)) (@ty_size _ _ A).
+  Proof. move=> ?? Eqv. apply Eqv. Qed.
+  Global Instance ty_size_proper {A} : Proper ((≡) ==> (=)) (@ty_size _ _ A).
+  Proof. move=> ?? Eqv. apply Eqv. Qed.
+  Global Instance ty_lfts_ne {A} n : Proper (dist n ==> (=)) (@ty_lfts _ _ A).
+  Proof. move=> ?? Eqv. apply Eqv. Qed.
+  Global Instance ty_lfts_proper {A} : Proper ((≡) ==> (=)) (@ty_lfts _ _ A).
+  Proof. move=> ?? Eqv. apply Eqv. Qed.
+  Global Instance ty_E_ne {A} n : Proper (dist n ==> (=)) (@ty_E _ _ A).
+  Proof. move=> ?? Eqv. apply Eqv. Qed.
+  Global Instance ty_E_proper {A} : Proper ((≡) ==> (=)) (@ty_E _ _ A).
+  Proof. move=> ?? Eqv. apply Eqv. Qed.
+  Global Instance ty_outlives_E_ne {A} n :
+    Proper (dist n ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
+  Proof. move=> ?? [_ Eqv _ _ _]. by rewrite /ty_outlives_E Eqv. Qed.
+  Global Instance ty_outlives_E_proper {A} :
+    Proper ((≡) ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
+  Proof. move=> ?? [_ Eqv _ _ _]. by rewrite /ty_outlives_E Eqv. Qed.
+(*
+  Global Instance tyl_E_ne {A} n : Proper (dist n ==> (=)) (@tyl_E _ _ A).
   Proof.
-    intros ?? EQ. unfold tyl_E.
-    induction EQ as [|???? EQ _ IH]=>//=. by rewrite EQ IH.
+    move=> ?? Eqv. unfold tyl_E.
+    induction Eqv as [|???? Eqv _ IH]=>//=. by rewrite Eqv IH.
   Qed.
-  Global Instance tyl_E_proper : Proper ((≡) ==> eq) tyl_E.
+  Global Instance tyl_E_proper {A} : Proper ((≡) ==> (=)) (@tyl_E _ _ A).
   Proof.
-    intros ?? EQ. unfold tyl_E.
-    induction EQ as [|???? EQ _ IH]=>//=. by rewrite EQ IH.
+    move=> ?? Eqv. unfold tyl_E.
+    induction Eqv as [|???? Eqv _ IH]=>//=. by rewrite Eqv IH.
   Qed.
-  Global Instance tyl_outlives_E_ne n : Proper (dist n ==> eq ==> eq) tyl_outlives_E.
+  Global Instance tyl_outlives_E_ne {A} n :
+    Proper (dist n ==> (=) ==> (=)) (@tyl_outlives_E _ _ A).
   Proof.
-    intros ?? EQ ?? ->. unfold tyl_outlives_E.
-    induction EQ as [|???? EQ _ IH]=>//=. by rewrite EQ IH.
+    move=> ?? Eqv ?? ->. unfold tyl_outlives_E.
+    induction Eqv as [|???? Eqv _ IH]=>//=. by rewrite Eqv IH.
   Qed.
-  Global Instance tyl_outlives_E_proper : Proper ((≡) ==> eq ==> eq) tyl_outlives_E.
+  Global Instance tyl_outlives_E_proper {A} :
+    Proper ((≡) ==> (=) ==> (=)) (@tyl_outlives_E _ _ A).
   Proof.
-    intros ?? EQ ?? ->. unfold tyl_outlives_E.
-    induction EQ as [|???? EQ _ IH]=>//=. by rewrite EQ IH.
+    move=> ?? Eqv ?? ->. unfold tyl_outlives_E.
+    induction Eqv as [|???? Eqv _ IH]=>//=. by rewrite Eqv IH.
   Qed.
-  Global Instance ty_own_ne n:
-    Proper (dist n ==> eq ==> eq ==> eq ==> dist n) ty_own.
-  Proof. intros ?? EQ ??-> ??-> ??->. apply EQ. Qed.
-  Global Instance ty_own_proper :
-    Proper ((≡) ==> eq ==> eq ==> eq ==> (≡)) ty_own.
-  Proof. intros ?? EQ ??-> ??-> ??->. apply EQ. Qed.
-  Global Instance ty_shr_ne n :
-    Proper (dist n ==> eq ==> eq ==> eq ==> dist n) ty_shr.
-  Proof. intros ?? EQ ??-> ??-> ??->. apply EQ. Qed.
-  Global Instance ty_shr_proper :
-    Proper ((≡) ==> eq ==> eq ==> eq ==> (≡)) ty_shr.
-  Proof. intros ?? EQ ??-> ??-> ??->. apply EQ. Qed.
+*)
+  Global Instance ty_own_ne {A} n:
+    Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@ty_own _ _ A).
+  Proof. move=> ?? Eqv ??-> ??-> ??->. apply Eqv. Qed.
+  Global Instance ty_own_proper {A} :
+    Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (≡)) (@ty_own _ _ A).
+  Proof. move=> ?? Eqv ??-> ??-> ??->. apply Eqv. Qed.
+  Global Instance ty_shr_ne {A} n :
+    Proper (dist n ==> (=) ==> (=) ==> (=) ==> (=) ==> dist n) (@ty_shr _ _ A).
+  Proof. move=> ?? Eqv ??-> ??-> ??-> ??->. apply Eqv. Qed.
+  Global Instance ty_shr_proper {A} :
+    Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) (@ty_shr _ _ A).
+  Proof. move=> ?? Eqv ??-> ??-> ??-> ??->. apply Eqv. Qed.
 
-  Inductive st_equiv' (ty1 ty2 : simple_type) : Prop :=
+  Inductive st_equiv' {A} (st1 st2: simple_type A) : Prop :=
     St_equiv :
-      ty1.(ty_lfts) = ty2.(ty_lfts) →
-      ty1.(ty_E) = ty2.(ty_E) →
-      (∀ depth tid vs, ty1.(ty_own) depth tid vs ≡ ty2.(ty_own) depth tid vs) →
-      st_equiv' ty1 ty2.
-  Instance st_equiv : Equiv simple_type := st_equiv'.
-  Inductive st_dist' (n : nat) (ty1 ty2 : simple_type) : Prop :=
+      st1.(ty_size) = st2.(ty_size) →
+      st1.(ty_lfts) = st2.(ty_lfts) →
+      st1.(ty_E) = st2.(ty_E) →
+      (∀vπd tid vl, st1.(ty_own) vπd tid vl ≡ st2.(ty_own) vπd tid vl) →
+      st_equiv' st1 st2.
+  Instance st_equiv {A} : Equiv (simple_type A) := st_equiv'.
+  Inductive st_dist' {A} (n: nat) (st1 st2: simple_type A) : Prop :=
     St_dist :
-      ty1.(ty_lfts) = ty2.(ty_lfts) →
-      ty1.(ty_E) = ty2.(ty_E) →
-      (∀ depth tid vs, ty1.(ty_own) depth tid vs ≡{n}≡ (ty2.(ty_own) depth tid vs)) →
-      st_dist' n ty1 ty2.
-  Instance st_dist : Dist simple_type := st_dist'.
+      st1.(ty_size) = st2.(ty_size) →
+      st1.(ty_lfts) = st2.(ty_lfts) →
+      st1.(ty_E) = st2.(ty_E) →
+      (∀vπd tid vl, st1.(ty_own) vπd tid vl ≡{n}≡ (st2.(ty_own) vπd tid vl)) →
+      st_dist' n st1 st2.
+  Instance st_dist {A} : Dist (simple_type A) := st_dist'.
 
-  Definition st_ofe_mixin : OfeMixin simple_type.
+  Definition st_ofe_mixin {A} : OfeMixin (simple_type A).
   Proof.
-    apply (iso_ofe_mixin ty_of_st); split=>EQ.
-    - split=>//=; try apply EQ. intros ???. destruct EQ as [_ _ EQ].
-      repeat eapply (EQ 0%nat) || f_equiv.
-    - split; apply EQ.
-    - split=>//=; try apply EQ. intros ???. destruct EQ as [_ _ EQ].
-      repeat eapply (EQ 0%nat) || f_equiv.
-    - split; apply EQ.
+    apply (iso_ofe_mixin ty_of_st); (split=> Eqv; split; try by apply Eqv);
+    move=> > /=; f_equiv; f_equiv; by move: Eqv=> [_ _ _ /= ->].
   Qed.
-  Canonical Structure stO : ofe := Ofe simple_type st_ofe_mixin.
+  Canonical Structure stO {A} : ofe := Ofe (simple_type A) st_ofe_mixin.
 
-  Global Instance st_own_ne n :
-    Proper (dist n ==> eq ==> eq ==> dist n) st_own.
-  Proof. intros ?? [_ _ EQ] ??-> ??->. apply (EQ 0%nat). Qed.
-  Global Instance st_own_proper : Proper ((≡) ==> eq ==> eq ==> (≡)) st_own.
-  Proof. intros ?? [_ _ EQ] ??-> ??->. apply (EQ 0%nat). Qed.
+  Global Instance st_own_ne n {A} :
+    Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@st_own _ _ A).
+  Proof. move=> ?? Eqv ??-> ??-> ??->. apply Eqv. Qed.
+  Global Instance st_own_proper {A} :
+    Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (≡)) (@st_own _ _ A).
+  Proof. move=> ?? Eqv ??-> ??-> ??->. apply Eqv. Qed.
 
-  Global Instance ty_of_st_ne : NonExpansive ty_of_st.
+  Global Instance ty_of_st_ne {A} : NonExpansive (@ty_of_st _ _ A).
   Proof.
-    intros n ?? EQ. split=>//=; try apply EQ.
-    intros ???. repeat apply EQ || f_equiv.
+    move=> ??? Eqv. split; try apply Eqv. move=> > /=. f_equiv. f_equiv.
+    by rewrite Eqv.
   Qed.
-  Global Instance ty_of_st_proper : Proper ((≡) ==> (≡)) ty_of_st.
+  Global Instance ty_of_st_proper {A} : Proper ((≡) ==> (≡)) (@ty_of_st _ _ A).
   Proof. apply (ne_proper _). Qed.
 End ofe.
 
+(*
 Ltac solve_ne_type :=
   constructor;
   solve_proper_core ltac:(fun _ => ((eapply ty_size_ne || eapply ty_lfts_ne ||
