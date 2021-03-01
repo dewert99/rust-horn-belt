@@ -24,9 +24,7 @@ Definition thread_id := na_inv_pool_name.
 Implicit Type d: nat.
 
 Record type `{!typeG Σ} A :=
-  { ty_size: nat;
-    ty_lfts: list lft;
-    ty_E: elctx;
+  { ty_size: nat; ty_lfts: list lft; ty_E: elctx;
     ty_own: pval_depth A → thread_id → list val → iProp Σ;
     ty_shr : pval_depth A → lft → thread_id → loc → iProp Σ;
 
@@ -136,10 +134,9 @@ Qed.
 *)
 
 Record simple_type `{!typeG Σ} A :=
-  { st_lfts: list lft;
-    st_E: elctx;
+  { st_size: nat; st_lfts: list lft; st_E: elctx;
     st_own: pval_depth A → thread_id → list val → iProp Σ;
-    st_size_eq vπd tid vl : st_own vπd tid vl -∗ ⌜length vl = 1%nat⌝;
+    st_size_eq vπd tid vl : st_own vπd tid vl -∗ ⌜length vl = st_size⌝;
     st_own_persistent vπd tid vl : Persistent (st_own vπd tid vl);
     st_own_depth_mono d d' vπ tid vl :
       d ≤ d' → st_own (vπ,d) tid vl -∗ st_own (vπ,d') tid vl;
@@ -148,15 +145,17 @@ Record simple_type `{!typeG Σ} A :=
       ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
         (q':+[ξs] ={E}=∗ st_own (vπ,d) tid vl ∗ q.[κ]); }.
 Existing Instance st_own_persistent.
+Instance: Params (@st_size) 2 := {}.
 Instance: Params (@st_lfts) 2 := {}.
 Instance: Params (@st_E) 2 := {}.
 Instance: Params (@st_own) 2 := {}.
+Arguments st_size {_ _ _} _ / : simpl nomatch.
 Arguments st_lfts {_ _ _} _ / : simpl nomatch.
 Arguments st_E {_ _ _} _ / : simpl nomatch.
 Arguments st_own {_ _ _} _ _ _ _ / : simpl nomatch.
 
 Program Definition ty_of_st `{!typeG Σ} {A} (st: simple_type A) : type A :=
-  {| ty_size := 1; ty_lfts := st.(st_lfts); ty_E := st.(st_E);
+  {| ty_size := st.(st_size); ty_lfts := st.(st_lfts); ty_E := st.(st_E);
      ty_own := st.(st_own);
      ty_shr vπd κ tid l :=
        (∃ vl, &frac{κ} (λ q, l ↦∗{q} vl) ∗ ▷ st.(st_own) vπd tid vl)%I
