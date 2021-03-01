@@ -55,7 +55,7 @@ Record type `{!typeG Σ} A :=
      *)
     ty_share E vπ d κ l tid q : lftE ⊆ E → lft_ctx -∗
       κ ⊑ lft_intersect_list ty_lfts -∗ &{κ} (l ↦∗: ty_own (vπ,d) tid) -∗ q.[κ]
-      ={E}▷=∗^d |={E}=> ty_shr (vπ,d) κ tid l ∗ q.[κ];
+      ={E}=∗ |={E}▷=>^d |={E}=> ty_shr (vπ,d) κ tid l ∗ q.[κ];
 
     ty_own_proph E vπ d tid vl κ q : lftE ⊆ E → lft_ctx -∗
       κ ⊑ lft_intersect_list ty_lfts -∗ ty_own (vπ,d) tid vl -∗ q.[κ]
@@ -172,12 +172,15 @@ Next Obligation.
   iSplit; [|done]. by iApply (frac_bor_shorten with "Incl").
 Qed.
 Next Obligation.
-  move=> *. iIntros "#LFT ? Bor Tok". iApply step_fupdN_intro; [done|]. iNext.
+  move=> *. iIntros "#LFT ? Bor Tok". 
   iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
   iMod (bor_sep with "LFT Bor") as "[Bor Own]"; [done|].
   iMod (bor_persistent with "LFT Own Tok") as "[Own Tok]"; [done|].
   iMod (bor_fracture (λ q, _ ↦∗{q} _)%I with "LFT Bor") as "Hfrac"; [done|].
-  iModIntro. iSplitR "Tok"; [|done]. iExists vl. by iSplit.
+
+  iModIntro.
+  iApply step_fupdN_intro; [done|]. iNext.
+  iSplitR "Tok"; [|done]. iExists vl. iModIntro. by iSplit.
 Qed.
 Next Obligation. move=> >. apply st_own_proph. Qed.
 Next Obligation.

@@ -1,7 +1,8 @@
 From iris.proofmode Require Import tactics.
 From lrust.lang.lib Require Import memcpy.
 From lrust.typing Require Export type.
-From lrust.typing Require Import util uninit type_context programs.
+From lrust.typing Require Import util.
+(* From lrust.typing Require Import util uninit type_context programs. *)
 Set Default Proof Using "Type".
 
 Section own.
@@ -44,31 +45,54 @@ Section own.
   (* Make sure 'simpl' doesn't unfold. *)
   Global Opaque freeable_sz.
 
-  Program Definition own_ptr (n : nat) (ty : type) :=
+  Program Definition own_ptr {A} (n : nat) (ty : type A) :=
     {| ty_size := 1;
        ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own depth tid vl :=
          match depth, vl return _ with
-         | S depth, [ #(LitLoc l) ] =>
+         | (asn, S depth), [ #(LitLoc l) ] =>
          (* We put a later in front of the †{q}, because we cannot use
             [ty_size_eq] on [ty] at step index 0, which would in turn
             prevent us to prove [subtype_own].
 
             Since this assertion is timeless, this should not cause
             problems. *)
-           ▷ (l ↦∗: ty.(ty_own) depth tid ∗ freeable_sz n ty.(ty_size) l)
+           ▷ (l ↦∗: ty.(ty_own) (asn, depth) tid ∗ freeable_sz n ty.(ty_size) l)
          | _, _ => False
          end%I;
-       ty_shr κ tid l :=
-         (∃ l':loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) κ tid l')%I |}.
-  Next Obligation. by iIntros (q ty [|depth] tid [|[[]|][]]) "H". Qed.
+         ty_shr depth κ tid l :=
+          match depth return _ with 
+          | (asn, S n) => 
+            (∃ l':loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) (asn, n) κ tid l')%I
+          | _ => False
+          end%I
+    |}.
+    Next Obligation. iIntros (A q ty [? [|depth]] κ tid l); typeclasses eauto. Qed.  
+    
+    Next Obligation. by iIntros (A q ty [? [|depth]] tid [|[[]|][]]) "H". Qed.
   Next Obligation.
-    intros n ty [|depth1] [|depth2] tid vl Hdepth12;
+    intros A n ty [|depth1] [|depth2] asn tid vl Hdepth12;
       [iIntros "[]"|iIntros "[]"|lia|].
     do 6 f_equiv. apply ty_own_mt_depth_mono. lia.
   Qed.
+
   Next Obligation.
-    iIntros (n ty N depth κ l tid ??) "/= #LFT #Hout Hshr Htok".
+    iIntros (A n ty [|d1] [|d2] asn tid1 tid2 l Hdepth12); 
+      [iIntros "[]"|iIntros "[]"|lia|]. 
+    do 4 f_equiv. iIntros "Hintros".
+    by iApply (ty_shr_depth_mono _ _ d1); [lia|].
+  Qed.
+
+  Next Obligation.
+    iIntros (A q ty κ κ' [? [|n]] tid l) "/= #LFT"; [iIntros "[]"|].
+    iDestruct 1 as (l') "[? ?]".
+    iExists (l'); iSplit.
+    - by iApply frac_bor_shorten.
+    - by iApply ty_shr_lft_mono.
+  Qed.
+
+  Next Obligation.
+    iIntros (A n ty N asn depth κ l tid ??) "/= #LFT #Hout Hshr Htok".
     iMod (bor_exists with "LFT Hshr") as (vl) "Hb"; first solve_ndisj.
     iMod (bor_sep with "LFT Hb") as "[Hb1 Hb2]"; first solve_ndisj.
     destruct depth as [|depth], vl as [|[[|l'|]|][]];
@@ -79,16 +103,41 @@ Section own.
     iMod (bor_later_tok with "LFT Hb2 Htok") as "Hb2"=>//.
     iIntros "/= !> !> !>". iMod "Hb2" as "[Hb2 Htok]".
     iMod (ty_share with "LFT Hout Hb2 Htok") as "Hb2"=>//. iModIntro.
-    iApply (step_fupdN_wand with "Hb2"). iIntros ">[Hb2 $]". eauto.
+    iApply (step_fupdN_wand with "Hb2"). iIntros ">[Hb2 $]".
+    iExists (l'); by iFrame.
   Qed.
+  
   Next Obligation.
-    intros _ ty κ κ' tid l. iIntros "#Hκ #H".
-    iDestruct "H" as (l') "[Hfb #Hvs]". iExists l'. iSplit.
-    - by iApply (frac_bor_shorten with "[]").
-    - by iApply (ty.(ty_shr_mono) with "Hκ").
+    iIntros (A n ty N asn [|d] tid [|[[]|][]] κ ??) "/= #LFT #Hout"; try iIntros "[]".
+    iIntros "Hown Htok".
+    iModIntro; iNext.
+    iDestruct "Hown" as "[Hown Hfrz]".
+    iDestruct "Hown" as (vl) "[Hown Hb]".
+    iDestruct ((ty_own_proph A _ N _ _ _ _ _ q H) with "LFT Hout Hb Htok") as "X".
+    iApply (step_fupdN_wand with "X").
+    iModIntro.
+    iDestruct 1 as (ξs q') "(? & ? & Hb)".
+    iExists ξs, q'; iFrame.
+    iIntros "Hq".
+    iMod ("Hb" with "Hq") as "[Hb ?]"; iFrame. 
+    iExists vl; by iFrame.
+  Qed.
+  
+  Next Obligation.
+    iIntros (A q ty N asn [|d] κ tid l κ' ??) "/= #LFT #Hout #Hshrt"; try iIntros "[]";
+    iDestruct 1 as (l') "[Hfrac Hshr]";iIntros "Htok".
+    iModIntro; iNext.
+    iDestruct ((ty_shr_proph A _ N) with "LFT Hout Hshrt Hshr Htok") as "Hb2"; [done|].
+    iApply (step_fupdN_wand with "Hb2").
+    iModIntro.
+    iDestruct 1 as (ξs q') "(Hdep &deptoks &depres)".
+    iExists ξs, q'; iFrame.
+    iIntros "Htok".
+    iMod ("depres" with "Htok") as "[Hshr ?]"; iFrame.
+    iExists l'; by iFrame.
   Qed.
 
-  Lemma own_type_incl n m ty1 ty2 :
+  (* Lemma own_type_incl n m ty1 ty2 :
     ▷ ⌜n = m⌝ -∗ type_incl ty1 ty2 -∗ type_incl (own_ptr n ty1) (own_ptr m ty2).
   Proof.
     iIntros "#Heq #(Hsz & Hout & Ho & Hs)".
@@ -99,7 +148,7 @@ Section own.
       iApply "Ho".
     - iIntros (???) "H". iDestruct "H" as (l') "[Hfb #Hshr]".
       iExists l'. iFrame. iApply ("Hs" with "Hshr").
-  Qed.
+  Qed. 
 
   Global Instance own_mono E L n :
     Proper (subtype E L ==> subtype E L) (own_ptr n).
@@ -385,3 +434,4 @@ Global Hint Resolve own_mono' own_proper' box_mono' box_proper'
 (* By setting the priority high, we make sure copying is tried before
    moving. *)
 Global Hint Resolve read_own_move | 100 : lrust_typing.
+  *)
