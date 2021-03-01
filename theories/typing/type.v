@@ -190,6 +190,12 @@ Next Obligation.
   by iSplit.
 Qed.
 
+Coercion ty_of_st : simple_type >-> type.
+
+Declare Scope lrust_type_scope.
+Delimit Scope lrust_type_scope with T.
+Bind Scope lrust_type_scope with type.
+
 (*
 (* OFE and COFE structures on types and simple types. *)
 Section ofe.
