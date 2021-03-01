@@ -18,9 +18,9 @@ Implicit Type S: uniq_smryUR.
 Local Definition item {Ap} q (vπd: _ * _) : uniq_itemR Ap :=
   @to_frac_agree (leibnizO _) q vπd.
 Local Definition line ξ q vπd : uniq_smryUR :=
-  .{[ξ.ty := {[ξ.id := item q vπd]}]}.
+  .{[ξ.(pv_ty) := {[ξ.(pv_id) := item q vπd]}]}.
 Local Definition add_line ξ q vπd S : uniq_smryUR :=
-  .<[ξ.ty := <[ξ.id := item q vπd]> (S ξ.ty)]> S.
+  .<[ξ.(pv_ty) := <[ξ.(pv_id) := item q vπd]> (S ξ.(pv_ty))]> S.
 
 Definition uniqΣ := #[GFunctor uniqUR].
 Class uniqPreG Σ := UniqPreG { uniq_preG_inG:> inG Σ uniqUR }.
@@ -114,16 +114,15 @@ Proof.
 Qed.
 
 Definition pval_to_pt {A} (vπ: proph_asn → A) := PtType A (vπ inhabitant).
-Notation "PT{ vπ }" := (pval_to_pt vπ) (at level 5, format "PT{ vπ }").
 
 Lemma uniq_intro {A} E (vπ: _ → A) d :
   ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗
-    ∃i, let ξ := $(PT{vπ},i) in .VO[ξ] (vπ,d) ∗ .PC[ξ] (vπ,d).
+    ∃i, let ξ := PVar (pval_to_pt vπ) i in .VO[ξ] (vπ,d) ∗ .PC[ξ] (vπ,d).
 Proof.
-  iIntros (?) "PROPH ?". iInv uniqN as (S) "> Auth". set Ap := PT{vπ}.
-  set I := dom (gset _) (S Ap).
+  iIntros (?) "PROPH ?". iInv uniqN as (S) "> Auth".
+  set Ap := pval_to_pt vπ. set I := dom (gset _) (S Ap).
   iMod (proph_intro _ I with "PROPH") as (i NIn) "Tok"; [by solve_ndisj|].
-  move: NIn=> /not_elem_of_dom ?. set ξ := $(Ap,i).
+  move: NIn=> /not_elem_of_dom ?. set ξ := PVar Ap i.
   set S' := add_line ξ 1 (vπ,d) S.
   iMod (own_update _ _ (● S' ⋅ ◯ line ξ 1 (vπ,d)) with "Auth") as "[? Vo2]".
   { by apply auth_update_alloc,
