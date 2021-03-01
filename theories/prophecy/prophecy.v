@@ -21,9 +21,11 @@ Global Instance pt_type_eq_dec : EqDecision ptType :=
 (** * Basic Notions *)
 
 Record proph_var := ProphVar { pv_ty: ptType; pv_id: positive }.
-Notation "$( Ap , i )" := (ProphVar Ap i) (at level 2, format "$( Ap ,  i )").
-Notation "ξ .ty" := (ξ.(pv_ty)) (at level 2, format "ξ .ty").
-Notation "ξ .id" := (ξ.(pv_id)) (at level 2, format "ξ .id").
+Notation "$( Ap , i )" := (ProphVar Ap i) (at level 1, format "$( Ap ,  i )").
+Notation "ξ .ty" := (ξ.(pv_ty))
+  (at level 2, left associativity, format "ξ .ty").
+Notation "ξ .id" := (ξ.(pv_id))
+  (at level 2, left associativity, format "ξ .id").
 
 Global Instance proph_var_eq_dec : EqDecision proph_var.
 Proof. solve_decision. Qed.
@@ -90,9 +92,11 @@ Qed.
 Record proph_log_item :=
   ProphLogItem { pli_pv: proph_var; pli_val: proph_asn → pli_pv.ty }.
 Local Notation ".{ ξ := vπ }" := (ProphLogItem ξ vπ)
-  (at level 2, format ".{ ξ  :=  vπ }").
-Local Notation "pli .pv" := (pli.(pli_pv)) (at level 2, format "pli .pv").
-Local Notation "pli .val" := (pli.(pli_val)) (at level 2, format "pli .val").
+  (at level 1, format ".{ ξ  :=  vπ }").
+Local Notation "pli .pv" := (pli.(pli_pv))
+  (at level 2, left associativity, format "pli .pv").
+Local Notation "pli .val" := (pli.(pli_val))
+  (at level 2, left associativity, format "pli .val").
 
 Local Definition proph_log := list proph_log_item.
 
@@ -209,9 +213,9 @@ Definition proph_obs φπ : iProp Σ :=
 End defs.
 
 Notation "q :[ ξ ]" := (proph_tok ξ q)
-  (at level 2, format "q :[ ξ ]") : bi_scope.
+  (at level 2, left associativity, format "q :[ ξ ]") : bi_scope.
 Notation "q :+[ ξs ]" := (proph_toks ξs q)
-  (at level 2, format "q :+[ ξs ]") : bi_scope.
+  (at level 2, left associativity, format "q :+[ ξs ]") : bi_scope.
 Notation "⟨ π , φ ⟩" := (proph_obs (λ π, φ%type%stdpp))
   (π name, at level 5, format "⟨ π ,  φ ⟩") : bi_scope.
 
