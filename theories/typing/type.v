@@ -222,24 +222,6 @@ Section ofe.
     natO (listO lftO)) (listO (prodO lftO lftO)))
     (pval_depth A -d> thread_id -d> list val -d> iPropO Σ))
     (pval_depth A -d> lft -d> thread_id -d> loc -d> iPropO Σ).
-  Let P {A} (x: T A) : Prop :=
-    (∀vπd κ tid l, Persistent (x.2 vπd κ tid l)) ∧
-    (∀vπd tid vl, x.1.2 vπd tid vl -∗ ⌜length vl = x.1.1.1.1⌝) ∧
-    (∀d d' vπ tid vl, d ≤ d' → x.1.2 (vπ,d) tid vl -∗ x.1.2 (vπ,d') tid vl) ∧
-    (∀d d' vπ κ l tid, d ≤ d' → x.2 (vπ,d) κ l tid -∗ x.2 (vπ,d') κ l tid) ∧
-    (∀κ κ' vπd tid l, κ' ⊑ κ -∗ x.2 vπd κ tid l -∗ x.2 vπd κ' tid l) ∧
-    (∀E vπ d κ l tid q, lftE ⊆ E → lft_ctx -∗
-      κ ⊑ lft_intersect_list x.1.1.1.2 -∗
-      &{κ} (l ↦∗: λ vs, x.1.2 (vπ,d) tid vs) -∗
-      q.[κ] ={E}▷=∗^d |={E}=> x.2 (vπ,d) κ tid l ∗ q.[κ]) ∧
-    (∀E vπ d tid vl κ q, lftE ⊆ E → lft_ctx -∗
-      κ ⊑ lft_intersect_list x.1.1.1.2 -∗ x.1.2 (vπ,d) tid vl -∗ q.[κ]
-      ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
-        (q':+[ξs] ={E}=∗ x.1.2 (vπ,d) tid vl ∗ q.[κ])) ∧
-    (∀E vπ d κ tid l κ' q, lftE ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
-      κ' ⊑ lft_intersect_list x.1.1.1.2 -∗ x.2 (vπ,d) κ tid l -∗ q.[κ']
-      ={E}▷=∗^(S d) ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
-        (q':+[ξs] ={E}=∗ x.2 (vπ,d) κ tid l ∗ q.[κ'])).
 
   Definition type_unpack {A} (ty: type A) : T A :=
     (ty.(ty_size), ty.(ty_lfts), ty.(ty_E), ty.(ty_own), ty.(ty_shr)).
