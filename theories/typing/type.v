@@ -204,8 +204,8 @@ Section ofe.
       ty1.(ty_size) = ty2.(ty_size) →
       ty1.(ty_lfts) = ty2.(ty_lfts) →
       ty1.(ty_E) = ty2.(ty_E) →
-      (∀ vπd tid vs, ty1.(ty_own) vπd tid vs ≡ ty2.(ty_own) vπd tid vs) →
-      (∀ vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡ ty2.(ty_shr) vπd κ tid l) →
+      (∀vπd tid vs, ty1.(ty_own) vπd tid vs ≡ ty2.(ty_own) vπd tid vs) →
+      (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡ ty2.(ty_shr) vπd κ tid l) →
       type_equiv' ty1 ty2.
   Instance type_equiv {A} : Equiv (type A) := type_equiv'.
   Inductive type_dist' {A} (n: nat) (ty1 ty2: type A) : Prop :=
@@ -213,8 +213,8 @@ Section ofe.
       ty1.(ty_size) = ty2.(ty_size) →
       ty1.(ty_lfts) = ty2.(ty_lfts) →
       ty1.(ty_E) = ty2.(ty_E) →
-      (∀ vπd tid vs, ty1.(ty_own) vπd tid vs ≡{n}≡ ty2.(ty_own) vπd tid vs) →
-      (∀ vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{n}≡ ty2.(ty_shr) vπd κ tid l) →
+      (∀vπd tid vs, ty1.(ty_own) vπd tid vs ≡{n}≡ ty2.(ty_own) vπd tid vs) →
+      (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{n}≡ ty2.(ty_shr) vπd κ tid l) →
       type_dist' n ty1 ty2.
   Instance type_dist {A} : Dist (type A) := type_dist'.
 
@@ -348,7 +348,6 @@ Section ofe.
   Proof. apply (ne_proper _). Qed.
 End ofe.
 
-(*
 Ltac solve_ne_type :=
   constructor;
   solve_proper_core ltac:(fun _ => ((eapply ty_size_ne || eapply ty_lfts_ne ||
@@ -356,23 +355,23 @@ Ltac solve_ne_type :=
                                     try reflexivity) || f_equiv).
 
 (** Type-nonexpansive and Type-contractive functions. *)
-Inductive TypeLftMorphism `{!typeG Σ} (T : type → type) : Prop :=
+Inductive TypeLftMorphism `{!typeG Σ} {A B} (T : type A → type B) : Prop :=
 | type_lft_morphism_add α βs E :
-    (∀ ty, ⊢ (T ty).(ty_lft) ≡ₗ α ⊓ ty.(ty_lft)) →
-    (∀ ty, elctx_interp (T ty).(ty_E) ⊣⊢
+    (∀ty, ⊢ (T ty).(ty_lft) ≡ₗ α ⊓ ty.(ty_lft)) →
+    (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢
            elctx_interp E ∗ elctx_interp ty.(ty_E) ∗
            [∗ list] β ∈ βs, β ⊑ ty.(ty_lft)) →
     TypeLftMorphism T
 | type_lft_morphism_const α E :
-    (∀ ty, ⊢ (T ty).(ty_lft) ≡ₗ α) →
-    (∀ ty, elctx_interp (T ty).(ty_E) ⊣⊢ elctx_interp E) →
+    (∀ty, ⊢ (T ty).(ty_lft) ≡ₗ α) →
+    (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢ elctx_interp E) →
     TypeLftMorphism T.
 Existing Class TypeLftMorphism.
 
 Section type_lft_morphism.
 Context `{!typeG Σ}.
 
-Global Instance type_lft_morphism_compose T U :
+Global Instance type_lft_morphism_compose {A B C} (T: _ B → _ C) (U: _ A → _ B):
   TypeLftMorphism T → TypeLftMorphism U → TypeLftMorphism (T ∘ U).
 Proof.
   destruct 1 as [αT βsT ET HTα HTE|αT ET HTα HTE], 1 as [αU βsU EU HUα HUE|αU EU HUα HUE].
@@ -399,7 +398,8 @@ Proof.
   - apply (type_lft_morphism_const _ αT ET)=>//=.
 Qed.
 
-Lemma type_lft_morphism_lft_equiv_proper T {HT:TypeLftMorphism T} ty1 ty2 :
+Lemma type_lft_morphism_lft_equiv_proper {A B} (T: _ A → _ B)
+  {HT: TypeLftMorphism T} ty1 ty2 :
   ty1.(ty_lft) ≡ₗ ty2.(ty_lft) -∗ (T ty1).(ty_lft) ≡ₗ (T ty2).(ty_lft).
 Proof.
   iIntros "#?". destruct HT as [α βs E Hα HE|α E Hα HE].
@@ -410,7 +410,8 @@ Proof.
     iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_refl.
 Qed.
 
-Lemma type_lft_morphism_elctx_interp_proper T {HT:TypeLftMorphism T} ty1 ty2 :
+Lemma type_lft_morphism_elctx_interp_proper {A B} (T: _ A → _ B)
+  {HT: TypeLftMorphism T} ty1 ty2 :
   elctx_interp ty1.(ty_E) ≡ elctx_interp ty2.(ty_E) →
   (⊢ ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) →
   elctx_interp (T ty1).(ty_E) ≡ elctx_interp (T ty2).(ty_E).
@@ -420,14 +421,12 @@ Proof.
   - by rewrite !HE.
 Qed.
 
-Lemma type_lft_morphism_ext T U :
-  TypeLftMorphism T →
-  (∀ ty, T ty = U ty) →
-  TypeLftMorphism U.
+Lemma type_lft_morphism_ext {A B} (T U: _ A → _ B) :
+  TypeLftMorphism T → (∀ty, T ty = U ty) → TypeLftMorphism U.
 Proof. by intros [] HTU; [eleft|eright]; intros; rewrite -HTU. Qed.
 End type_lft_morphism.
 
-Class TypeContractive `{!typeG Σ} (T : type -> type): Prop := {
+Class TypeContractive `{!typeG Σ} {A B} (T: type A -> type B): Prop := {
   type_contractive_type_lft_morphism : TypeLftMorphism T;
 
   type_contractive_ty_size ty1 ty2 : (T ty1).(ty_size) = (T ty2).(ty_size);
@@ -436,21 +435,25 @@ Class TypeContractive `{!typeG Σ} (T : type -> type): Prop := {
     ty1.(ty_size) = ty2.(ty_size) →
     (⊢ ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) →
     elctx_interp (ty1.(ty_E)) ≡ elctx_interp (ty2.(ty_E)) →
-    (∀ depth tid vl, dist_later n (ty1.(ty_own) depth tid vl) (ty2.(ty_own) depth tid vl)) →
-    (∀ κ tid l, ty1.(ty_shr) κ tid l ≡{n}≡ ty2.(ty_shr) κ tid l) →
-    (∀ depth tid vl, (T ty1).(ty_own) depth tid vl ≡{n}≡ (T ty2).(ty_own) depth tid vl);
+    (∀vπd tid vl,
+      dist_later n (ty1.(ty_own) vπd tid vl) (ty2.(ty_own) vπd tid vl)) →
+    (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{n}≡ ty2.(ty_shr) vπd κ tid l) →
+    (∀vπd tid vl,
+      (T ty1).(ty_own) vπd tid vl ≡{n}≡ (T ty2).(ty_own) vπd tid vl);
 
   type_contractive_ty_shr n ty1 ty2 :
     ty1.(ty_size) = ty2.(ty_size) →
     (⊢ ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) →
     elctx_interp (ty1.(ty_E)) ≡ elctx_interp (ty2.(ty_E)) →
-    (∀ depth tid vl, match n with S (S n) =>
-        ty1.(ty_own) depth tid vl ≡{n}≡ ty2.(ty_own) depth tid vl | _ => True end) →
-    (∀ κ tid l, dist_later n (ty1.(ty_shr) κ tid l) (ty2.(ty_shr) κ tid l)) →
-    (∀ κ tid l, (T ty1).(ty_shr) κ tid l ≡{n}≡ (T ty2).(ty_shr) κ tid l);
+    (∀vπd tid vl, match n with S (S n) =>
+      ty1.(ty_own) vπd tid vl ≡{n}≡ ty2.(ty_own) vπd tid vl | _ => True end) →
+    (∀vπd κ tid l,
+      dist_later n (ty1.(ty_shr) vπd κ tid l) (ty2.(ty_shr) vπd κ tid l)) →
+    (∀vπd κ tid l,
+      (T ty1).(ty_shr) vπd κ tid l ≡{n}≡ (T ty2).(ty_shr) vπd κ tid l);
 }.
 
-Class TypeNonExpansive `{!typeG Σ} (T : type -> type): Prop := {
+Class TypeNonExpansive `{!typeG Σ} {A B} (T : type A -> type B): Prop := {
   type_non_expansive_type_lft_morphism :> TypeLftMorphism T;
 
   type_non_expansive_ty_size ty1 ty2 :
@@ -460,20 +463,23 @@ Class TypeNonExpansive `{!typeG Σ} (T : type -> type): Prop := {
     ty1.(ty_size) = ty2.(ty_size) →
     (⊢ ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) →
     elctx_interp (ty1.(ty_E)) ≡ elctx_interp (ty2.(ty_E)) →
-    (∀ depth tid vl, ty1.(ty_own) depth tid vl ≡{n}≡ ty2.(ty_own) depth tid vl) →
-    (∀ κ tid l, ty1.(ty_shr) κ tid l ≡{S n}≡ ty2.(ty_shr) κ tid l) →
-    (∀ depth tid vl, (T ty1).(ty_own) depth tid vl ≡{n}≡ (T ty2).(ty_own) depth tid vl);
+    (∀vπd tid vl, ty1.(ty_own) vπd tid vl ≡{n}≡ ty2.(ty_own) vπd tid vl) →
+    (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{S n}≡ ty2.(ty_shr) vπd κ tid l) →
+    (∀vπd tid vl,
+      (T ty1).(ty_own) vπd tid vl ≡{n}≡ (T ty2).(ty_own) vπd tid vl);
 
   type_non_expansive_ty_shr n ty1 ty2 :
     ty1.(ty_size) = ty2.(ty_size) →
     (⊢ ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) →
     elctx_interp (ty1.(ty_E)) ≡ elctx_interp (ty2.(ty_E)) →
-    (∀ depth tid vl, dist_later n (ty1.(ty_own) depth tid vl) (ty2.(ty_own) depth tid vl)) →
-    (∀ κ tid l, ty1.(ty_shr) κ tid l ≡{n}≡ ty2.(ty_shr) κ tid l) →
-    (∀ κ tid l, (T ty1).(ty_shr) κ tid l ≡{n}≡ (T ty2).(ty_shr) κ tid l);
+    (∀vπd tid vl,
+      dist_later n (ty1.(ty_own) vπd tid vl) (ty2.(ty_own) vπd tid vl)) →
+    (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{n}≡ ty2.(ty_shr) vπd κ tid l) →
+    (∀vπd κ tid l,
+      (T ty1).(ty_shr) vπd κ tid l ≡{n}≡ (T ty2).(ty_shr) vπd κ tid l);
 }.
 
-
+(*
 Class TypeNonExpansiveList `{!typeG Σ} (T : list type → type): Prop := {
   type_list_non_expansive_ne (Tl : list (type → type)) :
     Forall TypeNonExpansive Tl →
@@ -485,35 +491,34 @@ Class TypeNonExpansiveList `{!typeG Σ} (T : list type → type): Prop := {
 
 Class TypeListNonExpansive `{!typeG Σ} (T : type → list type): Prop :=
   type_list_non_expansive : ∃ Tl,
-    (∀ ty, T ty = (λ T, T ty) <$> Tl) ∧
+    (∀ty, T ty = (λ T, T ty) <$> Tl) ∧
     Forall TypeNonExpansive Tl.
 
 Class TypeListContractive `{!typeG Σ} (T : type → list type): Prop :=
   type_list_contractive : ∃ Tl,
-    (∀ ty, T ty = (λ T, T ty) <$> Tl) ∧
+    (∀ty, T ty = (λ T, T ty) <$> Tl) ∧
     Forall TypeContractive Tl.
+*)
 
 Section type_contractive.
   Context `{!typeG Σ}.
 
-  Lemma type_ne_ext T U :
-    TypeNonExpansive T →
-    (∀ ty, T ty = U ty) →
-    TypeNonExpansive U.
+  Lemma type_ne_ext {A B} (T U: _ A → _ B) :
+    TypeNonExpansive T → (∀ty, T ty = U ty) → TypeNonExpansive U.
   Proof.
-    by intros [] HTU; split; intros; rewrite -?HTU; eauto using type_lft_morphism_ext.
+    by intros [] HTU; split; intros; rewrite -?HTU;
+    eauto using type_lft_morphism_ext.
   Qed.
 
-  Lemma type_contractive_ext T U :
-    TypeContractive T →
-    (∀ ty, T ty = U ty) →
-    TypeContractive U.
+  Lemma type_contractive_ext {A B} (T U: _ A → _ B) :
+    TypeContractive T → (∀ty, T ty = U ty) → TypeContractive U.
   Proof.
-    by intros [] HTU; split; intros; rewrite -?HTU; eauto using type_lft_morphism_ext.
+    by intros [] HTU; split; intros; rewrite -?HTU;
+    eauto using type_lft_morphism_ext.
   Qed.
 
   (* Show some more relationships between properties. *)
-  Global Instance type_contractive_type_ne T :
+  Global Instance type_contractive_type_ne {A B} (T: _ A → _ B) :
     TypeContractive T → TypeNonExpansive T.
   Proof.
     intros HT. split.
@@ -524,7 +529,7 @@ Section type_contractive.
       intros. apply dist_S, Hown.
   Qed.
 
-  Lemma type_ne_ne_compose T1 T2 :
+  Lemma type_ne_ne_compose {A B C} (T1: _ B → _ C) (T2: _ A → _ B) :
     TypeNonExpansive T1 → TypeNonExpansive T2 → TypeNonExpansive (T1 ∘ T2).
   Proof.
     intros HT1 HT2. split; intros.
@@ -538,7 +543,7 @@ Section type_contractive.
       + apply type_lft_morphism_elctx_interp_proper=>//. apply _.
   Qed.
 
-  Lemma type_contractive_compose_right T1 T2 :
+  Lemma type_contractive_compose_right {A B C} (T1: _ B → _ C) (T2: _ A → _ B) :
     TypeContractive T1 → TypeNonExpansive T2 → TypeContractive (T1 ∘ T2).
   Proof.
     intros HT1 HT2. split; intros.
@@ -552,7 +557,7 @@ Section type_contractive.
       + apply type_lft_morphism_elctx_interp_proper=>//. apply _.
   Qed.
 
-  Lemma type_contractive_compose_left T1 T2 :
+  Lemma type_contractive_compose_left {A B C} (T1: _ B → _ C) (T2: _ A → _ B) :
     TypeNonExpansive T1 → TypeContractive T2 → TypeContractive (T1 ∘ T2).
   Proof.
     intros HT1 HT2. split; intros.
@@ -566,18 +571,19 @@ Section type_contractive.
       + apply type_lft_morphism_elctx_interp_proper=>//. apply _.
   Qed.
 
-  Global Instance const_type_contractive ty :
-    TypeContractive (λ _, ty).
+  Global Instance const_type_contractive {A B} (ty: _ B) :
+    TypeContractive (λ (_: _ A), ty).
   Proof. split; intros=>//. eright=>_. iApply lft_equiv_refl. done. Qed.
 
-  Global Instance id_type_non_expansive :
-    TypeNonExpansive id.
+  Global Instance id_type_non_expansive {A} :
+    TypeNonExpansive (id: _ A → _ A).
   Proof.
     split; intros=>//. apply (type_lft_morphism_add _ static [] []).
     - intros. rewrite left_id. apply lft_equiv_refl.
     - intros. by rewrite /elctx_interp /= left_id right_id.
   Qed.
 
+(*
   Global Instance type_list_non_expansive_nil :
     TypeListNonExpansive (λ _, []).
   Proof. exists []. auto. Qed.
@@ -603,8 +609,10 @@ Section type_contractive.
     - intros. by rewrite EQ.
     - by constructor.
   Qed.
+*)
 End type_contractive.
 
+(*
 Fixpoint shr_locsE (l : loc) (n : nat) : coPset :=
   match n with
   | 0%nat => ∅
