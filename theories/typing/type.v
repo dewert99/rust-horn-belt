@@ -158,9 +158,6 @@ Arguments st_own {_ _ _} _ _ _ _ / : simpl nomatch.
 Program Definition ty_of_st `{!typeG Σ} {A} (st: simple_type A) : type A :=
   {| ty_size := 1; ty_lfts := st.(st_lfts); ty_E := st.(st_E);
      ty_own := st.(st_own);
-     (* [st.(st_own) tid vl] needs to be outside of the fractured
-         borrow, otherwise I do not know how to prove the shr part of
-         [subtype_shr_mono]. *)
      ty_shr vπd κ tid l :=
        (∃ vl, &frac{κ} (λ q, l ↦∗{q} vl) ∗ ▷ st.(st_own) vπd tid vl)%I
   |}.
