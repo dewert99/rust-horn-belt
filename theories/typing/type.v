@@ -63,7 +63,7 @@ Record type `{!typeG Σ} A :=
         (q':+[ξs] ={E}=∗ ty_own (vπ,d) tid vl ∗ q.[κ]);
     ty_shr_proph E vπ d κ tid l κ' q : lftE ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
       κ' ⊑ lft_intersect_list ty_lfts -∗ ty_shr (vπ,d) κ tid l -∗ q.[κ']
-      ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
+      ={E}▷=∗^(S d) ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
         (q':+[ξs] ={E}=∗ ty_shr (vπ,d) κ tid l ∗ q.[κ']);
   }.
 Existing Instance ty_shr_persistent.
@@ -133,50 +133,67 @@ Proof.
       etrans; [|done]. by apply submseteq_inserts_r.
     + apply IH; [|done]. etrans; [|done]. by apply submseteq_inserts_l.
 Qed.
+*)
 
-Record simple_type `{!typeG Σ} :=
-  { st_lfts : list lft;
-    st_E : elctx;
-    st_own : thread_id → list val → iProp Σ;
-    st_size_eq tid vl : st_own tid vl -∗ ⌜length vl = 1%nat⌝;
-    st_own_persistent tid vl : Persistent (st_own tid vl) }.
+Record simple_type `{!typeG Σ} A :=
+  { st_lfts: list lft;
+    st_E: elctx;
+    st_own: pval_depth A → thread_id → list val → iProp Σ;
+    st_size_eq vπd tid vl : st_own vπd tid vl -∗ ⌜length vl = 1%nat⌝;
+    st_own_persistent vπd tid vl : Persistent (st_own vπd tid vl);
+    st_own_depth_mono d d' vπ tid vl :
+      d ≤ d' → st_own (vπ,d) tid vl -∗ st_own (vπ,d') tid vl;
+    st_own_proph E vπ d tid vl κ q : lftE ⊆ E → lft_ctx -∗
+      κ ⊑ lft_intersect_list st_lfts -∗ st_own (vπ,d) tid vl -∗ q.[κ]
+      ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
+        (q':+[ξs] ={E}=∗ st_own (vπ,d) tid vl ∗ q.[κ]); }.
 Existing Instance st_own_persistent.
 Instance: Params (@st_lfts) 2 := {}.
 Instance: Params (@st_E) 2 := {}.
 Instance: Params (@st_own) 2 := {}.
+Arguments st_lfts {_ _ _} _ / : simpl nomatch.
+Arguments st_E {_ _ _} _ / : simpl nomatch.
+Arguments st_own {_ _ _} _ _ _ _ / : simpl nomatch.
 
-Program Definition ty_of_st `{!typeG Σ} (st : simple_type) : type :=
-  {| ty_size := 1;
-     ty_lfts := st.(st_lfts); ty_E := st.(st_E);
-     ty_own _ := st.(st_own);
+Program Definition ty_of_st `{!typeG Σ} {A} (st: simple_type A) : type A :=
+  {| ty_size := 1; ty_lfts := st.(st_lfts); ty_E := st.(st_E);
+     ty_own := st.(st_own);
      (* [st.(st_own) tid vl] needs to be outside of the fractured
          borrow, otherwise I do not know how to prove the shr part of
          [subtype_shr_mono]. *)
-     ty_shr κ tid l :=
-       (∃ vl, &frac{κ} (λ q, l ↦∗{q} vl) ∗ ▷ st.(st_own) tid vl)%I
+     ty_shr vπd κ tid l :=
+       (∃ vl, &frac{κ} (λ q, l ↦∗{q} vl) ∗ ▷ st.(st_own) vπd tid vl)%I
   |}.
-Next Obligation. intros. apply st_size_eq. Qed.
-Next Obligation. auto. Qed.
+Next Obligation. move=> >. apply st_size_eq. Qed.
+Next Obligation. move=> >. by apply st_own_depth_mono. Qed.
 Next Obligation.
-  iIntros (?? st E depth κ l tid ??) "#LFT _ Hmt Hκ !>".
-  iApply step_fupdN_intro=>//. iIntros "!>".
-  iMod (bor_exists with "LFT Hmt") as (vl) "Hmt"; first solve_ndisj.
-  iMod (bor_sep with "LFT Hmt") as "[Hmt Hown]"; first solve_ndisj.
-  iMod (bor_persistent with "LFT Hown Hκ") as "[Hown $]"; first solve_ndisj.
-  iMod (bor_fracture with "LFT [Hmt]") as "Hfrac"; by eauto with iFrame.
+  move=> > Le. iDestruct 1 as (vl) "[??]". iExists vl. iSplit; [done|].
+  iApply st_own_depth_mono; by [apply Le|].
 Qed.
 Next Obligation.
-  iIntros (?? st κ κ' tid l)  "#Hord H".
-  iDestruct "H" as (vl) "[#Hf #Hown]".
-  iExists vl. iFrame "Hown". by iApply (frac_bor_shorten with "Hord").
+  move=> >. iIntros "Incl". iDestruct 1 as (vl) "[??]". iExists vl.
+  iSplit; [|done]. by iApply (frac_bor_shorten with "Incl").
+Qed.
+Next Obligation.
+  move=> *. iIntros "#LFT ? Bor Tok". iApply step_fupdN_intro; [done|]. iNext.
+  iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
+  iMod (bor_sep with "LFT Bor") as "[Bor Own]"; [done|].
+  iMod (bor_persistent with "LFT Own Tok") as "[Own Tok]"; [done|].
+  iMod (bor_fracture (λ q, _ ↦∗{q} _)%I with "LFT Bor") as "Hfrac"; [done|].
+  iModIntro. iSplitR "Tok"; [|done]. iExists vl. by iSplit.
+Qed.
+Next Obligation. move=> >. apply st_own_proph. Qed.
+Next Obligation.
+  move=> *. iIntros "#LFT _ #Incl". iDestruct 1 as (vl) "[Bor Own]".
+  iIntros "Tok". simpl. iModIntro. iNext. iModIntro.
+  iDestruct (st_own_proph with "LFT Incl Own Tok") as "Upd"; [done|].
+  iApply (step_fupdN_wand with "Upd"). iDestruct 1 as (ξs q' ?) "[Tok Upd]".
+  iExists ξs, q'. iSplit; [done|]. iSplitL "Tok"; [done|]. iIntros "Tok".
+  iMod ("Upd" with "Tok") as "[??]". iModIntro. iSplit; [|done]. iExists vl.
+  by iSplit.
 Qed.
 
-Coercion ty_of_st : simple_type >-> type.
-
-Declare Scope lrust_type_scope.
-Delimit Scope lrust_type_scope with T.
-Bind Scope lrust_type_scope with type.
-
+(*
 (* OFE and COFE structures on types and simple types. *)
 Section ofe.
   Context `{!typeG Σ}.
