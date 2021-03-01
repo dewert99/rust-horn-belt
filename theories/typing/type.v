@@ -55,7 +55,7 @@ Record type `{!typeG Σ} A :=
      *)
     ty_share E vπ d κ l tid q : lftE ⊆ E → lft_ctx -∗
       κ ⊑ lft_intersect_list ty_lfts -∗ &{κ} (l ↦∗: ty_own (vπ,d) tid) -∗ q.[κ]
-      ={E}▷=∗^d ty_shr (vπ,d) κ tid l ∗ q.[κ];
+      ={E}▷=∗^d |={E}=> ty_shr (vπ,d) κ tid l ∗ q.[κ];
 
     ty_own_proph E vπ d tid vl κ q : lftE ⊆ E → lft_ctx -∗
       κ ⊑ lft_intersect_list ty_lfts -∗ ty_own (vπ,d) tid vl -∗ q.[κ]
@@ -85,8 +85,8 @@ Notation ty_lft ty := (lft_intersect_list ty.(ty_lfts)).
 Lemma ty_own_mt_depth_mono `{!typeG Σ} {A} (ty: _ A) d d' vπ tid l :
   d ≤ d' → l ↦∗: ty.(ty_own) (vπ,d) tid -∗ l ↦∗: ty.(ty_own) (vπ,d') tid.
 Proof.
-  iIntros (?) "H". iDestruct "H" as (vl) "[??]".
-  iExists vl. iFrame. by iApply ty_own_depth_mono.
+  iIntros (Le) "Own". iDestruct "Own" as (vl) "[Mt ?]". iExists vl.
+  iSplitL "Mt"; [done|]. iApply ty_own_depth_mono; by [apply Le|].
 Qed.
 
 Definition ty_outlives_E `{!typeG Σ} {A} (ty: _ A) (κ: lft) : elctx :=
@@ -97,24 +97,22 @@ Lemma ty_outlives_E_elctx_sat `{!typeG Σ} {A} E L (ty: _ A) α β :
   lctx_lft_incl E L α β →
   elctx_sat E L (ty_outlives_E ty α).
 Proof.
-  unfold ty_outlives_E. induction ty.(ty_lfts) as [|κ l IH]=>/= Hsub Hαβ.
-  - solve_typing.
-  - apply elctx_sat_lft_incl.
-    + etrans; first done. eapply lctx_lft_incl_external, elem_of_submseteq, Hsub.
-      set_solver.
-    + apply IH, Hαβ. etrans; last done. by apply submseteq_cons.
+  rewrite /ty_outlives_E. elim ty.(ty_lfts); [by solve_typing|].
+  move=> ?? IH Sub Incl. apply elctx_sat_lft_incl.
+  - etrans; [by apply Incl|].
+    eapply lctx_lft_incl_external, elem_of_submseteq, Sub. set_solver.
+  - apply IH, Incl. etrans; [|by apply Sub]. by apply submseteq_cons.
 Qed.
 
 Lemma elctx_interp_ty_outlives_E `{!typeG Σ} {A} (ty: _ A) α :
   elctx_interp (ty_outlives_E ty α) ⊣⊢ α ⊑ ty.(ty_lft).
 Proof.
   rewrite /ty_outlives_E /elctx_interp /elctx_elt_interp big_sepL_fmap /=.
-  induction ty.(ty_lfts) as [|κ l IH].
-  - iSplit; [|by auto]. iIntros "_". iApply lft_incl_static.
-  - rewrite /= IH. iSplit.
-    + iDestruct 1 as "#[??]". by iApply lft_incl_glb.
-    + iIntros "#?". iSplit; (iApply lft_incl_trans; [done|]);
-         [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
+  elim ty.(ty_lfts)=> /= [|κ l ->].
+  { iSplit; iIntros "_"; [|done]. iApply lft_incl_static. } iSplit.
+  - iDestruct 1 as "#[??]". by iApply lft_incl_glb.
+  - iIntros "#Incl". iSplit; (iApply lft_incl_trans; [iApply "Incl"|]);
+      [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
 Qed.
 
 (*

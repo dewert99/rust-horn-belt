@@ -349,26 +349,23 @@ Proof. move=> ?. iExists []. by iSplit. Qed.
 
 Lemma proph_obs_weaken φπ ψπ : (∀π, φπ π → ψπ π) → ⟨π, φπ π⟩ -∗ ⟨π, ψπ π⟩.
 Proof.
-  move=> Wkn. iIntros "Obs". iDestruct "Obs" as (L) "[SatImp ?]".
-  iDestruct "SatImp" as %SatImp. iExists L. iSplitR; [|done]. iPureIntro=> ??.
-  by apply Wkn, SatImp.
+  move=> Wkn. iDestruct 1 as (L SatImp) "?". iExists L. iSplitR; [|done].
+  iPureIntro=> ??. by apply Wkn, SatImp.
 Qed.
 
 Lemma proph_obs_merge φπ ψπ : ⟨π, φπ π⟩ -∗ ⟨π, ψπ π⟩ -∗ ⟨π, φπ π ∧ ψπ π⟩.
 Proof.
-  iIntros "Obs Obs'". iDestruct "Obs" as (L) "[SatImp Atoms]".
-  iDestruct "Obs'" as (L') "[SatImp' Atoms']". iDestruct "SatImp" as %SatImp.
-  iDestruct "SatImp'" as %SatImp'. iExists (L ++ L').
-  iSplitR; [|by rewrite big_sepL_app; iCombine "Atoms Atoms'" as "?"].
-  iPureIntro=> ? /Forall_app [??]. split; by [apply SatImp|apply SatImp'].
+  iDestruct 1 as (L SatImp) "Atoms". iDestruct 1 as (L' SatImp') "?".
+  iExists (L ++ L'). iSplitR.
+  - iPureIntro=> ? /Forall_app [??]. split; by [apply SatImp|apply SatImp'].
+  - rewrite big_sepL_app. by iSplitL "Atoms".
 Qed.
 
 Lemma proph_obs_sat E φπ :
   ↑prophN ⊆ E → proph_ctx -∗ ⟨π, φπ π⟩ ={E}=∗ ⌜∃π₀, φπ π₀⌝.
 Proof.
-  iIntros (?) "? Obs". iDestruct "Obs" as (L') "[SatImp #Atoms]".
-  iDestruct "SatImp" as %SatImp. iInv prophN as (S) "> [OkSim Auth]".
-  iDestruct "OkSim" as %[L [Ok Sim]].
+  iIntros (?) "?". iDestruct 1 as (L' SatImp) "#Atoms".
+  iInv prophN as (S) "> [OkSim Auth]". iDestruct "OkSim" as %[L [Ok Sim]].
   move: (Ok)=> /proph_ok_sat [π /Forall_forall Sat]. iModIntro.
   iAssert ⌜π ◁ L'⌝%I as %?; last first.
   { iSplitL; last first. { iPureIntro. exists π. by apply SatImp. }

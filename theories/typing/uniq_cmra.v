@@ -82,7 +82,7 @@ Qed.
 Local Lemma vo_pc ξ vπd :
   .VO[ξ] vπd -∗ .PC[ξ] vπd -∗ .VO2[ξ] vπd ∗ 1:[ξ].
 Proof.
-  iIntros "Vo Pc". iDestruct "Pc" as "[[? Tok]|[ExVo2 _]]"; last first.
+  iIntros "Vo". iDestruct 1 as "[[? Tok]|[ExVo2 _]]"; last first.
   { iDestruct "ExVo2" as (?) "Vo2".
     by iDestruct (own_line_agree with "Vo Vo2") as %[? _]. }
   iSplitR "Tok"; [|done]. rewrite -vo_vo2. by iSplitL "Vo".
@@ -97,7 +97,7 @@ Global Instance val_obs_timeless ξ vπd : Timeless (.VO[ξ] vπd) := _.
 Lemma uniq_strip_later ξ vπd :
   .VO[ξ] vπd -∗ ▷ .PC[ξ] vπd -∗ ◇ (.VO[ξ] vπd ∗ .PC[ξ] vπd).
 Proof.
-  iIntros "Vo Pc". iDestruct "Pc" as "[> ?|[> ExVo2 _]]"; last first.
+  iIntros "Vo". iDestruct 1 as "[> ?|[> ExVo2 _]]"; last first.
   { iDestruct "ExVo2" as (?) "Vo2".
     by iDestruct (own_line_agree with "Vo Vo2") as %[? _]. }
   iModIntro. iSplitL "Vo"; by [|iLeft].
@@ -134,7 +134,7 @@ Qed.
 
 Lemma uniq_agree ξ vπd vπd' : .VO[ξ] vπd -∗ .PC[ξ] vπd' -∗ ⌜vπd = vπd'⌝.
 Proof.
-  iIntros "Vo Pc". iDestruct "Pc" as "[[Own _]|[ExVo2 _]]";
+  iIntros "Vo". iDestruct 1 as "[[Own _]|[ExVo2 _]]";
     [|iDestruct "ExVo2" as (?) "Own"];
     by iDestruct (own_line_agree with "Vo Own") as %[??].
 Qed.
@@ -185,8 +185,7 @@ Qed.
 
 Lemma proph_ctrl_eqz ξ vπ d : proph_ctx -∗ .PC[ξ] (vπ,d) -∗ (.$ ξ) :== vπ.
 Proof.
-  iIntros "#? Pc".
-  iDestruct "Pc" as "[[_ ?]|[_ ?]]"; by [iApply proph_token_eqz|].
+  iIntros "#?". iDestruct 1 as "[[_ ?]|[_ ?]]"; by [iApply proph_token_eqz|].
 Qed.
 
 End lemmas.
