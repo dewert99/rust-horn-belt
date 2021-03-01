@@ -15,9 +15,8 @@ Class typeG Σ := TypeG {
   type_frac_borG:> frac_borG Σ;
 }.
 
-Definition lftE : coPset := ↑lftN.
 Definition lrustN := nroot .@ "lrust".
-Definition shrN  := lrustN .@ "shr".
+Definition shrN := lrustN .@ "shr".
 
 Definition thread_id := na_inv_pool_name.
 
@@ -51,15 +50,15 @@ Record type `{!typeG Σ} A :=
        nicer (they would otherwise require a "∨ □|=>[†κ]"), and (b) so that
        we can have emp == sum [].
      *)
-    ty_share E vπ d κ l tid q : lftE ⊆ E → lft_ctx -∗
+    ty_share E vπ d κ l tid q : ↑lftN ⊆ E → lft_ctx -∗
       κ ⊑ lft_intersect_list ty_lfts -∗ &{κ} (l ↦∗: ty_own (vπ,d) tid) -∗ q.[κ]
       ={E}▷=∗^d |={E}=> ty_shr (vπ,d) κ tid l ∗ q.[κ];
 
-    ty_own_proph E vπ d tid vl κ q : lftE ⊆ E → lft_ctx -∗
+    ty_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
       κ ⊑ lft_intersect_list ty_lfts -∗ ty_own (vπ,d) tid vl -∗ q.[κ]
       ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
         (q':+[ξs] ={E}=∗ ty_own (vπ,d) tid vl ∗ q.[κ]);
-    ty_shr_proph E vπ d κ tid l κ' q : lftE ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
+    ty_shr_proph E vπ d κ tid l κ' q : ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
       κ' ⊑ lft_intersect_list ty_lfts -∗ ty_shr (vπ,d) κ tid l -∗ q.[κ']
       ={E}▷=∗^(S d) ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
         (q':+[ξs] ={E}=∗ ty_shr (vπ,d) κ tid l ∗ q.[κ']);
@@ -140,7 +139,7 @@ Record simple_type `{!typeG Σ} A :=
     st_own_persistent vπd tid vl : Persistent (st_own vπd tid vl);
     st_own_depth_mono d d' vπ tid vl :
       d ≤ d' → st_own (vπ,d) tid vl -∗ st_own (vπ,d') tid vl;
-    st_own_proph E vπ d tid vl κ q : lftE ⊆ E → lft_ctx -∗
+    st_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
       κ ⊑ lft_intersect_list st_lfts -∗ st_own (vπ,d) tid vl -∗ q.[κ]
       ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
         (q':+[ξs] ={E}=∗ st_own (vπ,d) tid vl ∗ q.[κ]); }.
@@ -603,7 +602,7 @@ Fixpoint shr_locsE (l: loc) (n: nat) : coPset :=
 Class Copy `{!typeG Σ} {A} (ty: type A) := {
   copy_persistent vπd tid vl : Persistent (ty.(ty_own) vπd tid vl);
   copy_shr_acc vπd κ tid E F l q :
-    lftE ∪ ↑shrN ⊆ E → shr_locsE l (ty.(ty_size) + 1) ⊆ F →
+    ↑lftN ∪ ↑shrN ⊆ E → shr_locsE l (ty.(ty_size) + 1) ⊆ F →
     lft_ctx -∗ ty.(ty_shr) vπd κ tid l -∗ na_own tid F -∗ q.[κ] ={E}=∗
        ∃ q' vl, na_own tid (F ∖ shr_locsE l ty.(ty_size)) ∗
          l ↦∗{q'} vl ∗ ▷ty.(ty_own) vπd tid vl ∗

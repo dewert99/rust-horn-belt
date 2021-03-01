@@ -104,7 +104,7 @@ Section arc.
          | _ => False end;
        ty_shr κ tid l :=
          ∃ (l' : loc), &frac{κ} (λ q, l ↦{q} #l') ∗
-           □ ∀ F q, ⌜↑shrN ∪ lftE ⊆ F⌝ -∗ q.[κ]
+           □ ∀ F q, ⌜↑shrN ∪ ↑lftN ⊆ F⌝ -∗ q.[κ]
              ={F}[F∖↑shrN]▷=∗ q.[κ] ∗ ∃ γ ν q', κ ⊑ ν ∗
                 arc_persist tid ν γ l' ty ∗
                 &at{κ, arc_shrN}(arc_tok γ q')
@@ -252,7 +252,7 @@ Section arc.
          | _ => False end;
        ty_shr κ tid l :=
          ∃ (l' : loc), &frac{κ} (λ q, l ↦{q} #l') ∗
-           □ ∀ F q, ⌜↑shrN ∪ lftE ⊆ F⌝ -∗ q.[κ]
+           □ ∀ F q, ⌜↑shrN ∪ ↑lftN ⊆ F⌝ -∗ q.[κ]
              ={F}[F∖↑shrN]▷=∗ q.[κ] ∗ ∃ γ ν,
                 arc_persist tid ν γ l' ty ∗ &at{κ, arc_shrN}(weak_tok γ)
     |}%I.
@@ -1124,7 +1124,7 @@ Section arc.
       iApply type_assign; [solve_typing..|].
       iApply type_delete; [solve_typing..|].
       iApply type_jump; solve_typing.
-    - iIntros "[Hν Hweak]". wp_case. iSpecialize ("Hc" with "Hν"). wp_bind (new _). 
+    - iIntros "[Hν Hweak]". wp_case. iSpecialize ("Hc" with "Hν"). wp_bind (new _).
       iApply wp_mask_mono; last iApply (wp_step_fupd with "Hc"); first done.
       { (* FIXME [solve_ndisj] fails *) set_solver-. }
       wp_apply wp_new=>//. lia. iIntros (l) "(H† & Hlvl) (#Hν & Hown & H†') !>".
