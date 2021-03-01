@@ -1,11 +1,14 @@
-From lrust.lang Require Export proofmode.
-From lrust.lifetime Require Export frac_borrow.
+From lrust.prophecy Require Import prophecy.
+From lrust.lifetime Require Import frac_borrow.
+From lrust.lang Require Import proofmode.
 
 (* Last, so that we make sure we shadow the defintion of delete for
    sets coming from the prelude. *)
 From lrust.lang.lib Require Export new_delete.
 
 Open Scope Z_scope.
+
+Definition pval_depth A : Type := (proph_asn → A) * nat.
 
 Create HintDb lrust_typing.
 Create HintDb lrust_typing_merge.
