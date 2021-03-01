@@ -21,18 +21,25 @@ Definition shrN  := lrustN .@ "shr".
 
 Definition thread_id := na_inv_pool_name.
 
-Record type `{!typeG Σ} :=
-  { ty_size : nat;
-    ty_lfts : list lft;
-    ty_E : elctx;
-    ty_own : nat → thread_id → list val → iProp Σ;
-    ty_shr : lft → thread_id → loc → iProp Σ;
+Implicit Type d: nat.
 
-    ty_shr_persistent κ tid l : Persistent (ty_shr κ tid l);
+Record type `{!typeG Σ} A :=
+  { ty_size: nat;
+    ty_lfts: list lft;
+    ty_E: elctx;
+    ty_own: pval_depth A → thread_id → list val → iProp Σ;
+    ty_shr : pval_depth A → lft → thread_id → loc → iProp Σ;
 
-    ty_size_eq depth tid vl : ty_own depth tid vl -∗ ⌜length vl = ty_size⌝;
-    ty_own_depth_mono depth1 depth2 tid vl :
-      (depth1 ≤ depth2)%nat → ty_own depth1 tid vl -∗ ty_own depth2 tid vl;
+    ty_shr_persistent vπd κ tid l : Persistent (ty_shr vπd κ tid l);
+
+    ty_size_eq vπd tid vl : ty_own vπd tid vl -∗ ⌜length vl = ty_size⌝;
+    ty_own_depth_mono d d' vπ tid vl :
+      d ≤ d' → ty_own (vπ,d) tid vl -∗ ty_own (vπ,d') tid vl;
+    ty_shr_depth_mono d d' vπ κ tid l :
+      d ≤ d' → ty_shr (vπ,d) κ tid l -∗ ty_shr (vπ,d') κ tid l;
+    ty_shr_lft_mono κ κ' vπd tid l :
+      κ' ⊑ κ -∗ ty_shr vπd κ tid l -∗ ty_shr vπd κ' tid l;
+
     (* The mask for starting the sharing does /not/ include the
        namespace N, for allowing more flexibility for the user of
        this type (typically for the [own] type). AFAIK, there is no
@@ -46,24 +53,36 @@ Record type `{!typeG Σ} :=
        nicer (they would otherwise require a "∨ □|=>[†κ]"), and (b) so that
        we can have emp == sum [].
      *)
-    ty_share E depth κ l tid q : lftE ⊆ E →
-      lft_ctx -∗ κ ⊑ lft_intersect_list ty_lfts -∗
-      &{κ} (l ↦∗: ty_own depth tid) -∗ q.[κ]
-       ={E}=∗ |={E}▷=>^depth |={E}=> ty_shr κ tid l ∗ q.[κ];
-    ty_shr_mono κ κ' tid l :
-      κ' ⊑ κ -∗ ty_shr κ tid l -∗ ty_shr κ' tid l
+    ty_share E vπ d κ l tid q : lftE ⊆ E → lft_ctx -∗
+      κ ⊑ lft_intersect_list ty_lfts -∗ &{κ} (l ↦∗: ty_own (vπ,d) tid) -∗ q.[κ]
+      ={E}▷=∗^d ty_shr (vπ,d) κ tid l ∗ q.[κ];
+
+    ty_own_proph E vπ d tid vl κ q : lftE ⊆ E → lft_ctx -∗
+      κ ⊑ lft_intersect_list ty_lfts -∗ ty_own (vπ,d) tid vl -∗ q.[κ]
+      ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
+        (q':+[ξs] ={E}=∗ ty_own (vπ,d) tid vl ∗ q.[κ]);
+    ty_shr_proph E vπ d κ tid l κ' q : lftE ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
+      κ' ⊑ lft_intersect_list ty_lfts -∗ ty_shr (vπ,d) κ tid l -∗ q.[κ']
+      ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
+        (q':+[ξs] ={E}=∗ ty_shr (vπ,d) κ tid l ∗ q.[κ']);
   }.
 Existing Instance ty_shr_persistent.
+
 Instance: Params (@ty_size) 2 := {}.
 Instance: Params (@ty_lfts) 2 := {}.
 Instance: Params (@ty_E) 2 := {}.
 Instance: Params (@ty_own) 2 := {}.
 Instance: Params (@ty_shr) 2 := {}.
 
-Arguments ty_own {_ _} !_ _ _ _ / : simpl nomatch.
+Arguments ty_size {_ _ _} _ / : simpl nomatch.
+Arguments ty_lfts {_ _ _} _ / : simpl nomatch.
+Arguments ty_E {_ _ _} _ / : simpl nomatch.
+Arguments ty_own {_ _ _} _ _ _ _ / : simpl nomatch.
+Arguments ty_shr {_ _ _} _ _ _ _ _ / : simpl nomatch.
 
 Notation ty_lft ty := (lft_intersect_list ty.(ty_lfts)).
 
+(*
 Lemma ty_own_mt_depth_mono `{!typeG Σ} ty depth1 depth2 tid l :
   (depth1 ≤ depth2)%nat →
   l ↦∗: ty.(ty_own) depth1 tid -∗ l ↦∗: ty.(ty_own) depth2 tid.
@@ -877,3 +896,5 @@ End type_util.
 Global Hint Resolve ty_outlives_E_elctx_sat tyl_outlives_E_elctx_sat : lrust_typing.
 Global Hint Resolve subtype_refl eqtype_refl : lrust_typing.
 Global Hint Opaque subtype eqtype : lrust_typing.
+
+*)
