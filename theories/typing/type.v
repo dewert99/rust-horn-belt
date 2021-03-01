@@ -922,13 +922,12 @@ Section subtyping.
   Qed.
 End subtyping.
 
-(*
 Section type_util.
   Context `{!typeG Σ}.
 
-  Lemma heap_mapsto_ty_own l ty depth tid :
-    l ↦∗: ty.(ty_own) depth tid ⊣⊢
-      ∃ (vl : vec val ty.(ty_size)), l ↦∗ vl ∗ ty.(ty_own) depth tid vl.
+  Lemma heap_mapsto_ty_own {A} l (ty: _ A) vπd tid :
+    l ↦∗: ty.(ty_own) vπd tid ⊣⊢
+      ∃(vl : vec val ty.(ty_size)), l ↦∗ vl ∗ ty.(ty_own) vπd tid vl.
   Proof.
     iSplit.
     - iIntros "H". iDestruct "H" as (vl) "[Hl Hown]".
@@ -938,8 +937,7 @@ Section type_util.
   Qed.
 End type_util.
 
-Global Hint Resolve ty_outlives_E_elctx_sat tyl_outlives_E_elctx_sat : lrust_typing.
+Global Hint Resolve ty_outlives_E_elctx_sat (* tyl_outlives_E_elctx_sat *)
+  : lrust_typing.
 Global Hint Resolve subtype_refl eqtype_refl : lrust_typing.
 Global Hint Opaque subtype eqtype : lrust_typing.
-
-*)
