@@ -316,7 +316,7 @@ Lemma elctx_sat_submseteq `{!invG Σ, !lftG Σ} E E' L :
   E' ⊆+ E → elctx_sat E L E'.
 Proof. iIntros (HE' ?) "_ !# H". by iApply big_sepL_submseteq. Qed.
 
-Hint Resolve
+Global Hint Resolve
      lctx_lft_incl_relf lctx_lft_incl_static lctx_lft_incl_local'
      lctx_lft_incl_external' lctx_lft_incl_intersect
      lctx_lft_incl_intersect_l lctx_lft_incl_intersect_r
@@ -324,6 +324,6 @@ Hint Resolve
      elctx_sat_nil elctx_sat_lft_incl elctx_sat_app elctx_sat_refl
   : lrust_typing.
 
-Hint Resolve elctx_sat_submseteq | 100 : lrust_typing.
+Global Hint Resolve elctx_sat_submseteq | 100 : lrust_typing.
 
-Hint Opaque elctx_sat lctx_lft_alive lctx_lft_incl : lrust_typing.
+Global Hint Opaque elctx_sat lctx_lft_alive lctx_lft_incl : lrust_typing.

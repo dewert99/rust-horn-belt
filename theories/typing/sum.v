@@ -345,4 +345,4 @@ End sum.
 Notation "Σ[ ty1 ; .. ; tyn ]" :=
   (sum (cons ty1%T (..(cons tyn%T nil)..))) : lrust_type_scope.
 
-Hint Resolve sum_mono' sum_proper' : lrust_typing.
+Global Hint Resolve sum_mono' sum_proper' : lrust_typing.

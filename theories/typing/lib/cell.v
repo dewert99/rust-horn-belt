@@ -80,7 +80,7 @@ Section cell.
       iSplit; [by eauto|]. by iIntros "$ _". }
     (* Now we are in the non-0 case. *)
     iMod (na_bor_acc with "LFT Hshr Htok Htl") as "(H & Htl & Hclose)"; [solve_ndisj..|].
-    iDestruct "H" as (depth') "[#Hdepth' H]". iDestruct "H" as (vl) "[>Hvl #Hown]". 
+    iDestruct "H" as (depth') "[#Hdepth' H]". iDestruct "H" as (vl) "[>Hvl #Hown]".
     iExists vl. iDestruct (na_own_acc with "Htl") as "($ & Hclose')"; first by set_solver.
     iIntros "{$Hvl}". iSplitR; [by eauto|]. iIntros " !> Htl Hvl".
     iPoseProof ("Hclose'" with "Htl") as "Htl".
@@ -368,4 +368,4 @@ Section typing.
   Qed.
 End typing.
 
-Hint Resolve cell_mono' cell_proper' : lrust_typing.
+Global Hint Resolve cell_mono' cell_proper' : lrust_typing.

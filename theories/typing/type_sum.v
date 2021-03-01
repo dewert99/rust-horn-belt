@@ -309,4 +309,4 @@ Section case.
   Qed.
 End case.
 
-Hint Resolve ty_outlives_E_elctx_sat_sum : lrust_typing.
+Global Hint Resolve ty_outlives_E_elctx_sat_sum : lrust_typing.

@@ -343,5 +343,5 @@ Section typing.
 End typing.
 
 Arguments product : simpl never.
-Hint Resolve product_mono' product_proper' ty_outlives_E_elctx_sat_product
+Global Hint Resolve product_mono' product_proper' ty_outlives_E_elctx_sat_product
   : lrust_typing.

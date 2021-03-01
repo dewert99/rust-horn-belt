@@ -434,4 +434,4 @@ Section typing.
   Qed.
 End typing.
 
-Hint Resolve fn_subtype : lrust_typing.
+Global Hint Resolve fn_subtype : lrust_typing.

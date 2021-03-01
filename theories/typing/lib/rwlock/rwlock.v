@@ -223,4 +223,4 @@ Section rwlock.
   Qed.
 End rwlock.
 
-Hint Resolve rwlock_mono' rwlock_proper' : lrust_typing.
+Global Hint Resolve rwlock_mono' rwlock_proper' : lrust_typing.

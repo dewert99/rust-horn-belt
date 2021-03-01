@@ -242,4 +242,4 @@ Section borrow.
   Proof. iIntros. iApply type_let; [by apply type_deref_shr_uniq_instr|solve_typing|done]. Qed.
 End borrow.
 
-Hint Resolve tctx_extract_hasty_borrow | 10 : lrust_typing.
+Global Hint Resolve tctx_extract_hasty_borrow | 10 : lrust_typing.
