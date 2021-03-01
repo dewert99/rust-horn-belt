@@ -761,38 +761,39 @@ Section type.
   Qed.
 End type.
 
-(*
-Definition type_incl `{!typeG Σ} (ty1 ty2 : type) : iProp Σ :=
+Definition type_incl `{!typeG Σ} {A} (ty1 ty2: type A) : iProp Σ :=
     (⌜ty1.(ty_size) = ty2.(ty_size)⌝ ∗
      (ty2.(ty_lft) ⊑ ty1.(ty_lft)) ∗
-     (□ ∀ depth tid vl, ty1.(ty_own) depth tid vl -∗ ty2.(ty_own) depth tid vl) ∗
-     (□ ∀ κ tid l, ty1.(ty_shr) κ tid l -∗ ty2.(ty_shr) κ tid l))%I.
+     (□ ∀vπd tid vl, ty1.(ty_own) vπd tid vl -∗ ty2.(ty_own) vπd tid vl) ∗
+     (□ ∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l -∗ ty2.(ty_shr) vπd κ tid l))%I.
 Instance: Params (@type_incl) 2 := {}.
 
-Definition subtype `{!typeG Σ} (E : elctx) (L : llctx) (ty1 ty2 : type) : Prop :=
-  ∀ qL, llctx_interp L qL -∗ □ (elctx_interp E -∗ type_incl ty1 ty2).
+Definition subtype `{!typeG Σ} {A} E L (ty1 ty2: type A) : Prop :=
+  ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗ type_incl ty1 ty2).
 Instance: Params (@subtype) 4 := {}.
 
 (* TODO: The prelude should have a symmetric closure. *)
-Definition eqtype `{!typeG Σ} (E : elctx) (L : llctx) (ty1 ty2 : type) : Prop :=
+Definition eqtype `{!typeG Σ} {A} E L (ty1 ty2: type A) : Prop :=
   subtype E L ty1 ty2 ∧ subtype E L ty2 ty1.
 Instance: Params (@eqtype) 4 := {}.
 
 Section subtyping.
   Context `{!typeG Σ}.
 
-  Global Instance type_incl_ne : NonExpansive2 type_incl.
+  Global Instance type_incl_ne {A} : NonExpansive2 (@type_incl _ _ A).
   Proof.
-    intros n ?? [EQsz1%leibniz_equiv EQown1 EQshr1] ?? [EQsz2%leibniz_equiv EQown2 EQshr2].
+    intros n ?? [EQsz1%leibniz_equiv EQown1 EQshr1] ??
+      [EQsz2%leibniz_equiv EQown2 EQshr2].
     rewrite /type_incl. repeat ((by auto) || f_equiv).
   Qed.
 
-  Global Instance type_incl_persistent ty1 ty2 : Persistent (type_incl ty1 ty2) := _.
+  Global Instance type_incl_persistent {A} (ty1 ty2: _ A) :
+    Persistent (type_incl ty1 ty2) := _.
 
-  Lemma type_incl_refl ty : ⊢ type_incl ty ty.
+  Lemma type_incl_refl {A} (ty: _ A) : ⊢ type_incl ty ty.
   Proof. iSplit; [done|iSplit; [iApply lft_incl_refl|iSplit]]; auto. Qed.
 
-  Lemma type_incl_trans ty1 ty2 ty3 :
+  Lemma type_incl_trans {A} (ty1 ty2 ty3: _ A) :
     type_incl ty1 ty2 -∗ type_incl ty2 ty3 -∗ type_incl ty1 ty3.
   Proof.
     iIntros "(% & #Hl12 & #Ho12 & #Hs12) (% & #Hl23 & #Ho23 & #Hs23)".
@@ -800,21 +801,21 @@ Section subtyping.
     iSplit; [|iSplit].
     - iApply lft_incl_trans. iApply "Hl23". iApply "Hl12".
     - iIntros "!# %%% ?". iApply "Ho23". iApply "Ho12". done.
-    - iIntros "!# %%% ?". iApply "Hs23". iApply "Hs12". done.
+    - iIntros "!# %%%% ?". iApply "Hs23". iApply "Hs12". done.
   Qed.
 
-  Lemma subtype_refl E L ty : subtype E L ty ty.
+  Lemma subtype_refl {A} E L (ty: _ A) : subtype E L ty ty.
   Proof. iIntros (?) "_ !# _". iApply type_incl_refl. Qed.
-  Global Instance subtype_preorder E L : PreOrder (subtype E L).
+  Global Instance subtype_preorder {A} E L : PreOrder (@subtype _ _ A E L).
   Proof.
     split; first by intros ?; apply subtype_refl.
     intros ty1 ty2 ty3 H12 H23. iIntros (?) "HL".
     iDestruct (H12 with "HL") as "#H12". iDestruct (H23 with "HL") as "#H23".
-    iIntros "!# #HE".
-    iDestruct ("H12" with "HE") as "H12'". iDestruct ("H23" with "HE") as "H23'".
-    by iApply type_incl_trans.
+    iIntros "!# #HE". iDestruct ("H12" with "HE") as "H12'".
+    iDestruct ("H23" with "HE") as "H23'". by iApply type_incl_trans.
   Qed.
 
+(*
   Lemma subtype_Forall2_llctx E L tys1 tys2 qL :
     Forall2 (subtype E L) tys1 tys2 →
     llctx_interp L qL -∗ □ (elctx_interp E -∗
@@ -830,21 +831,23 @@ Section subtyping.
     iIntros "!# #HE". iApply (big_sepL_impl with "[$Htys]").
     iIntros "!# * % #Hincl". by iApply "Hincl".
   Qed.
+*)
 
-  Lemma equiv_subtype E L ty1 ty2 : ty1 ≡ ty2 → subtype E L ty1 ty2.
+  Lemma equiv_subtype {A} E L (ty1 ty2: _ A) : ty1 ≡ ty2 → subtype E L ty1 ty2.
   Proof.
     unfold subtype, type_incl=>EQ qL. iIntros "_ !# _".
-    iSplit; [by iPureIntro; apply EQ|]. iSplit; [by rewrite EQ; iApply lft_incl_refl|].
+    iSplit; [by iPureIntro; apply EQ|].
+    iSplit; [by rewrite EQ; iApply lft_incl_refl|].
     iSplit; iIntros "!# *"; rewrite EQ; iIntros "$".
   Qed.
 
-  Lemma eqtype_unfold E L ty1 ty2 :
+  Lemma eqtype_unfold {A} E L (ty1 ty2: _ A) :
     eqtype E L ty1 ty2 ↔
     (∀ qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
       (⌜ty1.(ty_size) = ty2.(ty_size)⌝ ∗
       (ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) ∗
-      (□ ∀ depth tid vl, ty1.(ty_own) depth tid vl ↔ ty2.(ty_own) depth tid vl) ∗
-      (□ ∀ κ tid l, ty1.(ty_shr) κ tid l ↔ ty2.(ty_shr) κ tid l)))).
+      (□ ∀vπd tid vl, ty1.(ty_own) vπd tid vl ↔ ty2.(ty_own) vπd tid vl) ∗
+      (□ ∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ↔ ty2.(ty_shr) vπd κ tid l)))).
   Proof.
     split.
     - iIntros ([EQ1 EQ2] qL) "HL".
@@ -867,17 +870,17 @@ Section subtyping.
       + by iApply "Hs".
   Qed.
 
-  Lemma eqtype_refl E L ty : eqtype E L ty ty.
+  Lemma eqtype_refl {A} E L (ty: _ A) : eqtype E L ty ty.
   Proof. by split. Qed.
 
-  Lemma equiv_eqtype E L ty1 ty2 : ty1 ≡ ty2 → eqtype E L ty1 ty2.
+  Lemma equiv_eqtype {A} E L (ty1 ty2: _ A) : ty1 ≡ ty2 → eqtype E L ty1 ty2.
   Proof. by split; apply equiv_subtype. Qed.
 
-  Global Instance subtype_proper E L :
-    Proper (eqtype E L ==> eqtype E L ==> iff) (subtype E L).
+  Global Instance subtype_proper {A} E L :
+    Proper (eqtype E L ==> eqtype E L ==> iff) (@subtype _ _ A E L).
   Proof. intros ??[] ??[]. split; intros; by etrans; [|etrans]. Qed.
 
-  Global Instance eqtype_equivalence E L : Equivalence (eqtype E L).
+  Global Instance eqtype_equivalence {A} E L : Equivalence (@eqtype _ _ A E L).
   Proof.
     split.
     - by split.
@@ -885,29 +888,30 @@ Section subtyping.
     - intros ??? H1 H2. split; etrans; (apply H1 || apply H2).
   Qed.
 
-  Lemma type_incl_simple_type (st1 st2 : simple_type) :
-    ty_lft st2 ⊑ ty_lft st1 -∗
-    □ (∀ tid vl, st1.(st_own) tid vl -∗ st2.(st_own) tid vl) -∗
+  Lemma type_incl_simple_type {A} (st1 st2: simple_type A) :
+    ty_size st1 = ty_size st2 → ty_lft st2 ⊑ ty_lft st1 -∗
+    □ (∀vπd tid vl, st1.(st_own) vπd tid vl -∗ st2.(st_own) vπd tid vl) -∗
     type_incl st1 st2.
   Proof.
-    iIntros "#Hl #Ho". iSplit; [done|]. iSplit; [done|]. iSplit; iModIntro.
+    move=> ?. iIntros "#Hl #Ho". iSplit; [done|]. iSplit; [done|].
+    iSplit; iModIntro.
     - iIntros. by iApply "Ho".
     - iIntros (???) "/=". iDestruct 1 as (vl) "[Hf Hown]". iExists vl.
       iFrame "Hf". by iApply "Ho".
   Qed.
 
-  Lemma subtype_simple_type E L (st1 st2 : simple_type) :
-    (∀ qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
-       (st2.(ty_lft) ⊑ st1.(ty_lft)) ∗
-       (∀ tid vl, st1.(st_own) tid vl -∗ st2.(st_own) tid vl))) →
+  Lemma subtype_simple_type {A} E L (st1 st2: simple_type A) :
+    (∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
+      ⌜ty_size st1 = ty_size st2⌝ ∗ st2.(ty_lft) ⊑ st1.(ty_lft) ∗
+      (∀vπd tid vl, st1.(st_own) vπd tid vl -∗ st2.(st_own) vπd tid vl))) →
     subtype E L st1 st2.
   Proof.
     intros Hst. iIntros (qL) "HL". iDestruct (Hst with "HL") as "#Hst".
-    iIntros "!# #HE". iDestruct ("Hst" with "HE") as "[??]".
+    iIntros "!# #HE". iDestruct ("Hst" with "HE") as (?) "[??]".
     by iApply type_incl_simple_type.
   Qed.
 
-  Lemma subtype_weaken E1 E2 L1 L2 ty1 ty2 :
+  Lemma subtype_weaken {A} E1 E2 L1 L2 (ty1 ty2: _ A) :
     E1 ⊆+ E2 → L1 ⊆+ L2 →
     subtype E1 L1 ty1 ty2 → subtype E2 L2 ty1 ty2.
   Proof.
@@ -918,6 +922,7 @@ Section subtyping.
   Qed.
 End subtyping.
 
+(*
 Section type_util.
   Context `{!typeG Σ}.
 
