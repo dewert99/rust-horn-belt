@@ -44,7 +44,7 @@ theories/typing/util.v
 # theories/typing/type_context.v
 # theories/typing/cont_context.v
 # theories/typing/uninit.v
-# theories/typing/own.v
+theories/typing/own.v
 # theories/typing/uniq_bor.v
 # theories/typing/shr_bor.v
 # theories/typing/product.v

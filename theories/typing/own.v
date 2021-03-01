@@ -61,14 +61,14 @@ Section own.
          | _, _ => False
          end%I;
          ty_shr depth κ tid l :=
-          match depth return _ with 
-          | (asn, S n) => 
+          match depth return _ with
+          | (asn, S n) =>
             (∃ l':loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) (asn, n) κ tid l')%I
           | _ => False
           end%I
     |}.
-    Next Obligation. iIntros (A q ty [? [|depth]] κ tid l); typeclasses eauto. Qed.  
-    
+    Next Obligation. iIntros (A q ty [? [|depth]] κ tid l); typeclasses eauto. Qed.
+
     Next Obligation. by iIntros (A q ty [? [|depth]] tid [|[[]|][]]) "H". Qed.
   Next Obligation.
     intros A n ty [|depth1] [|depth2] asn tid vl Hdepth12;
@@ -77,8 +77,8 @@ Section own.
   Qed.
 
   Next Obligation.
-    iIntros (A n ty [|d1] [|d2] asn tid1 tid2 l Hdepth12); 
-      [iIntros "[]"|iIntros "[]"|lia|]. 
+    iIntros (A n ty [|d1] [|d2] asn tid1 tid2 l Hdepth12);
+      [iIntros "[]"|iIntros "[]"|lia|].
     do 4 f_equiv. iIntros "Hintros".
     by iApply (ty_shr_depth_mono _ _ d1); [lia|].
   Qed.
@@ -106,7 +106,7 @@ Section own.
     iApply (step_fupdN_wand with "Hb2"). iIntros ">[Hb2 $]".
     iExists (l'); by iFrame.
   Qed.
-  
+
   Next Obligation.
     iIntros (A n ty N asn [|d] tid [|[[]|][]] κ ??) "/= #LFT #Hout"; try iIntros "[]".
     iIntros "Hown Htok".
@@ -119,10 +119,10 @@ Section own.
     iDestruct 1 as (ξs q') "(? & ? & Hb)".
     iExists ξs, q'; iFrame.
     iIntros "Hq".
-    iMod ("Hb" with "Hq") as "[Hb ?]"; iFrame. 
+    iMod ("Hb" with "Hq") as "[Hb ?]"; iFrame.
     iExists vl; by iFrame.
   Qed.
-  
+
   Next Obligation.
     iIntros (A q ty N asn [|d] κ tid l κ' ??) "/= #LFT #Hout #Hshrt"; try iIntros "[]";
     iDestruct 1 as (l') "[Hfrac Hshr]";iIntros "Htok".
@@ -148,7 +148,7 @@ Section own.
       iApply "Ho".
     - iIntros (???) "H". iDestruct "H" as (l') "[Hfb #Hshr]".
       iExists l'. iFrame. iApply ("Hs" with "Hshr").
-  Qed. 
+  Qed.
 
   Global Instance own_mono E L n :
     Proper (subtype E L ==> subtype E L) (own_ptr n).
@@ -196,9 +196,10 @@ Section own.
   Proof.
     iIntros (Hsync κ tid1 tid2 l) "H". iDestruct "H" as (l') "[Hm #Hshr]".
     iExists _. iFrame "Hm". by iApply Hsync.
-  Qed.
+  Qed. *)
 End own.
 
+(*
 Section box.
   Context `{!typeG Σ}.
 
