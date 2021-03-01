@@ -612,52 +612,58 @@ Section type_contractive.
 *)
 End type_contractive.
 
-(*
-Fixpoint shr_locsE (l : loc) (n : nat) : coPset :=
+Fixpoint shr_locsE (l: loc) (n: nat) : coPset :=
   match n with
   | 0%nat => ∅
   | S n => ↑shrN.@l ∪ shr_locsE (l +ₗ 1%nat) n
   end.
 
-Class Copy `{!typeG Σ} (t : type) := {
-  copy_persistent depth tid vl : Persistent (t.(ty_own) depth tid vl);
-  copy_shr_acc depth κ tid E F l q :
-    lftE ∪ ↑shrN ⊆ E → shr_locsE l (t.(ty_size) + 1) ⊆ F →
-    lft_ctx -∗ t.(ty_shr) κ tid l -∗ na_own tid F -∗ q.[κ] ={E}=∗
-       ∃ q' vl, na_own tid (F ∖ shr_locsE l t.(ty_size)) ∗
-         l ↦∗{q'} vl ∗ ▷t.(ty_own) depth tid vl ∗
-      (na_own tid (F ∖ shr_locsE l t.(ty_size)) -∗ l ↦∗{q'} vl
+Class Copy `{!typeG Σ} {A} (ty: type A) := {
+  copy_persistent vπd tid vl : Persistent (ty.(ty_own) vπd tid vl);
+  copy_shr_acc vπd κ tid E F l q :
+    lftE ∪ ↑shrN ⊆ E → shr_locsE l (ty.(ty_size) + 1) ⊆ F →
+    lft_ctx -∗ ty.(ty_shr) vπd κ tid l -∗ na_own tid F -∗ q.[κ] ={E}=∗
+       ∃ q' vl, na_own tid (F ∖ shr_locsE l ty.(ty_size)) ∗
+         l ↦∗{q'} vl ∗ ▷ty.(ty_own) vπd tid vl ∗
+      (na_own tid (F ∖ shr_locsE l ty.(ty_size)) -∗ l ↦∗{q'} vl
        ={E}=∗ na_own tid F ∗ q.[κ])
 }.
 Existing Instances copy_persistent.
 Instance: Params (@Copy) 2 := {}.
 
+(*
 Class LstCopy `{!typeG Σ} (tys : list type) := lst_copy : Forall Copy tys.
 Instance: Params (@LstCopy) 2 := {}.
 Global Instance lst_copy_nil `{!typeG Σ} : LstCopy [] := List.Forall_nil _.
 Global Instance lst_copy_cons `{!typeG Σ} ty tys :
   Copy ty → LstCopy tys → LstCopy (ty :: tys) := List.Forall_cons _ _ _.
+*)
 
-Class Send `{!typeG Σ} (t : type) :=
-  send_change_tid depth tid1 tid2 vl :
-    t.(ty_own) depth tid1 vl -∗ t.(ty_own) depth tid2 vl.
+Class Send `{!typeG Σ} {A} (ty: type A) :=
+  send_change_tid tid1 tid2 vπd vl :
+    ty.(ty_own) vπd tid1 vl -∗ ty.(ty_own) vπd tid2 vl.
 Instance: Params (@Send) 2 := {}.
 
+(*
 Class LstSend `{!typeG Σ} (tys : list type) := lst_send : Forall Send tys.
 Instance: Params (@LstSend) 2 := {}.
 Global Instance lst_send_nil `{!typeG Σ} : LstSend [] := List.Forall_nil _.
 Global Instance lst_send_cons `{!typeG Σ} ty tys :
   Send ty → LstSend tys → LstSend (ty :: tys) := List.Forall_cons _ _ _.
+*)
 
-Class Sync `{!typeG Σ} (t : type) :=
-  sync_change_tid κ tid1 tid2 l : t.(ty_shr) κ tid1 l -∗ t.(ty_shr) κ tid2 l.
+Class Sync `{!typeG Σ} {A} (ty: type A) :=
+  sync_change_tid tid1 tid2 vπd κ l :
+    ty.(ty_shr) vπd κ tid1 l -∗ ty.(ty_shr) vπd κ tid2 l.
 Instance: Params (@Sync) 2 := {}.
 
+(*
 Class LstSync `{!typeG Σ} (tys : list type) := lst_sync : Forall Sync tys.
 Instance: Params (@LstSync) 2 := {}.
 Global Instance lst_sync_nil `{!typeG Σ} : LstSync [] := List.Forall_nil _.
 Global Instance lst_sync_cons `{!typeG Σ} ty tys :
   Sync ty → LstSync tys → LstSync (ty :: tys) := List.Forall_cons _ _ _.
+*)
 
 Section type.
   Context `{!typeG Σ}.
@@ -706,7 +712,7 @@ Section type.
     rewrite shr_locsE_shift na_own_union //. apply shr_locsE_disj.
   Qed.
 
-  Global Instance copy_equiv : Proper (equiv ==> impl) Copy.
+  Global Instance copy_equiv {A} : Proper (equiv ==> impl) (@Copy _ _ A).
   Proof.
     intros ty1 ty2 [EQsz%leibniz_equiv EQlfts EQE EQown EQshr] Hty1. split.
     - intros. rewrite -EQown. apply _.
@@ -714,9 +720,9 @@ Section type.
       apply copy_shr_acc.
   Qed.
 
-  Global Program Instance ty_of_st_copy st : Copy (ty_of_st st).
+  Global Program Instance ty_of_st_copy {A} (st: _ A) : Copy (ty_of_st st).
   Next Obligation.
-    iIntros (st depth κ tid E ? l q ? HF) "#LFT #Hshr Htok Hlft /=".
+    move=> *. iIntros "#LFT #Hshr Htok Hlft /=".
     iDestruct (na_own_acc with "Htok") as "[$ Htok]"; first solve_ndisj.
     iDestruct "Hshr" as (vl) "[Hf Hown]".
     iMod (frac_bor_acc with "LFT Hf Hlft") as (q') "[>Hmt Hclose]"; first solve_ndisj.
@@ -725,37 +731,37 @@ Section type.
   Qed.
 
   (** Send and Sync types *)
-  Global Instance send_equiv : Proper (equiv ==> impl) Send.
+  Global Instance send_equiv {A} : Proper (equiv ==> impl) (@Send _ _ A).
   Proof.
-    intros ty1 ty2 [EQsz%leibniz_equiv EQlfts EQE EQown EQshr] Hty1.
-    rewrite /Send=>????. rewrite -!EQown. auto.
+    move=> ?? [_ _ _ Eqv _] ?. rewrite /Send=> *. by rewrite -!Eqv.
   Qed.
 
-  Global Instance sync_equiv : Proper (equiv ==> impl) Sync.
+  Global Instance sync_equiv {A} : Proper (equiv ==> impl) (@Sync _ _ A).
   Proof.
-    intros ty1 ty2 [EQsz%leibniz_equiv EQlfts EQE EQown EQshr] Hty1.
-    rewrite /Send=>????. rewrite -!EQshr. auto.
+    move=> ?? [_ _ _ _ Eqv] ?. rewrite /Sync=> *. by rewrite -!Eqv.
   Qed.
 
-  Global Instance ty_of_st_sync st : Send (ty_of_st st) → Sync (ty_of_st st).
+  Global Instance ty_of_st_sync {A} (st: _ A) :
+    Send (ty_of_st st) → Sync (ty_of_st st).
   Proof.
-    iIntros (Hsend κ tid1 tid2 l) "/=". iDestruct 1 as (vl) "[Hm Hown]".
-    iExists vl. iFrame "Hm". iNext. by iApply (Hsend 0%nat).
+    move=> Hsend >. iDestruct 1 as (vl) "[Hm Hown]".
+    iExists vl. iFrame "Hm". iNext. by iApply Hsend.
   Qed.
 
-  Lemma send_change_tid' t depth tid1 tid2 vl :
-    Send t → t.(ty_own) depth tid1 vl ≡ t.(ty_own) depth tid2 vl.
+  Lemma send_change_tid' {A} (ty: _ A) vπd tid1 tid2 vl :
+    Send ty → ty.(ty_own) vπd tid1 vl ≡ ty.(ty_own) vπd tid2 vl.
   Proof.
     intros ?. apply: anti_symm; apply send_change_tid.
   Qed.
 
-  Lemma sync_change_tid' t κ tid1 tid2 l :
-    Sync t → t.(ty_shr) κ tid1 l ≡ t.(ty_shr) κ tid2 l.
+  Lemma sync_change_tid' {A} (ty: _ A) vπd κ tid1 tid2 l :
+    Sync ty → ty.(ty_shr) vπd κ tid1 l ≡ ty.(ty_shr) vπd κ tid2 l.
   Proof.
     intros ?. apply: anti_symm; apply sync_change_tid.
   Qed.
 End type.
 
+(*
 Definition type_incl `{!typeG Σ} (ty1 ty2 : type) : iProp Σ :=
     (⌜ty1.(ty_size) = ty2.(ty_size)⌝ ∗
      (ty2.(ty_lft) ⊑ ty1.(ty_lft)) ∗
