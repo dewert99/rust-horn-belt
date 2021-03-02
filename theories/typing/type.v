@@ -56,11 +56,11 @@ Record type `{!typeG Σ} A :=
 
     ty_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
       κ ⊑ lft_intersect_list ty_lfts -∗ ty_own (vπ,d) tid vl -∗ q.[κ]
-      ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
+      ={E}=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
         (q':+[ξs] ={E}=∗ ty_own (vπ,d) tid vl ∗ q.[κ]);
     ty_shr_proph E vπ d κ tid l κ' q : ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
       κ' ⊑ lft_intersect_list ty_lfts -∗ ty_shr (vπ,d) κ tid l -∗ q.[κ']
-      ={E}▷=∗^(S d) ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
+      ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
         (q':+[ξs] ={E}=∗ ty_shr (vπ,d) κ tid l ∗ q.[κ']);
   }.
 Existing Instance ty_shr_persistent.
@@ -141,7 +141,7 @@ Record simple_type `{!typeG Σ} A :=
       d ≤ d' → st_own (vπ,d) tid vl -∗ st_own (vπ,d') tid vl;
     st_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
       κ ⊑ lft_intersect_list st_lfts -∗ st_own (vπ,d) tid vl -∗ q.[κ]
-      ={E}▷=∗^d ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
+      ={E}=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗ q':+[ξs] ∗
         (q':+[ξs] ={E}=∗ st_own (vπ,d) tid vl ∗ q.[κ]); }.
 Existing Instance st_own_persistent.
 Instance: Params (@st_size) 2 := {}.
@@ -170,23 +170,22 @@ Next Obligation.
   iSplit; [|done]. by iApply (frac_bor_shorten with "Incl").
 Qed.
 Next Obligation.
-  move=> *. iIntros "#LFT ? Bor Tok". 
+  move=> *. iIntros "#LFT ? Bor Tok".
   iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
   iMod (bor_sep with "LFT Bor") as "[Bor Own]"; [done|].
   iMod (bor_persistent with "LFT Own Tok") as "[Own Tok]"; [done|].
   iMod (bor_fracture (λ q, _ ↦∗{q} _)%I with "LFT Bor") as "Hfrac"; [done|].
-
-  iModIntro.
-  iApply step_fupdN_intro; [done|]. iNext.
+  iModIntro. iApply step_fupdN_intro; [done|]. iNext.
   iSplitR "Tok"; [|done]. iExists vl. iModIntro. by iSplit.
 Qed.
 Next Obligation. move=> >. apply st_own_proph. Qed.
 Next Obligation.
   move=> *. iIntros "#LFT _ #Incl". iDestruct 1 as (vl) "[Bor Own]".
-  iIntros "Tok". simpl. iModIntro. iNext. iModIntro.
-  iDestruct (st_own_proph with "LFT Incl Own Tok") as "Upd"; [done|].
-  iApply (step_fupdN_wand with "Upd"). iDestruct 1 as (ξs q' ?) "[Tok Upd]".
-  iExists ξs, q'. iSplit; [done|]. iSplitL "Tok"; [done|]. iIntros "Tok".
+  iIntros "Tok". iModIntro. iNext.
+  iDestruct (st_own_proph with "LFT Incl Own Tok") as "> Upd"; [done|].
+  iModIntro. iApply (step_fupdN_wand with "Upd"). iDestruct 1 as "> Upd".
+  iDestruct "Upd" as (ξs q' ?) "[Tok Upd]". iModIntro. iExists ξs, q'.
+  iSplit; [done|]. iSplitL "Tok"; [done|]. iIntros "Tok".
   iMod ("Upd" with "Tok") as "[??]". iModIntro. iSplit; [|done]. iExists vl.
   by iSplit.
 Qed.

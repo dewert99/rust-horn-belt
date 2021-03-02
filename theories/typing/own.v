@@ -108,16 +108,15 @@ Section own.
   Qed.
 
   Next Obligation.
-    iIntros (A n ty N asn [|d] tid [|[[]|][]] κ ??) "/= #LFT #Hout"; try iIntros "[]".
+    iIntros (A n ty N asn [|d] tid [|[[]|][]] κ ??) "#LFT #Hout"; try iIntros "[]".
     iIntros "Hown Htok".
-    iModIntro; iNext.
+    iModIntro. iModIntro. iNext.
     iDestruct "Hown" as "[Hown Hfrz]".
     iDestruct "Hown" as (vl) "[Hown Hb]".
     iDestruct ((ty_own_proph A _ N _ _ _ _ _ q H) with "LFT Hout Hb Htok") as "X".
-    iApply (step_fupdN_wand with "X").
-    iModIntro.
-    iDestruct 1 as (ξs q') "(? & ? & Hb)".
-    iExists ξs, q'; iFrame.
+    iApply (step_fupdN_wand with "X"). iDestruct 1 as "> Hupd".
+    iDestruct "Hupd" as (ξs q') "(? & ? & Hb)".
+    iExists ξs, q'; iFrame. iModIntro.
     iIntros "Hq".
     iMod ("Hb" with "Hq") as "[Hb ?]"; iFrame.
     iExists vl; by iFrame.
@@ -127,11 +126,11 @@ Section own.
     iIntros (A q ty N asn [|d] κ tid l κ' ??) "/= #LFT #Hout #Hshrt"; try iIntros "[]";
     iDestruct 1 as (l') "[Hfrac Hshr]";iIntros "Htok".
     iModIntro; iNext.
-    iDestruct ((ty_shr_proph A _ N) with "LFT Hout Hshrt Hshr Htok") as "Hb2"; [done|].
-    iApply (step_fupdN_wand with "Hb2").
-    iModIntro.
-    iDestruct 1 as (ξs q') "(Hdep &deptoks &depres)".
-    iExists ξs, q'; iFrame.
+    iDestruct ((ty_shr_proph A _ N) with "LFT Hout Hshrt Hshr Htok") as "> Hb2"; [done|].
+    iModIntro. iModIntro. iNext.
+    iApply (step_fupdN_wand with "Hb2"). iDestruct 1 as "> Hupd".
+    iDestruct "Hupd" as (ξs q') "(Hdep &deptoks &depres)".
+    iExists ξs, q'; iFrame. iModIntro.
     iIntros "Htok".
     iMod ("depres" with "Htok") as "[Hshr ?]"; iFrame.
     iExists l'; by iFrame.
