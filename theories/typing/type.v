@@ -626,7 +626,7 @@ Fixpoint shr_locsE (l: loc) (n: nat) : coPset :=
 Class Copy `{!typeG Σ} {A} (ty: type A) := {
   copy_persistent vπd tid vl : Persistent (ty.(ty_own) vπd tid vl);
   copy_shr_acc vπd κ tid E F l q :
-    ↑lftN ∪ ↑shrN ⊆ E → shr_locsE l (S ty.(ty_size)) ⊆ F →
+    ↑lftN ∪ ↑shrN ⊆ E → shr_locsE l (ty.(ty_size) + 1) ⊆ F →
     lft_ctx -∗ ty.(ty_shr) vπd κ tid l -∗ na_own tid F -∗ q.[κ] ={E}=∗ ∃q' vl,
       na_own tid (F ∖ shr_locsE l ty.(ty_size)) ∗
       l ↦∗{q'} vl ∗ ▷ty.(ty_own) vπd tid vl ∗
