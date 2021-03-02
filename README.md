@@ -13,15 +13,14 @@ This is the Coq development for RustHornBelt (work in progress).
 This version is known to compile with:
 
  - Coq 8.13.1
- - The latest version of the branch [step_indexing_controlled_by_ghosts](https://gitlab.mpi-sws.org/iris/iris/-/tree/step_indexing_controlled_by_ghosts) of Iris
+ - The latest version of the branch [`step_indexing_controlled_by_ghosts`](https://gitlab.mpi-sws.org/iris/iris/-/tree/step_indexing_controlled_by_ghosts) of Iris
 
-The branch [step_indexing_controlled_by_ghosts](https://gitlab.mpi-sws.org/iris/iris/-/tree/step_indexing_controlled_by_ghosts) of Iris is still in the process of being [merged to the master](https://gitlab.mpi-sws.org/iris/iris/-/merge_requests/595).
+The branch [`step_indexing_controlled_by_ghosts`](https://gitlab.mpi-sws.org/iris/iris/-/tree/step_indexing_controlled_by_ghosts) of Iris is still in the process of being [merged to the master](https://gitlab.mpi-sws.org/iris/iris/-/merge_requests/595).
 
-In order to use this branch of Iris for RustHornBelt, the following is an easy way.
-- Clone the [Iris git repository](https://gitlab.mpi-sws.org/iris/iris) to some local directory, which we write `IRIS` here.
-- In `IRIS`, do `git checkout step_indexing_controlled_by_ghosts` and `make`.
-- Add to `$COQPATH` the directory `IRIS`.
-This works because `IRIS` has the Coq code in the `iris` directory, which coincides with the library name `iris`.
+In order to use this branch of Iris, you can use the following `opam pin` command.
+```
+opam pin add coq-iris https://gitlab.mpi-sws.org/iris/iris.git#step_indexing_controlled_by_ghosts
+```
 
 ## Building from source
 
