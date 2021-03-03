@@ -257,9 +257,8 @@ Lemma proph_tok_app ξs ζs q q' :
   q:+[ξs] -∗ q':+[ζs] -∗
     ∃q'', q'':+[ξs ++ ζs] ∗ (q'':+[ξs ++ ζs] -∗ q:+[ξs] ∗ q':+[ζs]).
 Proof.
-  move: (Qp_lower_bound q q')=> [q''[?[?[-> ->]]]].
-  iDestruct 1 as "[??]". iDestruct 1 as "[??]". iExists q''.
-  iFrame. iDestruct 1 as "[??]". iFrame.
+  move: (Qp_lower_bound q q')=> [q''[?[?[-> ->]]]]. iDestruct 1 as "[??]".
+  iDestruct 1 as "[??]". iExists q''. iFrame. iDestruct 1 as "[$$]".
 Qed.
 
 (** Initialization *)
@@ -270,7 +269,7 @@ Proof.
   move=> ?. iMod (own_alloc (● ε)) as (γ) "Own"; [by apply auth_auth_valid|].
   set IProphG := ProphG Σ _ γ. iExists IProphG.
   iMod (inv_alloc _ _ proph_inv with "[Own]") as "?"; [|done]. iModIntro.
-  iExists ε. iSplitR; [|done]. iPureIntro. exists []. split; [done|] => ???.
+  iExists ε. iFrame. iPureIntro. exists []. split; [done|] => ???.
   rewrite lookup_empty. split; move=> Hyp; inversion Hyp.
 Qed.
 
@@ -284,11 +283,11 @@ Proof.
   case (exist_fresh (I ∪ dom _ (S Ap)))
     => [i /not_elem_of_union [? /not_elem_of_dom EqNone]].
   set ξ := PVar Ap i. set S' := add_line ξ (fitem 1) S.
-  iMod (own_update _ _ (● S' ⋅ ◯ line ξ (fitem 1)) with "Auth") as "[Auth' ?]".
+  iMod (own_update _ _ (● S' ⋅ ◯ line ξ (fitem 1)) with "Auth") as "[Auth ?]".
   { by apply auth_update_alloc,
       discrete_fun_insert_local_update, alloc_singleton_local_update. }
-  iModIntro. iSplitL "Auth'"; last first. { iModIntro. iExists i. by iSplit. }
-  iModIntro. iExists S'. iSplitR; [|done]. iPureIntro. exists L.
+  iModIntro. iSplitL "Auth"; last first. { iModIntro. iExists i. by iFrame. }
+  iModIntro. iExists S'. iFrame. iPureIntro. exists L.
   split; [done|] => Bp j ?. rewrite /S' /add_line /discrete_fun_insert -Sim.
   case (decide (Ap = Bp))=> [?|?]; [|done]. subst =>/=.
   case (decide (i = j))=> [<-|?]; [|by rewrite lookup_insert_ne].
@@ -335,14 +334,13 @@ Proof.
     by rewrite not_elem_of_cons. }
   set S' := add_line ξ (aitem vπ) S.
   iMod (own_update_2 _ _ _ (● S' ⋅ ◯ line ξ (aitem vπ)) with "Auth Tok")
-    as "[Auth' #?]".
+    as "[Auth #?]".
   { apply auth_update, discrete_fun_singleton_local_update_any,
       singleton_local_update_any => ? _. by apply exclusive_local_update. }
-  iModIntro. iSplitL "Auth'"; last first.
-  { iModIntro. iSplitR; [|done]. iExists [.{ξ:=vπ}].
-    iSplitR; [|by rewrite big_sepL_singleton]. iPureIntro=> ? Sat.
-    by inversion Sat. }
-  iModIntro. iExists S'. iSplitR; [|done]. iPureIntro. exists L'. split.
+  iModIntro. iSplitL "Auth"; last first.
+  { iModIntro. iFrame. iExists [.{ξ:=vπ}]. rewrite big_sepL_singleton.
+    iSplitR; [|done]. iPureIntro=> ? Sat. by inversion Sat. }
+  iModIntro. iExists S'. iFrame. iPureIntro. exists L'. split.
   { split; [done| split; [|done]] => ?? Eqv. apply Dep => ? /Outζs ?.
     by apply Eqv. }
   have InLNe ζ wπ : .{ζ:=wπ} ∈ L → ξ ≠ ζ.
@@ -368,16 +366,15 @@ Proof. move=> ?. iExists []. by iSplit. Qed.
 
 Lemma proph_obs_weaken φπ ψπ : (∀π, φπ π → ψπ π) → .⟨φπ⟩ -∗ .⟨ψπ⟩.
 Proof.
-  move=> Wkn. iDestruct 1 as (L SatImp) "?". iExists L. iSplitR; [|done].
-  iPureIntro=> ??. by apply Wkn, SatImp.
+  move=> Wkn. iDestruct 1 as (L SatImp) "?". iExists L. iFrame. iPureIntro=> ??.
+  by apply Wkn, SatImp.
 Qed.
 
 Lemma proph_obs_merge φπ ψπ : .⟨φπ⟩ -∗ .⟨ψπ⟩ -∗ ⟨π, φπ π ∧ ψπ π⟩.
 Proof.
-  iDestruct 1 as (L SatImp) "Atoms". iDestruct 1 as (L' SatImp') "?".
-  iExists (L ++ L'). iSplitR.
-  - iPureIntro=> ? /Forall_app [??]. split; by [apply SatImp|apply SatImp'].
-  - rewrite big_sepL_app. by iSplitL "Atoms".
+  iDestruct 1 as (L SatImp) "?". iDestruct 1 as (L' SatImp') "?".
+  iExists (L ++ L'). iFrame. iPureIntro=> ? /Forall_app [??].
+  split; by [apply SatImp|apply SatImp'].
 Qed.
 
 Lemma proph_obs_sat E φπ :
@@ -388,7 +385,7 @@ Proof.
   move: (Ok)=> /proph_ok_sat [π /Forall_forall Sat]. iModIntro.
   iAssert ⌜π ◁ L'⌝%I as %?; last first.
   { iSplitL; last first. { iPureIntro. exists π. by apply SatImp. }
-    iModIntro. iExists S. iSplitR; [|done]. iPureIntro. by exists L. }
+    iModIntro. iExists S. iFrame. iPureIntro. by exists L. }
   rewrite /proph_sat Forall_forall. iIntros ([[Ap i] vπ] In) =>/=.
   iAssert (proph_atom .{PVar Ap i := vπ}) with "[Atoms]" as "Atom".
   { iApply big_sepL_elem_of; by [apply In|]. }
@@ -427,13 +424,13 @@ Proof.
 Qed.
 
 Lemma proph_obs_eqz {A} (uπ vπ: _ → A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
-Proof. iIntros "?". iIntros (???) "?". iModIntro. by iSplit. Qed.
+Proof. iIntros "?". iIntros (???) "?". iModIntro. iFrame. Qed.
 
 Lemma proph_eqz_modify {A} (uπ uπ' vπ: _ → A) :
   ⟨π, uπ' π = uπ π⟩ -∗ uπ :== vπ -∗ uπ' :== vπ.
 Proof.
-  iIntros "#Obs Eqz". iIntros (???) "Ptoks".
-  iMod ("Eqz" with "[%//] Ptoks") as "[#Obs' ?]". iModIntro. iSplitR; [|done].
+  iIntros "Obs Eqz". iIntros (???) "Ptoks".
+  iMod ("Eqz" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
   iDestruct (proph_obs_merge with "Obs Obs'") as "Obs''".
   by iApply proph_obs_weaken; [|iApply "Obs''"] => ? [-> ?].
 Qed.
@@ -442,7 +439,7 @@ Lemma proph_eqz_constr {A B} f `{Inj A B (=) (=) f} uπ vπ :
   uπ :== vπ -∗ f ∘ uπ :== f ∘ vπ.
 Proof.
   iIntros "Eqz". iIntros (?? Dep) "Ptoks". move/proph_dep_destr in Dep.
-  iMod ("Eqz" with "[%//] Ptoks") as "[#Obs ?]". iModIntro. iSplitR; [|done].
+  iMod ("Eqz" with "[%//] Ptoks") as "[Obs $]". iModIntro.
   iApply proph_obs_weaken; [|by iApply "Obs"] => ??. by apply (f_equal f).
 Qed.
 
@@ -451,8 +448,8 @@ Lemma proph_eqz_constr2 {A B C} f `{Inj2 A B C (=) (=) (=) f} uπ uπ' vπ vπ' 
 Proof.
   iIntros "Eqz Eqz'". iIntros (?? Dep) "Ptoks".
   move: Dep=> /proph_dep_destr2 [??].
-  iMod ("Eqz" with "[%//] Ptoks") as "[#Obs Ptoks]".
-  iMod ("Eqz'" with "[%//] Ptoks") as "[#Obs' ?]". iModIntro. iSplitR; [|done].
+  iMod ("Eqz" with "[%//] Ptoks") as "[Obs Ptoks]".
+  iMod ("Eqz'" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
   iDestruct (proph_obs_merge with "Obs Obs'") as "Obs''".
   iApply proph_obs_weaken; [|by iApply "Obs''"] => ?[??]. by apply (f_equal2 f).
 Qed.

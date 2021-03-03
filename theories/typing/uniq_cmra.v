@@ -82,10 +82,10 @@ Qed.
 Local Lemma vo_pc ξ vπd :
   .VO[ξ] vπd -∗ .PC[ξ] vπd -∗ .VO2[ξ] vπd ∗ 1:[ξ].
 Proof.
-  iIntros "Vo". iDestruct 1 as "[[? Tok]|[ExVo2 _]]"; last first.
+  iIntros "Vo". iDestruct 1 as "[[??]|[ExVo2 _]]"; last first.
   { iDestruct "ExVo2" as (?) "Vo2".
     by iDestruct (own_line_agree with "Vo Vo2") as %[? _]. }
-  iSplitR "Tok"; [|done]. rewrite -vo_vo2. by iSplitL "Vo".
+  rewrite -vo_vo2. iFrame.
 Qed.
 
 (** Instances *)
@@ -102,7 +102,7 @@ Proof.
   iIntros "Vo". iDestruct 1 as "[> ?|[> ExVo2 _]]"; last first.
   { iDestruct "ExVo2" as (?) "Vo2".
     by iDestruct (own_line_agree with "Vo Vo2") as %[? _]. }
-  iModIntro. iSplitL "Vo"; by [|iLeft].
+  iModIntro. iFrame "Vo". by iLeft.
 Qed.
 
 (** Initialization *)
@@ -130,8 +130,7 @@ Proof.
   { by apply auth_update_alloc,
       discrete_fun_insert_local_update, alloc_singleton_local_update. }
   iModIntro. iSplitR "Vo2 Tok"; [by iExists S'|]. iModIntro. iExists i.
-  iDestruct (vo_vo2 with "Vo2") as "[Vo Vo']". iSplitL "Vo"; [done|]. iLeft.
-  by iSplitL "Vo'".
+  iDestruct (vo_vo2 with "Vo2") as "[Vo Vo']". iFrame "Vo". iLeft. iFrame.
 Qed.
 
 Lemma uniq_agree ξ vπd vπd' : .VO[ξ] vπd -∗ .PC[ξ] vπd' -∗ ⌜vπd = vπd'⌝.
@@ -144,9 +143,8 @@ Qed.
 Lemma uniq_proph_tok ξ vπd :
   .VO[ξ] vπd -∗ .PC[ξ] vπd -∗ .VO[ξ] vπd ∗ 1:[ξ] ∗ (1:[ξ] -∗ .PC[ξ] vπd).
 Proof.
-  iIntros "Vo Pc". iDestruct (vo_pc with "Vo Pc") as "[Vo2 Tok]".
-  iDestruct (vo_vo2 with "Vo2") as "[Vo Vo']". iSplitL "Vo"; [done|].
-  iSplitL "Tok"; [done|]. iIntros "?". iLeft. by iSplitL "Vo'".
+  iIntros "Vo Pc". iDestruct (vo_pc with "Vo Pc") as "[Vo2 $]".
+  iDestruct (vo_vo2 with "Vo2") as "[$ ?]". iIntros "?". iLeft. iFrame.
 Qed.
 
 Lemma uniq_update E ξ vπd vπd' : ↑uniqN ⊆ E →
@@ -158,8 +156,7 @@ Proof.
   { apply auth_update, discrete_fun_singleton_local_update_any,
       singleton_local_update_any => ? _. by apply exclusive_local_update. }
   iModIntro. iSplitR "Vo2 Tok"; [by iExists S'|]. iModIntro.
-  iDestruct (vo_vo2 with "Vo2") as "[Vo ?]". iSplitL "Vo"; [done|]. iLeft.
-  by iSplitR "Tok".
+  iDestruct (vo_vo2 with "Vo2") as "[$ ?]". iLeft. iFrame.
 Qed.
 
 Lemma uniq_resolve E ξ vπ d ζs q : ↑prophN ⊆ E → vπ ./ ζs →
@@ -167,10 +164,10 @@ Lemma uniq_resolve E ξ vπ d ζs q : ↑prophN ⊆ E → vπ ./ ζs →
     ⟨π, π ξ = vπ π⟩ ∗ .PC[ξ] (vπ,d) ∗ q:+[ζs].
 Proof.
   iIntros (??) "PROPH Vo Pc Ptoks".
-  iDestruct (vo_pc with "Vo Pc") as "[Vo2 Tok]".
-  iMod (proph_resolve with "PROPH Tok Ptoks") as "[#Obs ?]"; [done|done|].
-  iModIntro. iSplitR; [done|]. iSplitL "Vo2"; [|done]. iRight.
-  iSplitL; [by iExists (vπ,d)|]. by iApply proph_obs_eqz.
+  iDestruct (vo_pc with "Vo Pc") as "[? Tok]".
+  iMod (proph_resolve with "PROPH Tok Ptoks") as "[#? $]"; [done|done|].
+  iModIntro. iSplitR; [done|]. iRight. iSplitL; [by iExists (vπ,d)|].
+  by iApply proph_obs_eqz.
 Qed.
 
 Lemma uniq_preresolve E ξ u vπ d ζs q : ↑prophN ⊆ E → u ./ ζs →
@@ -178,10 +175,10 @@ Lemma uniq_preresolve E ξ u vπ d ζs q : ↑prophN ⊆ E → u ./ ζs →
     ⟨π, π ξ = u π⟩ ∗ q:+[ζs] ∗ (∀vπ' d', u :== vπ' -∗ .PC[ξ] (vπ',d')).
 Proof.
   iIntros (??) "PROPH Vo Pc Ptoks".
-  iDestruct (vo_pc with "Vo Pc") as "[Vo2 Tok]".
-  iMod (proph_resolve with "PROPH Tok Ptoks") as "[#Obs Ptok]"; [done|done|].
-  iModIntro. iSplitR; [done|]. iSplitL "Ptok"; [done|]. iIntros (??) "Eqz".
-  iRight. iSplitR "Eqz"; [by iExists (vπ,d)|].
+  iDestruct (vo_pc with "Vo Pc") as "[? Tok]".
+  iMod (proph_resolve with "PROPH Tok Ptoks") as "[#Obs $]"; [done|done|].
+  iModIntro. iSplitR; [done|]. iIntros (??) "Eqz". iRight.
+  iSplitR "Eqz"; [by iExists (vπ,d)|].
   by iDestruct (proph_eqz_modify with "Obs Eqz") as "?".
 Qed.
 
