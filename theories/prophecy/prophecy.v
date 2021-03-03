@@ -212,6 +212,8 @@ Notation "q :[ ξ ]" := (proph_tok ξ q)
   (at level 2, left associativity, format "q :[ ξ ]") : bi_scope.
 Notation "q :+[ ξs ]" := (proph_toks ξs q)
   (at level 2, left associativity, format "q :+[ ξs ]") : bi_scope.
+Notation ".⟨ φπ ⟩" := (proph_obs φπ)
+  (at level 5, format ".⟨ φπ ⟩") : bi_scope.
 Notation "⟨ π , φ ⟩" := (proph_obs (λ π, φ%type%stdpp))
   (π name, at level 5, format "⟨ π ,  φ ⟩") : bi_scope.
 
@@ -240,8 +242,8 @@ Global Instance proph_toks_as_fractional q ξs :
   AsFractional q:+[ξs] (λ q, q:+[ξs]%I) q.
 Proof. split; by [|apply _]. Qed.
 
-Global Instance proph_obs_persistent φπ : Persistent ⟨π, φπ π⟩ := _.
-Global Instance proph_obs_timeless φπ : Timeless ⟨π, φπ π⟩ := _.
+Global Instance proph_obs_persistent φπ : Persistent .⟨φπ⟩ := _.
+Global Instance proph_obs_timeless φπ : Timeless .⟨φπ⟩ := _.
 
 (** Initialization *)
 
@@ -347,13 +349,13 @@ Qed.
 Lemma proph_obs_trivial φ : φ → ⊢ ⟨_, φ⟩.
 Proof. move=> ?. iExists []. by iSplit. Qed.
 
-Lemma proph_obs_weaken φπ ψπ : (∀π, φπ π → ψπ π) → ⟨π, φπ π⟩ -∗ ⟨π, ψπ π⟩.
+Lemma proph_obs_weaken φπ ψπ : (∀π, φπ π → ψπ π) → .⟨φπ⟩ -∗ .⟨ψπ⟩.
 Proof.
   move=> Wkn. iDestruct 1 as (L SatImp) "?". iExists L. iSplitR; [|done].
   iPureIntro=> ??. by apply Wkn, SatImp.
 Qed.
 
-Lemma proph_obs_merge φπ ψπ : ⟨π, φπ π⟩ -∗ ⟨π, ψπ π⟩ -∗ ⟨π, φπ π ∧ ψπ π⟩.
+Lemma proph_obs_merge φπ ψπ : .⟨φπ⟩ -∗ .⟨ψπ⟩ -∗ ⟨π, φπ π ∧ ψπ π⟩.
 Proof.
   iDestruct 1 as (L SatImp) "Atoms". iDestruct 1 as (L' SatImp') "?".
   iExists (L ++ L'). iSplitR.
@@ -362,7 +364,7 @@ Proof.
 Qed.
 
 Lemma proph_obs_sat E φπ :
-  ↑prophN ⊆ E → proph_ctx -∗ ⟨π, φπ π⟩ ={E}=∗ ⌜∃π₀, φπ π₀⌝.
+  ↑prophN ⊆ E → proph_ctx -∗ .⟨φπ⟩ ={E}=∗ ⌜∃π₀, φπ π₀⌝.
 Proof.
   iIntros (?) "?". iDestruct 1 as (L' SatImp) "#Atoms".
   iInv prophN as (S) "> [OkSim Auth]". iDestruct "OkSim" as %[L [Ok Sim]].
