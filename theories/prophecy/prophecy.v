@@ -244,6 +244,12 @@ Proof. split; by [|apply _]. Qed.
 
 Global Instance proph_obs_persistent φπ : Persistent .⟨φπ⟩ := _.
 Global Instance proph_obs_timeless φπ : Timeless .⟨φπ⟩ := _.
+Global Instance proph_obs_proper :
+  Proper (pointwise_relation _ (↔) ==> (⊣⊢)) proph_obs.
+Proof.
+  move=> ?? Eqv. rewrite /proph_obs. f_equiv. f_equiv. f_equiv. f_equiv.
+  apply forall_proper => ?. by rewrite Eqv.
+Qed.
 
 (** Initialization *)
 
