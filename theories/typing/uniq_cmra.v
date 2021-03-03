@@ -88,11 +88,13 @@ Proof.
   iSplitR "Tok"; [|done]. rewrite -vo_vo2. by iSplitL "Vo".
 Qed.
 
-(** Instances and Later *)
+(** Instances *)
 
 Global Instance uniq_ctx_persistent : Persistent uniq_ctx := _.
 
 Global Instance val_obs_timeless ξ vπd : Timeless (.VO[ξ] vπd) := _.
+
+(** Later *)
 
 Lemma uniq_strip_later ξ vπd :
   .VO[ξ] vπd -∗ ▷ .PC[ξ] vπd -∗ ◇ (.VO[ξ] vπd ∗ .PC[ξ] vπd).

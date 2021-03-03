@@ -251,6 +251,17 @@ Proof.
   apply forall_proper => ?. by rewrite Eqv.
 Qed.
 
+(** Manipulating Tokens *)
+
+Lemma proph_tok_app ξs ζs q q' :
+  q:+[ξs] -∗ q':+[ζs] -∗
+    ∃q'', q'':+[ξs ++ ζs] ∗ (q'':+[ξs ++ ζs] -∗ q:+[ξs] ∗ q':+[ζs]).
+Proof.
+  move: (Qp_lower_bound q q')=> [q''[?[?[-> ->]]]].
+  iDestruct 1 as "[??]". iDestruct 1 as "[??]". iExists q''.
+  iFrame. iDestruct 1 as "[??]". iFrame.
+Qed.
+
 (** Initialization *)
 
 Lemma proph_init `{!prophPreG Σ} E :
@@ -350,7 +361,7 @@ Proof.
   move=> [Eq|?]; by [dependent destruction Eq|].
 Qed.
 
-(** Operations on Prophecy Observations *)
+(** Manipulating Prophecy Observations *)
 
 Lemma proph_obs_trivial φ : φ → ⊢ ⟨_, φ⟩.
 Proof. move=> ?. iExists []. by iSplit. Qed.
