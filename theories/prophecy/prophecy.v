@@ -67,8 +67,8 @@ Proof. move=> ??. rewrite elem_of_app. by right. Qed.
 Lemma proph_dep_constr2 {A B C} (f: A → B → C) vπ wπ ξs ζs :
   vπ ./ ξs → wπ ./ ζs → f ∘ vπ ⊛ wπ ./ ξs ++ ζs.
 Proof.
-  move=> Dep Dep' ?? Eqv. eapply proph_dep_mono in Dep, Dep';
-    [|apply subseteq_app_r|apply subseteq_app_l].
+  move=> Dep Dep' ?? Eqv. eapply proph_dep_mono in Dep; [|apply subseteq_app_l].
+  eapply proph_dep_mono in Dep'; [|apply subseteq_app_r].
   move: (Eqv) (Eqv) => /Dep ? /Dep' ?. by apply (f_equal2 f).
 Qed.
 
