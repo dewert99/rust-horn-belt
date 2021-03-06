@@ -12,9 +12,9 @@ This is the Coq development for RustHornBelt (work in progress).
 
 This version is known to compile with:
 
-- Coq 8.13.1
+- Coq 8.13.0
 - A development version of [Iris](https://gitlab.mpi-sws.org/iris/iris)
-  (a version later than 2021-03-06)
+  (the version of 2021-03-06)
 
 ## Building from source
 
