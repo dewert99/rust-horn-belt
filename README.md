@@ -12,15 +12,9 @@ This is the Coq development for RustHornBelt (work in progress).
 
 This version is known to compile with:
 
- - Coq 8.13.1
- - The latest version of the branch [`step_indexing_controlled_by_ghosts`](https://gitlab.mpi-sws.org/iris/iris/-/tree/step_indexing_controlled_by_ghosts) of Iris
-
-The branch [`step_indexing_controlled_by_ghosts`](https://gitlab.mpi-sws.org/iris/iris/-/tree/step_indexing_controlled_by_ghosts) of Iris is still in the process of being [merged to the master](https://gitlab.mpi-sws.org/iris/iris/-/merge_requests/595).
-
-In order to use this branch of Iris, you can use the following `opam pin` command.
-```
-opam pin add coq-iris https://gitlab.mpi-sws.org/iris/iris.git#step_indexing_controlled_by_ghosts
-```
+- Coq 8.13.1
+- A development version of [Iris](https://gitlab.mpi-sws.org/iris/iris)
+  (a version later than 2021-03-06)
 
 ## Building from source
 
@@ -29,8 +23,6 @@ installing the dependencies.  This requires the following two repositories:
 
     opam repo add coq-released https://coq.inria.fr/opam/released
     opam repo add iris-dev https://gitlab.mpi-sws.org/iris/opam.git
-
-(As mentioned above, actually we don't use Iris registered to opam.)
 
 Once you got opam set up, run `make build-dep` to install the right versions
 of the dependencies.
