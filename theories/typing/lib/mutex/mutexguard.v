@@ -3,7 +3,7 @@ From iris.algebra Require Import auth csum frac agree.
 From lrust.lang.lib Require Import memcpy lock.
 From lrust.lifetime Require Import na_borrow.
 From lrust.typing Require Export type.
-From lrust.typing Require Import typing util option mutex.
+From lrust.typing Require Import typing option mutex.
 Set Default Proof Using "Type".
 
 (* This type is an experiment in defining a Rust type on top of a non-typesysten-specific

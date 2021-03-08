@@ -41,7 +41,6 @@ theories/typing/base.v
 theories/typing/lft_contexts.v
 theories/typing/uniq_cmra.v
 theories/typing/type.v
-theories/typing/util.v
 # theories/typing/type_context.v
 # theories/typing/cont_context.v
 # theories/typing/uninit.v
@@ -93,3 +92,4 @@ theories/typing/own.v
 # theories/typing/examples/init_prod.v
 # theories/typing/examples/lazy_lft.v
 # theories/typing/examples/nonlexical.v
+# theories/typing/util.v

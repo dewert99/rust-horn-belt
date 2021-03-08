@@ -2,7 +2,7 @@ From iris.algebra.lib Require Export excl_auth.
 From iris.proofmode Require Import tactics.
 From lrust.lang Require Import heap.
 From lrust.typing Require Export type.
-From lrust.typing Require Import util lft_contexts type_context programs.
+From lrust.typing Require Import lft_contexts type_context programs.
 Set Default Proof Using "Type".
 
 Section uniq_bor.
