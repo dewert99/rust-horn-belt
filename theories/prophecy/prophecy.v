@@ -253,8 +253,8 @@ Global Instance proph_obs_timeless φπ : Timeless .⟨φπ⟩ := _.
 Global Instance proph_obs_proper :
   Proper (pointwise_relation _ (↔) ==> (⊣⊢)) proph_obs.
 Proof.
-  move=> ?? Eqv. rewrite /proph_obs. f_equiv. f_equiv. f_equiv. f_equiv.
-  apply forall_proper => ?. by rewrite Eqv.
+  move=> ?? Iff. rewrite /proph_obs. do 4 f_equiv. apply forall_proper => ?.
+  by rewrite Iff.
 Qed.
 
 (** Manipulating Tokens *)
