@@ -36,6 +36,7 @@ followed by `make build-dep`.
 
 ## Structure
 
+* The folder [util](theories/util) contains utility for basic concepts.
 * The folder [prophecy](theories/prophecy) contains the formalization of the
   prophecy library.
 * The folder [lifetime](theories/lifetime) proves the rules of the lifetime
