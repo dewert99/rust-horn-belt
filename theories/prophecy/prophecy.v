@@ -37,6 +37,10 @@ Implicit Type π: proph_asn.
 Definition s_comb {A B C} (f: A → B → C) (g: A → B) x := (f x) (g x).
 Global Infix "⊛" := (s_comb) (left associativity, at level 50).
 
+Lemma surjective_pairing_fun {A B C} (f: A → B * C) :
+  pointwise_relation _ (=) f (pair ∘ (fst ∘ f) ⊛ (snd ∘ f)).
+Proof. move=> ?. by rewrite /s_comb /compose -surjective_pairing. Qed.
+
 (** * Prophecy Dependency *)
 
 Local Definition proph_asn_eqv ξs π π' := ∀ξ, ξ ∈ ξs → π ξ = π' ξ.
@@ -46,10 +50,10 @@ Local Notation "π .≡{ ξs }≡ π'" := (proph_asn_eqv ξs π π')
 Definition proph_dep {A} (vπ: _ → A) ξs := ∀π π', π .≡{ξs}≡ π' → vπ π = vπ π'.
 Notation "vπ ./ ξs" := (proph_dep vπ ξs) (at level 70, format "vπ  ./  ξs").
 
-Global Instance proph_dep_proper {A} ξs :
-  Proper (pointwise_relation _ (=) ==> (↔)) (λ vπ: _ → A, vπ ./ ξs).
+Global Instance proph_dep_proper {A} :
+  Proper (pointwise_relation _ (=) ==> (=) ==> (↔)) (@proph_dep A).
 Proof.
-  move=> ?? Eq. do 2 apply forall_proper =>?. by rewrite Eq.
+  move=> ?? Eq ?? ->. do 2 apply forall_proper =>?. by rewrite Eq.
 Qed.
 
 (** ** Lemmas *)
@@ -76,6 +80,12 @@ Proof.
   move=> Dep Dep' ?? Eqv. eapply proph_dep_mono in Dep, Dep';
     [|apply subseteq_app_r|apply subseteq_app_l].
   move: (Eqv) (Eqv) => /Dep ? /Dep' ?. by apply (f_equal2 f).
+Qed.
+
+Lemma proph_dep_pair {A B} (vπ: _ → A * B) ξs ζs :
+  fst ∘ vπ ./ ξs → snd ∘ vπ ./ ζs → vπ ./ ξs ++ ζs.
+Proof.
+  move=> ??. rewrite (surjective_pairing_fun vπ). by apply proph_dep_constr2.
 Qed.
 
 Lemma proph_dep_destr {A B} f `{Inj A B (=) (=) f} vπ ξs :
