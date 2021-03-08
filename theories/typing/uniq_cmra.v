@@ -1,7 +1,8 @@
 From iris.algebra Require Import auth cmra functions gmap frac_agree.
 From iris.proofmode Require Import tactics.
 From iris.base_logic Require Import invariants.
-From lrust.prophecy Require Import functions prophecy.
+From lrust.util Require Import discrete_fun.
+From lrust.prophecy Require Import prophecy.
 From lrust.typing Require Import base.
 
 Implicit Type (Ap: ptType) (q: Qp).
