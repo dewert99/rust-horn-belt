@@ -422,6 +422,13 @@ Notation "uπ :== vπ" := (proph_eqz uπ vπ)
 Section lemmas.
 Context `{!invG Σ, !prophG Σ}.
 
+Global Instance proph_eqz_proper {A} : Proper (pointwise_relation _ (=) ==>
+  pointwise_relation _ (=) ==> (⊣⊢)) (@proph_eqz _ _ _ A).
+Proof.
+  move=> ?? Eq ?? Eq'. rewrite /proph_eqz. do 5 f_equiv; [by rewrite Eq'|].
+  do 5 f_equiv. by rewrite Eq Eq'.
+Qed.
+
 (** ** Constructing Prophecy Equalizers *)
 
 Lemma proph_token_eqz ξ vπ : proph_ctx -∗ 1:[ξ] -∗ (.$ ξ) :== vπ.
@@ -459,6 +466,13 @@ Proof.
   iMod ("Eqz'" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
   iDestruct (proph_obs_merge with "Obs Obs'") as "Obs''".
   iApply proph_obs_weaken; [|by iApply "Obs''"] => ?[??]. by apply (f_equal2 f).
+Qed.
+
+Lemma proph_eqz_pair {A B} (uπ vπ: _ → A * B) :
+  fst ∘ uπ :== fst ∘ vπ -∗ snd ∘ uπ :== snd ∘ vπ -∗ uπ :== vπ.
+Proof.
+  iIntros "Eqz Eqz'". iDestruct (proph_eqz_constr2 with "Eqz Eqz'") as "?".
+  by rewrite -!surjective_pairing_fun.
 Qed.
 
 End lemmas.
