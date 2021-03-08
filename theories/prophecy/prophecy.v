@@ -220,9 +220,9 @@ Notation "q :[ ξ ]" := (proph_tok ξ q)
 Notation "q :+[ ξs ]" := (proph_toks ξs q)
   (at level 2, left associativity, format "q :+[ ξs ]") : bi_scope.
 Notation ".⟨ φπ ⟩" := (proph_obs φπ)
-  (at level 5, format ".⟨ φπ ⟩") : bi_scope.
+  (at level 1, format ".⟨ φπ ⟩") : bi_scope.
 Notation "⟨ π , φ ⟩" := (proph_obs (λ π, φ%type%stdpp))
-  (π name, at level 5, format "⟨ π ,  φ ⟩") : bi_scope.
+  (π name, at level 1, format "⟨ π ,  φ ⟩") : bi_scope.
 
 (** * Iris Lemmas *)
 

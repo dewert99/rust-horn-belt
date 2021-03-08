@@ -5,7 +5,7 @@ From iris.algebra Require Import cmra auth functions.
 Notation ".<[ x := a ]>" := (discrete_fun_insert x a)
   (at level 5, format ".<[ x  :=  a ]>").
 Notation ".{[ x := a ]}" := (discrete_fun_singleton x a)
-  (at level 5, format ".{[ x  :=  a ]}").
+  (at level 1, format ".{[ x  :=  a ]}").
 
 Section ucmra.
 Context `{EqDecision A} {B: A → ucmra}.

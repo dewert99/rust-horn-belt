@@ -52,12 +52,11 @@ Definition proph_ctrl ξ vπd : iProp Σ :=
 
 End defs.
 
-Notation ".VO[ ξ ] vπd" := (val_obs ξ vπd)
-  (at level 5, format ".VO[ ξ ]  vπd") : bi_scope.
-Local Notation ".VO2[ ξ ] vπd" := (val_obs2 ξ vπd)
-  (at level 5, format ".VO2[ ξ ]  vπd") : bi_scope.
-Notation ".PC[ ξ ] vπd" := (proph_ctrl ξ vπd)
-  (at level 5, format ".PC[ ξ ]  vπd") : bi_scope.
+Notation ".VO[ ξ ]" := (val_obs ξ) (at level 5, format ".VO[ ξ ]") : bi_scope.
+Local Notation ".VO2[ ξ ]" := (val_obs2 ξ)
+  (at level 5, format ".VO2[ ξ ]") : bi_scope.
+Notation ".PC[ ξ ]" := (proph_ctrl ξ)
+  (at level 5, format ".PC[ ξ ]") : bi_scope.
 
 (** * Lemmas *)
 

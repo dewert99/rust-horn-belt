@@ -112,26 +112,6 @@ Proof.
       [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
 Qed.
 
-Inductive Types := Nil_Types: Types | Cons_Types: Type → Types → Types.
-Implicit Type As Bs: Types.
-Notation "^[ ]" := (Nil_Types) (at level 5, format "^[ ]").
-Infix "^::" := (Cons_Types) (at level 60, right associativity).
-Notation "^[ A ; .. ; B ]" := (A ^:: .. (B ^:: ^[]) ..)
-  (at level 5, format "^[ A ;  .. ;  B ]").
-
-Inductive types `{!typeG Σ} : Types → Type :=
-| Nil_types: types ^[]
-| Cons_types {A As} : type A → types As → types (A ^:: As).
-Notation "$[]" := (Nil_types).
-Infix "$::" := (Cons_types) (at level 60, right associativity).
-Notation "$[ ty ; .. ; ty' ]" := (ty $:: .. (ty' $:: $[]) ..)
-  (format "$[ ty ;  .. ;  ty' ]").
-
-Fixpoint ttypes As : Type := match As with
-| ^[] => unit
-| A ^:: As => A * ttypes As
-end.
-
 (*
 Definition tyl_lfts `{!typeG Σ} tyl : list lft := concat (ty_lfts <$> tyl).
 Definition tyl_E `{!typeG Σ} tyl : elctx := concat (ty_E <$> tyl).
