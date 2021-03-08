@@ -5,7 +5,7 @@ From iris.algebra Require Import auth cmra functions gmap csum frac agree.
 From iris.bi Require Import fractional.
 From iris.proofmode Require Import tactics.
 From iris.base_logic Require Import invariants.
-From lrust.prophecy Require Import functions.
+From lrust.util Require Import point_free discrete_fun.
 
 (** * Pointed Type *)
 
@@ -34,13 +34,6 @@ Global Instance proph_asn_inhabited : Inhabited proph_asn :=
 
 Implicit Type π: proph_asn.
 
-Definition s_comb {A B C} (f: A → B → C) (g: A → B) x := (f x) (g x).
-Global Infix "⊛" := (s_comb) (left associativity, at level 50).
-
-Lemma surjective_pairing_fun {A B C} (f: A → B * C) :
-  pointwise_relation _ (=) f (pair ∘ (fst ∘ f) ⊛ (snd ∘ f)).
-Proof. move=> ?. by rewrite /s_comb /compose -surjective_pairing. Qed.
-
 (** * Prophecy Dependency *)
 
 Local Definition proph_asn_eqv ξs π π' := ∀ξ, ξ ∈ ξs → π ξ = π' ξ.
@@ -52,9 +45,7 @@ Notation "vπ ./ ξs" := (proph_dep vπ ξs) (at level 70, format "vπ  ./  ξs"
 
 Global Instance proph_dep_proper {A} :
   Proper (pointwise_relation _ (=) ==> (=) ==> (↔)) (@proph_dep A).
-Proof.
-  move=> ?? Eq ?? ->. do 2 apply forall_proper =>?. by rewrite Eq.
-Qed.
+Proof. move=> ?? Eq ?? ->. do 2 apply forall_proper =>?. by rewrite Eq. Qed.
 
 (** ** Lemmas *)
 

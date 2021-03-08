@@ -1,6 +1,6 @@
 From iris.algebra Require Import cmra auth functions.
 
-(** Additional Notations and Lemmas for Discrete Functions *)
+(** Utility for discrete_fun *)
 
 Notation ".<[ x := a ]>" := (discrete_fun_insert x a)
   (at level 5, format ".<[ x  :=  a ]>").

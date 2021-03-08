@@ -5,7 +5,8 @@
 # (https://github.com/coq/coq/issues/6294).
 -arg -w -arg -redundant-canonical-projection
 
-theories/prophecy/functions.v
+theories/util/point_free.v
+theories/util/discrete_fun.v
 theories/prophecy/prophecy.v
 theories/lifetime/model/definitions.v
 theories/lifetime/model/faking.v
