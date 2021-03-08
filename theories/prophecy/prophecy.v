@@ -46,6 +46,12 @@ Local Notation "π .≡{ ξs }≡ π'" := (proph_asn_eqv ξs π π')
 Definition proph_dep {A} (vπ: _ → A) ξs := ∀π π', π .≡{ξs}≡ π' → vπ π = vπ π'.
 Notation "vπ ./ ξs" := (proph_dep vπ ξs) (at level 70, format "vπ  ./  ξs").
 
+Global Instance proph_dep_proper {A} ξs :
+  Proper (pointwise_relation _ (=) ==> (↔)) (λ vπ: _ → A, vπ ./ ξs).
+Proof.
+  move=> ?? Eq. do 2 apply forall_proper =>?. by rewrite Eq.
+Qed.
+
 (** ** Lemmas *)
 
 Lemma proph_dep_one ξ : (.$ ξ) ./ [ξ].
