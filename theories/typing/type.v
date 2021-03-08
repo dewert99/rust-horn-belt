@@ -23,7 +23,7 @@ Definition thread_id := na_inv_pool_name.
 Implicit Type d: nat.
 
 Record type `{!typeG Σ} A :=
-  { ty_size: nat; ty_lfts: list lft; ty_E: elctx;
+  { ty_size: nat;  ty_lfts: list lft;  ty_E: elctx;
     ty_own: pval_depth A → thread_id → list val → iProp Σ;
     ty_shr : pval_depth A → lft → thread_id → loc → iProp Σ;
 
@@ -111,6 +111,26 @@ Proof.
   - iIntros "#Incl". iSplit; (iApply lft_incl_trans; [iApply "Incl"|]);
       [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
 Qed.
+
+Inductive Types := Nil_Types: Types | Cons_Types: Type → Types → Types.
+Implicit Type As Bs: Types.
+Notation "^[ ]" := (Nil_Types) (at level 5, format "^[ ]").
+Infix "^::" := (Cons_Types) (at level 60, right associativity).
+Notation "^[ A ; .. ; B ]" := (A ^:: .. (B ^:: ^[]) ..)
+  (at level 5, format "^[ A ;  .. ;  B ]").
+
+Inductive types `{!typeG Σ} : Types → Type :=
+| Nil_types: types ^[]
+| Cons_types {A As} : type A → types As → types (A ^:: As).
+Notation "$[]" := (Nil_types).
+Infix "$::" := (Cons_types) (at level 60, right associativity).
+Notation "$[ ty ; .. ; ty' ]" := (ty $:: .. (ty' $:: $[]) ..)
+  (format "$[ ty ;  .. ;  ty' ]").
+
+Fixpoint ttypes As : Type := match As with
+| ^[] => unit
+| A ^:: As => A * ttypes As
+end.
 
 (*
 Definition tyl_lfts `{!typeG Σ} tyl : list lft := concat (ty_lfts <$> tyl).
@@ -332,7 +352,7 @@ End ofe.
 Ltac solve_ne_type :=
   constructor;
   solve_proper_core ltac:(fun _ => ((eapply ty_size_ne || eapply ty_lfts_ne ||
-                                     eapply ty_E_ne || eapply ty_outlives_E_ne) ;
+                                     eapply ty_E_ne || eapply ty_outlives_E_ne);
                                     try reflexivity) || f_equiv).
 
 (** Type-nonexpansive and Type-contractive functions. *)
@@ -355,7 +375,8 @@ Context `{!typeG Σ}.
 Global Instance type_lft_morphism_compose {A B C} (T: _ B → _ C) (U: _ A → _ B):
   TypeLftMorphism T → TypeLftMorphism U → TypeLftMorphism (T ∘ U).
 Proof.
-  destruct 1 as [αT βsT ET HTα HTE|αT ET HTα HTE], 1 as [αU βsU EU HUα HUE|αU EU HUα HUE].
+  destruct 1 as [αT βsT ET HTα HTE|αT ET HTα HTE],
+           1 as [αU βsU EU HUα HUE|αU EU HUα HUE].
   - apply (type_lft_morphism_add _ (αT ⊓ αU) (βsT ++ βsU)
                                  (ET ++ EU ++ ((λ β, β ⊑ₑ αU) <$> βsT)))=>ty.
     + iApply lft_equiv_trans. iApply HTα. rewrite -assoc.
@@ -368,9 +389,10 @@ Proof.
         [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
       * iIntros "($ & $ & H1 & $ & H2 & $)".
         rewrite /elctx_interp big_sepL_fmap. iCombine "H1 H2" as "H".
-        rewrite -big_sepL_sep. iApply (big_sepL_impl with "H"); iIntros "!# * _ #[??]".
-        by iApply lft_incl_glb.
-  - apply (type_lft_morphism_const _ (αT ⊓ αU) (ET ++ EU ++ ((λ β, β ⊑ₑ αU) <$> βsT)))=>ty.
+        rewrite -big_sepL_sep. iApply (big_sepL_impl with "H").
+        iIntros "!# * _ #[??]". by iApply lft_incl_glb.
+  - apply (type_lft_morphism_const _ (αT ⊓ αU)
+            (ET ++ EU ++ ((λ β, β ⊑ₑ αU) <$> βsT)))=>ty.
     + iApply lft_equiv_trans. iApply HTα.
       iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|iApply HUα].
     + rewrite HTE HUE !elctx_interp_app /elctx_interp big_sepL_fmap.
@@ -665,7 +687,7 @@ Section type.
     revert l; induction n; intros l.
     - simpl. set_solver+.
     - rewrite -Nat.add_1_l Nat2Z.inj_add /=.
-      apply disjoint_union_l. split; last (rewrite -shift_loc_assoc; exact: IHn).
+      apply disjoint_union_l. split; [|rewrite -shift_loc_assoc; exact: IHn].
       clear IHn. revert n; induction m; intros n; simpl; first set_solver+.
       rewrite shift_loc_assoc. apply disjoint_union_r. split.
       + apply ndot_ne_disjoint. destruct l. intros [=]. lia.
@@ -704,9 +726,10 @@ Section type.
   Global Program Instance ty_of_st_copy {A} (st: _ A) : Copy (ty_of_st st).
   Next Obligation.
     move=> *. iIntros "#LFT #Hshr Htok Hlft /=".
-    iDestruct (na_own_acc with "Htok") as "[$ Htok]"; first solve_ndisj.
+    iDestruct (na_own_acc with "Htok") as "[$ Htok]"; [solve_ndisj|].
     iDestruct "Hshr" as (vl) "[Hf Hown]".
-    iMod (frac_bor_acc with "LFT Hf Hlft") as (q') "[>Hmt Hclose]"; first solve_ndisj.
+    iMod (frac_bor_acc with "LFT Hf Hlft") as (q') "[>Hmt Hclose]";
+      [solve_ndisj|].
     iModIntro. iExists _, _. iFrame "Hmt Hown". iIntros "Htok2".
     iDestruct ("Htok" with "Htok2") as "$". iIntros "Hmt". by iApply "Hclose".
   Qed.
