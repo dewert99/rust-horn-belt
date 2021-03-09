@@ -443,26 +443,15 @@ Class TypeNonExpansive `{!typeG Σ} {A B} (T : type A -> type B): Prop := {
       (T ty1).(ty_shr) vπd κ tid l ≡{n}≡ (T ty2).(ty_shr) vπd κ tid l);
 }.
 
-(*
-Class TypeNonExpansiveList `{!typeG Σ} (T : list type → type): Prop := {
-  type_list_non_expansive_ne (Tl : list (type → type)) :
-    Forall TypeNonExpansive Tl →
-    TypeNonExpansive (λ ty, T ((λ T, T ty) <$> Tl));
-  type_list_non_expansive_cont (Tl : list (type → type)) :
-    Forall TypeContractive Tl →
-    TypeContractive (λ ty, T ((λ T, T ty) <$> Tl))
-}.
+Class TypeListNonExpansive `{!typeG Σ} {A Bs} (T: type A → hlist type Bs) : Prop
+:= type_list_non_expansive: ∃Tl,
+    (∀ty, T ty = (λ B (T': type A → type B), T' ty) +<$>+ Tl) ∧
+    HForall (λ _, TypeNonExpansive) Tl.
 
-Class TypeListNonExpansive `{!typeG Σ} (T : type → list type): Prop :=
-  type_list_non_expansive : ∃ Tl,
-    (∀ty, T ty = (λ T, T ty) <$> Tl) ∧
-    Forall TypeNonExpansive Tl.
-
-Class TypeListContractive `{!typeG Σ} (T : type → list type): Prop :=
-  type_list_contractive : ∃ Tl,
-    (∀ty, T ty = (λ T, T ty) <$> Tl) ∧
-    Forall TypeContractive Tl.
-*)
+Class TypeListContractive `{!typeG Σ} {A Bs} (T: type A → hlist type Bs) : Prop
+:= type_list_contractive: ∃Tl,
+    (∀ty, T ty = (λ B (T': type A → type B), T' ty) +<$>+ Tl) ∧
+    HForall (λ _, TypeContractive) Tl.
 
 Section type_contractive.
   Context `{!typeG Σ}.
@@ -547,30 +536,30 @@ Section type_contractive.
     - intros. by rewrite /elctx_interp /= left_id right_id.
   Qed.
 
-  Global Instance type_list_non_expansive_nil :
-    TypeListNonExpansive (λ _, []).
-  Proof. exists []. auto. Qed.
+  Global Instance type_list_non_expansive_nil {A} :
+    TypeListNonExpansive (λ (_: _ A), +[]).
+  Proof. exists +[]. split; by [|constructor]. Qed.
 
-  Global Instance type_list_contractive_nil :
-    TypeListContractive (λ _, []).
-  Proof. exists []. auto. Qed.
+  Global Instance type_list_contractive_nil {A} :
+    TypeListContractive (λ (_: _ A), +[]).
+  Proof. exists +[]. split; by [|constructor]. Qed.
 
-  Global Instance type_list_non_expansive_cons T Tl :
+  Global Instance type_list_non_expansive_cons {A B Bs}
+    (T: _ A → _ B) (Tl: _ A → _ Bs) :
     TypeNonExpansive T → TypeListNonExpansive Tl →
-    TypeListNonExpansive (λ ty, T ty :: Tl ty).
+    TypeListNonExpansive (λ ty, T ty +:: Tl ty).
   Proof.
-    intros ? [Tl' [EQ HTl']]. exists (T :: Tl'). split.
-    - intros. by rewrite EQ.
-    - by constructor.
+    move=> ? [Tl' [Eq ?]]. exists (T +:: Tl'). split; [|by constructor] => ?.
+    by rewrite Eq.
   Qed.
 
-  Global Instance type_list_contractive_cons T Tl :
+  Global Instance type_list_contractive_cons {A B Bs}
+    (T: _ A → _ B) (Tl: _ A → _ Bs) :
     TypeContractive T → TypeListContractive Tl →
-    TypeListContractive (λ ty, T ty :: Tl ty).
+    TypeListContractive (λ ty, T ty +:: Tl ty).
   Proof.
-    intros ? [Tl' [EQ HTl']]. exists (T :: Tl'). split.
-    - intros. by rewrite EQ.
-    - by constructor.
+    move=> ? [Tl' [Eq ?]]. exists (T +:: Tl'). split; [|by constructor] => ?.
+    by rewrite Eq.
   Qed.
 
 End type_contractive.

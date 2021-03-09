@@ -36,9 +36,13 @@ Fixpoint happ {F As Bs} (xl: hlist F As) (yl: hlist F Bs)
   match xl with +[] => yl | x +:: xl' => x +:: happ xl' yl end.
 Infix "+++" := (happ) (at level 60, right associativity).
 
-Fixpoint hmap {F As B} (f: ∀A, F A → B) (xl: hlist F As) : list B :=
+Fixpoint hmap {F B As} (f: ∀A, F A → B) (xl: hlist F As) : list B :=
   match xl with +[] => [] | x +:: xl' => f _ x :: hmap f xl' end.
 Infix "+<$>" := (hmap) (at level 61, left associativity).
+
+Fixpoint hhmap {F G As} (f: ∀A, F A → G A) (xl: hlist F As) : hlist G As :=
+  match xl with +[] => +[] | x +:: xl' => f _ x +:: hhmap f xl' end.
+Infix "+<$>+" := (hhmap) (at level 61, left associativity).
 
 Inductive HForall {F} (Φ: ∀A, F A → Prop) : ∀{As: Types}, hlist F As → Prop :=
 | HForall_nil: HForall Φ +[]
