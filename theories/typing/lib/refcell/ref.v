@@ -90,7 +90,7 @@ Section ref.
   Proof.
     iIntros (α1 α2 Hα ty1 ty2 Hty q) "HL".
     iDestruct (Hty with "HL") as "#Hty". iDestruct (Hα with "HL") as "#Hα".
-    iIntros "!# #HE". iDestruct ("Hα" with "HE") as "Hα1α2".
+    iIntros "!> #HE". iDestruct ("Hα" with "HE") as "Hα1α2".
     iDestruct ("Hty" with "HE") as "(%&#Hl&#Ho&#Hs)".
     iSplit; [done|iSplit; [|iSplit; iModIntro]].
     - simpl. by iApply lft_intersect_mono.

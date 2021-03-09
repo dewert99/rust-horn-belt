@@ -23,7 +23,7 @@ Section diverging_static.
     typed_val (diverging_static_loop call_once)
               (fn(∀ α, λ ϝ, ty_outlives_E T static; &shr{α} T, F) → ∅).
   Proof.
-    intros Hf E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros Hf E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x f. simpl_subst.
     iApply type_let; [apply Hf|solve_typing|]. iIntros (call); simpl_subst.
     (* Drop to Iris *)
@@ -50,6 +50,6 @@ Section diverging_static.
       { rewrite /llctx_interp /=. done. }
       iApply (type_cont [] [] (λ _, [])).
       + iIntros (?). simpl_subst. iApply type_jump; solve_typing.
-      + iIntros "!#" (? args). inv_vec args. simpl_subst. iApply type_jump; solve_typing.
+      + iIntros "!>" (? args). inv_vec args. simpl_subst. iApply type_jump; solve_typing.
   Qed.
 End diverging_static.

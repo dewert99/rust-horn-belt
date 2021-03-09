@@ -99,7 +99,7 @@ Section lft_contexts.
   Proof. done. Qed.
 
   Lemma lctx_lft_incl_relf κ : lctx_lft_incl κ κ.
-  Proof. iIntros (qL) "_ !# _". iApply lft_incl_refl. Qed.
+  Proof. iIntros (qL) "_ !> _". iApply lft_incl_refl. Qed.
 
   Global Instance lctx_lft_incl_preorder : PreOrder lctx_lft_incl.
   Proof.
@@ -107,7 +107,7 @@ Section lft_contexts.
     iIntros (??? H1 H2 ?) "HL".
     iDestruct (H1 with "HL") as "#H1".
     iDestruct (H2 with "HL") as "#H2".
-    iClear "∗". iIntros "!# #HE". iApply lft_incl_trans.
+    iClear "∗". iIntros "!> #HE". iApply lft_incl_trans.
     by iApply "H1". by iApply "H2".
   Qed.
 
@@ -124,7 +124,7 @@ Section lft_contexts.
   Qed.
 
   Lemma lctx_lft_incl_static κ : lctx_lft_incl κ static.
-  Proof. iIntros (qL) "_ !# _". iApply lft_incl_static. Qed.
+  Proof. iIntros (qL) "_ !> _". iApply lft_incl_static. Qed.
 
   Lemma lctx_lft_incl_local κ κ' κs :
     κ ⊑ₗ κs ∈ L → κ' ∈ κs → lctx_lft_incl κ κ'.
@@ -132,7 +132,7 @@ Section lft_contexts.
     iIntros (? Hκ'κs qL) "H".
     iDestruct (big_sepL_elem_of with "H") as "H"; first done.
     iDestruct "H" as (κ'') "[EQ _]". iDestruct "EQ" as %EQ.
-    simpl in EQ; subst. iIntros "!# #HE".
+    simpl in EQ; subst. iIntros "!> #HE".
     iApply lft_incl_trans; first iApply lft_intersect_incl_l.
     by iApply lft_intersect_list_elem_of_incl.
   Qed.
@@ -143,7 +143,7 @@ Section lft_contexts.
 
   Lemma lctx_lft_incl_external κ κ' : κ ⊑ₑ κ' ∈ E → lctx_lft_incl κ κ'.
   Proof.
-    iIntros (??) "_ !# #HE".
+    iIntros (??) "_ !> #HE".
     rewrite /elctx_interp /elctx_elt_interp big_sepL_elem_of //. done.
   Qed.
 
@@ -158,7 +158,7 @@ Section lft_contexts.
     iIntros (Hκ' Hκ'' ?) "HL".
     iDestruct (Hκ' with "HL") as "#Hκ'".
     iDestruct (Hκ'' with "HL") as "#Hκ''".
-    iIntros "!# #HE". iApply lft_incl_glb. by iApply "Hκ'". by iApply "Hκ''".
+    iIntros "!> #HE". iApply lft_incl_glb. by iApply "Hκ'". by iApply "Hκ''".
   Qed.
 
   Lemma lctx_lft_incl_intersect_l κ κ' κ'' :
@@ -167,7 +167,7 @@ Section lft_contexts.
   Proof.
     iIntros (Hκ' ?) "HL".
     iDestruct (Hκ' with "HL") as "#Hκ'".
-    iIntros "!# #HE". iApply lft_incl_trans.
+    iIntros "!> #HE". iApply lft_incl_trans.
       by iApply lft_intersect_incl_l. by iApply "Hκ'".
   Qed.
 
@@ -177,7 +177,7 @@ Section lft_contexts.
   Proof.
     iIntros (Hκ' ?) "HL".
     iDestruct (Hκ' with "HL") as "#Hκ'".
-    iIntros "!# #HE". iApply lft_incl_trans.
+    iIntros "!> #HE". iApply lft_incl_trans.
       by iApply lft_intersect_incl_r. by iApply "Hκ'".
   Qed.
 
@@ -277,7 +277,7 @@ Section lft_contexts.
     ∀ qL, llctx_interp L qL -∗ □ (elctx_interp E -∗ elctx_interp E').
 
   Lemma elctx_sat_nil : elctx_sat [].
-  Proof. iIntros (?) "_ !# _". by rewrite /elctx_interp /=. Qed.
+  Proof. iIntros (?) "_ !> _". by rewrite /elctx_interp /=. Qed.
 
   Lemma elctx_sat_lft_incl E' κ κ' :
     lctx_lft_incl κ κ' → elctx_sat E' → elctx_sat ((κ ⊑ₑ κ') :: E').
@@ -285,7 +285,7 @@ Section lft_contexts.
     iIntros (Hκκ' HE' qL) "HL".
     iDestruct (Hκκ' with "HL") as "#Hincl".
     iDestruct (HE' with "HL") as "#HE'".
-    iClear "∗". iIntros "!# #HE". iSplit.
+    iClear "∗". iIntros "!> #HE". iSplit.
     - by iApply "Hincl".
     - by iApply "HE'".
   Qed.
@@ -296,13 +296,13 @@ Section lft_contexts.
     iIntros (HE1 HE2 ?) "HL".
     iDestruct (HE1 with "HL") as "#HE1".
     iDestruct (HE2 with "HL") as "#HE2".
-    iClear "∗". iIntros "!# #HE".
+    iClear "∗". iIntros "!> #HE".
     iDestruct ("HE1" with "HE") as "#$".
     iApply ("HE2" with "HE").
   Qed.
 
   Lemma elctx_sat_refl : elctx_sat E.
-  Proof. iIntros (?) "_ !# ?". done. Qed.
+  Proof. iIntros (?) "_ !> ?". done. Qed.
 End lft_contexts.
 
 Arguments lctx_lft_incl {_ _ _} _ _ _ _.
@@ -314,7 +314,7 @@ Arguments lctx_lft_alive_tok {_ _ _ _ _} _ _ _.
 
 Lemma elctx_sat_submseteq `{!invG Σ, !lftG Σ} E E' L :
   E' ⊆+ E → elctx_sat E L E'.
-Proof. iIntros (HE' ?) "_ !# H". by iApply big_sepL_submseteq. Qed.
+Proof. iIntros (HE' ?) "_ !> H". by iApply big_sepL_submseteq. Qed.
 
 Global Hint Resolve
      lctx_lft_incl_relf lctx_lft_incl_static lctx_lft_incl_local'

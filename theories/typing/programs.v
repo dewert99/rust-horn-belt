@@ -268,7 +268,7 @@ Section typing_rules.
     {{{ RET #☠; na_own tid ⊤ ∗ llctx_interp L qL ∗
                  tctx_elt_interp tid (p1 ◁ ty1') ∗ tctx_elt_interp tid (p2 ◁ ty2') }}}.
   Proof.
-    iIntros (<-) "#Hwrt #Hread !#".
+    iIntros (<-) "#Hwrt #Hread !>".
     iIntros (Φ) "(#LFT & #TIME & #HE & Htl & [HL1 HL2] & [Hp1 Hp2]) HΦ".
     wp_bind p1. iApply (wp_hasty with "Hp1"). iIntros (depth1 v1) "Hdepth1 % Hown1".
     wp_bind p2. iApply (wp_hasty with "Hp2"). iIntros (depth2 v2) "Hdepth2 % Hown2".

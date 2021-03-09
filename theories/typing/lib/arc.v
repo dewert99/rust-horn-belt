@@ -37,7 +37,7 @@ Section arc.
     - iDestruct "Hs" as "[?|?]"; last auto. iLeft. iApply "Hincls".
       iApply (ty_shr_mono with "[] [//]").
       iApply lft_intersect_mono; [iApply lft_incl_refl|done].
-    - iIntros "!# Hν". iMod ("Hvs" with "Hν") as "H". iModIntro. iNext.
+    - iIntros "!> Hν". iMod ("Hvs" with "Hν") as "H". iModIntro. iNext.
       iMod "H" as "($ & H & $)". iDestruct "H" as (vl) "[??]". iExists _.
       iFrame. by iApply "Hinclo".
   Qed.
@@ -46,7 +46,7 @@ Section arc.
     arc_persist tid ν γ l ty -∗ arc_persist tid' ν γ l ty.
   Proof.
     iIntros "#($ & ? & Hvs)". rewrite sync_change_tid. iFrame "#".
-    iIntros "!# Hν". iMod ("Hvs" with "Hν") as "H". iModIntro. iNext.
+    iIntros "!> Hν". iMod ("Hvs" with "Hν") as "H". iModIntro. iNext.
     iMod "H" as "($ & H & $)". iDestruct "H" as (vl) "?". iExists _.
     by rewrite send_change_tid.
   Qed.
@@ -82,7 +82,7 @@ Section arc.
       as (γ q'') "(#? & ? & ?)".
     iExists _, _, _. iFrame "∗#". iCombine "H†" "HPend" as "H".
     iMod (inv_alloc arc_endN _ ([†ν] ∨ _)%I with "[H]") as "#INV";
-      first by iRight; iApply "H". iIntros "!> !# Hν".
+      first by iRight; iApply "H". iIntros "!> !> Hν".
     iMod (inv_acc with "INV") as "[[H†|[$ Hvs]] Hclose]";
       [set_solver|iDestruct (lft_tok_dead with "Hν H†") as ">[]"|].
     rewrite difference_union_distr_l_L difference_diag_L right_id_L
@@ -125,7 +125,7 @@ Section arc.
     set (C := (∃ _ _ _, _ ∗ _ ∗ &at{_,_} _)%I).
     iMod (inv_alloc shrN _ (idx_bor_own 1 i ∨ C)%I
           with "[Hpbown]") as "#Hinv"; first by iLeft.
-    iIntros "!> !#" (F q' ?) "Htok".
+    iIntros "!> !>" (F q' ?) "Htok".
     iMod (inv_acc with "Hinv") as "[INV Hclose1]"; first solve_ndisj.
     iDestruct "INV" as "[>Hbtok|#Hshr]".
     - iAssert (&{κ} _)%I with "[Hbtok]" as "Hb".
@@ -210,7 +210,7 @@ Section arc.
       iDestruct "Hvl" as (γ ν q) "(#Hpersist & Htk & Hν)".
       iRight. iExists _, _, _. iFrame "#∗". by iApply arc_persist_type_incl.
     - iIntros "* #Hshr". iDestruct "Hshr" as (l') "[Hfrac Hshr]". iExists l'.
-      iIntros "{$Hfrac} !# * % Htok". iMod ("Hshr" with "[% //] Htok") as "{Hshr} H".
+      iIntros "{$Hfrac} !> * % Htok". iMod ("Hshr" with "[% //] Htok") as "{Hshr} H".
       iModIntro. iNext. iMod "H" as "[$ H]".
       iDestruct "H" as (γ ν q') "(Hlft & Hpersist & Hna)".
       iExists _, _, _. iFrame. by iApply arc_persist_type_incl.
@@ -220,7 +220,7 @@ Section arc.
     Proper (subtype E L ==> subtype E L) arc.
   Proof.
     iIntros (ty1 ty2 Hsub ?) "HL". iDestruct (Hsub with "HL") as "#Hsub".
-    iIntros "!# #HE". iApply arc_subtype. by iApply "Hsub".
+    iIntros "!> #HE". iApply arc_subtype. by iApply "Hsub".
   Qed.
   Global Instance arc_proper E L :
     Proper (eqtype E L ==> eqtype E L) arc.
@@ -272,7 +272,7 @@ Section arc.
     set (C := (∃ _ _, _ ∗ &at{_,_} _)%I).
     iMod (inv_alloc shrN _ (idx_bor_own 1 i ∨ C)%I
           with "[Hpbown]") as "#Hinv"; first by iLeft.
-    iIntros "!> !# * % Htok".
+    iIntros "!> !> * % Htok".
     iMod (inv_acc with "Hinv") as "[INV Hclose1]"; first solve_ndisj.
     iDestruct "INV" as "[>Hbtok|#Hshr]".
     - iAssert (&{κ} _)%I with "[Hbtok]" as "Hb".
@@ -341,7 +341,7 @@ Section arc.
       iDestruct "Hvl" as (γ ν) "(#Hpersist & Htk)".
       iExists _, _. iFrame "#∗". by iApply arc_persist_type_incl.
     - iIntros "* #Hshr". iDestruct "Hshr" as (l') "[Hfrac Hshr]". iExists l'.
-      iIntros "{$Hfrac} !# * % Htok". iMod ("Hshr" with "[% //] Htok") as "{Hshr} H".
+      iIntros "{$Hfrac} !> * % Htok". iMod ("Hshr" with "[% //] Htok") as "{Hshr} H".
       iModIntro. iNext. iMod "H" as "[$ H]". iDestruct "H" as (γ ν) "[Hpersist Hna]".
       iExists _, _. iFrame. by iApply arc_persist_type_incl.
   Qed.
@@ -350,7 +350,7 @@ Section arc.
     Proper (subtype E L ==> subtype E L) weak.
   Proof.
     iIntros (ty1 ty2 Hsub ?) "HL". iDestruct (Hsub with "HL") as "#Hsub".
-    iIntros "!# #HE". iApply weak_subtype. by iApply "Hsub".
+    iIntros "!> #HE". iApply weak_subtype. by iApply "Hsub".
   Qed.
   Global Instance weak_proper E L :
     Proper (eqtype E L ==> eqtype E L) weak.
@@ -386,7 +386,7 @@ Section arc.
   Lemma arc_new_type ty :
     typed_val (arc_new ty) (fn(∅; ty) → arc ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (_ ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply (type_new (2 + ty.(ty_size))); [solve_typing..|]; iIntros (rcbox); simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (rc); simpl_subst.
@@ -428,7 +428,7 @@ Section arc.
   Lemma weak_new_type ty :
     typed_val (weak_new ty) (fn(∅) → weak ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (_ ϝ ret arg). inv_vec arg. simpl_subst.
     iApply (type_new (2 + ty.(ty_size))); [solve_typing..|]; iIntros (rcbox); simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (rc); simpl_subst.
@@ -453,7 +453,7 @@ Section arc.
             with "Hrcbox↦0 Hrcbox↦1 [-]") as (γ) "[Ha Htok]".
       { rewrite freeable_sz_full_S. iFrame. iExists _. iFrame.
         by rewrite vec_to_list_length. }
-      iExists γ, ν. iFrame. iSplitL; first by auto. iIntros "!>!>!# Hν".
+      iExists γ, ν. iFrame. iSplitL; first by auto. iIntros "!>!>!> Hν".
       iDestruct (lft_tok_dead with "Hν H†") as "[]". }
     iApply type_jump; solve_typing.
   Qed.
@@ -469,7 +469,7 @@ Section arc.
   Lemma arc_deref_type ty :
     typed_val arc_deref (fn(∀ α, ∅; &shr{α}(arc ty)) → &shr{α}ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>rcx. simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (x); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -515,7 +515,7 @@ Section arc.
   Lemma arc_strong_count_type ty :
     typed_val arc_strong_count (fn(∀ α, ∅; &shr{α}(arc ty)) → int).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -532,7 +532,7 @@ Section arc.
     iDestruct "Hproto" as (γ ν q') "#(Hαν & Hpersist & Hrctokb)". iModIntro. wp_let.
     wp_apply (strong_count_spec (P1 ν) (P2 l' ty.(ty_size)) _ _ _ (q.[α])%I
        with "[] [] [$Hα1 $Hα2]"); first by iDestruct "Hpersist" as "[$ _]".
-    { iIntros "!# Hα".
+    { iIntros "!> Hα".
       iMod (at_bor_acc_tok with "LFT Hrctokb Hα") as "[>Htok Hclose1]"; [solve_ndisj..|].
       iExists _. iFrame. iMod fupd_intro_mask' as "Hclose2"; last iModIntro. set_solver.
       iIntros "Htok". iMod "Hclose2" as "_". by iApply "Hclose1". }
@@ -558,7 +558,7 @@ Section arc.
   Lemma arc_weak_count_type ty :
     typed_val arc_weak_count (fn(∀ α, ∅; &shr{α}(arc ty)) → int).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -575,7 +575,7 @@ Section arc.
     iDestruct "Hproto" as (γ ν q') "#(Hαν & Hpersist & Hrctokb)". iModIntro. wp_let.
     wp_apply (weak_count_spec (P1 ν) (P2 l' ty.(ty_size)) _ _ _ (q.[α])%I
        with "[] [] [$Hα1 $Hα2]"); first by iDestruct "Hpersist" as "[$ _]".
-    { iIntros "!# Hα".
+    { iIntros "!> Hα".
       iMod (at_bor_acc_tok with "LFT Hrctokb Hα") as "[>Htok Hclose1]"; [solve_ndisj..|].
       iExists _. iFrame. iMod fupd_intro_mask' as "Hclose2"; last iModIntro. set_solver.
       iIntros "Htok". iMod "Hclose2" as "_". by iApply "Hclose1". }
@@ -603,7 +603,7 @@ Section arc.
   Lemma arc_clone_type ty :
     typed_val arc_clone (fn(∀ α, ∅; &shr{α}(arc ty)) → arc ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -620,7 +620,7 @@ Section arc.
     iDestruct "Hproto" as (γ ν q') "#(Hαν & Hpersist & Hrctokb)". iModIntro. wp_let.
     wp_apply (clone_arc_spec (P1 ν) (P2 l' ty.(ty_size)) _ _ _ (q.[α])%I
        with "[] [] [$Hα1 $Hα2]"); first by iDestruct "Hpersist" as "[$ _]".
-    { iIntros "!# Hα".
+    { iIntros "!> Hα".
       iMod (at_bor_acc_tok with "LFT Hrctokb Hα") as "[>Htok Hclose1]"; [solve_ndisj..|].
       iExists _. iFrame. iMod fupd_intro_mask' as "Hclose2"; last iModIntro. set_solver.
       iIntros "Htok". iMod "Hclose2" as "_". by iApply "Hclose1". }
@@ -647,7 +647,7 @@ Section arc.
   Lemma weak_clone_type ty :
     typed_val weak_clone (fn(∀ α, ∅; &shr{α}(weak ty)) → weak ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -664,7 +664,7 @@ Section arc.
     iDestruct "Hproto" as (γ ν) "#[Hpersist Hrctokb]". iModIntro. wp_let.
     wp_apply (clone_weak_spec (P1 ν) (P2 l' ty.(ty_size)) _ _ _ (q.[α])%I
        with "[] [] [$Hα1 $Hα2]"); first by iDestruct "Hpersist" as "[$ _]".
-    { iIntros "!# Hα".
+    { iIntros "!> Hα".
       iMod (at_bor_acc_tok with "LFT Hrctokb Hα") as "[>$ Hclose1]"; [solve_ndisj..|].
       iMod fupd_intro_mask' as "Hclose2"; last iModIntro. set_solver.
       iIntros "Htok". iMod "Hclose2" as "_". by iApply "Hclose1". }
@@ -691,7 +691,7 @@ Section arc.
   Lemma downgrade_type ty :
     typed_val downgrade (fn(∀ α, ∅; &shr{α}(arc ty)) → weak ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -708,7 +708,7 @@ Section arc.
     iDestruct "Hproto" as (γ ν q') "#(Hαν & Hpersist & Hrctokb)". iModIntro. wp_let.
     wp_apply (downgrade_spec (P1 ν) (P2 l' ty.(ty_size)) _ _ _ (q.[α])%I
               with "[] [] [$Hα1 $Hα2]"); first by iDestruct "Hpersist" as "[$ _]".
-    { iIntros "!# Hα".
+    { iIntros "!> Hα".
       iMod (at_bor_acc_tok with "LFT Hrctokb Hα") as "[>Htok Hclose1]"; [solve_ndisj..|].
       iExists _. iFrame. iMod fupd_intro_mask' as "Hclose2"; last iModIntro. set_solver.
       iIntros "Htok". iMod "Hclose2" as "_". by iApply "Hclose1". }
@@ -738,7 +738,7 @@ Section arc.
   Lemma upgrade_type ty :
     typed_val upgrade (fn(∀ α, ∅; &shr{α}(weak ty)) → option (arc ty)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply (type_new 2); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -755,7 +755,7 @@ Section arc.
     iDestruct "Hproto" as (γ ν) "#[Hpersist Hrctokb]". iModIntro. wp_let.
     wp_apply (upgrade_spec (P1 ν) (P2 l' ty.(ty_size)) _ _ _ (q.[α])%I
               with "[] [] [$Hα1 $Hα2]"); first by iDestruct "Hpersist" as "[$ _]".
-    { iIntros "!# Hα".
+    { iIntros "!> Hα".
       iMod (at_bor_acc_tok with "LFT Hrctokb Hα") as "[>$ Hclose1]"; [solve_ndisj..|].
       iMod fupd_intro_mask' as "Hclose2"; last iModIntro. set_solver.
       iIntros "Htok". iMod "Hclose2" as "_". by iApply "Hclose1". }
@@ -796,7 +796,7 @@ Section arc.
   Lemma arc_drop_type ty :
     typed_val (arc_drop ty) (fn(∅; arc ty) → option ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
     iIntros (_ ϝ ret arg). inv_vec arg=>rcx. simpl_subst.
     iApply (type_new (option ty).(ty_size)); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -810,7 +810,7 @@ Section arc.
         as (?) "(Htok & HL & Hclose)"; [done| |].
       { change (ty_outlives_E (arc ty)) with (ty_outlives_E ty).
         eapply (lctx_lft_alive_incl _ _ ϝ); first solve_typing.
-        iIntros (?) "_ !#". rewrite !elctx_interp_app /=.
+        iIntros (?) "_ !>". rewrite !elctx_interp_app /=.
         iIntros "(_ & _ & [? _] & _ & _)". by iApply elctx_interp_ty_outlives_E. }
       iMod (arc_own_share with "LFT Htok [$]") as "[Htok $]"; first solve_ndisj.
       by iApply ("Hclose" with "Htok"). }
@@ -868,7 +868,7 @@ Section arc.
   Lemma weak_drop_type ty :
     typed_val (weak_drop ty) (fn(∅; weak ty) → unit).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
     iIntros (_ ϝ ret arg). inv_vec arg=>rcx. simpl_subst.
     iApply (type_new 0); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -911,7 +911,7 @@ Section arc.
   Lemma arc_try_unwrap_type ty :
     typed_val (arc_try_unwrap ty) (fn(∅; arc ty) → Σ[ ty; arc ty ]).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
     iIntros (_ ϝ ret arg). inv_vec arg=>rcx. simpl_subst.
     iApply (type_new (Σ[ ty; arc ty ]).(ty_size));
       [solve_typing..|]; iIntros (r); simpl_subst.
@@ -925,7 +925,7 @@ Section arc.
         as (?) "(Htok & HL & Hclose)"; [done| |].
       { change (ty_outlives_E (arc ty)) with (ty_outlives_E ty).
         eapply (lctx_lft_alive_incl _ _ ϝ); first solve_typing.
-        iIntros (?) "_ !#". rewrite !elctx_interp_app /=.
+        iIntros (?) "_ !>". rewrite !elctx_interp_app /=.
         iIntros "(_ & _ & [?_] & _ & _)". by iApply elctx_interp_ty_outlives_E. }
       iMod (arc_own_share with "LFT Htok [$]") as "[Htok $]"; first solve_ndisj.
       by iApply ("Hclose" with "Htok"). }
@@ -994,7 +994,7 @@ Section arc.
   Lemma arc_get_mut_type ty :
     typed_val arc_get_mut (fn(∀ α, ∅; &uniq{α}(arc ty)) → option (&uniq{α}ty)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
     iIntros (α ϝ ret arg). inv_vec arg=>rcx. simpl_subst.
     iApply (type_new 2); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -1087,7 +1087,7 @@ Section arc.
     typed_val (arc_make_mut ty clone) (fn(∀ α, ∅; &uniq{α}(arc ty)) → &uniq{α} ty).
   Proof.
     intros Hclone E L. iApply type_fn; [solve_typing..|]. rewrite [(2 + ty_size ty)%nat]lock.
-    iIntros "/= !#". iIntros (α ϝ ret arg). inv_vec arg=>rcx. simpl_subst.
+    iIntros "/= !>". iIntros (α ϝ ret arg). inv_vec arg=>rcx. simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
     iIntros (tid) "#LFT #HE Hna HL Hk [Hrcx [Hrc' [Hr _]]]".

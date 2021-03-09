@@ -12,7 +12,7 @@ Section fake_shared.
     typed_val fake_shared_box
       (fn(∀ '(α, β), ∅; &shr{α}(&shr{β} ty)) → &shr{α}(box ty)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros ([α β] ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iIntros (tid) "#LFT #TIME #HE Hna HL Hk HT".
     rewrite tctx_interp_singleton tctx_hasty_val.
@@ -23,7 +23,7 @@ Section fake_shared.
       iNext. iDestruct "H" as ([|[[]|][]]) "[H↦ H]"; try done.
       iExists _. iFrame. iDestruct "H" as (vl) "[#Hf H]".
       iNext. destruct vl as [|[[|l'|]|][]]; try done. iExists l'. iSplit.
-      { iApply frac_bor_iff; last done. iIntros "!>!# *".
+      { iApply frac_bor_iff; last done. iIntros "!>!> *".
         rewrite heap_mapsto_vec_singleton. iSplit; auto. }
       by iApply ty_shr_mono. }
     do 2 wp_seq.
@@ -41,7 +41,7 @@ Section fake_shared.
     typed_val fake_shared_box
       (fn(∀ '(α, β), ∅; &shr{α}(&shr{β} ty)) → &shr{α}(&uniq{β} ty)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros ([α β] ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iIntros (tid) "#LFT #TIME #HE Hna HL Hk HT".
     rewrite tctx_interp_singleton tctx_hasty_val.
@@ -53,7 +53,7 @@ Section fake_shared.
       iNext. iDestruct "H" as ([|[[]|][]]) "[H↦ H]"; try done.
       iExists _. iFrame. iDestruct "H" as (vl) "[#Hf H]".
       iNext. destruct vl as [|[[|l'|]|][]]; try done. iExists l'. iSplit.
-      { iApply frac_bor_iff; last done. iIntros "!>!# *".
+      { iApply frac_bor_iff; last done. iIntros "!>!> *".
         rewrite heap_mapsto_vec_singleton. iSplit; auto. }
       by iApply ty_shr_mono. }
     do 2 wp_seq.

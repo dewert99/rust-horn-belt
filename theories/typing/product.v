@@ -168,7 +168,7 @@ Section product.
   Proof.
     iIntros (ty11 ty12 H1 ty21 ty22 H2). iIntros (qL) "HL".
     iDestruct (H1 with "HL") as "#H1". iDestruct (H2 with "HL") as "#H2".
-    iIntros "!# #HE".
+    iIntros "!> #HE".
     iDestruct ("H1" with "HE") as "(% & #Hout1 & #Ho1 & #Hs1)". iClear (H1) "H1".
     iDestruct ("H2" with "HE") as "(% & #Hout2 & #Ho2 & #Hs2)". iClear (H2) "H2".
     iSplit; first by (iPureIntro; simpl; f_equal). iSplit; [|iSplit; iModIntro].
@@ -282,25 +282,25 @@ Section typing.
 
   Global Instance prod2_assoc E L : Assoc (eqtype E L) product2.
   Proof.
-    intros ???. apply eqtype_unfold. iIntros (?) "_ !# _".
+    intros ???. apply eqtype_unfold. iIntros (?) "_ !> _".
     rewrite /= !(assoc plus) !(assoc app). iSplit; [done|].
     iSplit; [|iSplit].
     - iApply lft_equiv_refl.
-    - iIntros "!# *". iSplit; iIntros "H".
+    - iIntros "!> *". iSplit; iIntros "H".
       + iDestruct "H" as (vl1 vl') "(-> & Ho1 & H)".
         iDestruct "H" as (vl2 vl3) "(-> & Ho2 & Ho3)".
         iExists _, _. iSplit. by rewrite assoc. iFrame. iExists _, _. by iFrame.
       + iDestruct "H" as (vl1 vl') "(-> & H & Ho3)".
         iDestruct "H" as (vl2 vl3) "(-> & Ho1 & Ho2)".
         iExists _, _. iSplit. by rewrite -assoc. iFrame. iExists _, _. by iFrame.
-    - iIntros "!# *". rewrite assoc shift_loc_assoc_nat. by iApply (bi.iff_refl True%I).
+    - iIntros "!> *". rewrite assoc shift_loc_assoc_nat. by iApply (bi.iff_refl True%I).
   Qed.
 
   Global Instance prod2_unit_leftid E L : LeftId (eqtype E L) unit product2.
   Proof.
-    intros ty. apply eqtype_unfold. iIntros (?) "_ !# _ /=".
+    intros ty. apply eqtype_unfold. iIntros (?) "_ !> _ /=".
     setoid_rewrite (left_id True%I bi_sep). setoid_rewrite shift_loc_0.
-    iSplit; [done|iSplit; [|iSplit; iIntros "!# *"; iSplit; iIntros "H //"]].
+    iSplit; [done|iSplit; [|iSplit; iIntros "!> *"; iSplit; iIntros "H //"]].
     - iApply lft_equiv_refl.
     - by iDestruct "H" as (? ?) "(-> & -> & ?)".
     - iExists [], _. eauto.
@@ -308,9 +308,9 @@ Section typing.
 
   Global Instance prod2_unit_rightid E L : RightId (eqtype E L) unit product2.
   Proof.
-    intros ty. apply eqtype_unfold. iIntros (?) "_ !# _ /=".
+    intros ty. apply eqtype_unfold. iIntros (?) "_ !> _ /=".
     setoid_rewrite (right_id True%I bi_sep). rewrite (right_id [] app).
-    iSplit; [done|iSplit; [|iSplit; iIntros "!# *"; iSplit; iIntros "H //"]].
+    iSplit; [done|iSplit; [|iSplit; iIntros "!> *"; iSplit; iIntros "H //"]].
     - iApply lft_equiv_refl.
     - iDestruct "H" as (? ?) "(-> & ? & ->)". by rewrite right_id.
     - iExists _, []. rewrite right_id. eauto.

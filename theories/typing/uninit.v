@@ -44,7 +44,7 @@ Section uninit.
     iIntros (????????) "LFT _ Hvl".
     iApply (ty_share (uninit0 n) with "LFT []"); first done.
     { iInduction n as [|n] "IH"; [|done]. iApply lft_incl_static. }
-    iApply (bor_iff with "[] Hvl"). iIntros "!> !#". setoid_rewrite uninit0_own.
+    iApply (bor_iff with "[] Hvl"). iIntros "!> !>". setoid_rewrite uninit0_own.
     iSplit; iIntros; done.
   Qed.
   Next Obligation. intros. by apply ty_shr_mono. Qed.
@@ -71,7 +71,7 @@ Section uninit.
   Lemma uninit_uninit0_eqtype E L n :
     eqtype E L (uninit0 n) (uninit n).
   Proof.
-    apply eqtype_unfold. iIntros (qL) "_ !# _".
+    apply eqtype_unfold. iIntros (qL) "_ !> _".
     iSplit; [|iSplit; [|iSplit; iModIntro]].
     - auto using uninit0_sz.
     - induction n as [|n IH]=>//. iApply lft_equiv_refl.

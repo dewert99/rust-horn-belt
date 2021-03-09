@@ -22,7 +22,7 @@ Section shr_bor.
   Proof.
     iIntros "#Hκ [_ [#Hlft [_ #Hty]]]". iApply type_incl_simple_type=>/=.
     - by iApply lft_intersect_mono.
-    - iIntros "!#" (tid [|[[]|][]]) "H"=>//=. iApply "Hty".
+    - iIntros "!>" (tid [|[[]|][]]) "H"=>//=. iApply "Hty".
       iApply (ty1.(ty_shr_mono) with "Hκ"). done.
   Qed.
 
@@ -31,7 +31,7 @@ Section shr_bor.
   Proof.
     intros κ1 κ2 Hκ ty1 ty2 Hty.
     iIntros (?) "/= HL". iDestruct (Hκ with "HL") as "#Hincl".
-    iDestruct (Hty with "HL") as "#Hty". iIntros "!# #HE".
+    iDestruct (Hty with "HL") as "#Hty". iIntros "!> #HE".
     iApply shr_type_incl.
     - by iApply "Hincl".
     - by iApply "Hty".
@@ -90,7 +90,7 @@ Section typing.
   Lemma read_shr E L κ ty :
     Copy ty → lctx_lft_alive E L κ → ⊢ typed_read E L (&shr{κ}ty) ty (&shr{κ}ty).
   Proof.
-    rewrite typed_read_eq. iIntros (Hcopy Halive) "!#".
+    rewrite typed_read_eq. iIntros (Hcopy Halive) "!>".
     iIntros ([[]|] depth tid F qL ?) "#LFT #HE Htl HL #Hshr"; try done.
     iMod (Halive with "HE HL") as (q) "[Hκ Hclose]"; first solve_ndisj.
     iMod (copy_shr_acc with "LFT Hshr Htl Hκ")

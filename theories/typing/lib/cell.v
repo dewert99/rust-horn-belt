@@ -46,9 +46,9 @@ Section cell.
   Global Instance cell_mono E L : Proper (eqtype E L ==> subtype E L) cell.
   Proof.
     move=>?? /eqtype_unfold EQ. iIntros (?) "HL".
-    iDestruct (EQ with "HL") as "#EQ". iIntros "!# #HE".
+    iDestruct (EQ with "HL") as "#EQ". iIntros "!> #HE".
     iDestruct ("EQ" with "HE") as "(% & #[Hout1 Hout2] & #Hown & #Hshr)".
-    iSplit; [done|iSplit; [done|iSplit; iIntros "!# * H"]].
+    iSplit; [done|iSplit; [done|iSplit; iIntros "!> * H"]].
     - iDestruct "H" as (depth') "[? H]". iExists _. iFrame. iApply ("Hown" with "H").
     - iApply na_bor_iff; last done. iNext; iModIntro; iSplit; iIntros "H";
       iDestruct "H" as (depth) "[? H]"; iExists depth; iFrame;
@@ -103,7 +103,7 @@ Section typing.
 
   Lemma cell_new_type ty : typed_val cell_new (fn(∅; ty) → cell ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (_ ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply type_jump; [solve_typing..|].
     iIntros (??) "#LFT _ $ Hty".
@@ -121,7 +121,7 @@ Section typing.
   Lemma cell_into_inner_type ty :
     typed_val cell_into_inner (fn(∅; cell ty) → ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (_ ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iIntros (tid) "#LFT #TIME #HE Hna HL HC HT".
     rewrite !tctx_interp_singleton /= !tctx_hasty_val.
@@ -140,7 +140,7 @@ Section typing.
   Lemma cell_get_mut_type ty :
     typed_val cell_get_mut (fn(∀ α, ∅; &uniq{α} (cell ty)) → &uniq{α} ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iIntros (tid) "#LFT #TIME #HE Hna HL HC HT".
     rewrite !tctx_interp_singleton /= !tctx_hasty_val.
@@ -179,7 +179,7 @@ Section typing.
   Lemma cell_from_mut_type ty :
     typed_val cell_from_mut (fn(∀ α, ∅; &uniq{α} ty) → &uniq{α} (cell ty)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iIntros (tid) "#LFT #TIME #HE Hna HL HC HT".
     rewrite !tctx_interp_singleton /= !tctx_hasty_val.
@@ -217,7 +217,7 @@ Section typing.
   Lemma cell_into_box_type ty :
     typed_val cell_into_box (fn(∅;box (cell ty)) → box ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros ([] ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iIntros (tid) "#LFT #TIME #HE Hna HL HC HT".
     rewrite !tctx_interp_singleton /= !tctx_hasty_val.
@@ -243,7 +243,7 @@ Section typing.
   Lemma cell_from_box_type ty :
     typed_val cell_from_box (fn(∅; box ty) → box (cell ty)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply type_jump; [solve_typing..|].
     iIntros (??) "#LFT _ $ Hty". rewrite !tctx_interp_singleton /= !tctx_hasty_val.
@@ -271,7 +271,7 @@ Section typing.
   Lemma cell_get_type ty `(!Copy ty) :
     typed_val (cell_get ty) (fn(∀ α, ∅; &shr{α} (cell ty)) → ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply type_deref; [solve_typing..|]. iIntros (x'). simpl_subst.
     iApply (type_letalloc_n (cell ty)); [solve_typing..|].
@@ -294,7 +294,7 @@ Section typing.
   Lemma cell_replace_type ty :
     typed_val (cell_replace ty) (fn(∀ α, ∅; &shr{α}(cell ty), ty) → ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>c x. simpl_subst.
     iApply type_deref; [solve_typing..|].
     iIntros (c'); simpl_subst.
@@ -356,7 +356,7 @@ Section typing.
   Lemma fake_shared_cell_type ty :
     typed_val fake_shared_cell (fn(∀ α, ∅; &uniq{α} ty) → &shr{α}(cell ty)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply type_let; [apply cell_from_mut_type|solve_typing|]. iIntros (f). simpl_subst.
     iApply type_letcall; [solve_typing..|]. iIntros (r). simpl_subst.

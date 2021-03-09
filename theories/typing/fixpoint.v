@@ -37,7 +37,7 @@ Section S.
     - induction n as [|n IH]=>//. simpl in *.
       rewrite (HE (Tn (S n))) IH !HE !assoc -!persistent_sep_dup -!assoc.
       iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
-      iApply (big_sepL_impl with "H"). iIntros "!# * _". iIntros "#?".
+      iApply (big_sepL_impl with "H"). iIntros "!> * _". iIntros "#?".
       iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const (S n) 0) as "[_ $]".
     - by rewrite !HE.
   Qed.
@@ -163,7 +163,7 @@ Proof.
       apply dist_S, HTn'.
     - intros. destruct n as [|n]; [done|].
       destruct (fixpoint_defs.type_fixpoint_Tn'_dist T n) as [_ _ _ _ HTn']. apply HTn'. }
-  iIntros "_ !# _"; iSplit; [|iSplit; [|iSplit; iIntros "!# *"]].
+  iIntros "_ !> _"; iSplit; [|iSplit; [|iSplit; iIntros "!> *"]].
   - iPureIntro. apply HT.
   - destruct type_contractive_type_lft_morphism as [α βs E' Hα HE'|α E' Hα HE'].
     + iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα]. simpl.

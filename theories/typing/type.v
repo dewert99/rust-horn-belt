@@ -345,13 +345,13 @@ Proof.
     + rewrite HTE HUE !elctx_interp_app big_sepL_app -!assoc.
       setoid_rewrite (lft_incl_equiv_proper_r _ _ _ (HUα _)). iSplit.
       * iIntros "($ & $ & $ & $ & H)". rewrite /elctx_interp big_sepL_fmap.
-        iSplit; iApply (big_sepL_impl with "H"); iIntros "!# * _ #H";
+        iSplit; iApply (big_sepL_impl with "H"); iIntros "!> * _ #H";
         (iApply lft_incl_trans; [done|]);
         [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
       * iIntros "($ & $ & H1 & $ & H2 & $)".
         rewrite /elctx_interp big_sepL_fmap. iCombine "H1 H2" as "H".
         rewrite -big_sepL_sep. iApply (big_sepL_impl with "H").
-        iIntros "!# * _ #[??]". by iApply lft_incl_glb.
+        iIntros "!> * _ #[??]". by iApply lft_incl_glb.
   - apply (type_lft_morphism_const _ (αT ⊓ αU)
             (ET ++ EU ++ ((λ β, β ⊑ₑ αU) <$> βsT)))=>ty.
     + iApply lft_equiv_trans. iApply HTα.
@@ -756,18 +756,18 @@ Section subtyping.
     iSplit; first (iPureIntro; etrans; done).
     iSplit; [|iSplit].
     - iApply lft_incl_trans. iApply "Hl23". iApply "Hl12".
-    - iIntros "!# %%% ?". iApply "Ho23". iApply "Ho12". done.
-    - iIntros "!# %%%% ?". iApply "Hs23". iApply "Hs12". done.
+    - iIntros "!> %%% ?". iApply "Ho23". iApply "Ho12". done.
+    - iIntros "!> %%%% ?". iApply "Hs23". iApply "Hs12". done.
   Qed.
 
   Lemma subtype_refl {A} E L (ty: _ A) : subtype E L ty ty.
-  Proof. iIntros (?) "_ !# _". iApply type_incl_refl. Qed.
+  Proof. iIntros (?) "_ !> _". iApply type_incl_refl. Qed.
   Global Instance subtype_preorder {A} E L : PreOrder (@subtype _ _ A E L).
   Proof.
     split; first by intros ?; apply subtype_refl.
     intros ty1 ty2 ty3 H12 H23. iIntros (?) "HL".
     iDestruct (H12 with "HL") as "#H12". iDestruct (H23 with "HL") as "#H23".
-    iIntros "!# #HE". iDestruct ("H12" with "HE") as "H12'".
+    iIntros "!> #HE". iDestruct ("H12" with "HE") as "H12'".
     iDestruct ("H23" with "HE") as "H23'". by iApply type_incl_trans.
   Qed.
 
@@ -784,17 +784,17 @@ Section subtyping.
       move:Htyl => /Forall2_Forall /Forall_forall=>Htyl.
       iDestruct (Htyl (ty1, ty2) with "HL") as "H"; [|done].
       exact: elem_of_list_lookup_2. }
-    iIntros "!# #HE". iApply (big_sepL_impl with "[$Htyl]").
-    iIntros "!# * % #Hincl". by iApply "Hincl".
+    iIntros "!> #HE". iApply (big_sepL_impl with "[$Htyl]").
+    iIntros "!> * % #Hincl". by iApply "Hincl".
   Qed.
 *)
 
   Lemma equiv_subtype {A} E L (ty1 ty2: _ A) : ty1 ≡ ty2 → subtype E L ty1 ty2.
   Proof.
-    unfold subtype, type_incl=>EQ qL. iIntros "_ !# _".
+    unfold subtype, type_incl=>EQ qL. iIntros "_ !> _".
     iSplit; [by iPureIntro; apply EQ|].
     iSplit; [by rewrite EQ; iApply lft_incl_refl|].
-    iSplit; iIntros "!# *"; rewrite EQ; iIntros "$".
+    iSplit; iIntros "!> *"; rewrite EQ; iIntros "$".
   Qed.
 
   Lemma eqtype_unfold {A} E L (ty1 ty2: _ A) :
@@ -808,18 +808,18 @@ Section subtyping.
     split.
     - iIntros ([EQ1 EQ2] qL) "HL".
       iDestruct (EQ1 with "HL") as "#EQ1". iDestruct (EQ2 with "HL") as "#EQ2".
-      iIntros "!# #HE".
+      iIntros "!> #HE".
       iDestruct ("EQ1" with "HE") as "($ & $ & #Ho1 & #Hs1)".
       iDestruct ("EQ2" with "HE") as "(_ & $ & #Ho2 & #Hs2)".
-      iSplit; iIntros "!# *"; iSplit; iIntros "?".
+      iSplit; iIntros "!> *"; iSplit; iIntros "?".
       * by iApply "Ho1".
       * by iApply "Ho2".
       * by iApply "Hs1".
       * by iApply "Hs2".
     - intros EQ. split; iIntros (qL) "HL";
-      iDestruct (EQ with "HL") as "#EQ"; iIntros "!# #HE";
+      iDestruct (EQ with "HL") as "#EQ"; iIntros "!> #HE";
       iDestruct ("EQ" with "HE") as "(% & [??] & #Ho & #Hs)";
-      (iSplit; [done|iSplit; [done|iSplit]]); iIntros "!# * ?".
+      (iSplit; [done|iSplit; [done|iSplit]]); iIntros "!> * ?".
       + by iApply "Ho".
       + by iApply "Hs".
       + by iApply "Ho".
@@ -863,7 +863,7 @@ Section subtyping.
     subtype E L st1 st2.
   Proof.
     intros Hst. iIntros (qL) "HL". iDestruct (Hst with "HL") as "#Hst".
-    iIntros "!# #HE". iDestruct ("Hst" with "HE") as (?) "[??]".
+    iIntros "!> #HE". iDestruct ("Hst" with "HE") as (?) "[??]".
     by iApply type_incl_simple_type.
   Qed.
 
@@ -873,7 +873,7 @@ Section subtyping.
   Proof.
     iIntros (HE12 ? Hsub qL) "HL". iDestruct (Hsub with "[HL]") as "#Hsub".
     { rewrite /llctx_interp. by iApply big_sepL_submseteq. }
-    iClear "∗". iIntros "!# #HE". iApply "Hsub".
+    iClear "∗". iIntros "!> #HE". iApply "Hsub".
     rewrite /elctx_interp. by iApply big_sepL_submseteq.
   Qed.
 End subtyping.

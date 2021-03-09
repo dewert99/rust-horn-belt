@@ -38,7 +38,7 @@ Section weak.
     set (C := (∃ _ _, _ ∗ &na{_,_,_} _)%I).
     iMod (inv_alloc shrN _ (idx_bor_own 1 i ∨ C)%I with "[Hpbown]") as "#Hinv";
       first by iLeft.
-    iIntros "!> !# * % Htok".
+    iIntros "!> !> * % Htok".
     iMod (inv_acc with "Hinv") as "[INV Hclose1]"; first solve_ndisj.
     iDestruct "INV" as "[>Hbtok|#Hshr]".
     - iAssert (&{κ} _)%I with "[Hbtok]" as "Hb".
@@ -110,7 +110,7 @@ Section weak.
       iDestruct "Hvl" as (γ ν) "(#Hpersist & Htok)".
       iExists _, _. iFrame "Htok". by iApply rc_persist_type_incl.
     - iIntros "* #Hshr". iDestruct "Hshr" as (l') "[Hfrac Hshr]". iExists l'.
-      iIntros "{$Hfrac} !# * % Htok". iMod ("Hshr" with "[% //] Htok") as "{Hshr} H".
+      iIntros "{$Hfrac} !> * % Htok". iMod ("Hshr" with "[% //] Htok") as "{Hshr} H".
       iModIntro. iNext. iMod "H" as "[$ H]". iDestruct "H" as (γ ν) "(Hpersist & Hshr)".
       iExists _, _. iFrame "Hshr". by iApply rc_persist_type_incl.
   Qed.
@@ -119,7 +119,7 @@ Section weak.
     Proper (subtype E L ==> subtype E L) weak.
   Proof.
     iIntros (ty1 ty2 Hsub ?) "HL". iDestruct (Hsub with "HL") as "#Hsub".
-    iIntros "!# #HE". iApply weak_subtype. iApply "Hsub"; done.
+    iIntros "!> #HE". iApply weak_subtype. iApply "Hsub"; done.
   Qed.
   Global Instance weak_proper E L :
     Proper (eqtype E L ==> eqtype E L) weak.
@@ -149,7 +149,7 @@ Section code.
   Lemma rc_upgrade_type ty :
     typed_val rc_upgrade (fn(∀ α, ∅; &shr{α}(weak ty)) → option (rc ty)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (α ϝ ret arg). inv_vec arg=>w. simpl_subst.
     iApply (type_new 2); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply (type_cont [] [ϝ ⊑ₗ []]
@@ -258,7 +258,7 @@ Section code.
     typed_val rc_downgrade (fn(∀ α, ∅; &shr{α}(rc ty)) → weak ty).
   Proof.
     (* TODO : this is almost identical to rc_clone *)
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
     iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -321,7 +321,7 @@ Section code.
     typed_val weak_clone (fn(∀ α, ∅; &shr{α}(weak ty)) → weak ty).
   Proof.
     (* TODO : this is almost identical to rc_clone *)
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
     iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (r); simpl_subst.
     iApply type_deref; [solve_typing..|]; iIntros (rc'); simpl_subst.
@@ -397,7 +397,7 @@ Section code.
   Lemma weak_drop_type ty :
     typed_val (weak_drop ty) (fn(∅; weak ty) → unit).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
     iIntros (_ ϝ ret arg). inv_vec arg=>w. simpl_subst.
     iApply (type_cont [] [ϝ ⊑ₗ []] (λ _, [w ◁ box (uninit 1)]));
       [solve_typing..| |]; last first.
@@ -472,7 +472,7 @@ Section code.
   Lemma weak_new_type ty :
     typed_val (weak_new ty) (fn(∅) → weak ty).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !#".
+    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
       iIntros (_ ϝ ret arg). inv_vec arg. simpl_subst.
     iApply (type_new (2 + ty.(ty_size))); [solve_typing..|]; iIntros (rcbox); simpl_subst.
     iApply (type_new 1); [solve_typing..|]; iIntros (w); simpl_subst.

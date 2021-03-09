@@ -153,7 +153,7 @@ Section own.
   Proof.
     intros ty1 ty2 Hincl. iIntros (qL) "HL".
     iDestruct (Hincl with "HL") as "#Hincl".
-    iClear "∗". iIntros "!# #HE".
+    iClear "∗". iIntros "!> #HE".
     iApply own_type_incl; first by auto. iApply "Hincl"; auto.
   Qed.
   Lemma own_mono' E L n1 n2 ty1 ty2 :
@@ -215,7 +215,7 @@ Section box.
   Proof.
     intros ty1 ty2 Hincl. iIntros (qL) "HL".
     iDestruct (Hincl with "HL") as "#Hincl".
-    iClear "∗". iIntros "!# #HE".
+    iClear "∗". iIntros "!> #HE".
     iApply box_type_incl. iApply "Hincl"; auto.
   Qed.
   Lemma box_mono' E L ty1 ty2 :
@@ -282,7 +282,7 @@ Section typing.
   Lemma write_own {E L} ty ty' n :
     ty.(ty_size) = ty'.(ty_size) → ⊢ typed_write E L (own_ptr n ty') ty (own_ptr n ty).
   Proof.
-    rewrite typed_write_eq. iIntros (Hsz) "!#".
+    rewrite typed_write_eq. iIntros (Hsz) "!>".
     iIntros ([[]|] [|depth] tid F qL ?) "_ _ $ Hown"; try done.
     rewrite /= Hsz. iDestruct "Hown" as "[H↦ $]". iDestruct "H↦" as (vl) "[>H↦ Hown]".
     iDestruct (ty_size_eq with "Hown") as "#>%". auto 10 with iFrame.
@@ -291,7 +291,7 @@ Section typing.
   Lemma read_own_copy E L ty n :
     Copy ty → ⊢ typed_read E L (own_ptr n ty) ty (own_ptr n ty).
   Proof.
-    rewrite typed_read_eq. iIntros (Hsz) "!#".
+    rewrite typed_read_eq. iIntros (Hsz) "!>".
     iIntros ([[]|] [|depth] tid F qL ?) "_ _ $ $ Hown"; try done.
     iDestruct "Hown" as "[H↦ H†]". iDestruct "H↦" as (vl) "[>H↦ Hown]".
     iDestruct (ty_own_depth_mono _ _ (S depth) with "Hown") as "#?"; [lia|].

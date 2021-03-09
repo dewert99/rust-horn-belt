@@ -78,7 +78,7 @@ Section uniq_bor.
   Proof.
     intros κ1 κ2 Hκ ty1 ty2. rewrite eqtype_unfold=>Hty. iIntros (?) "HL".
     iDestruct (Hty with "HL") as "#Hty". iDestruct (Hκ with "HL") as "#Hκ".
-    iIntros "!# #HE". iSplit; first done.
+    iIntros "!> #HE". iSplit; first done.
     iDestruct ("Hty" with "HE") as "(_ & #[Hout1 Hout2] & #Ho & #Hs)";
       [done..|clear Hty].
     iSpecialize ("Hκ" with "HE"). iSplit; [|iSplit; iModIntro].
@@ -204,7 +204,7 @@ Section typing.
   Lemma read_uniq E L κ ty :
     Copy ty → lctx_lft_alive E L κ → ⊢ typed_read E L (&uniq{κ}ty) ty (&uniq{κ}ty).
   Proof.
-    rewrite typed_read_eq. iIntros (Hcopy Halive) "!#".
+    rewrite typed_read_eq. iIntros (Hcopy Halive) "!>".
     iIntros ([[]|] [|depth1] tid F qL ?) "#LFT #HE Htl HL [Hout Hown] //".
     iDestruct "Hown" as (depth2 γ) "(% & H◯ & Hown)".
     iMod (Halive with "HE HL") as (q) "[Hκ Hclose]"; first solve_ndisj.
@@ -223,7 +223,7 @@ Section typing.
   Lemma write_uniq E L κ ty :
     lctx_lft_alive E L κ → ⊢ typed_write E L (&uniq{κ}ty) ty (&uniq{κ}ty).
   Proof.
-    rewrite typed_write_eq. iIntros (Halive) "!#".
+    rewrite typed_write_eq. iIntros (Halive) "!>".
     iIntros ([[]|] [|depth1] tid F qL ?) "#LFT HE HL [Hout Hown] //".
     iDestruct "Hown" as (depth2 γ) "(% & H◯ & Hown)".
     iMod (Halive with "HE HL") as (q) "[Htok Hclose]"; first solve_ndisj.

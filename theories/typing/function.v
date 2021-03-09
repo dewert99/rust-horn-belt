@@ -179,16 +179,16 @@ Section typing.
       iDestruct (HE with "HL0") as "#HE".
       iDestruct (subtype_Forall2_llctx with "HL0") as "#Htys"; first done.
       iDestruct (Hty with "HL0") as "#Hty".
-      iClear "∗". iIntros "!# #HEE".
+      iClear "∗". iIntros "!> #HEE".
       iSplit; last iSplit.
       - by iApply "HE".
       - by iApply "Htys".
       - by iApply "Hty". }
-    iClear (Hcons) "∗". iIntros "!# #HE0". iSplit.
+    iClear (Hcons) "∗". iIntros "!> #HE0". iSplit.
     - iApply lft_incl_refl.
     - iIntros (_ vl) "Hf". iDestruct "Hf" as (fb kb xb e ?) "[-> [<- #Hf]]".
       iExists fb, kb, xb, e, _. iSplit; [done|]. iSplit; [done|]. iNext.
-      rewrite /typed_body. iIntros (x ϝ k xl) "!# * #LFT #TIME #HE' Htl HL HC HT".
+      rewrite /typed_body. iIntros (x ϝ k xl) "!> * #LFT #TIME #HE' Htl HL HC HT".
       iDestruct ("Hcons" with "[$]") as "#(HE & Htys & Hty)".
       iApply ("Hf" with "LFT TIME HE Htl HL [HC] [HT]").
       + unfold cctx_interp. iIntros (elt) "Helt".
@@ -205,7 +205,7 @@ Section typing.
            -{2}(fst_zip (fp x).(fp_tys) (fp' x).(fp_tys)) ?vec_to_list_length //
            -{2}(snd_zip (fp x).(fp_tys) (fp' x).(fp_tys)) ?vec_to_list_length //
            !zip_with_fmap_r !(zip_with_zip (λ _ _, (_ ∘ _) _ _)) !big_sepL_fmap.
-        iApply (big_sepL_impl with "HT"). iIntros "!#".
+        iApply (big_sepL_impl with "HT"). iIntros "!>".
         iIntros (i [p [ty1' ty2']]) "#Hzip H /=".
         iDestruct "H" as (v depth) "(? & Hdepth & Hown)". iExists v, depth. iFrame.
         rewrite !lookup_zip_with.
@@ -224,7 +224,7 @@ Section typing.
   Lemma fn_subtype_specialize {A B n} (σ : A → B) E0 L0 fp :
     subtype E0 L0 (fn (n:=n) fp) (fn (fp ∘ σ)).
   Proof.
-    apply subtype_simple_type. iIntros (qL) "/= _ !# _". iSplit.
+    apply subtype_simple_type. iIntros (qL) "/= _ !> _". iSplit.
     - iApply lft_incl_refl.
     - iIntros (_ vl) "Hf". iDestruct "Hf" as (fb kb xb e ?) "[-> [<- #Hf]]".
       iExists fb, kb, xb, e, _. iSplit; [done|]. iSplit; [done|].
@@ -410,7 +410,7 @@ Section typing.
     rewrite tctx_interp_singleton. iLöb as "IH". iExists _, 0%nat.
     iSplit; [done|]. iSplit; [by rewrite /= decide_left|].
     iExists fb, _, argsb, e, _. iSplit. done. iSplit. done. iNext.
-    iIntros (x ϝ k args) "!#". iIntros (tid') "_ _ HE Htl HL HC HT'".
+    iIntros (x ϝ k args) "!>". iIntros (tid') "_ _ HE Htl HL HC HT'".
     iApply ("Hbody" with "LFT TIME HE Htl HL HC").
     rewrite tctx_interp_cons tctx_interp_app. iFrame "HT' IH".
     by iApply sendc_change_tid.
@@ -428,7 +428,7 @@ Section typing.
                    (subst_v (BNamed "return" :: argsb) (k ::: args) e)) -∗
     typed_instruction_ty E L T ef (fn fp).
   Proof.
-    iIntros (??) "#He". iApply type_rec; try done. iIntros "!# *".
+    iIntros (??) "#He". iApply type_rec; try done. iIntros "!> *".
     iApply typed_body_mono; last iApply "He"; try done.
     eapply contains_tctx_incl. by constructor.
   Qed.
