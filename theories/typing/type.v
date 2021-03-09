@@ -1,8 +1,9 @@
 From iris.algebra Require Import numbers list.
 From iris.base_logic Require Export na_invariants.
-From lrust.lang Require Export proofmode notation.
+From lrust.util Require Import types.
 From lrust.prophecy Require Export prophecy.
 From lrust.lifetime Require Export frac_borrow.
+From lrust.lang Require Export proofmode notation.
 From lrust.typing Require Export base lft_contexts uniq_cmra.
 Set Default Proof Using "Type".
 
@@ -112,25 +113,22 @@ Proof.
       [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
 Qed.
 
-(*
-Definition tyl_lfts `{!typeG Σ} tyl : list lft := concat (ty_lfts <$> tyl).
-Definition tyl_E `{!typeG Σ} tyl : elctx := concat (ty_E <$> tyl).
-Definition tyl_outlives_E `{!typeG Σ} tyl (κ : lft) : elctx :=
-  concat ((λ ty, ty_outlives_E ty κ) <$> tyl).
+Definition tyl_lfts `{!typeG Σ} {As} (tyl: hlist type As) : list lft :=
+  concat ((λ _, ty_lfts) +<$> tyl).
+Definition tyl_E `{!typeG Σ} {As} (tyl: hlist type As) : elctx :=
+  concat ((λ _, ty_E) +<$> tyl).
+Definition tyl_outlives_E `{!typeG Σ} {As} (tyl: hlist type As) κ : elctx :=
+  concat ((λ _ ty, ty_outlives_E ty κ) +<$> tyl).
 
-Lemma tyl_outlives_E_elctx_sat `{!typeG Σ} E L tyl α β :
-  tyl_outlives_E tyl β ⊆+ E →
-  lctx_lft_incl E L α β →
+Lemma tyl_outlives_E_elctx_sat `{!typeG Σ} {As} E L (tyl: hlist type As) α β :
+  tyl_outlives_E tyl β ⊆+ E → lctx_lft_incl E L α β →
   elctx_sat E L (tyl_outlives_E tyl α).
 Proof.
-  induction tyl as [|?? IH]=>/=.
-  - solve_typing.
-  - intros. apply elctx_sat_app.
-    + eapply ty_outlives_E_elctx_sat; [|done].
-      etrans; [|done]. by apply submseteq_inserts_r.
-    + apply IH; [|done]. etrans; [|done]. by apply submseteq_inserts_l.
+  elim tyl=> [|> IH]; [solve_typing|]=> Outlv Incl. apply elctx_sat_app.
+  - eapply ty_outlives_E_elctx_sat; [|by apply Incl].
+    etrans; [|by apply Outlv]. by apply submseteq_inserts_r.
+  - apply IH; [|done]. etrans; [|by apply Outlv]. by apply submseteq_inserts_l.
 Qed.
-*)
 
 Record simple_type `{!typeG Σ} A :=
   { st_size: nat; st_lfts: list lft; st_E: elctx;
@@ -248,34 +246,29 @@ Section ofe.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_outlives_E_ne {A} n :
     Proper (dist n ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
-  Proof. move=> ?? [_ Eqv _ _ _]. by rewrite /ty_outlives_E Eqv. Qed.
+  Proof. rewrite /ty_outlives_E. by move=> ?? [_ -> _ _ _]. Qed.
   Global Instance ty_outlives_E_proper {A} :
     Proper ((≡) ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
-  Proof. move=> ?? [_ Eqv _ _ _]. by rewrite /ty_outlives_E Eqv. Qed.
-(*
-  Global Instance tyl_E_ne {A} n : Proper (dist n ==> (=)) (@tyl_E _ _ A).
+  Proof. rewrite /ty_outlives_E. by move=> ?? [_ -> _ _ _]. Qed.
+
+  Global Instance hlist_dist_type {As} : Dist (hlist type As)
+    := @hlist_dist (@typeO) _.
+
+  Global Instance tyl_E_ne {As} n : Proper (dist n ==> (=)) (@tyl_E _ _ As).
+  Proof. move=> ??. rewrite /tyl_E. by elim=> [|/= > -> _ ->]. Qed.
+  Global Instance tyl_E_proper {As} : Proper ((≡) ==> (=)) (@tyl_E _ _ As).
+  Proof. move=> ??. rewrite /tyl_E. by elim=> [|/= > -> _ ->]. Qed.
+  Global Instance tyl_outlives_E_ne {As} n :
+    Proper (dist n ==> (=) ==> (=)) (@tyl_outlives_E _ _ As).
   Proof.
-    move=> ?? Eqv. unfold tyl_E.
-    induction Eqv as [|???? Eqv _ IH]=>//=. by rewrite Eqv IH.
-  Qed.
-  Global Instance tyl_E_proper {A} : Proper ((≡) ==> (=)) (@tyl_E _ _ A).
-  Proof.
-    move=> ?? Eqv. unfold tyl_E.
-    induction Eqv as [|???? Eqv _ IH]=>//=. by rewrite Eqv IH.
-  Qed.
-  Global Instance tyl_outlives_E_ne {A} n :
-    Proper (dist n ==> (=) ==> (=)) (@tyl_outlives_E _ _ A).
-  Proof.
-    move=> ?? Eqv ?? ->. unfold tyl_outlives_E.
-    induction Eqv as [|???? Eqv _ IH]=>//=. by rewrite Eqv IH.
+    move=> ?? Eqv ??->. rewrite /tyl_outlives_E. by elim Eqv=> [|/= > -> _ ->].
   Qed.
   Global Instance tyl_outlives_E_proper {A} :
     Proper ((≡) ==> (=) ==> (=)) (@tyl_outlives_E _ _ A).
   Proof.
-    move=> ?? Eqv ?? ->. unfold tyl_outlives_E.
-    induction Eqv as [|???? Eqv _ IH]=>//=. by rewrite Eqv IH.
+    move=> ?? Eqv ??->. rewrite /tyl_outlives_E. by elim Eqv=> [|/= > -> _ ->].
   Qed.
-*)
+
   Global Instance ty_own_ne {A} n:
     Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@ty_own _ _ A).
   Proof. move=> ?? Eqv ??-> ??-> ??->. apply Eqv. Qed.
@@ -921,7 +914,7 @@ Section type_util.
   Qed.
 End type_util.
 
-Global Hint Resolve ty_outlives_E_elctx_sat (* tyl_outlives_E_elctx_sat *)
+Global Hint Resolve ty_outlives_E_elctx_sat tyl_outlives_E_elctx_sat
   : lrust_typing.
 Global Hint Resolve subtype_refl eqtype_refl : lrust_typing.
 Global Hint Opaque subtype eqtype : lrust_typing.

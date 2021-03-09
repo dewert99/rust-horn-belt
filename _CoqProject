@@ -7,6 +7,7 @@
 
 theories/util/point_free.v
 theories/util/discrete_fun.v
+theories/util/types.v
 theories/prophecy/prophecy.v
 theories/lifetime/model/definitions.v
 theories/lifetime/model/faking.v
