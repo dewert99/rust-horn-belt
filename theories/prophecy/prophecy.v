@@ -43,10 +43,6 @@ Local Notation "π .≡{ ξs }≡ π'" := (proph_asn_eqv ξs π π')
 Definition proph_dep {A} (vπ: _ → A) ξs := ∀π π', π .≡{ξs}≡ π' → vπ π = vπ π'.
 Notation "vπ ./ ξs" := (proph_dep vπ ξs) (at level 70, format "vπ  ./  ξs").
 
-Global Instance proph_dep_proper {A} :
-  Proper (pointwise_relation _ (=) ==> (=) ==> (↔)) (@proph_dep A).
-Proof. move=> ?? Eq ?? ->. do 2 apply forall_proper =>?. by rewrite Eq. Qed.
-
 (** ** Lemmas *)
 
 Lemma proph_dep_one ξ : (.$ ξ) ./ [ξ].
@@ -421,13 +417,6 @@ Notation "uπ :== vπ" := (proph_eqz uπ vπ)
 
 Section lemmas.
 Context `{!invG Σ, !prophG Σ}.
-
-Global Instance proph_eqz_proper {A} : Proper (pointwise_relation _ (=) ==>
-  pointwise_relation _ (=) ==> (⊣⊢)) (@proph_eqz _ _ _ A).
-Proof.
-  move=> ?? Eq ?? Eq'. rewrite /proph_eqz. do 5 f_equiv; [by rewrite Eq'|].
-  do 5 f_equiv. by rewrite Eq Eq'.
-Qed.
 
 (** ** Constructing Prophecy Equalizers *)
 
