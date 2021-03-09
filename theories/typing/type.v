@@ -8,12 +8,8 @@ From lrust.typing Require Export base lft_contexts uniq_cmra.
 Set Default Proof Using "Type".
 
 Class typeG Σ := TypeG {
-  type_lrustG:> lrustG Σ;
-  type_prophG:> prophG Σ;
-  type_uniqG:> uniqG Σ;
-  type_lftG:> lftG Σ;
-  type_na_invG:> na_invG Σ;
-  type_frac_borG:> frac_borG Σ;
+  type_lrustG:> lrustG Σ;  type_prophG:> prophG Σ;  type_uniqG:> uniqG Σ;
+  type_lftG:> lftG Σ;  type_na_invG:> na_invG Σ;  type_frac_borG:> frac_borG Σ;
 }.
 
 Definition lrustN := nroot .@ "lrust".
@@ -23,47 +19,47 @@ Definition thread_id := na_inv_pool_name.
 
 Implicit Type d: nat.
 
-Record type `{!typeG Σ} A :=
-  { ty_size: nat;  ty_lfts: list lft;  ty_E: elctx;
-    ty_own: pval_depth A → thread_id → list val → iProp Σ;
-    ty_shr : pval_depth A → lft → thread_id → loc → iProp Σ;
+Record type `{!typeG Σ} A := {
+  ty_size: nat;  ty_lfts: list lft;  ty_E: elctx;
+  ty_own: pval_depth A → thread_id → list val → iProp Σ;
+  ty_shr : pval_depth A → lft → thread_id → loc → iProp Σ;
 
-    ty_shr_persistent vπd κ tid l : Persistent (ty_shr vπd κ tid l);
+  ty_shr_persistent vπd κ tid l : Persistent (ty_shr vπd κ tid l);
 
-    ty_size_eq vπd tid vl : ty_own vπd tid vl -∗ ⌜length vl = ty_size⌝;
-    ty_own_depth_mono d d' vπ tid vl :
-      d ≤ d' → ty_own (vπ,d) tid vl -∗ ty_own (vπ,d') tid vl;
-    ty_shr_depth_mono d d' vπ κ tid l :
-      d ≤ d' → ty_shr (vπ,d) κ tid l -∗ ty_shr (vπ,d') κ tid l;
-    ty_shr_lft_mono κ κ' vπd tid l :
-      κ' ⊑ κ -∗ ty_shr vπd κ tid l -∗ ty_shr vπd κ' tid l;
+  ty_size_eq vπd tid vl : ty_own vπd tid vl -∗ ⌜length vl = ty_size⌝;
+  ty_own_depth_mono d d' vπ tid vl :
+    d ≤ d' → ty_own (vπ,d) tid vl -∗ ty_own (vπ,d') tid vl;
+  ty_shr_depth_mono d d' vπ κ tid l :
+    d ≤ d' → ty_shr (vπ,d) κ tid l -∗ ty_shr (vπ,d') κ tid l;
+  ty_shr_lft_mono κ κ' vπd tid l :
+    κ' ⊑ κ -∗ ty_shr vπd κ tid l -∗ ty_shr vπd κ' tid l;
 
-    (* The mask for starting the sharing does /not/ include the
-       namespace N, for allowing more flexibility for the user of
-       this type (typically for the [own] type). AFAIK, there is no
-       fundamental reason for this.
-       This should not be harmful, since sharing typically creates
-       invariants, which does not need the mask.  Moreover, it is
-       more consistent with thread-local tokens, which we do not
-       give any.
+  (* The mask for starting the sharing does /not/ include the
+      namespace N, for allowing more flexibility for the user of
+      this type (typically for the [own] type). AFAIK, there is no
+      fundamental reason for this.
+      This should not be harmful, since sharing typically creates
+      invariants, which does not need the mask.  Moreover, it is
+      more consistent with thread-local tokens, which we do not
+      give any.
 
-       The lifetime token is needed (a) to make the definition of simple types
-       nicer (they would otherwise require a "∨ □|=>[†κ]"), and (b) so that
-       we can have emp == sum [].
-     *)
-    ty_share E vπ d κ l tid q : ↑lftN ⊆ E → lft_ctx -∗
-      κ ⊑ lft_intersect_list ty_lfts -∗ &{κ} (l ↦∗: ty_own (vπ,d) tid) -∗ q.[κ]
-      ={E}=∗ |={E}▷=>^d |={E}=> ty_shr (vπ,d) κ tid l ∗ q.[κ];
+      The lifetime token is needed (a) to make the definition of simple types
+      nicer (they would otherwise require a "∨ □|=>[†κ]"), and (b) so that
+      we can have emp == sum [].
+    *)
+  ty_share E vπ d κ l tid q : ↑lftN ⊆ E → lft_ctx -∗
+    κ ⊑ lft_intersect_list ty_lfts -∗ &{κ} (l ↦∗: ty_own (vπ,d) tid) -∗ q.[κ]
+    ={E}=∗ |={E}▷=>^d |={E}=> ty_shr (vπ,d) κ tid l ∗ q.[κ];
 
-    ty_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
-      κ ⊑ lft_intersect_list ty_lfts -∗ ty_own (vπ,d) tid vl -∗ q.[κ]
-      ={E}=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗
-        q':+[ξs] ∗ (q':+[ξs] ={E}=∗ ty_own (vπ,d) tid vl ∗ q.[κ]);
-    ty_shr_proph E vπ d κ tid l κ' q : ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
-      κ' ⊑ lft_intersect_list ty_lfts -∗ ty_shr (vπ,d) κ tid l -∗ q.[κ']
-      ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗
-        q':+[ξs] ∗ (q':+[ξs] ={E}=∗ ty_shr (vπ,d) κ tid l ∗ q.[κ']);
-  }.
+  ty_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
+    κ ⊑ lft_intersect_list ty_lfts -∗ ty_own (vπ,d) tid vl -∗ q.[κ]
+    ={E}=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗
+      q':+[ξs] ∗ (q':+[ξs] ={E}=∗ ty_own (vπ,d) tid vl ∗ q.[κ]);
+  ty_shr_proph E vπ d κ tid l κ' q : ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
+    κ' ⊑ lft_intersect_list ty_lfts -∗ ty_shr (vπ,d) κ tid l -∗ q.[κ']
+    ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗
+      q':+[ξs] ∗ (q':+[ξs] ={E}=∗ ty_shr (vπ,d) κ tid l ∗ q.[κ']);
+}.
 Existing Instance ty_shr_persistent.
 
 Instance: Params (@ty_size) 2 := {}.
@@ -130,17 +126,18 @@ Proof.
   - apply IH; [|done]. etrans; [|by apply Outlv]. by apply submseteq_inserts_l.
 Qed.
 
-Record simple_type `{!typeG Σ} A :=
-  { st_size: nat; st_lfts: list lft; st_E: elctx;
-    st_own: pval_depth A → thread_id → list val → iProp Σ;
-    st_size_eq vπd tid vl : st_own vπd tid vl -∗ ⌜length vl = st_size⌝;
-    st_own_persistent vπd tid vl : Persistent (st_own vπd tid vl);
-    st_own_depth_mono d d' vπ tid vl :
-      d ≤ d' → st_own (vπ,d) tid vl -∗ st_own (vπ,d') tid vl;
-    st_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
-      κ ⊑ lft_intersect_list st_lfts -∗ st_own (vπ,d) tid vl -∗ q.[κ]
-      ={E}=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗
-        q':+[ξs] ∗ (q':+[ξs] ={E}=∗ st_own (vπ,d) tid vl ∗ q.[κ]); }.
+Record simple_type `{!typeG Σ} A := {
+  st_size: nat;  st_lfts: list lft;  st_E: elctx;
+  st_own: pval_depth A → thread_id → list val → iProp Σ;
+  st_size_eq vπd tid vl : st_own vπd tid vl -∗ ⌜length vl = st_size⌝;
+  st_own_persistent vπd tid vl : Persistent (st_own vπd tid vl);
+  st_own_depth_mono d d' vπ tid vl :
+    d ≤ d' → st_own (vπ,d) tid vl -∗ st_own (vπ,d') tid vl;
+  st_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
+    κ ⊑ lft_intersect_list st_lfts -∗ st_own (vπ,d) tid vl -∗ q.[κ]
+    ={E}=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗
+      q':+[ξs] ∗ (q':+[ξs] ={E}=∗ st_own (vπ,d) tid vl ∗ q.[κ]);
+}.
 Existing Instance st_own_persistent.
 Instance: Params (@st_size) 2 := {}.
 Instance: Params (@st_lfts) 2 := {}.
@@ -196,23 +193,19 @@ Bind Scope lrust_type_scope with type.
 Section ofe.
   Context `{!typeG Σ}.
 
-  Inductive type_equiv' {A} (ty1 ty2: type A) : Prop :=
-    Type_equiv :
-      ty1.(ty_size) = ty2.(ty_size) →
-      ty1.(ty_lfts) = ty2.(ty_lfts) →
-      ty1.(ty_E) = ty2.(ty_E) →
-      (∀vπd tid vs, ty1.(ty_own) vπd tid vs ≡ ty2.(ty_own) vπd tid vs) →
-      (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡ ty2.(ty_shr) vπd κ tid l) →
-      type_equiv' ty1 ty2.
+  Inductive type_equiv' {A} (ty1 ty2: type A) : Prop := Type_equiv :
+    ty1.(ty_size) = ty2.(ty_size) → ty1.(ty_lfts) = ty2.(ty_lfts) →
+    ty1.(ty_E) = ty2.(ty_E) →
+    (∀vπd tid vs, ty1.(ty_own) vπd tid vs ≡ ty2.(ty_own) vπd tid vs) →
+    (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡ ty2.(ty_shr) vπd κ tid l) →
+    type_equiv' ty1 ty2.
   Instance type_equiv {A} : Equiv (type A) := type_equiv'.
-  Inductive type_dist' {A} (n: nat) (ty1 ty2: type A) : Prop :=
-    Type_dist :
-      ty1.(ty_size) = ty2.(ty_size) →
-      ty1.(ty_lfts) = ty2.(ty_lfts) →
-      ty1.(ty_E) = ty2.(ty_E) →
-      (∀vπd tid vs, ty1.(ty_own) vπd tid vs ≡{n}≡ ty2.(ty_own) vπd tid vs) →
-      (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{n}≡ ty2.(ty_shr) vπd κ tid l) →
-      type_dist' n ty1 ty2.
+  Inductive type_dist' {A} (n: nat) (ty1 ty2: type A) : Prop := Type_dist :
+    ty1.(ty_size) = ty2.(ty_size) → ty1.(ty_lfts) = ty2.(ty_lfts) →
+    ty1.(ty_E) = ty2.(ty_E) →
+    (∀vπd tid vs, ty1.(ty_own) vπd tid vs ≡{n}≡ ty2.(ty_own) vπd tid vs) →
+    (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{n}≡ ty2.(ty_shr) vπd κ tid l) →
+    type_dist' n ty1 ty2.
   Instance type_dist {A} : Dist (type A) := type_dist'.
 
   Let T A := prodO (prodO (prodO (prodO
@@ -282,21 +275,17 @@ Section ofe.
     Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) (@ty_shr _ _ A).
   Proof. move=> ?? Eqv ??-> ??-> ??-> ??->. apply Eqv. Qed.
 
-  Inductive st_equiv' {A} (st1 st2: simple_type A) : Prop :=
-    St_equiv :
-      st1.(ty_size) = st2.(ty_size) →
-      st1.(ty_lfts) = st2.(ty_lfts) →
-      st1.(ty_E) = st2.(ty_E) →
-      (∀vπd tid vl, st1.(ty_own) vπd tid vl ≡ st2.(ty_own) vπd tid vl) →
-      st_equiv' st1 st2.
+  Inductive st_equiv' {A} (st1 st2: simple_type A) : Prop := St_equiv :
+    st1.(ty_size) = st2.(ty_size) → st1.(ty_lfts) = st2.(ty_lfts) →
+    st1.(ty_E) = st2.(ty_E) →
+    (∀vπd tid vl, st1.(ty_own) vπd tid vl ≡ st2.(ty_own) vπd tid vl) →
+    st_equiv' st1 st2.
   Instance st_equiv {A} : Equiv (simple_type A) := st_equiv'.
-  Inductive st_dist' {A} (n: nat) (st1 st2: simple_type A) : Prop :=
-    St_dist :
-      st1.(ty_size) = st2.(ty_size) →
-      st1.(ty_lfts) = st2.(ty_lfts) →
-      st1.(ty_E) = st2.(ty_E) →
-      (∀vπd tid vl, st1.(ty_own) vπd tid vl ≡{n}≡ (st2.(ty_own) vπd tid vl)) →
-      st_dist' n st1 st2.
+  Inductive st_dist' {A} (n: nat) (st1 st2: simple_type A) : Prop := St_dist :
+    st1.(ty_size) = st2.(ty_size) → st1.(ty_lfts) = st2.(ty_lfts) →
+    st1.(ty_E) = st2.(ty_E) →
+    (∀vπd tid vl, st1.(ty_own) vπd tid vl ≡{n}≡ (st2.(ty_own) vπd tid vl)) →
+    st_dist' n st1 st2.
   Instance st_dist {A} : Dist (simple_type A) := st_dist'.
 
   Definition st_ofe_mixin {A} : OfeMixin (simple_type A).
@@ -332,9 +321,8 @@ Ltac solve_ne_type :=
 Inductive TypeLftMorphism `{!typeG Σ} {A B} (T : type A → type B) : Prop :=
 | type_lft_morphism_add α βs E :
     (∀ty, ⊢ (T ty).(ty_lft) ≡ₗ α ⊓ ty.(ty_lft)) →
-    (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢
-           elctx_interp E ∗ elctx_interp ty.(ty_E) ∗
-           [∗ list] β ∈ βs, β ⊑ ty.(ty_lft)) →
+    (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢ elctx_interp E ∗
+            elctx_interp ty.(ty_E) ∗ [∗ list] β ∈ βs, β ⊑ ty.(ty_lft)) →
     TypeLftMorphism T
 | type_lft_morphism_const α E :
     (∀ty, ⊢ (T ty).(ty_lft) ≡ₗ α) →
@@ -559,7 +547,6 @@ Section type_contractive.
     - intros. by rewrite /elctx_interp /= left_id right_id.
   Qed.
 
-(*
   Global Instance type_list_non_expansive_nil :
     TypeListNonExpansive (λ _, []).
   Proof. exists []. auto. Qed.
@@ -585,7 +572,7 @@ Section type_contractive.
     - intros. by rewrite EQ.
     - by constructor.
   Qed.
-*)
+
 End type_contractive.
 
 Fixpoint shr_locsE (l: loc) (n: nat) : coPset :=
