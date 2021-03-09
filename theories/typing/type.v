@@ -62,11 +62,11 @@ Record type `{!typeG Σ} A := {
 }.
 Existing Instance ty_shr_persistent.
 
-Instance: Params (@ty_size) 2 := {}.
-Instance: Params (@ty_lfts) 2 := {}.
-Instance: Params (@ty_E) 2 := {}.
-Instance: Params (@ty_own) 2 := {}.
-Instance: Params (@ty_shr) 2 := {}.
+Instance: Params (@ty_size) 3 := {}.
+Instance: Params (@ty_lfts) 3 := {}.
+Instance: Params (@ty_E) 3 := {}.
+Instance: Params (@ty_own) 3 := {}.
+Instance: Params (@ty_shr) 3 := {}.
 
 Arguments ty_size {_ _ _} _ / : simpl nomatch.
 Arguments ty_lfts {_ _ _} _ / : simpl nomatch.
@@ -139,10 +139,10 @@ Record simple_type `{!typeG Σ} A := {
       q':+[ξs] ∗ (q':+[ξs] ={E}=∗ st_own (vπ,d) tid vl ∗ q.[κ]);
 }.
 Existing Instance st_own_persistent.
-Instance: Params (@st_size) 2 := {}.
-Instance: Params (@st_lfts) 2 := {}.
-Instance: Params (@st_E) 2 := {}.
-Instance: Params (@st_own) 2 := {}.
+Instance: Params (@st_size) 3 := {}.
+Instance: Params (@st_lfts) 3 := {}.
+Instance: Params (@st_E) 3 := {}.
+Instance: Params (@st_own) 3 := {}.
 Arguments st_size {_ _ _} _ / : simpl nomatch.
 Arguments st_lfts {_ _ _} _ / : simpl nomatch.
 Arguments st_E {_ _ _} _ / : simpl nomatch.
@@ -581,41 +581,44 @@ Class Copy `{!typeG Σ} {A} (ty: type A) := {
        ={E}=∗ na_own tid F ∗ q.[κ])
 }.
 Existing Instances copy_persistent.
-Instance: Params (@Copy) 2 := {}.
+Instance: Params (@Copy) 3 := {}.
 
-(*
-Class LstCopy `{!typeG Σ} (tys : list type) := lst_copy : Forall Copy tys.
-Instance: Params (@LstCopy) 2 := {}.
-Global Instance lst_copy_nil `{!typeG Σ} : LstCopy [] := List.Forall_nil _.
-Global Instance lst_copy_cons `{!typeG Σ} ty tys :
-  Copy ty → LstCopy tys → LstCopy (ty :: tys) := List.Forall_cons _ _ _.
-*)
+Class ListCopy `{!typeG Σ} {As} (tyl: hlist type As) :=
+  list_copy: HForall (λ _, Copy) tyl.
+Instance: Params (@ListCopy) 3 := {}.
+Global Instance list_copy_nil `{!typeG Σ} : ListCopy +[].
+Proof. constructor. Qed.
+Global Instance list_copy_cons `{!typeG Σ} {A As} (ty: _ A) (tyl: _ As) :
+  Copy ty → ListCopy tyl → ListCopy (ty +:: tyl).
+Proof. by constructor. Qed.
 
 Class Send `{!typeG Σ} {A} (ty: type A) :=
   send_change_tid tid1 tid2 vπd vl :
     ty.(ty_own) vπd tid1 vl -∗ ty.(ty_own) vπd tid2 vl.
-Instance: Params (@Send) 2 := {}.
+Instance: Params (@Send) 3 := {}.
 
-(*
-Class LstSend `{!typeG Σ} (tys : list type) := lst_send : Forall Send tys.
-Instance: Params (@LstSend) 2 := {}.
-Global Instance lst_send_nil `{!typeG Σ} : LstSend [] := List.Forall_nil _.
-Global Instance lst_send_cons `{!typeG Σ} ty tys :
-  Send ty → LstSend tys → LstSend (ty :: tys) := List.Forall_cons _ _ _.
-*)
+Class ListSend `{!typeG Σ} {As} (tyl: hlist type As) :=
+  list_send : HForall (λ _, Send) tyl.
+Instance: Params (@ListSend) 3 := {}.
+Global Instance list_send_nil `{!typeG Σ} : ListSend +[].
+Proof. constructor. Qed.
+Global Instance list_send_cons `{!typeG Σ} {A As} (ty: _ A) (tyl: _ As) :
+  Send ty → ListSend tyl → ListSend (ty +:: tyl).
+Proof. by constructor. Qed.
 
 Class Sync `{!typeG Σ} {A} (ty: type A) :=
   sync_change_tid tid1 tid2 vπd κ l :
     ty.(ty_shr) vπd κ tid1 l -∗ ty.(ty_shr) vπd κ tid2 l.
-Instance: Params (@Sync) 2 := {}.
+Instance: Params (@Sync) 3 := {}.
 
-(*
-Class LstSync `{!typeG Σ} (tys : list type) := lst_sync : Forall Sync tys.
-Instance: Params (@LstSync) 2 := {}.
-Global Instance lst_sync_nil `{!typeG Σ} : LstSync [] := List.Forall_nil _.
-Global Instance lst_sync_cons `{!typeG Σ} ty tys :
-  Sync ty → LstSync tys → LstSync (ty :: tys) := List.Forall_cons _ _ _.
-*)
+Class ListSync `{!typeG Σ} {As} (tyl: hlist type As) :=
+  list_sync : HForall (λ _, Sync) tyl.
+Instance: Params (@ListSync) 3 := {}.
+Global Instance list_sync_nil `{!typeG Σ} : ListSync +[].
+Proof. constructor. Qed.
+Global Instance list_sync_cons `{!typeG Σ} {A As} (ty: _ A) (tyl: _ As) :
+  Sync ty → ListSync tyl → ListSync (ty +:: tyl).
+Proof. by constructor. Qed.
 
 Section type.
   Context `{!typeG Σ}.
@@ -719,16 +722,16 @@ Definition type_incl `{!typeG Σ} {A} (ty1 ty2: type A) : iProp Σ :=
      (ty2.(ty_lft) ⊑ ty1.(ty_lft)) ∗
      (□ ∀vπd tid vl, ty1.(ty_own) vπd tid vl -∗ ty2.(ty_own) vπd tid vl) ∗
      (□ ∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l -∗ ty2.(ty_shr) vπd κ tid l))%I.
-Instance: Params (@type_incl) 2 := {}.
+Instance: Params (@type_incl) 3 := {}.
 
 Definition subtype `{!typeG Σ} {A} E L (ty1 ty2: type A) : Prop :=
   ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗ type_incl ty1 ty2).
-Instance: Params (@subtype) 4 := {}.
+Instance: Params (@subtype) 5 := {}.
 
 (* TODO: The prelude should have a symmetric closure. *)
 Definition eqtype `{!typeG Σ} {A} E L (ty1 ty2: type A) : Prop :=
   subtype E L ty1 ty2 ∧ subtype E L ty2 ty1.
-Instance: Params (@eqtype) 4 := {}.
+Instance: Params (@eqtype) 5 := {}.
 
 Section subtyping.
   Context `{!typeG Σ}.
@@ -769,19 +772,19 @@ Section subtyping.
   Qed.
 
 (*
-  Lemma subtype_Forall2_llctx E L tys1 tys2 qL :
-    Forall2 (subtype E L) tys1 tys2 →
+  Lemma subtype_Forall2_llctx E L tyl1 tyl2 qL :
+    Forall2 (subtype E L) tyl1 tyl2 →
     llctx_interp L qL -∗ □ (elctx_interp E -∗
-           [∗ list] tys ∈ (zip tys1 tys2), type_incl (tys.1) (tys.2)).
+           [∗ list] tyl ∈ (zip tyl1 tyl2), type_incl (tyl.1) (tyl.2)).
   Proof.
-    iIntros (Htys) "HL".
-    iAssert ([∗ list] tys ∈ zip tys1 tys2,
-             □ (elctx_interp E -∗ type_incl (tys.1) (tys.2)))%I as "#Htys".
+    iIntros (Htyl) "HL".
+    iAssert ([∗ list] tyl ∈ zip tyl1 tyl2,
+             □ (elctx_interp E -∗ type_incl (tyl.1) (tyl.2)))%I as "#Htyl".
     { iApply big_sepL_forall. iIntros (k [ty1 ty2] Hlookup).
-      move:Htys => /Forall2_Forall /Forall_forall=>Htys.
-      iDestruct (Htys (ty1, ty2) with "HL") as "H"; [|done].
+      move:Htyl => /Forall2_Forall /Forall_forall=>Htyl.
+      iDestruct (Htyl (ty1, ty2) with "HL") as "H"; [|done].
       exact: elem_of_list_lookup_2. }
-    iIntros "!# #HE". iApply (big_sepL_impl with "[$Htys]").
+    iIntros "!# #HE". iApply (big_sepL_impl with "[$Htyl]").
     iIntros "!# * % #Hincl". by iApply "Hincl".
   Qed.
 *)

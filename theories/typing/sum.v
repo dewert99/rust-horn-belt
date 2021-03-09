@@ -278,7 +278,7 @@ Section sum.
     nth i [] d = d.
   Proof. by destruct i. Qed.
 
-  Global Instance sum_copy tyl : LstCopy tyl → Copy (sum tyl).
+  Global Instance sum_copy tyl : ListCopy tyl → Copy (sum tyl).
   Proof.
     intros HFA. split.
     - intros depth tid vl.
@@ -317,7 +317,7 @@ Section sum.
       iFrame. iExists pad. by iFrame.
   Qed.
 
-  Global Instance sum_send tyl : LstSend tyl → Send (sum tyl).
+  Global Instance sum_send tyl : ListSend tyl → Send (sum tyl).
   Proof.
     iIntros (Hsend depth tid1 tid2 vl) "H".
     iDestruct "H" as (i vl' vl'') "(% & % & Hown)".
@@ -327,7 +327,7 @@ Section sum.
     iIntros (????) "[]".
   Qed.
 
-  Global Instance sum_sync tyl : LstSync tyl → Sync (sum tyl).
+  Global Instance sum_sync tyl : ListSync tyl → Sync (sum tyl).
   Proof.
     iIntros (Hsync κ tid1 tid2 l) "H". iDestruct "H" as (i) "[Hframe Hown]".
     iExists _. iFrame "Hframe". iApply @sync_change_tid; last done.

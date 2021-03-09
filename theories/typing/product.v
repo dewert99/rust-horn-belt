@@ -262,11 +262,11 @@ Section product.
   Lemma product_proper' E L tyl1 tyl2 :
     Forall2 (eqtype E L) tyl1 tyl2 → eqtype E L (product tyl1) (product tyl2).
   Proof. apply product_proper. Qed.
-  Global Instance product_copy tys : LstCopy tys → Copy (product tys).
+  Global Instance product_copy tys : ListCopy tys → Copy (product tys).
   Proof. induction 1; apply _. Qed.
-  Global Instance product_send tys : LstSend tys → Send (product tys).
+  Global Instance product_send tys : ListSend tys → Send (product tys).
   Proof. induction 1; apply _. Qed.
-  Global Instance product_sync tys : LstSync tys → Sync (product tys).
+  Global Instance product_sync tys : ListSync tys → Sync (product tys).
   Proof. induction 1; apply _. Qed.
 
   Definition product_cons ty tyl :
