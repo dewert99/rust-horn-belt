@@ -222,7 +222,7 @@ Notation "q :+[ ξs ]" := (proph_toks ξs q)
 Notation ".⟨ φπ ⟩" := (proph_obs φπ)
   (at level 1, format ".⟨ φπ ⟩") : bi_scope.
 Notation "⟨ π , φ ⟩" := (proph_obs (λ π, φ%type%stdpp))
-  (π name, at level 1, format "⟨ π ,  φ ⟩") : bi_scope.
+  (at level 1, format "⟨ π ,  φ ⟩") : bi_scope.
 
 (** * Iris Lemmas *)
 
@@ -438,7 +438,7 @@ Proof.
 Qed.
 
 Lemma proph_obs_eqz {A} (uπ vπ: _ → A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
-Proof. iIntros "?". iIntros (???) "?". iModIntro. iFrame. Qed.
+Proof. iIntros "?". iIntros (???) "? !>". iFrame. Qed.
 
 Lemma proph_eqz_modify {A} (uπ uπ' vπ: _ → A) :
   ⟨π, uπ' π = uπ π⟩ -∗ uπ :== vπ -∗ uπ' :== vπ.
