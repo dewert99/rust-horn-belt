@@ -1,4 +1,3 @@
-From stdpp Require Import prelude.
 From iris.algebra Require Import monoid ofe.
 From iris.base_logic Require Export iprop.
 
@@ -93,7 +92,7 @@ Context {F: Type → ofe}.
 Global Instance hlist_dist {As} : Dist (hlist F As) :=
   λ n, HForall2 (λ _, dist n).
 Global Instance hcons_ne {A As} : NonExpansive2 (@hcons F A As).
-Proof. move=> ???????. by apply HForall2_cons. Qed.
+Proof. move=> ???????. by constructor. Qed.
 
 End ofe.
 
@@ -110,9 +109,9 @@ Infix "-::" := cons_pair (at level 60, right associativity).
 Notation "-[ a ; .. ; z ]" := (a -:: .. (z -:: -[]) ..)
   (at level 1, format "-[ a ;  .. ;  z ]").
 
-Fixpoint flist F As : Type :=
-  match As with ^[] => :1 | A ^:: As' => F A :* flist F As' end.
-Fixpoint app_flist {F As Bs} (xl: flist F As) (yl: flist F Bs)
-  : flist F (As ^++ Bs) := match As, xl with
-  | ^[], -[] => yl | A ^:: As', x -:: xl' => x -:: app_flist xl' yl end.
-Infix "-++" := app_flist (at level 60, right associativity).
+Fixpoint list_prod F As : Type :=
+  match As with ^[] => :1 | A ^:: As' => F A :* list_prod F As' end.
+Fixpoint papp {F As Bs} (xl: list_prod F As) (yl: list_prod F Bs)
+  : list_prod F (As ^++ Bs) := match As, xl with
+  | ^[], -[] => yl | A ^:: As', x -:: xl' => x -:: papp xl' yl end.
+Infix "-++" := papp (at level 60, right associativity).
