@@ -830,6 +830,8 @@ Instance: Params (@eqtype) 6 := {}.
 Section subtyping.
   Context `{!typeG Σ}.
 
+  (** Subtyping *)
+
   Global Instance type_incl_ne {A B} (f: A → B) : NonExpansive2 (type_incl f).
   Proof.
     rewrite /type_incl.
@@ -867,6 +869,16 @@ Section subtyping.
     iApply (type_incl_trans with "Incl Incl'").
   Qed.
 
+  Lemma subtype_weaken {A B} E1 E2 L1 L2 (f: A → B) ty1 ty2 :
+    E1 ⊆+ E2 → L1 ⊆+ L2 →
+    subtype E1 L1 f ty1 ty2 → subtype E2 L2 f ty1 ty2.
+  Proof.
+    iIntros (HE12 ? Hsub qL) "HL". iDestruct (Hsub with "[HL]") as "#Hsub".
+    { rewrite /llctx_interp. by iApply big_sepL_submseteq. }
+    iClear "∗". iIntros "!> #HE". iApply "Hsub".
+    rewrite /elctx_interp. by iApply big_sepL_submseteq.
+  Qed.
+
 (* This lemma is not supported.
   Lemma subtype_Forall2_llctx E L tys1 tys2 qL :
     Forall2 (subtype E L) tys1 tys2 →
@@ -884,6 +896,8 @@ Section subtyping.
     iIntros "!# * % #Hincl". by iApply "Hincl".
   Qed.
 *)
+
+  (** Type Equivalence *)
 
   Lemma equiv_subtype {A} E L ty1 ty2 : ty1 ≡ ty2 → subtype E L (@id A) ty1 ty2.
   Proof.
@@ -948,8 +962,10 @@ Section subtyping.
     split; eapply subtype_trans; [apply Sub1| | |apply Sub1']; done.
   Qed.
 
+  (** Simple Type *)
+
   Lemma type_incl_simple_type {A B} f (st1: simple_type A) (st2: simple_type B) :
-    st1.(st_size) = st2.(st_size) → st2.(st_lft) ⊑ st1.(st_lft) -∗
+    st1.(st_size) = st2.(st_size) → st2.(ty_lft) ⊑ st1.(ty_lft) -∗
     □ (∀vπ d tid vl,
       st1.(st_own) (vπ, d) tid vl -∗ st2.(st_own) (f ∘ vπ, d) tid vl) -∗
     type_incl f st1 st2.
@@ -961,10 +977,9 @@ Section subtyping.
       iFrame "Hf". by iApply "Ho".
   Qed.
 
-  Lemma subtype_simple_type {A B} E L f
-    (st1: simple_type A) (st2: simple_type B) :
+  Lemma subtype_simple_type {A B} E L f (st1: simple_type A) (st2: simple_type B) :
     (∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ⌜st1.(st_size) = st2.(st_size)⌝ ∗ st2.(st_lft) ⊑ st1.(st_lft) ∗
+      ⌜st1.(st_size) = st2.(st_size)⌝ ∗ st2.(ty_lft) ⊑ st1.(ty_lft) ∗
       (∀vπ d tid vl,
         st1.(st_own) (vπ, d) tid vl -∗ st2.(st_own) (f ∘ vπ, d) tid vl))) →
     subtype E L f st1 st2.
@@ -974,15 +989,34 @@ Section subtyping.
     by iApply type_incl_simple_type.
   Qed.
 
-  Lemma subtype_weaken {A B} E1 E2 L1 L2 (f: A → B) ty1 ty2 :
-    E1 ⊆+ E2 → L1 ⊆+ L2 →
-    subtype E1 L1 f ty1 ty2 → subtype E2 L2 f ty1 ty2.
+  (** Plain Type *)
+
+  Lemma type_incl_plain_type {A B} f (pt1: plain_type A) (pt2: plain_type B) :
+    pt1.(pt_size) = pt2.(pt_size) → pt2.(ty_lft) ⊑ pt1.(ty_lft) -∗
+    □ (∀v tid vl,
+      pt1.(pt_own) v tid vl -∗ pt2.(pt_own) (f v) tid vl) -∗
+    type_incl f pt1 pt2.
   Proof.
-    iIntros (HE12 ? Hsub qL) "HL". iDestruct (Hsub with "[HL]") as "#Hsub".
-    { rewrite /llctx_interp. by iApply big_sepL_submseteq. }
-    iClear "∗". iIntros "!> #HE". iApply "Hsub".
-    rewrite /elctx_interp. by iApply big_sepL_submseteq.
+    move=> ?. iIntros "#Hl #Ho". iSplit; [done|]. iSplit; [done|].
+    iSplit; iModIntro =>/=.
+    - iDestruct 1 as (v ->) "?". iExists (f v). iSplit; [done|]. by iApply "Ho".
+    - iIntros (???). iDestruct 1 as (vl) "[Hf Hown]". iExists vl.
+      iFrame "Hf". iNext. iDestruct "Hown" as (v ->) "?". iExists (f v).
+      iSplit; [done|]. by iApply "Ho".
   Qed.
+
+  Lemma subtype_plain_type {A B} E L f (pt1: plain_type A) (pt2: plain_type B) :
+    (∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
+      ⌜pt1.(pt_size) = pt2.(pt_size)⌝ ∗ pt2.(ty_lft) ⊑ pt1.(ty_lft) ∗
+      (∀v tid vl,
+        pt1.(pt_own) v tid vl -∗ pt2.(pt_own) (f v) tid vl))) →
+    subtype E L f pt1 pt2.
+  Proof.
+    intros Hst. iIntros (qL) "HL". iDestruct (Hst with "HL") as "#Hst".
+    iIntros "!> #HE". iDestruct ("Hst" with "HE") as (?) "[??]".
+    by iApply type_incl_plain_type.
+  Qed.
+
 End subtyping.
 
 Section type_util.
