@@ -6,6 +6,7 @@ From lrust.lifetime Require Export frac_borrow.
 From lrust.lang Require Export proofmode notation.
 From lrust.typing Require Export base lft_contexts uniq_cmra.
 Set Default Proof Using "Type".
+Open Scope nat.
 
 Class typeG Σ := TypeG {
   type_lrustG:> lrustG Σ;  type_prophG:> prophG Σ;  type_uniqG:> uniqG Σ;
@@ -16,8 +17,6 @@ Definition lrustN := nroot .@ "lrust".
 Definition shrN := lrustN .@ "shr".
 
 Definition thread_id := na_inv_pool_name.
-
-Implicit Type d: nat.
 
 (** * Type *)
 
@@ -102,7 +101,7 @@ Lemma elctx_interp_ty_outlives_E `{!typeG Σ} {A} (ty: _ A) α :
   elctx_interp (ty_outlives_E ty α) ⊣⊢ α ⊑ ty.(ty_lft).
 Proof.
   rewrite /ty_outlives_E /elctx_interp /elctx_elt_interp big_sepL_fmap /=.
-  elim ty.(ty_lfts)=> /= [|κ l ->].
+  elim ty.(ty_lfts)=> /=[|κ l ->].
   { iSplit; iIntros "_"; [|done]. iApply lft_incl_static. } iSplit.
   - iDestruct 1 as "#[??]". by iApply lft_incl_glb.
   - iIntros "#Incl". iSplit; (iApply lft_incl_trans; [iApply "Incl"|]);
@@ -185,7 +184,7 @@ Next Obligation.
   iMod ("Upd" with "Tok") as "[? $]". iModIntro. iExists vl. iFrame.
 Qed.
 
-Coercion ty_of_st : simple_type >-> type.
+Coercion ty_of_st: simple_type >-> type.
 
 (** Plain Type *)
 
@@ -216,7 +215,7 @@ Next Obligation.
   iFrame "Ptok". iExists v. by iSplit.
 Qed.
 
-Coercion st_of_pt : plain_type >-> simple_type.
+Coercion st_of_pt: plain_type >-> simple_type.
 
 (** * OFE Structures on Types *)
 
@@ -397,7 +396,7 @@ Ltac solve_ne_type :=
 
 (** * Nonexpansiveness/Contractiveness of Type Morphisms *)
 
-Inductive TypeLftMorphism `{!typeG Σ} {A B} (T : type A → type B) : Prop :=
+Inductive TypeLftMorphism `{!typeG Σ} {A B} (T: type A → type B) : Prop :=
 | type_lft_morphism_add α βs E :
     (∀ty, ⊢ (T ty).(ty_lft) ≡ₗ α ⊓ ty.(ty_lft)) →
     (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢
@@ -489,7 +488,7 @@ Class TypeContractive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
     (∀vπd κ tid l, (T ty1).(ty_shr) vπd κ tid l ≡{n}≡ (T ty2).(ty_shr) vπd κ tid l);
 }.
 
-Class TypeNonExpansive `{!typeG Σ} {A B} (T : type A -> type B) : Prop := {
+Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
   type_non_expansive_type_lft_morphism :> TypeLftMorphism T;
 
   type_non_expansive_ty_size ty1 ty2 :
@@ -501,8 +500,7 @@ Class TypeNonExpansive `{!typeG Σ} {A B} (T : type A -> type B) : Prop := {
     elctx_interp (ty1.(ty_E)) ≡ elctx_interp (ty2.(ty_E)) →
     (∀vπd tid vl, ty1.(ty_own) vπd tid vl ≡{n}≡ ty2.(ty_own) vπd tid vl) →
     (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{S n}≡ ty2.(ty_shr) vπd κ tid l) →
-    (∀vπd tid vl,
-      (T ty1).(ty_own) vπd tid vl ≡{n}≡ (T ty2).(ty_own) vπd tid vl);
+    (∀vπd tid vl, (T ty1).(ty_own) vπd tid vl ≡{n}≡ (T ty2).(ty_own) vπd tid vl);
 
   type_non_expansive_ty_shr n ty1 ty2 :
     ty1.(ty_size) = ty2.(ty_size) →
@@ -511,8 +509,7 @@ Class TypeNonExpansive `{!typeG Σ} {A B} (T : type A -> type B) : Prop := {
     (∀vπd tid vl,
       dist_later n (ty1.(ty_own) vπd tid vl) (ty2.(ty_own) vπd tid vl)) →
     (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{n}≡ ty2.(ty_shr) vπd κ tid l) →
-    (∀vπd κ tid l,
-      (T ty1).(ty_shr) vπd κ tid l ≡{n}≡ (T ty2).(ty_shr) vπd κ tid l);
+    (∀vπd κ tid l, (T ty1).(ty_shr) vπd κ tid l ≡{n}≡ (T ty2).(ty_shr) vπd κ tid l);
 }.
 
 Class TypeListNonExpansive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
@@ -632,12 +629,12 @@ End type_contractive.
 (** * Traits *)
 
 Fixpoint shr_locsE (l: loc) (n: nat) : coPset :=
-  match n with 0%nat => ∅ | S n => ↑shrN.@l ∪ shr_locsE (l +ₗ 1%nat) n end.
+  match n with 0 => ∅ | S n => ↑shrN.@l ∪ shr_locsE (l +ₗ 1) n end.
 
 Class Copy `{!typeG Σ} {A} (ty: type A) := {
   copy_persistent vπd tid vl : Persistent (ty.(ty_own) vπd tid vl);
   copy_shr_acc vπd κ tid E F l q :
-    ↑lftN ∪ ↑shrN ⊆ E → shr_locsE l (ty.(ty_size) + 1) ⊆ F →
+    ↑lftN ∪ ↑shrN ⊆ E → shr_locsE l (S ty.(ty_size)) ⊆ F →
     lft_ctx -∗ ty.(ty_shr) vπd κ tid l -∗ na_own tid F -∗ q.[κ] ={E}=∗ ∃q' vl,
       na_own tid (F ∖ shr_locsE l ty.(ty_size)) ∗
       l ↦∗{q'} vl ∗ ▷ty.(ty_own) vπd tid vl ∗
@@ -691,8 +688,7 @@ Section type.
   Proof.
     revert l; induction n; intros l.
     - rewrite shift_loc_0. set_solver+.
-    - rewrite -Nat.add_1_l Nat2Z.inj_add /= IHn shift_loc_assoc.
-      set_solver+.
+    - rewrite -Nat.add_1_l Nat2Z.inj_add /= IHn shift_loc_assoc. set_solver+.
   Qed.
 
   Lemma shr_locsE_disj l n m :
@@ -705,29 +701,25 @@ Section type.
       clear IHn. revert n; induction m; intros n; simpl; first set_solver+.
       rewrite shift_loc_assoc. apply disjoint_union_r. split.
       + apply ndot_ne_disjoint. destruct l. intros [=]. lia.
-      + rewrite -Z.add_assoc. move:(IHm (n + 1)%nat). rewrite Nat2Z.inj_add //.
+      + rewrite -Z.add_assoc. move:(IHm (n + 1)). rewrite Nat2Z.inj_add //.
   Qed.
 
-  Lemma shr_locsE_shrN l n :
-    shr_locsE l n ⊆ ↑shrN.
+  Lemma shr_locsE_shrN l n : shr_locsE l n ⊆ ↑shrN.
   Proof.
     revert l; induction n=>l /=; first by set_solver+.
     apply union_least; last by auto. solve_ndisj.
   Qed.
 
-  Lemma shr_locsE_subseteq l n m :
-    (n ≤ m)%nat → shr_locsE l n ⊆ shr_locsE l m.
+  Lemma shr_locsE_subseteq l n m : n ≤ m → shr_locsE l n ⊆ shr_locsE l m.
   Proof.
     induction 1; first done. etrans; first done.
-    rewrite -Nat.add_1_l [(_ + _)%nat]comm_L shr_locsE_shift. set_solver+.
+    rewrite -Nat.add_1_l [(_ + _)]comm_L shr_locsE_shift. set_solver+.
   Qed.
 
   Lemma shr_locsE_split_tok l n m tid :
     na_own tid (shr_locsE l (n + m)) ⊣⊢
     na_own tid (shr_locsE l n) ∗ na_own tid (shr_locsE (l +ₗ n) m).
-  Proof.
-    rewrite shr_locsE_shift na_own_union //. apply shr_locsE_disj.
-  Qed.
+  Proof. rewrite shr_locsE_shift na_own_union //. apply shr_locsE_disj. Qed.
 
   Global Instance copy_equiv {A} : Proper (equiv ==> impl) (@Copy _ _ A).
   Proof.
@@ -741,8 +733,8 @@ Section type.
   Next Obligation.
     move=> *. iIntros "#LFT #Hshr Htok Hlft /=".
     iDestruct (na_own_acc with "Htok") as "[$ Htok]"; [solve_ndisj|].
-    iDestruct "Hshr" as (vl) "[Hf Hown]".
-    iMod (frac_bor_acc with "LFT Hf Hlft") as (q') "[>Hmt Hclose]"; [solve_ndisj|].
+    iDestruct "Hshr" as (?) "[Hf Hown]".
+    iMod (frac_bor_acc with "LFT Hf Hlft") as (?) "[>Hmt Hclose]"; [solve_ndisj|].
     iModIntro. iExists _, _. iFrame "Hmt Hown". iIntros "Htok2".
     iDestruct ("Htok" with "Htok2") as "$". iIntros "Hmt". by iApply "Hclose".
   Qed.
@@ -773,20 +765,18 @@ End type.
 
 (** * Subtyping *)
 
-Definition type_incl `{!typeG Σ} {A B} (f: A → B) ty1 ty2 : iProp Σ :=
+Definition type_incl `{!typeG Σ} {A B} (f: A → B) (ty1: type A) (ty2: type B) : iProp Σ :=
   ⌜ty1.(ty_size) = ty2.(ty_size)⌝ ∗ (ty2.(ty_lft) ⊑ ty1.(ty_lft)) ∗
-  (□ ∀vπ d tid vl,
-    ty1.(ty_own) (vπ,d) tid vl -∗ ty2.(ty_own) (f∘vπ,d) tid vl) ∗
-  (□ ∀vπ d κ tid l,
-    ty1.(ty_shr) (vπ,d) κ tid l -∗ ty2.(ty_shr) (f∘vπ,d) κ tid l).
+  (□ ∀vπ d tid vl, ty1.(ty_own) (vπ,d) tid vl -∗ ty2.(ty_own) (f∘vπ,d) tid vl) ∗
+  (□ ∀vπ d κ tid l, ty1.(ty_shr) (vπ,d) κ tid l -∗ ty2.(ty_shr) (f∘vπ,d) κ tid l).
 Instance: Params (@type_incl) 4 := {}.
 
-Definition subtype `{!typeG Σ} {A B} E L (f: A → B) ty1 ty2 : Prop :=
+Definition subtype `{!typeG Σ} {A B} E L (f: A → B) (ty1: type A) (ty2: type B) : Prop :=
   ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗ type_incl f ty1 ty2).
 Instance: Params (@subtype) 6 := {}.
 
-Definition eqtype `{!typeG Σ} {A B} E L (f: A → B) (g: B → A) ty1 ty2 : Prop :=
-  subtype E L f ty1 ty2 ∧ subtype E L g ty2 ty1.
+Definition eqtype `{!typeG Σ} {A B} E L (f: A → B) (g: B → A) (ty1: type A) (ty2: type B)
+  : Prop := subtype E L f ty1 ty2 ∧ subtype E L g ty2 ty1.
 Instance: Params (@eqtype) 6 := {}.
 
 Section subtyping.
@@ -812,7 +802,7 @@ Section subtyping.
     type_incl f ty1 ty2 -∗ type_incl g ty2 ty3 -∗ type_incl (g ∘ f) ty1 ty3.
   Proof.
     iIntros "(% & #Lft & #Own & #Shr) (% & #Lft' & #Own' & #Shr')".
-    iSplit; [iPureIntro; by etrans|]. iSplit; [|iSplit].
+    iSplit. { iPureIntro. by etrans. } iSplit; [|iSplit].
     - iApply lft_incl_trans; [iApply "Lft'"|iApply "Lft"].
     - iIntros (????) "!>?". iApply "Own'". by iApply "Own".
     - iIntros (?????) "!>?". iApply "Shr'". by iApply "Shr".
@@ -826,8 +816,7 @@ Section subtyping.
   Proof.
     move=> Sub Sub'. iIntros (?) "L". iDestruct (Sub with "L") as "#Wand".
     iDestruct (Sub' with "L") as "#Wand'". iIntros "!> #E".
-    iDestruct ("Wand" with "E") as "Incl".
-    iDestruct ("Wand'" with "E") as "Incl'".
+    iDestruct ("Wand" with "E") as "Incl". iDestruct ("Wand'" with "E") as "Incl'".
     iApply (type_incl_trans with "Incl Incl'").
   Qed.
 
@@ -835,7 +824,7 @@ Section subtyping.
     E1 ⊆+ E2 → L1 ⊆+ L2 →
     subtype E1 L1 f ty1 ty2 → subtype E2 L2 f ty1 ty2.
   Proof.
-    iIntros (HE12 ? Hsub qL) "HL". iDestruct (Hsub with "[HL]") as "#Hsub".
+    iIntros (HE12 ? Hsub ?) "HL". iDestruct (Hsub with "[HL]") as "#Hsub".
     { rewrite /llctx_interp. by iApply big_sepL_submseteq. }
     iClear "∗". iIntros "!> #HE". iApply "Hsub".
     rewrite /elctx_interp. by iApply big_sepL_submseteq.
@@ -863,22 +852,20 @@ Section subtyping.
 
   Lemma equiv_subtype {A} E L ty1 ty2 : ty1 ≡ ty2 → subtype E L (@id A) ty1 ty2.
   Proof.
-    unfold subtype, type_incl=>EQ qL. iIntros "_ !> _".
-    iSplit; [by iPureIntro; apply EQ|].
-    iSplit; [by rewrite EQ; iApply lft_incl_refl|].
-    iSplit; iIntros "!> *"; rewrite EQ; iIntros "$".
+    move=> Eqv ?. iIntros "_ !> _". iSplit. { iPureIntro. apply Eqv. }
+    iSplit. { rewrite Eqv. iApply lft_incl_refl. }
+    iSplit; iIntros "!> *"; rewrite Eqv; iIntros "$".
   Qed.
 
   Lemma eqtype_unfold {A B} E L (f: A → B) g ty1 ty2 : g ∘ f = id → f ∘ g = id →
     eqtype E L f g ty1 ty2 ↔
     ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ⌜ty1.(ty_size) = ty2.(ty_size)⌝ ∗
-      (ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) ∗
+      ⌜ty1.(ty_size) = ty2.(ty_size)⌝ ∗ (ty1.(ty_lft) ≡ₗ ty2.(ty_lft)) ∗
       (□ ∀vπ d tid vl, ty1.(ty_own) (vπ,d) tid vl ↔ ty2.(ty_own) (f∘vπ,d) tid vl) ∗
       (□ ∀vπ d κ tid l, ty1.(ty_shr) (vπ,d) κ tid l ↔ ty2.(ty_shr) (f∘vπ,d) κ tid l)).
   Proof.
     move=> Eq_gf Eq_fg. split.
-    - iIntros ([EQ1 EQ2] qL) "HL".
+    - iIntros ([EQ1 EQ2] ?) "HL".
       iDestruct (EQ1 with "HL") as "#EQ1". iDestruct (EQ2 with "HL") as "#EQ2".
       iIntros "!> #HE".
       iDestruct ("EQ1" with "HE") as "($ & $ & #Ho1 & #Hs1)".
@@ -887,7 +874,7 @@ Section subtyping.
       [by iApply "Ho1"| |by iApply "Hs1"|];
       [iDestruct ("Ho2" with "Own") as "?"|iDestruct ("Hs2" with "Own") as "?"];
       by rewrite compose_assoc Eq_gf.
-    - intros EQ. split; iIntros (qL) "HL";
+    - intros EQ. split; iIntros (?) "HL";
       iDestruct (EQ with "HL") as "#EQ"; iIntros "!> #HE";
       iDestruct ("EQ" with "HE") as "(% & [??] & #Ho & #Hs)";
       (iSplit; [done|]; iSplit; [done|]; iSplit); iIntros "!> * Own";
@@ -898,8 +885,7 @@ Section subtyping.
   Lemma eqtype_refl {A} E L (ty: _ A) : eqtype E L id id ty ty.
   Proof. split; apply subtype_refl. Qed.
 
-  Lemma equiv_eqtype {A} E L (ty1 ty2: _ A) :
-    ty1 ≡ ty2 → eqtype E L id id ty1 ty2.
+  Lemma equiv_eqtype {A} E L (ty1 ty2: _ A) : ty1 ≡ ty2 → eqtype E L id id ty1 ty2.
   Proof. by split; apply equiv_subtype. Qed.
 
   Global Instance subtype_proper {A B} E L (f: A → B) :
@@ -924,7 +910,7 @@ Section subtyping.
 
   (** Simple Type *)
 
-  Lemma type_incl_simple_type {A B} f (st1: simple_type A) (st2: simple_type B) :
+  Lemma type_incl_simple_type {A B} (f: A → B) st1 st2 :
     st1.(st_size) = st2.(st_size) → st2.(ty_lft) ⊑ st1.(ty_lft) -∗
     □ (∀vπ d tid vl, st1.(st_own) (vπ,d) tid vl -∗ st2.(st_own) (f∘vπ,d) tid vl) -∗
     type_incl f st1 st2.
@@ -936,20 +922,20 @@ Section subtyping.
       iFrame "Hf". by iApply "Ho".
   Qed.
 
-  Lemma subtype_simple_type {A B} E L f (st1: simple_type A) (st2: simple_type B) :
+  Lemma subtype_simple_type {A B} E L (f: A → B) st1 st2 :
     (∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
       ⌜st1.(st_size) = st2.(st_size)⌝ ∗ st2.(ty_lft) ⊑ st1.(ty_lft) ∗
       (∀vπ d tid vl, st1.(st_own) (vπ,d) tid vl -∗ st2.(st_own) (f∘vπ,d) tid vl))) →
     subtype E L f st1 st2.
   Proof.
-    intros Hst. iIntros (qL) "HL". iDestruct (Hst with "HL") as "#Hst".
+    intros Hst. iIntros (?) "HL". iDestruct (Hst with "HL") as "#Hst".
     iIntros "!> #HE". iDestruct ("Hst" with "HE") as (?) "[??]".
     by iApply type_incl_simple_type.
   Qed.
 
   (** Plain Type *)
 
-  Lemma type_incl_plain_type {A B} f (pt1: plain_type A) (pt2: plain_type B) :
+  Lemma type_incl_plain_type {A B} (f: A → B) pt1 pt2 :
     pt1.(pt_size) = pt2.(pt_size) → pt2.(ty_lft) ⊑ pt1.(ty_lft) -∗
     □ (∀v tid vl, pt1.(pt_own) v tid vl -∗ pt2.(pt_own) (f v) tid vl) -∗
     type_incl f pt1 pt2.
@@ -962,13 +948,13 @@ Section subtyping.
       iSplit; [done|]. by iApply "Ho".
   Qed.
 
-  Lemma subtype_plain_type {A B} E L f (pt1: plain_type A) (pt2: plain_type B) :
+  Lemma subtype_plain_type {A B} E L (f: A → B) pt1 pt2 :
     (∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
       ⌜pt1.(pt_size) = pt2.(pt_size)⌝ ∗ pt2.(ty_lft) ⊑ pt1.(ty_lft) ∗
       (∀v tid vl, pt1.(pt_own) v tid vl -∗ pt2.(pt_own) (f v) tid vl))) →
     subtype E L f pt1 pt2.
   Proof.
-    intros Hst. iIntros (qL) "HL". iDestruct (Hst with "HL") as "#Hst".
+    intros Hst. iIntros (?) "HL". iDestruct (Hst with "HL") as "#Hst".
     iIntros "!> #HE". iDestruct ("Hst" with "HE") as (?) "[??]".
     by iApply type_incl_plain_type.
   Qed.
@@ -980,13 +966,13 @@ Section type_util.
 
   Lemma heap_mapsto_ty_own {A} l (ty: _ A) vπd tid :
     l ↦∗: ty.(ty_own) vπd tid ⊣⊢
-      ∃(vl : vec val ty.(ty_size)), l ↦∗ vl ∗ ty.(ty_own) vπd tid vl.
+    ∃vl: vec val ty.(ty_size), l ↦∗ vl ∗ ty.(ty_own) vπd tid vl.
   Proof.
     iSplit.
     - iIntros "H". iDestruct "H" as (vl) "[Hl Hown]".
       iDestruct (ty_size_eq with "Hown") as %<-.
       iExists (list_to_vec vl). rewrite vec_to_list_to_vec. iFrame.
-    - iIntros "H". iDestruct "H" as (vl) "[Hl Hown]". eauto with iFrame.
+    - iIntros "H". iDestruct "H" as (?) "[Hl Hown]". eauto with iFrame.
   Qed.
 End type_util.
 
