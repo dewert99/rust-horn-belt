@@ -128,13 +128,17 @@ Proof.
   - apply IH; [|done]. etrans; [|by apply Outlv]. by apply submseteq_inserts_l.
 Qed.
 
+Declare Scope lrust_type_scope.
+Delimit Scope lrust_type_scope with T.
+Bind Scope lrust_type_scope with type.
+
 (** Simple Type *)
 
 Record simple_type `{!typeG Σ} A := {
   st_size: nat;  st_lfts: list lft;  st_E: elctx;
   st_own: pval_depth A → thread_id → list val → iProp Σ;
-  st_size_eq vπd tid vl : st_own vπd tid vl -∗ ⌜length vl = st_size⌝;
   st_own_persistent vπd tid vl : Persistent (st_own vπd tid vl);
+  st_size_eq vπd tid vl : st_own vπd tid vl -∗ ⌜length vl = st_size⌝;
   st_own_depth_mono d d' vπ tid vl :
     d ≤ d' → st_own (vπ,d) tid vl -∗ st_own (vπ,d') tid vl;
   st_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
@@ -153,9 +157,9 @@ Arguments st_E {_ _ _} _ / : simpl nomatch.
 Arguments st_own {_ _ _} _ _ _ _ / : simpl nomatch.
 
 Program Definition ty_of_st `{!typeG Σ} {A} (st: simple_type A) : type A :=
-  {| ty_size := st.(st_size); ty_lfts := st.(st_lfts); ty_E := st.(st_E);
+  {| ty_size := st.(st_size);  ty_lfts := st.(st_lfts);  ty_E := st.(st_E);
      ty_own := st.(st_own);
-     ty_shr vπd κ tid l := (∃ vl,
+     ty_shr vπd κ tid l := (∃vl,
        &frac{κ} (λ q, l ↦∗{q} vl) ∗ ▷ st.(st_own) vπd tid vl)%I |}.
 Next Obligation. move=> >. apply st_size_eq. Qed.
 Next Obligation. move=> >. by apply st_own_depth_mono. Qed.
@@ -189,9 +193,37 @@ Qed.
 
 Coercion ty_of_st : simple_type >-> type.
 
-Declare Scope lrust_type_scope.
-Delimit Scope lrust_type_scope with T.
-Bind Scope lrust_type_scope with type.
+(** Plain Type *)
+
+Record plain_type `{!typeG Σ} A := {
+  pt_size: nat;  pt_lfts: list lft;  pt_E: elctx;
+  pt_own: A → thread_id → list val → iProp Σ;
+  pt_own_persistent v tid vl : Persistent (pt_own v tid vl);
+  pt_size_eq v tid vl : pt_own v tid vl -∗ ⌜length vl = pt_size⌝;
+}.
+Existing Instance pt_own_persistent.
+Instance: Params (@pt_size) 3 := {}.
+Instance: Params (@pt_lfts) 3 := {}.
+Instance: Params (@pt_E) 3 := {}.
+Instance: Params (@pt_own) 3 := {}.
+Arguments pt_size {_ _ _} _ / : simpl nomatch.
+Arguments pt_lfts {_ _ _} _ / : simpl nomatch.
+Arguments pt_E {_ _ _} _ / : simpl nomatch.
+Arguments pt_own {_ _ _} _ _ _ _ / : simpl nomatch.
+
+Program Definition st_of_pt `{!typeG Σ} {A} (pt: plain_type A): simple_type A :=
+  {| st_size := pt.(pt_size);  st_lfts := pt.(pt_lfts);  st_E := pt.(pt_E);
+     st_own vπd tid vl := (∃v, ⌜vπd.1 = const v⌝ ∗ pt.(pt_own) v tid vl)%I |}.
+Next Obligation. move=> >. iDestruct 1 as (? _) "?". by iApply pt_size_eq. Qed.
+Next Obligation. done. Qed.
+Next Obligation.
+  move=> * /=. iIntros "_ _". iDestruct 1 as (?->) "?". iIntros "Ptok !>".
+  iApply step_fupdN_intro; [done|]. iIntros "!>!>". iExists [], 1%Qp.
+  iSplit; [done|]. iSplit; [by rewrite /proph_toks|]. iIntros "_ !>".
+  iFrame "Ptok". iExists v. by iSplit.
+Qed.
+
+Coercion st_of_pt : plain_type >-> simple_type.
 
 (** * OFE Structures on Types *)
 
