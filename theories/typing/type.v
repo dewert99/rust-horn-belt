@@ -232,24 +232,23 @@ Section ofe.
 
   (**  Type *)
 
-  Inductive type_equiv' {A} (ty1 ty2: type A) : Prop := Type_equiv :
+  Inductive type_equiv' {A} (ty1 ty2: type A) : Prop := TypeEquiv:
     ty1.(ty_size) = ty2.(ty_size) → ty1.(ty_lfts) = ty2.(ty_lfts) →
     ty1.(ty_E) = ty2.(ty_E) →
     (∀vπd tid vs, ty1.(ty_own) vπd tid vs ≡ ty2.(ty_own) vπd tid vs) →
     (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡ ty2.(ty_shr) vπd κ tid l) →
     type_equiv' ty1 ty2.
-  Instance type_equiv {A} : Equiv (type A) := type_equiv'.
-  Inductive type_dist' {A} (n: nat) (ty1 ty2: type A) : Prop := Type_dist :
+  Global Instance type_equiv {A} : Equiv (type A) := type_equiv'.
+  Inductive type_dist' {A} (n: nat) (ty1 ty2: type A) : Prop := TypeDist:
     ty1.(ty_size) = ty2.(ty_size) → ty1.(ty_lfts) = ty2.(ty_lfts) →
     ty1.(ty_E) = ty2.(ty_E) →
     (∀vπd tid vs, ty1.(ty_own) vπd tid vs ≡{n}≡ ty2.(ty_own) vπd tid vs) →
     (∀vπd κ tid l, ty1.(ty_shr) vπd κ tid l ≡{n}≡ ty2.(ty_shr) vπd κ tid l) →
     type_dist' n ty1 ty2.
-  Instance type_dist {A} : Dist (type A) := type_dist'.
+  Global Instance type_dist {A} : Dist (type A) := type_dist'.
 
   Definition type_unpack {A} (ty: type A)
-    : prodO (prodO (prodO (prodO
-      natO (listO lftO)) (listO (prodO lftO lftO)))
+    : prodO (prodO (prodO (prodO natO (listO lftO)) (listO (prodO lftO lftO)))
       (pval_depth A -d> thread_id -d> list val -d> iPropO Σ))
       (pval_depth A -d> lft -d> thread_id -d> loc -d> iPropO Σ) :=
     (ty.(ty_size), ty.(ty_lfts), ty.(ty_E), ty.(ty_own), ty.(ty_shr)).
@@ -282,8 +281,7 @@ Section ofe.
     Proper ((≡) ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
   Proof. rewrite /ty_outlives_E. by move=> ?? [_ -> _ _ _]. Qed.
 
-  Global Instance hlist_dist_type {As} : Dist (hlist type As)
-    := @hlist_dist (@typeO) _.
+  Global Instance hlist_dist_type {As} : Dist (hlist type As) := @hlist_dist (@typeO) _.
 
   Global Instance tyl_E_ne {As} n : Proper (dist n ==> (=)) (@tyl_E _ _ As).
   Proof. move=> ??. rewrite /tyl_E. by elim=> [|/= > -> _ ->]. Qed.
@@ -315,25 +313,26 @@ Section ofe.
 
   (** Simple Type *)
 
-  Inductive st_equiv' {A} (st1 st2: simple_type A) : Prop := St_equiv :
-    st1.(ty_size) = st2.(ty_size) → st1.(ty_lfts) = st2.(ty_lfts) →
-    st1.(ty_E) = st2.(ty_E) →
-    (∀vπd tid vl, st1.(ty_own) vπd tid vl ≡ st2.(ty_own) vπd tid vl) →
-    st_equiv' st1 st2.
-  Instance st_equiv {A} : Equiv (simple_type A) := st_equiv'.
-  Inductive st_dist' {A} (n: nat) (st1 st2: simple_type A) : Prop := St_dist :
-    st1.(ty_size) = st2.(ty_size) → st1.(ty_lfts) = st2.(ty_lfts) →
-    st1.(ty_E) = st2.(ty_E) →
-    (∀vπd tid vl, st1.(ty_own) vπd tid vl ≡{n}≡ (st2.(ty_own) vπd tid vl)) →
-    st_dist' n st1 st2.
-  Instance st_dist {A} : Dist (simple_type A) := st_dist'.
+  Inductive simple_type_equiv' {A} (st1 st2: simple_type A) : Prop := SimpleTypeEquiv:
+    st1.(st_size) = st2.(st_size) → st1.(st_lfts) = st2.(st_lfts) →
+    st1.(st_E) = st2.(st_E) →
+    (∀vπd tid vl, st1.(st_own) vπd tid vl ≡ st2.(st_own) vπd tid vl) →
+    simple_type_equiv' st1 st2.
+  Global Instance simple_type_equiv {A} : Equiv (simple_type A) := simple_type_equiv'.
+  Inductive simple_type_dist' {A} (n: nat) (st1 st2: simple_type A) : Prop :=
+    SimpleTypeDist:
+    st1.(st_size) = st2.(st_size) → st1.(st_lfts) = st2.(st_lfts) →
+    st1.(st_E) = st2.(st_E) →
+    (∀vπd tid vl, st1.(st_own) vπd tid vl ≡{n}≡ (st2.(st_own) vπd tid vl)) →
+    simple_type_dist' n st1 st2.
+  Global Instance simple_type_dist {A} : Dist (simple_type A) := simple_type_dist'.
 
-  Definition st_ofe_mixin {A} : OfeMixin (simple_type A).
+  Definition simple_type_ofe_mixin {A} : OfeMixin (simple_type A).
   Proof.
     apply (iso_ofe_mixin ty_of_st); (split=> Eqv; split; try by apply Eqv);
-    move=> > /=; f_equiv; f_equiv; by move: Eqv=> [_ _ _ /= ->].
+    move=> > /=; f_equiv; f_equiv; by move: Eqv=> [_ _ _ ->].
   Qed.
-  Canonical Structure simple_typeO {A} : ofe := Ofe (simple_type A) st_ofe_mixin.
+  Canonical Structure simple_typeO {A} : ofe := Ofe (simple_type A) simple_type_ofe_mixin.
 
   Global Instance st_own_ne n {A} :
     Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@st_own _ _ A).
@@ -344,10 +343,55 @@ Section ofe.
 
   Global Instance ty_of_st_ne {A} : NonExpansive (@ty_of_st _ _ A).
   Proof.
-    move=> ??? Eqv. split; try apply Eqv. move=> > /=. f_equiv. f_equiv.
+    move=> ??? Eqv. split; try apply Eqv. move=> > /=. do 2 f_equiv.
     by rewrite Eqv.
   Qed.
   Global Instance ty_of_st_proper {A} : Proper ((≡) ==> (≡)) (@ty_of_st _ _ A).
+  Proof. apply (ne_proper _). Qed.
+
+  (** Plain Type *)
+
+  Inductive plain_type_equiv' {A} (pt1 pt2: plain_type A) : Prop := PlainTypeEquiv:
+    pt1.(pt_size) = pt2.(pt_size) → pt1.(pt_lfts) = pt2.(pt_lfts) →
+    pt1.(pt_E) = pt2.(pt_E) →
+    (∀v tid vl, pt1.(pt_own) v tid vl ≡ pt2.(pt_own) v tid vl) →
+    plain_type_equiv' pt1 pt2.
+  Global Instance plain_type_equiv {A} : Equiv (plain_type A) := plain_type_equiv'.
+  Inductive plain_type_dist' {A} (n: nat) (pt1 pt2: plain_type A) : Prop :=
+    PlainTypeDist:
+    pt1.(pt_size) = pt2.(pt_size) → pt1.(pt_lfts) = pt2.(pt_lfts) →
+    pt1.(pt_E) = pt2.(pt_E) →
+    (∀v tid vl, pt1.(pt_own) v tid vl ≡{n}≡ (pt2.(pt_own) v tid vl)) →
+    plain_type_dist' n pt1 pt2.
+  Global Instance plain_type_dist {A} : Dist (plain_type A) := plain_type_dist'.
+
+  Definition plain_type_unpack {A} (pt: plain_type A)
+    : prodO (prodO (prodO natO (listO lftO)) (listO (prodO lftO lftO)))
+      (A -d> thread_id -d> list val -d> iPropO Σ) :=
+    (pt.(pt_size), pt.(pt_lfts), pt.(pt_E), pt.(pt_own)).
+
+  Definition plain_type_ofe_mixin {A} : OfeMixin (plain_type A).
+  Proof.
+    apply (iso_ofe_mixin plain_type_unpack);
+    (rewrite /plain_type_unpack; split; [by move=> [-> -> -> ?]|]);
+    move=> [[[??]?]?]; simpl in *; constructor; try apply leibniz_equiv;
+    try done; by eapply (discrete_iff _ _).
+  Qed.
+  Canonical Structure plain_typeO {A} : ofe := Ofe (plain_type A) plain_type_ofe_mixin.
+
+  Global Instance pt_own_ne n {A} :
+    Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@pt_own _ _ A).
+  Proof. move=> ?? Eqv ??-> ??-> ??->. apply Eqv. Qed.
+  Global Instance pt_own_proper {A} :
+    Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (≡)) (@pt_own _ _ A).
+  Proof. move=> ?? Eqv ??-> ??-> ??->. apply Eqv. Qed.
+
+  Global Instance st_of_pt_ne {A} : NonExpansive (@st_of_pt _ _ A).
+  Proof.
+    move=> ??? Eqv. split; try apply Eqv. move=> > /=. do 2 f_equiv.
+    by rewrite Eqv.
+  Qed.
+  Global Instance st_of_pt_proper {A} : Proper ((≡) ==> (≡)) (@st_of_pt _ _ A).
   Proof. apply (ne_proper _). Qed.
 
 End ofe.
@@ -905,7 +949,8 @@ Section subtyping.
   Qed.
 
   Lemma type_incl_simple_type {A B} f (st1: simple_type A) (st2: simple_type B) :
-    ty_size st1 = ty_size st2 → ty_lft st2 ⊑ ty_lft st1 -∗ □ (∀vπ d tid vl,
+    st1.(st_size) = st2.(st_size) → st2.(st_lft) ⊑ st1.(st_lft) -∗
+    □ (∀vπ d tid vl,
       st1.(st_own) (vπ, d) tid vl -∗ st2.(st_own) (f ∘ vπ, d) tid vl) -∗
     type_incl f st1 st2.
   Proof.
@@ -919,7 +964,8 @@ Section subtyping.
   Lemma subtype_simple_type {A B} E L f
     (st1: simple_type A) (st2: simple_type B) :
     (∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ⌜ty_size st1 = ty_size st2⌝ ∗ st2.(ty_lft) ⊑ st1.(ty_lft) ∗ (∀vπ d tid vl,
+      ⌜st1.(st_size) = st2.(st_size)⌝ ∗ st2.(st_lft) ⊑ st1.(st_lft) ∗
+      (∀vπ d tid vl,
         st1.(st_own) (vπ, d) tid vl -∗ st2.(st_own) (f ∘ vπ, d) tid vl))) →
     subtype E L f st1 st2.
   Proof.
