@@ -1,4 +1,8 @@
 From iris.algebra Require Import numbers list.
+From iris.algebra Require Import numbers list.
+From iris.algebra Require Import numbers list.
+From iris.algebra Require Import numbers list.
+From iris.algebra Require Import numbers list.
 From iris.base_logic Require Export na_invariants.
 From lrust.util Require Import point_free types.
 From lrust.prophecy Require Export prophecy.
@@ -63,9 +67,9 @@ Record type `{!typeG Σ} A := {
 }.
 Existing Instance ty_shr_persistent.
 
-Instance: Params (@ty_size) 3 := {}. Instance: Params (@ty_lfts) 3 := {}.
+Instance: Params (@ty_size) 3 := {}.  Instance: Params (@ty_lfts) 3 := {}.
 Instance: Params (@ty_E) 3 := {}.
-Instance: Params (@ty_own) 3 := {}. Instance: Params (@ty_shr) 3 := {}.
+Instance: Params (@ty_own) 3 := {}.  Instance: Params (@ty_shr) 3 := {}.
 
 Arguments ty_size {_ _ _} _ / : simpl nomatch.
 Arguments ty_lfts {_ _ _} _ / : simpl nomatch.
@@ -144,8 +148,8 @@ Record simple_type `{!typeG Σ} A := {
       q':+[ξs] ∗ (q':+[ξs] ={E}=∗ st_own (vπ,d) tid vl ∗ q.[κ]);
 }.
 Existing Instance st_own_persistent.
-Instance: Params (@st_size) 3 := {}. Instance: Params (@st_lfts) 3 := {}.
-Instance: Params (@st_E) 3 := {}. Instance: Params (@st_own) 3 := {}.
+Instance: Params (@st_size) 3 := {}.  Instance: Params (@st_lfts) 3 := {}.
+Instance: Params (@st_E) 3 := {}.  Instance: Params (@st_own) 3 := {}.
 Arguments st_size {_ _ _} _ / : simpl nomatch.
 Arguments st_lfts {_ _ _} _ / : simpl nomatch.
 Arguments st_E {_ _ _} _ / : simpl nomatch.
@@ -189,21 +193,17 @@ Coercion ty_of_st: simple_type >-> type.
 (** Plain Type *)
 
 Record plain_type `{!typeG Σ} A := {
-  pt_size: nat;  pt_lfts: list lft;  pt_E: elctx;
-  pt_own: A → thread_id → list val → iProp Σ;
+  pt_size: nat;  pt_own: A → thread_id → list val → iProp Σ;
   pt_own_persistent v tid vl : Persistent (pt_own v tid vl);
   pt_size_eq v tid vl : pt_own v tid vl -∗ ⌜length vl = pt_size⌝;
 }.
 Existing Instance pt_own_persistent.
-Instance: Params (@pt_size) 3 := {}. Instance: Params (@pt_lfts) 3 := {}.
-Instance: Params (@pt_E) 3 := {}. Instance: Params (@pt_own) 3 := {}.
+Instance: Params (@pt_size) 3 := {}.  Instance: Params (@pt_own) 3 := {}.
 Arguments pt_size {_ _ _} _ / : simpl nomatch.
-Arguments pt_lfts {_ _ _} _ / : simpl nomatch.
-Arguments pt_E {_ _ _} _ / : simpl nomatch.
 Arguments pt_own {_ _ _} _ _ _ _ / : simpl nomatch.
 
 Program Definition st_of_pt `{!typeG Σ} {A} (pt: plain_type A) : simple_type A := {|
-  st_size := pt.(pt_size);  st_lfts := pt.(pt_lfts);  st_E := pt.(pt_E);
+  st_size := pt.(pt_size);  st_lfts := [];  st_E := [];
   st_own vπd tid vl := (∃v, ⌜vπd.1 = const v⌝ ∗ pt.(pt_own) v tid vl)%I;
 |}.
 Next Obligation. move=> >. iDestruct 1 as (? _) "?". by iApply pt_size_eq. Qed.
@@ -344,29 +344,26 @@ Section ofe.
   (** Plain Type *)
 
   Inductive plain_type_equiv' {A} (pt1 pt2: plain_type A) : Prop := PlainTypeEquiv:
-    pt1.(pt_size) = pt2.(pt_size) → pt1.(pt_lfts) = pt2.(pt_lfts) →
-    pt1.(pt_E) = pt2.(pt_E) →
+    pt1.(pt_size) = pt2.(pt_size) →
     (∀v tid vl, pt1.(pt_own) v tid vl ≡ pt2.(pt_own) v tid vl) →
     plain_type_equiv' pt1 pt2.
   Global Instance plain_type_equiv {A} : Equiv (plain_type A) := plain_type_equiv'.
   Inductive plain_type_dist' {A} (n: nat) (pt1 pt2: plain_type A) : Prop :=
     PlainTypeDist:
-    pt1.(pt_size) = pt2.(pt_size) → pt1.(pt_lfts) = pt2.(pt_lfts) →
-    pt1.(pt_E) = pt2.(pt_E) →
+    pt1.(pt_size) = pt2.(pt_size) →
     (∀v tid vl, pt1.(pt_own) v tid vl ≡{n}≡ (pt2.(pt_own) v tid vl)) →
     plain_type_dist' n pt1 pt2.
   Global Instance plain_type_dist {A} : Dist (plain_type A) := plain_type_dist'.
 
   Definition plain_type_unpack {A} (pt: plain_type A)
-    : prodO (prodO (prodO natO (listO lftO)) (listO (prodO lftO lftO)))
-      (A -d> thread_id -d> list val -d> iPropO Σ) :=
-    (pt.(pt_size), pt.(pt_lfts), pt.(pt_E), pt.(pt_own)).
+    : prodO natO (A -d> thread_id -d> list val -d> iPropO Σ) :=
+    (pt.(pt_size), pt.(pt_own)).
 
   Definition plain_type_ofe_mixin {A} : OfeMixin (plain_type A).
   Proof.
     apply (iso_ofe_mixin plain_type_unpack);
-    (rewrite /plain_type_unpack; split; [by move=> [->->->?]|]);
-    move=> [[[??]?]?]; simpl in *; constructor; try apply leibniz_equiv;
+    (rewrite /plain_type_unpack; split; [by move=> [->?]|]);
+    move=> [??]; simpl in *; constructor; try apply leibniz_equiv;
     try done; by eapply (discrete_iff _ _).
   Qed.
   Canonical Structure plain_typeO {A} : ofe := Ofe (plain_type A) plain_type_ofe_mixin.
@@ -380,8 +377,7 @@ Section ofe.
 
   Global Instance st_of_pt_ne {A} : NonExpansive (@st_of_pt _ _ A).
   Proof.
-    move=> ??? Eqv. split; try apply Eqv. move=> > /=. do 2 f_equiv.
-    by rewrite Eqv.
+    move=> ??? [? Eqv]. split =>//=. move=> >. do 2 f_equiv. by rewrite Eqv.
   Qed.
   Global Instance st_of_pt_proper {A} : Proper ((≡) ==> (≡)) (@st_of_pt _ _ A).
   Proof. apply (ne_proper _). Qed.
