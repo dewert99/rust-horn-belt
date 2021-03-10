@@ -123,8 +123,8 @@ Lemma tyl_outlives_E_elctx_sat `{!typeG Σ} {As} E L (tyl: hlist type As) α β 
   elctx_sat E L (tyl_outlives_E tyl α).
 Proof.
   elim tyl=> [|> IH]; [solve_typing|]=> Outlv Incl. apply elctx_sat_app.
-  - eapply ty_outlives_E_elctx_sat; [|by apply Incl].
-    etrans; [|by apply Outlv]. by apply submseteq_inserts_r.
+  - eapply ty_outlives_E_elctx_sat; [|by apply Incl]. etrans; [|by apply Outlv].
+    by apply submseteq_inserts_r.
   - apply IH; [|done]. etrans; [|by apply Outlv]. by apply submseteq_inserts_l.
 Qed.
 
@@ -211,7 +211,7 @@ Arguments pt_lfts {_ _ _} _ / : simpl nomatch.
 Arguments pt_E {_ _ _} _ / : simpl nomatch.
 Arguments pt_own {_ _ _} _ _ _ _ / : simpl nomatch.
 
-Program Definition st_of_pt `{!typeG Σ} {A} (pt: plain_type A): simple_type A :=
+Program Definition st_of_pt `{!typeG Σ} {A} (pt: plain_type A) : simple_type A :=
   {| st_size := pt.(pt_size);  st_lfts := pt.(pt_lfts);  st_E := pt.(pt_E);
      st_own vπd tid vl := (∃v, ⌜vπd.1 = const v⌝ ∗ pt.(pt_own) v tid vl)%I |}.
 Next Obligation. move=> >. iDestruct 1 as (? _) "?". by iApply pt_size_eq. Qed.
@@ -230,6 +230,8 @@ Coercion st_of_pt : plain_type >-> simple_type.
 Section ofe.
   Context `{!typeG Σ}.
 
+  (**  Type *)
+
   Inductive type_equiv' {A} (ty1 ty2: type A) : Prop := Type_equiv :
     ty1.(ty_size) = ty2.(ty_size) → ty1.(ty_lfts) = ty2.(ty_lfts) →
     ty1.(ty_E) = ty2.(ty_E) →
@@ -245,12 +247,11 @@ Section ofe.
     type_dist' n ty1 ty2.
   Instance type_dist {A} : Dist (type A) := type_dist'.
 
-  Let T A := prodO (prodO (prodO (prodO
-    natO (listO lftO)) (listO (prodO lftO lftO)))
-    (pval_depth A -d> thread_id -d> list val -d> iPropO Σ))
-    (pval_depth A -d> lft -d> thread_id -d> loc -d> iPropO Σ).
-
-  Definition type_unpack {A} (ty: type A) : T A :=
+  Definition type_unpack {A} (ty: type A)
+    : prodO (prodO (prodO (prodO
+      natO (listO lftO)) (listO (prodO lftO lftO)))
+      (pval_depth A -d> thread_id -d> list val -d> iPropO Σ))
+      (pval_depth A -d> lft -d> thread_id -d> loc -d> iPropO Σ) :=
     (ty.(ty_size), ty.(ty_lfts), ty.(ty_E), ty.(ty_own), ty.(ty_shr)).
 
   Definition type_ofe_mixin {A} : OfeMixin (type A).
@@ -312,6 +313,8 @@ Section ofe.
     Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) (@ty_shr _ _ A).
   Proof. move=> ?? Eqv ??-> ??-> ??-> ??->. apply Eqv. Qed.
 
+  (** Simple Type *)
+
   Inductive st_equiv' {A} (st1 st2: simple_type A) : Prop := St_equiv :
     st1.(ty_size) = st2.(ty_size) → st1.(ty_lfts) = st2.(ty_lfts) →
     st1.(ty_E) = st2.(ty_E) →
@@ -330,7 +333,7 @@ Section ofe.
     apply (iso_ofe_mixin ty_of_st); (split=> Eqv; split; try by apply Eqv);
     move=> > /=; f_equiv; f_equiv; by move: Eqv=> [_ _ _ /= ->].
   Qed.
-  Canonical Structure stO {A} : ofe := Ofe (simple_type A) st_ofe_mixin.
+  Canonical Structure simple_typeO {A} : ofe := Ofe (simple_type A) st_ofe_mixin.
 
   Global Instance st_own_ne n {A} :
     Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@st_own _ _ A).
@@ -346,6 +349,7 @@ Section ofe.
   Qed.
   Global Instance ty_of_st_proper {A} : Proper ((≡) ==> (≡)) (@ty_of_st _ _ A).
   Proof. apply (ne_proper _). Qed.
+
 End ofe.
 
 Ltac solve_ne_type :=
@@ -426,6 +430,7 @@ Qed.
 Lemma type_lft_morphism_ext {A B} (T U: _ A → _ B) :
   TypeLftMorphism T → (∀ty, T ty = U ty) → TypeLftMorphism U.
 Proof. by intros [] HTU; [eleft|eright]; intros; rewrite -HTU. Qed.
+
 End type_lft_morphism.
 
 Class TypeContractive `{!typeG Σ} {A B} (T: type A -> type B): Prop := {
@@ -899,7 +904,7 @@ Section subtyping.
     split; eapply subtype_trans; [apply Sub1| | |apply Sub1']; done.
   Qed.
 
-  Lemma type_incl_simple_type {A B} f (st1: simple_type A) (st2: simple_type B):
+  Lemma type_incl_simple_type {A B} f (st1: simple_type A) (st2: simple_type B) :
     ty_size st1 = ty_size st2 → ty_lft st2 ⊑ ty_lft st1 -∗ □ (∀vπ d tid vl,
       st1.(st_own) (vπ, d) tid vl -∗ st2.(st_own) (f ∘ vπ, d) tid vl) -∗
     type_incl f st1 st2.
