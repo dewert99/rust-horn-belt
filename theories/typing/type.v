@@ -19,6 +19,8 @@ Definition thread_id := na_inv_pool_name.
 
 Implicit Type d: nat.
 
+(** * Type *)
+
 Record type `{!typeG Σ} A := {
   ty_size: nat;  ty_lfts: list lft;  ty_E: elctx;
   ty_own: pval_depth A → thread_id → list val → iProp Σ;
@@ -126,6 +128,8 @@ Proof.
   - apply IH; [|done]. etrans; [|by apply Outlv]. by apply submseteq_inserts_l.
 Qed.
 
+(** Simple Type *)
+
 Record simple_type `{!typeG Σ} A := {
   st_size: nat;  st_lfts: list lft;  st_E: elctx;
   st_own: pval_depth A → thread_id → list val → iProp Σ;
@@ -189,7 +193,8 @@ Declare Scope lrust_type_scope.
 Delimit Scope lrust_type_scope with T.
 Bind Scope lrust_type_scope with type.
 
-(* OFE and COFE structures on types and simple types. *)
+(** * OFE Structures on Types *)
+
 Section ofe.
   Context `{!typeG Σ}.
 
@@ -317,7 +322,8 @@ Ltac solve_ne_type :=
                                      eapply ty_E_ne || eapply ty_outlives_E_ne);
                                     try reflexivity) || f_equiv).
 
-(** Type-nonexpansive and Type-contractive functions. *)
+(** * Nonexpansiveness/Contractiveness of Type Morphisms *)
+
 Inductive TypeLftMorphism `{!typeG Σ} {A B} (T : type A → type B) : Prop :=
 | type_lft_morphism_add α βs E :
     (∀ty, ⊢ (T ty).(ty_lft) ≡ₗ α ⊓ ty.(ty_lft)) →
@@ -470,7 +476,6 @@ Section type_contractive.
     eauto using type_lft_morphism_ext.
   Qed.
 
-  (* Show some more relationships between properties. *)
   Global Instance type_contractive_type_ne {A B} (T: _ A → _ B) :
     TypeContractive T → TypeNonExpansive T.
   Proof.
@@ -564,6 +569,8 @@ Section type_contractive.
 
 End type_contractive.
 
+(** * Traits *)
+
 Fixpoint shr_locsE (l: loc) (n: nat) : coPset :=
   match n with
   | 0%nat => ∅
@@ -623,7 +630,8 @@ Proof. by constructor. Qed.
 Section type.
   Context `{!typeG Σ}.
 
-  (** Copy types *)
+  (** Lemmas on Copy *)
+
   Lemma shr_locsE_shift l n m :
     shr_locsE l (n + m) = shr_locsE l n ∪ shr_locsE (l +ₗ n) m.
   Proof.
@@ -686,7 +694,8 @@ Section type.
     iDestruct ("Htok" with "Htok2") as "$". iIntros "Hmt". by iApply "Hclose".
   Qed.
 
-  (** Send and Sync types *)
+  (** Lemmas on Send and Sync *)
+
   Global Instance send_equiv {A} : Proper (equiv ==> impl) (@Send _ _ A).
   Proof.
     move=> ?? [_ _ _ Eqv _] ?. rewrite /Send=> *. by rewrite -!Eqv.
@@ -715,7 +724,10 @@ Section type.
   Proof.
     intros ?. apply: anti_symm; apply sync_change_tid.
   Qed.
+
 End type.
+
+(** * Subtyping *)
 
 Definition type_incl `{!typeG Σ} {A B} (f: A → B) ty1 ty2 : iProp Σ :=
   ⌜ty1.(ty_size) = ty2.(ty_size)⌝ ∗
