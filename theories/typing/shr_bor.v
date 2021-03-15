@@ -8,9 +8,9 @@ Section shr_bor.
 
   Program Definition shr_bor {A} (κ: lft) (ty: type A) : type A := {|
     st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
-    st_own vπd tid vl := (∃d (l: loc),
-      ⌜vπd.2 = S d⌝ ∗ ⌜vl = [ #l]⌝ ∗ ty.(ty_shr) (vπd.1,d) κ tid l)%I;
-  |}.
+    st_own vπd tid vl := ∃d (l: loc),
+      ⌜vπd.2 = S d⌝ ∗ ⌜vl = [ #l]⌝ ∗ ty.(ty_shr) (vπd.1,d) κ tid l;
+  |}%I.
   Next Obligation. move=> *. by iDestruct 1 as (???->) "_". Qed.
   Next Obligation.
     move=> ????[|d']*/=; iDestruct 1 as (d l ->->) "?"; [lia|].

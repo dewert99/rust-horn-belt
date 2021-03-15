@@ -7,8 +7,8 @@ Section bool.
   Context `{!typeG Σ}.
 
   Program Definition bool: type bool := {|
-    pt_size := 1; pt_own (b: bool) _ vl := ⌜vl = [ #b]⌝%I;
-  |}.
+    pt_size := 1;  pt_own (b: bool) _ vl := ⌜vl = [ #b]⌝;
+  |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
   Global Instance bool_send: Send bool.
