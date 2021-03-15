@@ -1,19 +1,19 @@
 From iris.proofmode Require Import tactics.
 From iris.algebra Require Import list numbers.
+From lrust.util Require Import basic.
 From lrust.typing Require Import lft_contexts.
 From lrust.typing Require Export type.
-From lrust.util Require Import point_free.
 
 Set Default Proof Using "Type".
 
 Section fupd_combine.
   Context `{BiFUpd PROP}.
   Implicit Types P Q : PROP.
-  Lemma step_fupdN_combine n E P Q : (|={E}▷=>^n P) ∗ (|={E}▷=>^n Q) ⊢ |={E}▷=>^n (P ∗ Q)%I. 
+  Lemma step_fupdN_combine n E P Q : (|={E}▷=>^n P) ∗ (|={E}▷=>^n Q) ⊢ |={E}▷=>^n (P ∗ Q)%I.
   Proof.
     iIntros "[H1 H2]".
     iInduction n as [|n] "IH".
-    - iFrame. 
+    - iFrame.
     (* compact this proof down. only challenge is controlling unfolding *)
     - iMod "H1"; iMod "H2"; iModIntro; iNext.
       by iApply ("IH" with "[> $]").
@@ -33,7 +33,7 @@ Section product.
   Program Definition unit0 {A} : type A :=
     {| ty_size := 0; ty_lfts := []; ty_E := [];
        ty_own depth tid vl := ⌜vl = [] ∧ depth.1 ./ []⌝%I; ty_shr d κ tid l := ⌜ d.1 ./ [] ⌝%I |}.
-  
+
   Next Obligation. iIntros (A depth tid vl) "[% _]". by subst. Qed.
   Next Obligation. by iIntros (??????). Qed.
   Next Obligation. by iIntros (????????). Qed.
@@ -44,10 +44,10 @@ Section product.
     iMod (bor_exists with "LFT H") as (vl) "H"; first done.
     iMod (bor_sep with "LFT H") as "[_ H]"; first done.
     iMod ((bor_persistent _ E) with "LFT H Htok") as "[> [_ ?] ?]"; first done.
-    by iFrame. 
+    by iFrame.
   Qed.
   Next Obligation. iIntros (?????????) "/= ? ? [% %] ?".
-    iModIntro. 
+    iModIntro.
     iApply step_fupdN_intro=>//. iNext. iModIntro.
     iExists [], q.
     iSplit; first done.
@@ -61,14 +61,14 @@ Section product.
   iSplit; first done.
   iSplit; first by rewrite /proph_toks.
   iIntros. by iFrame.
-  Qed. 
+  Qed.
 
   Global Instance unit0_copy {A} : Copy (@unit0 A).
   Proof.
     split.
     - simpl. by apply _.
     - iIntros (????????) "_ ? Hshr Htok $".
-      iDestruct (na_own_acc with "Htok") as "[$ Htok]"; first solve_ndisj.  
+      iDestruct (na_own_acc with "Htok") as "[$ Htok]"; first solve_ndisj.
       iExists 1%Qp. iModIntro. iExists []. iSplitR; [by rewrite heap_mapsto_vec_nil|].
       iDestruct "Hshr" as "%".
       simpl. iSplitR; first by auto. iIntros "Htok2 _". by iApply "Htok".
@@ -142,11 +142,11 @@ Section product.
     iDestruct (step_fupdN_combine with "[H1 H2]") as "H1"; first iFrame.
     iModIntro.
     iApply (step_fupdN_wand with "H1").
-    iIntros "[> [? ?] > [? ?]]". by iFrame. 
+    iIntros "[> [? ?] > [? ?]]". by iFrame.
     Qed.
-  
+
   Next Obligation.
-    iIntros (A B ty1 ty2 N vπ d tid vl κ q ?) "#LFT #H⊑". 
+    iIntros (A B ty1 ty2 N vπ d tid vl κ q ?) "#LFT #H⊑".
     iDestruct 1 as (vl1 vl2) "(? & Hownty1 & Hownty2)".
     iIntros "[Htok1 Htok2]".
     iDestruct (ty_own_proph with "LFT [] Hownty1 Htok1") as "> H1"; first done.
@@ -155,11 +155,11 @@ Section product.
     iDestruct (ty_own_proph with "LFT [] Hownty2 Htok2") as "> H2"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
-    
-    iDestruct (step_fupdN_combine with "[H1 H2]") as "H1"; first iAccu. 
+
+    iDestruct (step_fupdN_combine with "[H1 H2]") as "H1"; first iAccu.
     iApply (step_fupdN_wand with "H1").
     iModIntro.
-    iIntros "[H1 H2]". 
+    iIntros "[H1 H2]".
     iMod "H1" as (ξs1 q1') "(% & q1dep & ty1own)".
     iMod "H2" as (ξs2 q2') "(% & q2dep & ty2own)".
     destruct (Qp_lower_bound q1' q2') as (x & r1 & r2 & Hq1 & Hq2); setoid_subst.
@@ -175,7 +175,7 @@ Section product.
       iMod ("ty1own" with "[$]") as "[? ?]"; first iFrame.
       iMod ("ty2own" with "[$]") as "[? ?]"; first iFrame.
       iExists vl1, vl2; by iFrame.
-  Qed.    
+  Qed.
 
   Next Obligation.
     iIntros (A B ty1 ty2 E vπ d κ tid l κ' q ?) "/= #LFT #Hsub #? [Hty1 Hty2] [Htok1 Htok2]".
@@ -187,7 +187,7 @@ Section product.
       iApply lft_intersect_incl_r. }
     iModIntro; iNext.
     iCombine "Hty1 Hty2" as "> ?".
-    iDestruct (step_fupdN_combine with "[$]") as "H1". 
+    iDestruct (step_fupdN_combine with "[$]") as "H1".
     iApply (step_fupdN_wand with "H1").
     iModIntro.
     iIntros "[Hty1 Hty2]".
@@ -271,7 +271,7 @@ Section product.
 
   (* Global Instance product2_ne {A B} :
     NonExpansive2 (@product2 A B).
-  Proof. 
+  Proof.
     split.
     - pose proof (type_non_expansive_ty_size (A := (A * B)%type)). rewrite !(type_non_expansive_ty_size (T:=T1) ty1 ty2) //.
     rewrite !(type_non_expansive_ty_size (T:=T2) ty1 ty2) //.
