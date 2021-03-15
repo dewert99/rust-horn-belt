@@ -6,9 +6,8 @@ Set Default Proof Using "Type".
 Section bool.
   Context `{!typeG Σ}.
 
-  Definition bool2int (b: bool) : Z := if b then 1 else 0.
   Program Definition bool: type bool := {|
-    pt_size := 1; pt_own b _ vl := ⌜vl = [ #(LitInt (bool2int b))]⌝%I;
+    pt_size := 1; pt_own (b: bool) _ vl := ⌜vl = [ #b]⌝%I;
   |}.
   Next Obligation. move=> *. by iIntros (->). Qed.
 

@@ -7,7 +7,7 @@ Section int.
   Context `{!typeG Σ}.
 
   Program Definition int: type Z := {|
-    pt_size := 1; pt_own n _ vl := ⌜vl = [ #(LitInt n)]⌝%I;
+    pt_size := 1; pt_own (n: Z) _ vl := ⌜vl = [ #n]⌝%I;
   |}.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
