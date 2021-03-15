@@ -1,6 +1,11 @@
 Require Import ssreflect FunctionalExtensionality.
 From stdpp Require Import prelude.
 
+(** * Utility for Natural Numbers *)
+
+Lemma succ_le m n : S m ≤ n → ∃n', n = S n' ∧ m ≤ n'.
+Proof. move: n=> [|n'] => Le. { inversion Le. } exists n'. lia. Qed.
+
 (** * Utility for Point-Free Style *)
 
 Lemma compose_assoc {A B C D} (f: A → B) (g: B → C) (h: C → D) :

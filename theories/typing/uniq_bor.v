@@ -1,78 +1,87 @@
 From iris.algebra.lib Require Export excl_auth.
 From iris.proofmode Require Import tactics.
+From lrust.util Require Import basic update.
 From lrust.lang Require Import heap.
 From lrust.typing Require Export type.
-From lrust.typing Require Import lft_contexts type_context programs.
+From lrust.typing Require Import uniq_cmra.
+(* From lrust.typing Require Import lft_contexts type_context programs. *)
+From iris_string_ident Require Import ltac2_string_ident.
 Set Default Proof Using "Type".
 
 Section uniq_bor.
   Context `{!typeG Σ}.
 
-  Program Definition uniq_bor (κ:lft) (ty:type) :=
-    {| ty_size := 1;
-       ty_lfts := κ :: ty.(ty_lfts); ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
-       ty_own depth0 tid vl :=
-         κ ⊑ ty.(ty_lft) ∗
-         match depth0, vl return _ with
-         | S depth1, [ #(LitLoc l) ] =>
-           ∃ depth2 γ, ⌜depth2 ≤ depth1⌝%nat ∗ own γ (◯E depth2) ∗
-             &{κ} (∃ depth2', own γ (●E depth2') ∗ ⧖S depth2' ∗
-                                     l ↦∗: ty.(ty_own) depth2' tid)
-         | _, _ => False
-         end;
-       ty_shr κ' tid l :=
-         ∃ l':loc, &frac{κ'}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) κ' tid l'
-    |}%I.
-  Next Obligation. by iIntros (κ ty [|depth] tid [|[[]|][]]) "[_ H]". Qed.
-  Next Obligation.
-    intros κ ty [|depth1] [|depth2] tid [|[[]|][]] ?; try iIntros "[_ []]" || lia.
-    do 8 f_equiv. lia.
-  Qed.
-  Next Obligation.
-    move=> κ ty N depth0 κ' l tid ??/=. iIntros "#LFT #Houtlives Hshr Htok".
-    iMod (bor_exists with "LFT Hshr") as ([|[[|l'|]|][]]) "Hb"=>//;
-      (iMod (bor_sep with "LFT Hb") as "[Hb1 Hb2]"; [done|]);
-      destruct depth0 as [|depth1];
-      try (by iMod (bor_persistent with "LFT Hb2 Htok") as "[[_ >[]] _]").
-    iMod (bor_sep with "LFT Hb2") as "[_ Hb2]"; [done|].
-    iMod (bor_exists with "LFT Hb2") as (depth2) "Hb2"; [done|].
-    iMod (bor_exists with "LFT Hb2") as (γ) "Hb2"; [done|].
-    iMod (bor_sep with "LFT Hb2") as "[Hdepth Hb2]"; [done|].
-    iMod (bor_persistent with "LFT Hdepth Htok") as "[>Hdepth Htok]"; [done|].
-    iDestruct "Hdepth" as %Hdepth.
-    iMod (bor_sep with "LFT Hb2") as "[Hdepth2 Hb2]"; [done|].
-    iMod (bor_unnest with "LFT Hb2") as "Hb2"; [done|].
-    iIntros "/= !> !> !>". iMod "Hb2".
-    iMod (bor_exists with "LFT Hb2") as (depth2') "Hb2"; [done|].
-    iDestruct (bor_shorten κ' with "[] Hb2") as "Hb2".
-    { iApply lft_incl_glb; [|iApply lft_incl_refl].
-      iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
-    iMod (bor_sep with "LFT Hb2") as "[Hdepth2' Hb2]"; [done|].
-    iMod (bor_combine with "LFT Hdepth2' Hdepth2") as "Hdepth"; [done|].
-    assert (Hvalid : ∀ x : excl_authR natO, own γ x ⊣⊢ own γ x ∗ ✓x).
-    { intros ?. iSplit; [|iIntros "[$ _]"]. iIntros "H".
-      by iDestruct (own_valid with "H") as "#$". }
-    rewrite -own_op Hvalid. iMod (bor_sep with "LFT Hdepth") as "[_ Hdepth]"; [done|].
-    iMod (bor_persistent with "LFT Hdepth Htok") as "[>Hdepth Htok]"; [done|].
-    iDestruct "Hdepth" as %->%excl_auth_agree_L.
-    iMod (bor_sep with "LFT Hb2") as "[_ Hb2]"; [done|].
-    iMod (ty_share with "LFT [] Hb2 Htok") as "Hb2"=>//.
-    { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_r. }
-    (* TODO prove that step_fupdN is monotonic. *)
-    iModIntro. iInduction Hdepth as [|] "IH"; last first.
-    { iIntros "/= !> !> !>". iApply ("IH" with "[$] [$]"). }
-    iApply (step_fupdN_wand with "Hb2"). iIntros ">[? $]".
-    rewrite heap_mapsto_vec_singleton.
-    iMod (bor_fracture (λ q, l ↦{q} #l')%I with "LFT Hb1") as "Hb1"; first solve_ndisj.
-    eauto with iFrame.
-  Qed.
-  Next Obligation.
-    intros κ0 ty κ κ' tid l. iIntros "/= #Hκ #H".
-    iDestruct "H" as (l') "[Hfb Hvs]".
-    iExists l'. iSplit. by iApply (frac_bor_shorten with "[]").
-    by iApply (ty_shr_mono with "Hκ").
+  Lemma bor_sep_persistent E κ P `{!Persistent P} Q q :
+    ↑lftN ⊆ E → lft_ctx -∗ &{κ} (P ∗ Q) -∗ q.[κ] ={E}=∗ ▷ P ∗ &{κ} Q ∗ q.[κ].
+  Proof.
+    iIntros (?) "#LFT Bor Tok". iMod (bor_sep with "LFT Bor") as "[Bor $]"; [done|].
+    by iMod (bor_persistent with "LFT Bor Tok") as "[$$]".
   Qed.
 
+  Program Definition uniq_bor {A} (κ: lft) (ty: type A) : type (A * A) := {|
+    ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    ty_own vπd tid vl := ∃d (l: loc) (ξ: proph_var' A), ⌜S d ≤ vπd.2⌝ ∗ ⌜vl = [ #l]⌝ ∗
+      ⌜snd ∘ vπd.1 = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπd.1, d) ∗
+      &{κ} (∃vπd', l ↦∗: ty.(ty_own) vπd' tid ∗ ⧖ S vπd'.2 ∗ .PC[ξ] vπd');
+    ty_shr vπd κ' tid l := ∃d (l': loc) ξ, ⌜vπd.2 = S d⌝ ∗ ⌜snd ∘ vπd.1 ./ [ξ]⌝ ∗
+      &frac{κ'}(λ q', l ↦{q'} #l') ∗ &frac{κ'} (λ q, q:[ξ]) ∗
+      ▷ ty.(ty_shr) (fst ∘ vπd.1, d) κ' tid l';
+  |}%I.
+  Next Obligation. move=> *. by iDestruct 1 as (????->) "?". Qed.
+  Next Obligation.
+    move=> ????[|d']*/=; iDestruct 1 as (d l ξ ?->?) "[??]"; [lia|].
+    iExists d, l, ξ. iSplit; [iPureIntro; lia|]. do 2 (iSplit; [done|]). iFrame.
+  Qed.
+  Next Obligation.
+    move=> ????[|d']*/=; iDestruct 1 as (d l ξ -> ?) "[?[??]]"; [lia|].
+    iExists d', l, ξ. do 2 (iSplit; [done|]). iFrame.
+    iApply ty_shr_depth_mono; [|done]. lia.
+  Qed.
+  Next Obligation.
+    move=> *. iIntros "#In". iDestruct 1 as (d l ξ -> ?) "[?[??]]". iExists d, l, ξ.
+    do 2 (iSplit; [done|]). do 2 (iSplit; [by iApply frac_bor_shorten|]).
+    by iApply ty_shr_lft_mono.
+  Qed.
+  Next Obligation.
+    move=> A ??? vπ *. iIntros "#LFT #? Bor Tok".
+    have ?: Inhabited A := populate ((vπ inhabitant).1).
+    iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
+    iMod (bor_sep with "LFT Bor") as "[BorMt Bor]"; [done|].
+    iMod (bor_exists with "LFT Bor") as (d) "Bor"; [done|].
+    iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
+    iMod (bor_exists with "LFT Bor") as (ξ) "Bor"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor Tok") as "[>%Le [Bor Tok]]"; [done|].
+    do 2 (iMod (bor_sep_persistent with "LFT Bor Tok") as "[>-> [Bor Tok]]"; [done|]).
+    iMod (bor_sep with "LFT Bor") as "[BorVo Bor]"; [done|].
+    iMod (bor_unnest with "LFT Bor") as "Bor"; [done|].
+    move: Le=> /succ_le /=[d'[->Le]] /=. iIntros "!>!>!>".
+    iMod (bor_shorten with "[] Bor") as "Bor".
+    { iApply lft_incl_glb; [|iApply lft_incl_refl].
+      iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
+    iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
+    iMod (bor_sep with "LFT Bor") as "[BorOwn Bor]"; [done|].
+    iMod (bor_sep with "LFT Bor") as "[_ BorPc]"; [done|].
+    iMod (bor_combine with "LFT BorVo BorPc") as "Bor"; [done|].
+    iMod (bor_acc_cons with "LFT Bor Tok") as "[[>Vo Pc] Close]"; [done|].
+    iMod (uniq_agree with "Vo Pc") as (<-) "[Vo Pc]".
+    iDestruct (uniq_proph_tok with "Vo Pc") as "[Vo [PTok Wand]]".
+    iMod ("Close" with "[Vo Wand] PTok") as "[BorPTok Tok]".
+    { iIntros "!> >PTok !>!>". iFrame "Vo". by iApply "Wand". }
+    iMod (ty_share with "LFT [] BorOwn Tok") as "Big"; first done.
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
+    iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Big").
+    rewrite heap_mapsto_vec_singleton.
+    iDestruct (bor_fracture (λ q, _ ↦{q} _)%I with "LFT BorMt") as ">?"; [done|].
+    iDestruct (bor_fracture (λ q, q:[_])%I with "LFT BorPTok") as ">?"; [done|].
+    iIntros "!> >[? $] !>". iExists d', l, ξ. iFrame. iSplit; [done|].
+    iSplit; [iPureIntro; apply proph_dep_one|]. by iApply ty_shr_depth_mono.
+  Qed.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+
+(*
   Global Instance uniq_mono E L :
     Proper (flip (lctx_lft_incl E L) ==> eqtype E L ==> subtype E L) uniq_bor.
   Proof.
@@ -132,10 +141,12 @@ Section uniq_bor.
     iIntros (Hsync κ' tid1 tid2 l) "H". iDestruct "H" as (l') "[Hm #Hshr]".
     iExists l'. iFrame "Hm". by iApply Hsync.
   Qed.
+*)
 End uniq_bor.
 
 Notation "&uniq{ κ }" := (uniq_bor κ) (format "&uniq{ κ }") : lrust_type_scope.
 
+(*
 Section typing.
   Context `{!typeG Σ}.
 
@@ -241,3 +252,4 @@ End typing.
 
 Global Hint Resolve uniq_mono' uniq_proper' write_uniq read_uniq : lrust_typing.
 Global Hint Resolve tctx_extract_hasty_reborrow | 10 : lrust_typing.
+*)

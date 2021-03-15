@@ -5,7 +5,7 @@ From iris.algebra Require Import auth cmra functions gmap csum frac agree.
 From iris.bi Require Import fractional.
 From iris.proofmode Require Import tactics.
 From iris.base_logic Require Import invariants.
-From lrust.util Require Import point_free discrete_fun.
+From lrust.util Require Import basic discrete_fun.
 
 (** * Pointed Type *)
 
@@ -26,6 +26,10 @@ Global Instance proph_var_eq_dec : EqDecision proph_var.
 Proof. solve_decision. Qed.
 
 Implicit Type (ξ ζ: proph_var) (ξs ζs: list proph_var).
+
+Definition proph_var' A : Type := A * positive.
+Definition proph_var_of_proph_var' {A} (ξ: proph_var' A) := PVar (PtType A ξ.1) ξ.2.
+Coercion proph_var_of_proph_var': proph_var' >-> proph_var.
 
 Definition proph_asn := ∀ξ, ξ.(pv_ty).
 

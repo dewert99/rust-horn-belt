@@ -94,17 +94,6 @@ Global Instance uniq_ctx_persistent : Persistent uniq_ctx := _.
 
 Global Instance val_obs_timeless ξ vπd : Timeless (.VO[ξ] vπd) := _.
 
-(** Later *)
-
-Lemma uniq_strip_later ξ vπd :
-  .VO[ξ] vπd -∗ ▷ .PC[ξ] vπd -∗ ◇ (.VO[ξ] vπd ∗ .PC[ξ] vπd).
-Proof.
-  iIntros "Vo". iDestruct 1 as "[> ?|[> ExVo2 _]]"; last first.
-  { iDestruct "ExVo2" as (?) "Vo2".
-    by iDestruct (own_line_agree with "Vo Vo2") as %[? _]. }
-  iModIntro. iFrame "Vo". by iLeft.
-Qed.
-
 (** Initialization *)
 
 Lemma uniq_init `{!uniqPreG Σ} E :
@@ -133,17 +122,21 @@ Proof.
   iDestruct (vo_vo2 with "Vo2") as "[Vo Vo']". iFrame "Vo". iLeft. iFrame.
 Qed.
 
-Lemma uniq_agree ξ vπd vπd' : .VO[ξ] vπd -∗ .PC[ξ] vπd' -∗ ⌜vπd = vπd'⌝.
+Lemma uniq_agree ξ vπd vπd' :
+  .VO[ξ] vπd -∗ ▷ .PC[ξ] vπd' -∗ ◇ (⌜vπd = vπd'⌝ ∗ (.VO[ξ] vπd ∗ .PC[ξ] vπd)).
 Proof.
-  iIntros "Vo". iDestruct 1 as "[[Own _]|[ExVo2 _]]";
-    [|iDestruct "ExVo2" as (?) "Own"];
-    by iDestruct (own_line_agree with "Vo Own") as %[??].
+  iIntros "Vo". iDestruct 1 as "[> [Vo' ?]|[> ExVo2 _]]"; last first.
+  { iDestruct "ExVo2" as (?) "Vo2".
+    by iDestruct (own_line_agree with "Vo Vo2") as %[? _]. }
+  iDestruct (own_line_agree with "Vo Vo'") as %[_ ->]. iModIntro.
+  iSplit; [done|]. iFrame "Vo". iLeft. iFrame.
 Qed.
 
 Lemma uniq_proph_tok ξ vπd :
   .VO[ξ] vπd -∗ .PC[ξ] vπd -∗ .VO[ξ] vπd ∗ 1:[ξ] ∗ (1:[ξ] -∗ .PC[ξ] vπd).
 Proof.
-  iIntros "Vo Pc". iDestruct (vo_pc with "Vo Pc") as "[Vo2 $]".
+  iIntros "Vo Pc".
+  iDestruct (vo_pc with "Vo Pc") as "[Vo2 $]".
   iDestruct (vo_vo2 with "Vo2") as "[$ ?]". iIntros "?". iLeft. iFrame.
 Qed.
 
