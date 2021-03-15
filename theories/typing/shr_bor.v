@@ -6,7 +6,7 @@ Set Default Proof Using "Type".
 Section shr_bor.
   Context `{!typeG Σ}.
 
-  Program Definition shr_bor {A} (κ: lft) (ty: type A) : type A := ty_of_st {|
+  Program Definition shr_bor {A} (κ: lft) (ty: type A) : type A := {|
     st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
     st_own vπd tid vl := (∃d (l: loc),
       ⌜vπd.2 = S d⌝ ∗ ⌜vl = [ #l]⌝ ∗ ty.(ty_shr) (vπd.1,d) κ tid l)%I;
