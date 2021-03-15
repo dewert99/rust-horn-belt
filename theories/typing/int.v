@@ -1,25 +1,21 @@
 From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
-From lrust.typing Require Import bool programs.
+(* From lrust.typing Require Import bool programs. *)
 Set Default Proof Using "Type".
 
 Section int.
   Context `{!typeG Σ}.
 
-  Program Definition int : type :=
-    {| st_lfts := []; st_E := [];
-       st_own tid vl :=
-         match vl return _ with
-         | [ #(LitInt z)] => True
-         | _ => False
-         end%I |}.
-  Next Obligation. intros ? [|[[]|] []]; auto. Qed.
-  Next Obligation. intros ? [|[[]|] []]; apply _. Qed.
+  Program Definition int: type Z := {|
+    pt_size := 1; pt_own n _ vl := ⌜vl = [ #(LitInt n)]⌝%I;
+  |}.
+  Next Obligation. move=> *. by iIntros (->). Qed.
 
-  Global Instance int_send : Send int.
+  Global Instance int_send: Send int.
   Proof. done. Qed.
 End int.
 
+(*
 Section typing.
   Context `{!typeG Σ}.
 
@@ -83,3 +79,4 @@ Section typing.
     typed_body E L C T (let: x := p1 ≤ p2 in e).
   Proof. iIntros. iApply type_let; [apply type_le_instr|solve_typing|done]. Qed.
 End typing.
+*)

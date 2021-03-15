@@ -52,7 +52,7 @@ theories/typing/own.v
 # theories/typing/product_split.v
 # theories/typing/sum.v
 theories/typing/bool.v
-# theories/typing/int.v
+theories/typing/int.v
 # theories/typing/function.v
 # theories/typing/programs.v
 # theories/typing/borrow.v
