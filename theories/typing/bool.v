@@ -1,25 +1,22 @@
 From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
-From lrust.typing Require Import programs.
+(* From lrust.typing Require Import programs. *)
 Set Default Proof Using "Type".
 
 Section bool.
   Context `{!typeG Σ}.
 
-  Program Definition bool : type :=
-    {| st_lfts := []; st_E := [];
-       st_own tid vl :=
-         match vl return _ with
-         | [ #(LitInt (0|1))] => True
-         | _ => False
-         end%I |}.
-  Next Obligation. intros ? [|[[| |[|[]|]]|] []]; auto. Qed.
-  Next Obligation. intros ? [|[[| |[|[]|]]|] []]; apply _. Qed.
+  Definition bool2int (b: bool) : Z := if b then 1 else 0.
+  Program Definition bool: type bool := {|
+    pt_size := 1; pt_own b _ vl := ⌜vl = [ #(LitInt (bool2int b))]⌝%I;
+  |}.
+  Next Obligation. move=> *. by iIntros (->). Qed.
 
-  Global Instance bool_send : Send bool.
+  Global Instance bool_send: Send bool.
   Proof. done. Qed.
 End bool.
 
+(*
 Section typing.
   Context `{!typeG Σ}.
 
@@ -49,3 +46,4 @@ Section typing.
     - iApply ("He1" with "LFT TIME HE Htl HL HC HT").
   Qed.
 End typing.
+*)
