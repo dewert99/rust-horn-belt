@@ -135,132 +135,137 @@ Section own.
     iExists l'; by iFrame.
   Qed.
 
-  (* Lemma own_type_incl n m ty1 ty2 :
-    ▷ ⌜n = m⌝ -∗ type_incl ty1 ty2 -∗ type_incl (own_ptr n ty1) (own_ptr m ty2).
+  Lemma own_type_incl A B (f : A → B) n m ty1 ty2 :
+    ▷ ⌜n = m⌝ -∗ type_incl f ty1 ty2 -∗ type_incl f (own_ptr n ty1) (own_ptr m ty2).
   Proof.
     iIntros "#Heq #(Hsz & Hout & Ho & Hs)".
     iSplit; first done. iSplit; [done|iSplit; iModIntro].
-    - iIntros ([|depth]?[|[[| |]|][]]) "H"; try done. simpl.
+    - iIntros (? [|depth]?[|[[| |]|][]]) "H"; try done. simpl.
       iDestruct "H" as "[Hmt H†]". iNext. iDestruct ("Hsz") as %<-.
       iDestruct "Heq" as %->. iFrame. iApply (heap_mapsto_pred_wand with "Hmt").
       iApply "Ho".
-    - iIntros (???) "H". iDestruct "H" as (l') "[Hfb #Hshr]".
+    - iIntros (?[|depth] ???) "H"; first done. iDestruct "H" as (l') "[Hfb #Hshr]".
       iExists l'. iFrame. iApply ("Hs" with "Hshr").
   Qed.
-
-  Global Instance own_mono E L n :
-    Proper (subtype E L ==> subtype E L) (own_ptr n).
+  
+  Global Instance own_mono A E L n :
+    Proper (subtype E L id ==> subtype E L id) (@own_ptr A n).
   Proof.
     intros ty1 ty2 Hincl. iIntros (qL) "HL".
     iDestruct (Hincl with "HL") as "#Hincl".
     iClear "∗". iIntros "!> #HE".
     iApply own_type_incl; first by auto. iApply "Hincl"; auto.
   Qed.
-  Lemma own_mono' E L n1 n2 ty1 ty2 :
-    n1 = n2 → subtype E L ty1 ty2 → subtype E L (own_ptr n1 ty1) (own_ptr n2 ty2).
+
+  Lemma own_mono' A E L n1 n2 ty1 ty2 :
+    n1 = n2 → subtype E L id ty1 ty2 → subtype E L id (own_ptr n1 ty1) (@own_ptr A n2 ty2).
   Proof. intros -> *. by apply own_mono. Qed.
-  Global Instance own_proper E L n :
-    Proper (eqtype E L ==> eqtype E L) (own_ptr n).
+
+  Global Instance own_proper A E L n :
+    Proper (eqtype E L id id ==> eqtype E L id id) (@own_ptr A n).
   Proof. intros ??[]; split; by apply own_mono. Qed.
-  Lemma own_proper' E L n1 n2 ty1 ty2 :
-    n1 = n2 → eqtype E L ty1 ty2 → eqtype E L (own_ptr n1 ty1) (own_ptr n2 ty2).
+
+  Lemma own_proper' A E L n1 n2 ty1 ty2 :
+    n1 = n2 → eqtype E L id id ty1 ty2 → eqtype E L id id (@own_ptr A n1 ty1) (@own_ptr A n2 ty2).
   Proof. intros -> *. by apply own_proper. Qed.
 
-  Global Instance own_type_contractive n : TypeContractive (own_ptr n).
+  Global Instance own_type_contractive A n : @TypeContractive _ _ A A (own_ptr n).
   Proof.
     split.
     - apply (type_lft_morphism_add _ static [] []) => ?.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /= /elctx_interp /= left_id right_id.
     - done.
-    - move=> ??? Hsz ?? Ho ?[|depth]? [|[[|l|]|] []] //=.
+    - move=> ??? Hsz ?? Ho ? [? [|depth]]? [|[[|l|]|] []] //=.
       rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
-    - move=> ??????? Hs ??? /=. repeat (apply Hs || f_contractive || f_equiv).
+    - move=> ??????? Hs [? [|?]] ??? /=;  repeat (apply Hs || f_contractive || f_equiv).  
   Qed.
 
-  Global Instance own_ne n : NonExpansive (own_ptr n).
+  Global Instance own_ne A n : NonExpansive (@own_ptr A n).
   Proof. solve_ne_type. Qed.
 
-  Global Instance own_send n ty :
-    Send ty → Send (own_ptr n ty).
+  Global Instance own_send A n ty :
+    Send ty → Send (@own_ptr A n ty).
   Proof.
-    iIntros (Hsend [|depth] tid1 tid2 [|[[| |]|][]]) "H"; try done.
+    iIntros (Hsend tid1 tid2 [? [|depth]] [|[[| |]|][]]) "H"; try done.
     iDestruct "H" as "[Hm $]". iNext. iApply (heap_mapsto_pred_wand with "Hm").
     iIntros (vl) "?". by iApply Hsend.
   Qed.
 
-  Global Instance own_sync n ty :
-    Sync ty → Sync (own_ptr n ty).
+  Global Instance own_sync A n ty :
+    Sync ty → Sync (@own_ptr A n ty).
   Proof.
-    iIntros (Hsync κ tid1 tid2 l) "H". iDestruct "H" as (l') "[Hm #Hshr]".
+    iIntros (Hsync tid1 tid2 [? [|?]] κ  l) "H"; first done. iDestruct "H" as (l') "[Hm #Hshr]".
     iExists _. iFrame "Hm". by iApply Hsync.
-  Qed. *)
+  Qed.
 End own.
 
-(*
+
 Section box.
   Context `{!typeG Σ}.
 
-  Definition box ty := own_ptr ty.(ty_size) ty.
+  Definition box {A} (ty : type A) := own_ptr ty.(ty_size) ty.
 
-  Lemma box_type_incl ty1 ty2 :
-    type_incl ty1 ty2 -∗ type_incl (box ty1) (box ty2).
+  Lemma box_type_incl A ty1 ty2:
+    type_incl id ty1 ty2 -∗ type_incl id (@box A ty1) (@box A ty2).
   Proof.
     iIntros "#Hincl". iApply own_type_incl; last done.
     iDestruct "Hincl" as "(? & _ & _)". done.
   Qed.
 
-  Global Instance box_mono E L :
-    Proper (subtype E L ==> subtype E L) box.
+  Global Instance box_mono A E L :
+    Proper (subtype E L id ==> subtype E L id) (@box A).
   Proof.
     intros ty1 ty2 Hincl. iIntros (qL) "HL".
     iDestruct (Hincl with "HL") as "#Hincl".
     iClear "∗". iIntros "!> #HE".
     iApply box_type_incl. iApply "Hincl"; auto.
   Qed.
-  Lemma box_mono' E L ty1 ty2 :
-    subtype E L ty1 ty2 → subtype E L (box ty1) (box ty2).
+
+  Lemma box_mono' A E L ty1 ty2 :
+    subtype E L id ty1 ty2 → subtype E L id (@box A ty1) (@box A ty2).
   Proof. intros. by apply box_mono. Qed.
-  Global Instance box_proper E L :
-    Proper (eqtype E L ==> eqtype E L) box.
+
+  Global Instance box_proper A E L :
+    Proper (eqtype E L id id ==> eqtype E L id id) (@box A).
   Proof. intros ??[]; split; by apply box_mono. Qed.
-  Lemma box_proper' E L ty1 ty2 :
-    eqtype E L ty1 ty2 → eqtype E L (box ty1) (box ty2).
+  Lemma box_proper' A E L ty1 ty2 :
+    eqtype E L id id ty1 ty2 → eqtype E L id id (@box A ty1) (@box A ty2).
   Proof. intros. by apply box_proper. Qed.
 
-  Global Instance box_type_contractive : TypeContractive box.
+  Global Instance box_type_contractive A : TypeContractive (@box A).
   Proof.
     split.
     - apply (type_lft_morphism_add _ static [] []) => ?.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /= /elctx_interp /= left_id right_id.
     - done.
-    - move=> ??? Hsz ?? Ho ?[|depth]? [|[[|l|]|] []] //=.
+    - move=> ??? Hsz ?? Ho ? [? [|depth]] ? [|[[|l|]|] []] //=.
       rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
-    - move=> ??????? Hs ??? /=. repeat (apply Hs || f_contractive || f_equiv).
+    - move=> ??????? Hs [? [|?]] ??? /=; repeat (apply Hs || f_contractive || f_equiv).
   Qed.
 
-  Global Instance box_ne : NonExpansive box.
+  Global Instance box_ne A : NonExpansive (@box A).
   Proof. solve_ne_type. Qed.
 End box.
 
 Section util.
   Context `{!typeG Σ}.
 
-  Lemma ownptr_own n ty tid depth v :
+  Lemma ownptr_own A n (ty : type A) tid depth v :
     (own_ptr n ty).(ty_own) depth tid [v] ⊣⊢
        ∃ (l : loc) (vl : vec val ty.(ty_size)),
-         ⌜depth > 0⌝%nat ∗ ⌜v = #l⌝ ∗ ▷ l ↦∗ vl ∗
-         ▷ ty.(ty_own) (pred depth) tid vl ∗ ▷ freeable_sz n ty.(ty_size) l.
+         ⌜depth.2 > 0⌝%nat ∗ ⌜v = #l⌝ ∗ ▷ l ↦∗ vl ∗
+         ▷ ty.(ty_own) (depth.1, (pred depth.2)) tid vl ∗ ▷ freeable_sz n ty.(ty_size) l.
   Proof.
     iSplit.
-    - iIntros "Hown". destruct depth as [|depth], v as [[|l|]|]; try done.
+    - iIntros "Hown". destruct depth as [? [|depth]], v as [[|l|]|]; try done.
       iExists l. iDestruct "Hown" as "[Hown $]". rewrite heap_mapsto_ty_own.
-      iDestruct "Hown" as (vl) "[??]". eauto with iFrame lia.
+      iDestruct "Hown" as (vl) "[??]". simpl. eauto with iFrame lia.
     - iIntros "Hown". iDestruct "Hown" as (l vl) "(% & -> & ? & ? & ?)".
-      destruct depth as [|depth]; try lia. iFrame. iExists _. iFrame.
+      destruct depth as [? [|depth]]; simpl in *; try lia. iFrame. iExists _. iFrame.
   Qed.
-
+  (*
   Lemma ownptr_uninit_own n m tid depth v :
     (own_ptr n (uninit m)).(ty_own) depth tid [v] ⊣⊢
          ∃ (l : loc) (vl' : vec val m), ⌜depth > 0⌝%nat ∗ ⌜v = #l⌝ ∗
@@ -272,9 +277,9 @@ Section util.
     - iIntros "H". iDestruct "H" as (vl) "(% & -> & Hl & _ & $)". auto.
     - iIntros "H". iDestruct "H" as (vl) "(% & -> & Hl & $)".
       iExists vl. rewrite /= vec_to_list_length. auto.
-  Qed.
+  Qed.*)
 End util.
-
+(*
 Section typing.
   Context `{!typeG Σ}.
 

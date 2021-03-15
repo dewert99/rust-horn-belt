@@ -2,7 +2,23 @@ From iris.proofmode Require Import tactics.
 From iris.algebra Require Import list numbers.
 From lrust.typing Require Import lft_contexts.
 From lrust.typing Require Export type.
+From lrust.util Require Import point_free.
+
 Set Default Proof Using "Type".
+
+Section fupd_combine.
+  Context `{BiFUpd PROP}.
+  Implicit Types P Q : PROP.
+  Lemma step_fupdN_combine n E P Q : (|={E}▷=>^n P) ∗ (|={E}▷=>^n Q) ⊢ |={E}▷=>^n (P ∗ Q)%I. 
+  Proof.
+    iIntros "[H1 H2]".
+    iInduction n as [|n] "IH".
+    - iFrame. 
+    (* compact this proof down. only challenge is controlling unfolding *)
+    - iMod "H1"; iMod "H2"; iModIntro; iNext.
+      by iApply ("IH" with "[> $]").
+  Qed.
+End fupd_combine.
 
 Section product.
   Context `{!typeG Σ}.
@@ -14,38 +30,61 @@ Section product.
   (* "Pre"-unit.  We later define the full unit as the empty product.  That's
      convertible, but products are opaque in some hint DBs, so this does make a
      difference. *)
-  Program Definition unit0 : type :=
+  Program Definition unit0 {A} : type A :=
     {| ty_size := 0; ty_lfts := []; ty_E := [];
-       ty_own depth tid vl := ⌜vl = []⌝%I; ty_shr κ tid l := True%I |}.
-  Next Obligation. iIntros (depth tid vl) "%". by subst. Qed.
+       ty_own depth tid vl := ⌜vl = [] ∧ depth.1 ./ []⌝%I; ty_shr d κ tid l := ⌜ d.1 ./ [] ⌝%I |}.
+  
+  Next Obligation. iIntros (A depth tid vl) "[% _]". by subst. Qed.
   Next Obligation. by iIntros (??????). Qed.
-  Next Obligation.
-    iIntros (???????) "_ _ _ ? !>". iApply step_fupdN_intro=>//.
-    iIntros "!>". auto.
+  Next Obligation. by iIntros (????????). Qed.
+  Next Obligation. by iIntros (??????) "?". Qed.
+  Next Obligation. iIntros (?????????) "#LFT ? H Htok".
+    iApply step_fupdN_intro=>//.
+    iModIntro. iNext.
+    iMod (bor_exists with "LFT H") as (vl) "H"; first done.
+    iMod (bor_sep with "LFT H") as "[_ H]"; first done.
+    iMod ((bor_persistent _ E) with "LFT H Htok") as "[> [_ ?] ?]"; first done.
+    by iFrame. 
   Qed.
-  Next Obligation. by iIntros (????) "_ $". Qed.
+  Next Obligation. iIntros (?????????) "/= ? ? [% %] ?".
+    iModIntro. 
+    iApply step_fupdN_intro=>//. iNext. iModIntro.
+    iExists [], q.
+    iSplit; first done.
+    iSplit; first by rewrite /proph_toks.
+    iIntros; iModIntro; iFrame; done.
+  Qed.
 
-  Global Instance unit0_copy : Copy unit0.
+  Next Obligation. iIntros (??????????) "/= ? ? ? % ?".
+  iModIntro. iApply step_fupdN_intro=>//. do 4 iModIntro.
+  iExists [], q.
+  iSplit; first done.
+  iSplit; first by rewrite /proph_toks.
+  iIntros. by iFrame.
+  Qed. 
+
+  Global Instance unit0_copy {A} : Copy (@unit0 A).
   Proof.
     split.
     - simpl. by apply _.
-    - iIntros (????????) "_ _ _ Htok $".
-      iDestruct (na_own_acc with "Htok") as "[$ Htok]"; first solve_ndisj.
+    - iIntros (????????) "_ ? Hshr Htok $".
+      iDestruct (na_own_acc with "Htok") as "[$ Htok]"; first solve_ndisj.  
       iExists 1%Qp. iModIntro. iExists []. iSplitR; [by rewrite heap_mapsto_vec_nil|].
+      iDestruct "Hshr" as "%".
       simpl. iSplitR; first by auto. iIntros "Htok2 _". by iApply "Htok".
   Qed.
 
-  Global Instance unit0_send : Send unit0.
+  Global Instance unit0_send {A : Type } : Send (@unit0 A).
   Proof. by iIntros (depth tid1 tid2 vl) "H". Qed.
 
-  Global Instance unit0_sync : Sync unit0.
-  Proof. by iIntros (????) "_". Qed.
+  Global Instance unit0_sync { A : Type } : Sync (@unit0 A).
+  Proof. by iIntros (????). Qed.
 
-  Lemma split_prod_mt depth tid ty1 ty2 q l :
+  Lemma split_prod_mt {A B} (depth1 : pval_depth A) (depth2 : pval_depth B) tid ty1 ty2 q l :
     (l ↦∗{q}: λ vl, ∃ vl1 vl2,
-       ⌜vl = vl1 ++ vl2⌝ ∗ ty1.(ty_own) depth tid vl1 ∗ ty2.(ty_own) depth tid vl2)%I
-       ⊣⊢ l ↦∗{q}: ty1.(ty_own) depth tid ∗
-          (l +ₗ ty1.(ty_size)) ↦∗{q}: ty2.(ty_own) depth tid.
+       ⌜vl = vl1 ++ vl2⌝ ∗ ty1.(ty_own) depth1 tid vl1 ∗ ty2.(ty_own) depth2 tid vl2)%I
+       ⊣⊢ l ↦∗{q}: ty1.(ty_own) depth1 tid ∗
+          (l +ₗ ty1.(ty_size)) ↦∗{q}: ty2.(ty_own) depth2 tid.
   Proof.
     iSplit; iIntros "H".
     - iDestruct "H" as (vl) "[H↦ H]". iDestruct "H" as (vl1 vl2 ?) "[H1 H2]".
@@ -58,47 +97,118 @@ Section product.
       iDestruct (ty_size_eq with "H1") as %->. auto with iFrame.
   Qed.
 
-  Program Definition product2 (ty1 ty2 : type) :=
+  Program Definition product2 {A B} (ty1 : type A) (ty2 : type B) : type (A * B) :=
     {| ty_size := ty1.(ty_size) + ty2.(ty_size);
        ty_lfts := ty1.(ty_lfts) ++ ty2.(ty_lfts);
        ty_E := ty1.(ty_E) ++ ty2.(ty_E);
-       ty_own depth tid vl := (∃ vl1 vl2,
-         ⌜vl = vl1 ++ vl2⌝ ∗ ty1.(ty_own) depth tid vl1 ∗ ty2.(ty_own) depth tid vl2)%I;
-       ty_shr κ tid l :=
-         (ty1.(ty_shr) κ tid l ∗
-          ty2.(ty_shr) κ tid (l +ₗ ty1.(ty_size)))%I |}.
+       ty_own vπd tid vl := (∃ vl1 vl2,
+         ⌜vl = vl1 ++ vl2⌝ ∗ ty1.(ty_own) (fst ∘ vπd.1, vπd.2) tid vl1 ∗ ty2.(ty_own) (snd ∘ vπd.1, vπd.2) tid vl2)%I;
+       ty_shr d κ tid l :=
+         (ty1.(ty_shr) (fst ∘ d.1, d.2) κ tid l ∗
+          ty2.(ty_shr) (snd ∘ d.1, d.2) κ tid (l +ₗ ty1.(ty_size)))%I |}.
   Next Obligation.
-    iIntros (ty1 ty2 depth tid vl) "H". iDestruct "H" as (vl1 vl2 ?) "[H1 H2]".
+    iIntros (A B ty1 ty2 depth tid vl) "H". iDestruct "H" as (vl1 vl2 ?) "[H1 H2]".
     subst. rewrite app_length !ty_size_eq.
     iDestruct "H1" as %->. iDestruct "H2" as %->. done.
   Qed.
   Next Obligation.
-    move=>ty1 ty2 depth1 depth2 tid vl Hdepth /=.
+    move=>A B ty1 ty2 depth1 depth2 tid vl Hdepth /=.
     iDestruct 1 as (vl1 vl2 ->) "[H1 H2]".
     iExists vl1, vl2. iSplitR; [done|]. by iSplitL "H1"; iApply ty_own_depth_mono.
   Qed.
+
   Next Obligation.
-    intros ty1 ty2 E depth κ l tid q ?. iIntros "#LFT /= #? H [Htok1 Htok2]".
-    rewrite split_prod_mt.
-    iMod (bor_sep with "LFT H") as "[H1 H2]"; first solve_ndisj.
-    iMod (ty1.(ty_share) with "LFT [] H1 Htok1") as "H1"; first solve_ndisj.
-    { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
-      iApply lft_intersect_incl_l. }
-    iMod (ty2.(ty_share) with "LFT [] H2 Htok2") as "H2"; first solve_ndisj.
-    { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
-      iApply lft_intersect_incl_r. }
-    (* TODO : a generic lemma step_fupdN_combine *)
-    iModIntro. iInduction depth as [|depth] "IH".
-    - iMod "H1" as "[$$]". iMod "H2" as "[$$]". done.
-    - simpl. iMod "H1". iMod "H2". iModIntro. iNext.
-      iMod "H1". iMod "H2". iApply ("IH" with "H1 H2").
-  Qed.
-  Next Obligation.
-    intros ty1 ty2 κ κ' tid l. iIntros "/= #H⊑ [H1 H2]".
-    iSplitL "H1"; by iApply (ty_shr_mono with "H⊑").
+    iIntros (A B ty1 ty2 d1 d2 asn κ tid l Hdepth) "[? ?]".
+    iSplit; by iApply (ty_shr_depth_mono _ _ _ _ _ _ _ _ Hdepth).
   Qed.
 
-  Global Instance product2_lft_morphism T1 T2:
+  Next Obligation.
+    iIntros (A B ty1 ty2 κ κ' vπd tid l) "Hout [? ?]".
+    iSplit; by iApply (ty_shr_lft_mono with "Hout").
+  Qed.
+
+  Next Obligation.
+    intros A B ty1 ty2 E vπ depth κ l tid q ?; iIntros "#LFT /= #? H [Htok1 Htok2]".
+    rewrite split_prod_mt.
+
+    iMod (bor_sep with "LFT H") as "[H1 H2]"; first solve_ndisj.
+    iMod (ty1.(ty_share A) with "LFT [] H1 Htok1") as "H1"; first solve_ndisj.
+    { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
+      iApply lft_intersect_incl_l. }
+    iMod (ty2.(ty_share B) with "LFT [] H2 Htok2") as "H2"; first solve_ndisj.
+    { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
+      iApply lft_intersect_incl_r. }
+
+    iDestruct (step_fupdN_combine with "[H1 H2]") as "H1"; first iFrame.
+    iModIntro.
+    iApply (step_fupdN_wand with "H1").
+    iIntros "[> [? ?] > [? ?]]". by iFrame. 
+    Qed.
+  
+  Next Obligation.
+    iIntros (A B ty1 ty2 N vπ d tid vl κ q ?) "#LFT #H⊑". 
+    iDestruct 1 as (vl1 vl2) "(? & Hownty1 & Hownty2)".
+    iIntros "[Htok1 Htok2]".
+    iDestruct (ty_own_proph with "LFT [] Hownty1 Htok1") as "> H1"; first done.
+    { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
+      iApply lft_intersect_incl_l. }
+    iDestruct (ty_own_proph with "LFT [] Hownty2 Htok2") as "> H2"; first done.
+    { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
+      iApply lft_intersect_incl_r. }
+    
+    iDestruct (step_fupdN_combine with "[H1 H2]") as "H1"; first iAccu. 
+    iApply (step_fupdN_wand with "H1").
+    iModIntro.
+    iIntros "[H1 H2]". 
+    iMod "H1" as (ξs1 q1') "(% & q1dep & ty1own)".
+    iMod "H2" as (ξs2 q2') "(% & q2dep & ty2own)".
+    destruct (Qp_lower_bound q1' q2') as (x & r1 & r2 & Hq1 & Hq2); setoid_subst.
+    iExists (ξs1 ++ ξs2), x.
+    iModIntro.
+    iSplit.
+    - iPureIntro.
+      by apply proph_dep_pair.
+    - iDestruct "q1dep" as "[xξ1 r1ξ1]".
+      iDestruct "q2dep" as "[xξ2 r2ξ2]".
+      iSplitL "xξ1 xξ2"; iFrame.
+      iIntros "[xξ1 xξ2]".
+      iMod ("ty1own" with "[$]") as "[? ?]"; first iFrame.
+      iMod ("ty2own" with "[$]") as "[? ?]"; first iFrame.
+      iExists vl1, vl2; by iFrame.
+  Qed.    
+
+  Next Obligation.
+    iIntros (A B ty1 ty2 E vπ d κ tid l κ' q ?) "/= #LFT #Hsub #? [Hty1 Hty2] [Htok1 Htok2]".
+    iMod (ty1.(ty_shr_proph A) with "LFT Hsub [] Hty1 Htok1") as "Hty1"; first done.
+    { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
+      iApply lft_intersect_incl_l. }
+    iMod (ty2.(ty_shr_proph B) with "LFT Hsub [] Hty2 Htok2") as "Hty2"; first done.
+    { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
+      iApply lft_intersect_incl_r. }
+    iModIntro; iNext.
+    iCombine "Hty1 Hty2" as "> ?".
+    iDestruct (step_fupdN_combine with "[$]") as "H1". 
+    iApply (step_fupdN_wand with "H1").
+    iModIntro.
+    iIntros "[Hty1 Hty2]".
+    iMod "Hty1" as (ξs1 q1') "(% & q1dep & ty1own)".
+    iMod "Hty2" as (ξs2 q2') "(% & q2dep & ty2own)".
+    destruct (Qp_lower_bound q1' q2') as (x & r1 & r2 & -> & ->).
+    iDestruct "q1dep" as "[xξ1 r1ξ1]".
+    iDestruct "q2dep" as "[xξ2 r2ξ2]".
+    iExists (ξs1 ++ ξs2), x.
+    iModIntro.
+    iSplit.
+    - iPureIntro.
+      by apply proph_dep_pair.
+    - iSplitL "xξ1 xξ2"; iFrame.
+      iIntros "[? ?]".
+      iMod ("ty1own" with "[$]") as "[? ?]".
+      iMod ("ty2own" with "[$]") as "[? ?]".
+      by iFrame.
+  Qed.
+
+  Global Instance product2_lft_morphism {A B C} (T1 : type A → type B) (T2 : type A → type C):
     TypeLftMorphism T1 → TypeLftMorphism T2 →
     TypeLftMorphism (λ ty, product2 (T1 ty) (T2 ty)).
   Proof.
@@ -126,7 +236,7 @@ Section product.
       + by rewrite /= !elctx_interp_app HE HE'.
   Qed.
 
-  Global Instance product2_type_ne T1 T2:
+  Global Instance product2_type_ne {A B C} (T1 : type A → type B) (T2 : type A → type C):
     TypeNonExpansive T1 → TypeNonExpansive T2 →
     TypeNonExpansive (λ ty, product2 (T1 ty) (T2 ty)).
   Proof.
@@ -137,13 +247,13 @@ Section product.
       rewrite !(type_non_expansive_ty_size (T:=T2) ty1 ty2) //.
     - move=> n ty1 ty2 Hsz Hl HE Ho Hs depth tid vl /=.
       by do 6 f_equiv; apply type_non_expansive_ty_own.
-    - move=> n ty1 ty2 Hsz Hl HE Ho Hs κ tid l /=.
+    - move=> n ty1 ty2 Hsz Hl HE Ho Hs κ tid l l' /=.
       rewrite !(type_non_expansive_ty_size (T:=T1) ty1 ty2) //.
       by f_equiv; apply type_non_expansive_ty_shr.
   Qed.
 
   (* TODO : find a way to avoid this duplication. *)
-  Global Instance product2_type_contractive T1 T2:
+  Global Instance product2_type_contractive {A B C} (T1 : type A → type B) (T2 : type A → type C):
     TypeContractive T1 → TypeContractive T2 →
     TypeContractive (λ ty, product2 (T1 ty) (T2 ty)).
   Proof.
@@ -154,17 +264,21 @@ Section product.
       by rewrite !(type_contractive_ty_size (T:=T2) ty1 ty2).
     - move=> n ty1 ty2 Hsz Hl HE Ho Hs depth tid vl /=.
       by do 6 f_equiv; apply type_contractive_ty_own.
-    - move=> n ty1 ty2 Hsz Hl HE Ho Hs κ tid l /=.
+    - move=> n ty1 ty2 Hsz Hl HE Ho Hs κ tid l l' /=.
       rewrite !(type_contractive_ty_size (T:=T1) ty1 ty2).
       by f_equiv; apply type_contractive_ty_shr.
   Qed.
 
-  Global Instance product2_ne :
-    NonExpansive2 product2.
-  Proof. solve_ne_type. Qed.
+  (* Global Instance product2_ne {A B} :
+    NonExpansive2 (@product2 A B).
+  Proof. 
+    split.
+    - pose proof (type_non_expansive_ty_size (A := (A * B)%type)). rewrite !(type_non_expansive_ty_size (T:=T1) ty1 ty2) //.
+    rewrite !(type_non_expansive_ty_size (T:=T2) ty1 ty2) //.
+  solve_ne_type. Qed. *)
 
-  Global Instance product2_mono E L:
-    Proper (subtype E L ==> subtype E L ==> subtype E L) product2.
+  Global Instance product2_mono A B E L :
+    Proper (subtype E L id ==> subtype E L id ==> subtype E L id) (@product2 A B).
   Proof.
     iIntros (ty11 ty12 H1 ty21 ty22 H2). iIntros (qL) "HL".
     iDestruct (H1 with "HL") as "#H1". iDestruct (H2 with "HL") as "#H2".
@@ -173,20 +287,21 @@ Section product.
     iDestruct ("H2" with "HE") as "(% & #Hout2 & #Ho2 & #Hs2)". iClear (H2) "H2".
     iSplit; first by (iPureIntro; simpl; f_equal). iSplit; [|iSplit; iModIntro].
     - rewrite !lft_intersect_list_app. by iApply lft_intersect_mono.
-    - iIntros (???) "H /=". iDestruct "H" as (vl1 vl2) "(-> & Hown1 & Hown2)".
+    - iIntros (????) "H /=". iDestruct "H" as (vl1 vl2) "(-> & Hown1 & Hown2)".
       iExists _, _. iSplit. done. iSplitL "Hown1".
       + by iApply "Ho1".
       + by iApply "Ho2".
-    - iIntros (???) "/= #[Hshr1 Hshr2]". iSplit.
+    - iIntros (?????) "/= #[Hshr1 Hshr2]". iSplit.
       + by iApply "Hs1".
       + rewrite -(_ : ty_size ty11 = ty_size ty12) //. by iApply "Hs2".
   Qed.
-  Global Instance product2_proper E L:
-    Proper (eqtype E L ==> eqtype E L ==> eqtype E L) product2.
+
+  Global Instance product2_proper A B E L:
+    Proper (eqtype E L id id ==> eqtype E L id id ==> eqtype E L id id) (@product2 A B).
   Proof. by intros ??[]??[]; split; apply product2_mono. Qed.
 
-  Global Instance product2_copy `{!Copy ty1} `{!Copy ty2} :
-    Copy (product2 ty1 ty2).
+  Global Instance product2_copy {A B} `{!Copy ty1} `{!Copy ty2} :
+    Copy (@product2 A B ty1 ty2).
   Proof.
     split; first (intros; apply _).
     intros depth κ tid E F l q ? HF. iIntros "#LFT [H1 H2] Htl [Htok1 Htok2]".
@@ -211,20 +326,21 @@ Section product.
     iApply ("Hclose1" with "Htl [H1 H↦1f H↦1]"). by iFrame.
   Qed.
 
-  Global Instance product2_send `{!Send ty1} `{!Send ty2} :
-    Send (product2 ty1 ty2).
+  Global Instance product2_send {A B} `{!Send ty1} `{!Send ty2} :
+    Send (@product2 A B ty1 ty2).
   Proof.
     iIntros (depth tid1 tid2 vl) "H".
     iDestruct "H" as (vl1 vl2 ->) "[Hown1 Hown2]".
     iExists _, _. iSplit; first done. iSplitL "Hown1"; by iApply @send_change_tid.
   Qed.
 
-  Global Instance product2_sync `{!Sync ty1} `{!Sync ty2} :
-    Sync (product2 ty1 ty2).
+  Global Instance product2_sync {A B} `{!Sync ty1} `{!Sync ty2} :
+    Sync (@product2 A B ty1 ty2).
   Proof.
-    iIntros (κ tid1 ti2 l) "[#Hshr1 #Hshr2]". iSplit; by iApply @sync_change_tid.
+    iIntros (κ tid1 ti2 l l') "[#Hshr1 #Hshr2]". iSplit; by iApply @sync_change_tid.
   Qed.
 
+  (*
   Definition product := foldr product2 unit0.
   Definition unit := product [].
 
@@ -273,8 +389,9 @@ Section product.
     product (ty :: tyl) = product2 ty (product tyl) := eq_refl _.
   Definition product_nil :
     product [] = unit0 := eq_refl _.
+*)
 End product.
-
+(*
 Notation Π := product.
 
 Section typing.
@@ -344,4 +461,4 @@ End typing.
 
 Arguments product : simpl never.
 Global Hint Resolve product_mono' product_proper' ty_outlives_E_elctx_sat_product
-  : lrust_typing.
+  : lrust_typing. *)
