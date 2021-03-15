@@ -1,70 +1,78 @@
 From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
-From lrust.typing Require Import lft_contexts type_context programs.
+(* From lrust.typing Require Import lft_contexts type_context programs. *)
 Set Default Proof Using "Type".
 
 Section shr_bor.
   Context `{!typeG Σ}.
 
-  Program Definition shr_bor (κ : lft) (ty : type) : type :=
-    {| st_lfts := κ :: ty.(ty_lfts);
-       st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
-       st_own tid vl :=
-         match vl return _ with
-         | [ #(LitLoc l) ] => ty.(ty_shr) κ tid l
-         | _ => False
-         end%I |}.
-  Next Obligation. by iIntros (κ ty tid [|[[]|][]]) "H". Qed.
-  Next Obligation. intros κ ty tid [|[[]|][]]; apply _. Qed.
-
-  Lemma shr_type_incl κ1 κ2 ty1 ty2 :
-    κ2 ⊑ κ1 -∗ type_incl ty1 ty2 -∗ type_incl (shr_bor κ1 ty1) (shr_bor κ2 ty2).
-  Proof.
-    iIntros "#Hκ [_ [#Hlft [_ #Hty]]]". iApply type_incl_simple_type=>/=.
-    - by iApply lft_intersect_mono.
-    - iIntros "!>" (tid [|[[]|][]]) "H"=>//=. iApply "Hty".
-      iApply (ty1.(ty_shr_mono) with "Hκ"). done.
+  Program Definition shr_bor {A} (κ: lft) (ty: type A) : type A := ty_of_st {|
+    st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    st_own vπd tid vl := (∃d (l: loc),
+      ⌜vπd.2 = S d⌝ ∗ ⌜vl = [ #l]⌝ ∗ ty.(ty_shr) (vπd.1,d) κ tid l)%I;
+  |}.
+  Next Obligation. move=> *. by iDestruct 1 as (???->) "_". Qed.
+  Next Obligation.
+    move=> ????[|d']*/=; iDestruct 1 as (d l ->->) "?"; [lia|].
+    iExists d', l. do 2 (iSplit; [done|]). iApply ty_shr_depth_mono; [|done]. lia.
+  Qed.
+  Next Obligation.
+    move=> */=. iIntros "#LFT #LftIn". iDestruct 1 as (??->->) "Shr". iIntros "LftTok !>".
+    iDestruct (ty_shr_proph with "LFT [] [] Shr LftTok") as "Fupd". { done. }
+    { iApply lft_incl_trans; [iApply "LftIn"|iApply lft_intersect_incl_l]. }
+    { iApply lft_incl_trans; [iApply "LftIn"|iApply lft_intersect_incl_r]. }
+    iApply (step_fupdN_wand with "Fupd"). iIntros "!> > Upd !>".
+    iDestruct "Upd" as (ξs q) "[?[ProphTok Upd]]". iExists ξs, q. iSplit; [done|].
+    iFrame "ProphTok". iIntros "ProphTok". iMod ("Upd" with "ProphTok") as "[? $]".
+    iModIntro. iExists d, l. by do 2 (iSplit; [done|]).
   Qed.
 
-  Global Instance shr_mono E L :
-    Proper (flip (lctx_lft_incl E L) ==> subtype E L ==> subtype E L) shr_bor.
+  Lemma shr_type_incl {A B} κ κ' (f: A → B) ty ty' :
+    κ' ⊑ κ -∗ type_incl f ty ty' -∗ type_incl f (shr_bor κ ty) (shr_bor κ' ty').
   Proof.
-    intros κ1 κ2 Hκ ty1 ty2 Hty.
-    iIntros (?) "/= HL". iDestruct (Hκ with "HL") as "#Hincl".
-    iDestruct (Hty with "HL") as "#Hty". iIntros "!> #HE".
-    iApply shr_type_incl.
-    - by iApply "Hincl".
-    - by iApply "Hty".
+    iIntros "#? [_ [#? [_ #Wand]]]". iApply type_incl_simple_type=>/=.
+    { done. } { by iApply lft_intersect_mono. }
+    iIntros "!>" (????). iDestruct 1 as (d' l) "[->[->?]]". iExists d', l.
+    do 2 (iSplit; [done|]). iApply "Wand". by iApply ty_shr_lft_mono.
   Qed.
-  Global Instance shr_mono_flip E L :
-    Proper (lctx_lft_incl E L ==> flip (subtype E L) ==> flip (subtype E L)) shr_bor.
-  Proof. intros ??????. by apply shr_mono. Qed.
-  Global Instance shr_proper E L :
-    Proper (lctx_lft_eq E L ==> eqtype E L ==> eqtype E L) shr_bor.
-  Proof. intros ??[] ??[]. by split; apply shr_mono. Qed.
 
-  Global Instance shr_type_contractive κ : TypeContractive (shr_bor κ).
+  Global Instance shr_mono {A} E L :
+    Proper (flip (lctx_lft_incl E L) ==> subtype E L id ==> subtype E L id) (@shr_bor A).
   Proof.
-    split.
-    - apply (type_lft_morphism_add _ κ [κ] []) => ?.
-      + iApply lft_equiv_refl.
-      + by rewrite /= elctx_interp_app elctx_interp_ty_outlives_E
-                   /elctx_interp /= left_id right_id.
+    move=>/= ?? Lft ?? Ty. iIntros (?) "L". iDestruct (Lft with "L") as "#Lft".
+    iDestruct (Ty with "L") as "#Ty". iIntros "!> #E".
+    iApply shr_type_incl; by [iApply "Lft"|iApply "Ty"].
+  Qed.
+  Global Instance shr_mono_flip {A} E L : Proper
+    (lctx_lft_incl E L ==> flip (subtype E L id) ==> flip (subtype E L id)) (@shr_bor A).
+  Proof. move=> ??????. by apply shr_mono. Qed.
+  Global Instance shr_proper {A} E L :
+    Proper (lctx_lft_eq E L ==> eqtype E L id id ==> eqtype E L id id) (@shr_bor A).
+  Proof. move=> ??[??]??[??]. by split; apply shr_mono. Qed.
+
+  Global Instance shr_type_contractive {A} κ : TypeContractive (@shr_bor A κ).
+  Proof. split.
+    - apply (type_lft_morphism_add _ κ [κ] [])=> ?; [by apply lft_equiv_refl|].
+      by rewrite /= elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp
+        /= left_id right_id.
     - done.
-    - move=> ??? Hsz Hl HE Ho ??? [|[[|l|]|] []] //=.
-    - move=> ??????? Hs ??? /=. repeat (apply Hs || f_contractive || f_equiv).
+    - move=> */=. by do 6 f_equiv.
+    - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
-  Global Instance shr_ne κ : NonExpansive (shr_bor κ).
+  Global Instance shr_ne {A} κ : NonExpansive (@shr_bor A κ).
   Proof. solve_ne_type. Qed.
 
-  Global Instance shr_send κ ty :
-    Sync ty → Send (shr_bor κ ty).
-  Proof. by iIntros (Hsync depth tid1 tid2 [|[[]|][]]) "H"; try iApply Hsync. Qed.
+  Global Instance shr_send {A} κ (ty: _ A) : Sync ty → Send (shr_bor κ ty).
+  Proof.
+    move=> Sync ????. iDestruct 1 as (d l ??) "?". iExists d, l.
+    do 2 (iSplit; [done|]). by iApply Sync.
+  Qed.
 End shr_bor.
 
 Notation "&shr{ κ }" := (shr_bor κ) (format "&shr{ κ }") : lrust_type_scope.
 
+(*
 Section typing.
   Context `{!typeG Σ}.
 
@@ -102,3 +110,4 @@ Section typing.
 End typing.
 
 Global Hint Resolve shr_mono' shr_proper' read_shr : lrust_typing.
+*)

@@ -386,9 +386,10 @@ End ofe.
 
 Ltac solve_ne_type :=
   constructor;
-  solve_proper_core ltac:(fun _ => ((eapply ty_size_ne || eapply ty_lfts_ne ||
-                                     eapply ty_E_ne || eapply ty_outlives_E_ne);
-                                    try reflexivity) || f_equiv).
+  solve_proper_core ltac:(fun _ => (
+    (eapply ty_size_ne || eapply ty_lfts_ne || eapply ty_E_ne ||
+     eapply ty_outlives_E_ne || eapply ty_own_ne || eapply ty_shr_ne); try reflexivity
+  ) || f_equiv).
 
 (** * Nonexpansiveness/Contractiveness of Type Morphisms *)
 
