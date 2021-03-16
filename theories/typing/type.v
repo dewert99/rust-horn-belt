@@ -83,7 +83,7 @@ Notation typel := (hlist type).
 Lemma ty_own_mt_depth_mono `{!typeG Σ} {A} (ty: _ A) d d' vπ tid l :
   d ≤ d' → l ↦∗: ty.(ty_own) (vπ,d) tid -∗ l ↦∗: ty.(ty_own) (vπ,d') tid.
 Proof.
-  iIntros (Le). iDestruct 1 as (vl) "[??]". iExists vl. iFrame.
+  iIntros (Le). iDestruct 1 as (vl) "[Mt ?]". iExists vl. iFrame "Mt".
   iApply ty_own_depth_mono; by [apply Le|].
 Qed.
 
@@ -163,28 +163,27 @@ Program Definition ty_of_st `{!typeG Σ} {A} (st: simple_type A) : type A := {|
 Next Obligation. move=> >. apply st_size_eq. Qed.
 Next Obligation. move=> >. by apply st_own_depth_mono. Qed.
 Next Obligation.
-  move=> > Le. iDestruct 1 as (vl) "[??]". iExists vl. iFrame.
+  move=> > Le. iDestruct 1 as (vl) "[Bor ?]". iExists vl. iFrame "Bor".
   iApply st_own_depth_mono; by [apply Le|].
 Qed.
 Next Obligation.
-  move=> >. iIntros "Incl". iDestruct 1 as (vl) "[??]". iExists vl. iFrame.
-  by iApply (frac_bor_shorten with "Incl").
+  move=> >. iIntros "Incl". iDestruct 1 as (vl) "[? Own]". iExists vl.
+  iFrame "Own". by iApply (frac_bor_shorten with "Incl").
 Qed.
 Next Obligation.
   move=> *. iIntros "#LFT ? Bor Tok".
   iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
   iMod (bor_sep with "LFT Bor") as "[Bor Own]"; [done|].
-  iMod (bor_persistent with "LFT Own Tok") as "[??]"; [done|].
+  iMod (bor_persistent with "LFT Own Tok") as "[? Tok]"; [done|].
   iMod (bor_fracture (λ q, _ ↦∗{q} vl)%I with "LFT Bor") as "?"; [done|]. iModIntro.
-  iApply step_fupdN_intro; [done|]. iNext. iModIntro. iFrame. iExists vl. iFrame.
+  iApply step_fupdN_intro; [done|]. iIntros "!>!>". iFrame "Tok". iExists vl. iFrame.
 Qed.
 Next Obligation. move=> >. apply st_own_proph. Qed.
 Next Obligation.
   move=> *. iIntros "#LFT _ Incl". iDestruct 1 as (vl) "[? Own]". iIntros "Tok !>!>".
-  iDestruct (st_own_proph with "LFT Incl Own Tok") as "> Upd"; [done|].
-  iModIntro. iApply (step_fupdN_wand with "Upd"). iDestruct 1 as "> Upd".
-  iDestruct "Upd" as (ξs q' ?) "[Ptoks Upd]". iModIntro. iExists ξs, q'.
-  iSplit; [done|]. iFrame "Ptoks". iIntros "Tok".
+  iMod (st_own_proph with "LFT Incl Own Tok") as "Upd"; [done|].
+  iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q' ?) "[Ptoks Upd]".
+  iModIntro. iExists ξs, q'. iSplit; [done|]. iFrame "Ptoks". iIntros "Tok".
   iMod ("Upd" with "Tok") as "[? $]". iModIntro. iExists vl. iFrame.
 Qed.
 
