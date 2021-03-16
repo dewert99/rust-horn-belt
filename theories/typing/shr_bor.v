@@ -17,23 +17,22 @@ Section shr_bor.
     iExists d', l. do 2 (iSplit; [done|]). iApply ty_shr_depth_mono; [|done]. lia.
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT #LftIn". iDestruct 1 as (??->->) "Shr". iIntros "LftTok !>".
-    iDestruct (ty_shr_proph with "LFT [] [] Shr LftTok") as "Fupd". { done. }
-    { iApply lft_incl_trans; [iApply "LftIn"|iApply lft_intersect_incl_l]. }
-    { iApply lft_incl_trans; [iApply "LftIn"|iApply lft_intersect_incl_r]. }
-    iApply (step_fupdN_wand with "Fupd"). iIntros "!> > Upd !>".
-    iDestruct "Upd" as (ξs q) "[?[ProphTok Upd]]". iExists ξs, q. iSplit; [done|].
-    iFrame "ProphTok". iIntros "ProphTok". iMod ("Upd" with "ProphTok") as "[? $]".
-    iModIntro. iExists d, l. by do 2 (iSplit; [done|]).
+    move=> */=. iIntros "#LFT #?". iDestruct 1 as (??->->) "Shr". iIntros "Tok !>".
+    iDestruct (ty_shr_proph with "LFT [] [] Shr Tok") as "Upd"; first done.
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
+    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξs q ?) "[PTok Upd]".
+    iModIntro. iExists ξs, q. iSplit; [done|]. iFrame "PTok". iIntros "PTok".
+    iMod ("Upd" with "PTok") as "[Shr $]". iExists d, l. by iFrame "Shr".
   Qed.
 
   Lemma shr_type_incl {A B} κ κ' (f: A → B) ty ty' :
     κ' ⊑ κ -∗ type_incl f ty ty' -∗ type_incl f (shr_bor κ ty) (shr_bor κ' ty').
   Proof.
-    iIntros "#? [_ [#? [_ #Wand]]]". iApply type_incl_simple_type=>/=.
-    { done. } { by iApply lft_intersect_mono. }
-    iIntros "!>" (????). iDestruct 1 as (d' l) "[->[->?]]". iExists d', l.
-    do 2 (iSplit; [done|]). iApply "Wand". by iApply ty_shr_lft_mono.
+    iIntros "#? [_ [#? [_ #Sub]]]".
+    iApply type_incl_simple_type=>/=; [done|by iApply lft_intersect_mono|].
+    iIntros "!> *". iDestruct 1 as (d' l ->->) "?". iExists d', l.
+    do 2 (iSplit; [done|]). iApply "Sub". by iApply ty_shr_lft_mono.
   Qed.
 
   Global Instance shr_mono {A} E L :
@@ -53,7 +52,7 @@ Section shr_bor.
   Global Instance shr_type_contractive {A} κ : TypeContractive (@shr_bor A κ).
   Proof. split.
     - apply (type_lft_morphism_add _ κ [κ] [])=> ?; [by apply lft_equiv_refl|].
-      by rewrite /= elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp
+      by rewrite elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp
         /= left_id right_id.
     - done.
     - move=> */=. by do 6 f_equiv.
@@ -64,10 +63,8 @@ Section shr_bor.
   Proof. solve_ne_type. Qed.
 
   Global Instance shr_send {A} κ (ty: _ A) : Sync ty → Send (shr_bor κ ty).
-  Proof.
-    move=> Sync ????. iDestruct 1 as (d l ??) "?". iExists d, l.
-    do 2 (iSplit; [done|]). by iApply Sync.
-  Qed.
+  Proof. move=> Sync ?*/=. do 6 f_equiv. by iApply Sync. Qed.
+
 End shr_bor.
 
 Notation "&shr{ κ }" := (shr_bor κ) (format "&shr{ κ }") : lrust_type_scope.
