@@ -1,6 +1,8 @@
 From iris.proofmode Require Import tactics.
 From lrust.lang Require Import notation.
 From lrust.typing Require Import type lft_contexts type_context.
+From lrust.util Require Import types.
+
 Set Default Proof Using "Type".
 
 Section cont_context_def.
@@ -9,14 +11,14 @@ Section cont_context_def.
   Definition cont_postcondition : iProp Σ := True%I.
 
   Record cctx_elt : Type :=
-    CCtx_iscont { cctxe_k : val; cctxe_L : llctx;
-                  cctxe_n : nat; cctxe_T : vec val cctxe_n → tctx }.
+    CCtx_iscont { cctxe_k : val; cctxe_L : llctx; cctxe_As : Types; (* temp hack*)
+                  cctxe_n : nat; cctxe_T : vec val cctxe_n → tctx cctxe_As }.
 End cont_context_def.
 Add Printing Constructor cctx_elt.
 
 Notation cctx := (list cctx_elt).
 
-Notation "k ◁cont( L , T )" := (CCtx_iscont k L _ T)
+Notation "k ◁cont( L , T )" := (CCtx_iscont k L _ _ T)
   (at level 70, format "k  ◁cont( L ,  T )").
 
 Section cont_context.
@@ -24,12 +26,12 @@ Section cont_context.
 
   Definition cctx_elt_interp (tid : thread_id) (x : cctx_elt) : iProp Σ :=
     let '(k ◁cont(L, T)) := x in
-    (∀ args, na_own tid ⊤ -∗ llctx_interp L 1 -∗ tctx_interp tid (T args) -∗
+    (∀ args V, na_own tid ⊤ -∗ llctx_interp L 1 -∗ tctx_interp tid (T args) V -∗
          WP k (of_val <$> (args : list _)) {{ _, cont_postcondition }})%I.
   Definition cctx_interp (tid : thread_id) (C : cctx) : iProp Σ :=
     (∀ (x : cctx_elt), ⌜x ∈ C⌝ -∗ cctx_elt_interp tid x)%I.
 
-  Global Instance cctx_interp_permut tid:
+  (* Global Instance cctx_interp_permut tid:
     Proper ((≡ₚ) ==> (⊣⊢)) (cctx_interp tid).
   Proof. solve_proper. Qed.
 
@@ -38,7 +40,7 @@ Section cont_context.
   Proof.
     iSplit.
     - iIntros "H". iSplit; [|iIntros (??)]; iApply "H"; rewrite elem_of_cons; auto.
-    - iIntros "H". iIntros (? Hin). revert Hin. rewrite elem_of_cons=>-[->|?].
+    - iIntros "H". iIntros (? Hin). revert Hin. rewrite elem_of_cons. intros [-> |?]. 
       + by iDestruct "H" as "[H _]".
       + iDestruct "H" as "[_ H]". by iApply "H".
   Qed.
@@ -55,17 +57,17 @@ Section cont_context.
 
   Lemma cctx_interp_singleton tid x :
     cctx_interp tid [x] ≡ cctx_elt_interp tid x.
-  Proof. rewrite cctx_interp_cons cctx_interp_nil right_id //. Qed.
+  Proof. rewrite cctx_interp_cons cctx_interp_nil right_id //. Qed. *)
 
-  Lemma fupd_cctx_interp tid C :
+  (* Lemma fupd_cctx_interp tid C :
     (|={⊤}=> cctx_interp tid C) -∗ cctx_interp tid C.
   Proof.
-    rewrite /cctx_interp. iIntros "H". iIntros ([k L n T]) "%".
+    rewrite /cctx_interp. iIntros "H". iIntros ([k L n As T]) "%".
     iIntros (args) "HL HT". iMod "H".
     by iApply ("H" $! (k ◁cont(L, T)) with "[%] HL HT").
-  Qed.
+  Qed. *)
 
-  Definition cctx_incl (E : elctx) (C1 C2 : cctx): Prop :=
+  (* Definition cctx_incl (E : elctx) (C1 C2 : cctx): Prop :=
     ∀ tid, lft_ctx -∗ elctx_interp E -∗ cctx_interp tid C1 -∗ cctx_interp tid C2.
 
   Global Instance cctx_incl_preorder E : PreOrder (cctx_incl E).
@@ -80,9 +82,9 @@ Section cont_context.
   Proof.
     rewrite /cctx_incl /cctx_interp. iIntros (HC1C2 tid) "_ #HE H * %".
     iApply ("H" with "[%]"). by apply HC1C2.
-  Qed.
-
-  Lemma cctx_incl_cons E k L n (T1 T2 : vec val n → tctx) C1 C2 :
+  Qed. *)
+(* 
+  Lemma cctx_incl_cons {As} E k L n (T1 T2 : vec val n → tctx As) C1 C2 :
     cctx_incl E C1 C2 → (∀ args, tctx_incl E L (T2 args) (T1 args)) →
     cctx_incl E (k ◁cont(L, T1) :: C1) (k ◁cont(L, T2) :: C2).
   Proof.
@@ -111,7 +113,7 @@ Section cont_context.
     rewrite cctx_interp_cons. iSplit; last done. clear -Hin.
     iInduction Hin as [] "IH"; rewrite cctx_interp_cons;
       [iDestruct "HC" as "[$ _]" | iApply "IH"; iDestruct "HC" as "[_ $]"].
-  Qed.
+  Qed. *)
 End cont_context.
 
-Global Hint Resolve cctx_incl_nil cctx_incl_cons : lrust_typing.
+(* Global Hint Resolve cctx_incl_nil cctx_incl_cons : lrust_typing. *)

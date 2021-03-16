@@ -57,6 +57,12 @@ Fixpoint hnth {F B As} (y: F B) (xl: hlist F As) (i: nat) : F (tnth B As i) :=
   match xl with +[] => y | x +:: xl' =>
     match i with 0 => x | S j => hnth y xl' j end end.
 
+
+Inductive elem_of_hlist {F A} : forall As, ElemOf (F A) (hlist F As) :=
+  | elem_of_hlist_here As (x : F A) (l : hlist F As) : x ∈ (x +:: l)
+  | elem_of_list_further {B} As (x : F A) (y : F B) (l : hlist F As) : x ∈ l -> x ∈ (y +:: l).
+
+Global Existing Instance elem_of_hlist.
 Notation hnthe := (hnth ∅).
 
 Fixpoint hrepeat {F A} (x: F A) n : hlist F (trepeat A n) :=
@@ -73,6 +79,14 @@ Notation "( fl +$.)" := (happly fl) (only parsing).
 Lemma hnth_apply {F C B As} (fl: _ As) (y: F B) (x: C) i :
   hnth y (fl +$ x) i = hnth (const y) fl i x.
 Proof. move: i. elim fl; [done|]=> > IH [|i]; [done|]. by rewrite /= IH. Qed.
+
+Lemma hlist_app_split {F As Bs} (H : hlist F (As ^++ Bs)) : ∃ H1 H2, H = H1 h++ H2.
+Proof. induction As as [|?? IH].
+  - by exists +[], H.
+  - dependent destruction H.
+    destruct (IH H) as (H1 & H2 & ->).
+    by exists (f +:: H1), H2.
+ Qed.
 
 Inductive HForall {F} (Φ: ∀A, F A → Prop) : ∀{As}, hlist F As → Prop :=
 | HForall_nil: HForall Φ +[]
@@ -113,7 +127,7 @@ Qed.
 Lemma HForall2_nth {F G B As} (Φ: ∀A, F A → G A → Prop) (x y: _ B) (xl yl: _ As) i :
   Φ _ x y → HForall2 Φ xl yl → Φ _ (hnth x xl i) (hnth y yl i).
 Proof.
-  move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
+move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
 Qed.
 
 Global Instance HForall2_reflexive {F As} (R: ∀A, F A → F A → Prop) :
@@ -186,7 +200,7 @@ Proof.
   [by case=> [[]?]|done|case=> [[? xl]yl]|case=> [? xl]].
   - move: Eq. by move/equal_f/(.$ (xl, yl))=>/= ->.
   - move: Eq'. move/equal_f/(.$ xl)=>/=. by case (psep xl)=> [??]=>/= ->.
-Qed.
+  Qed.
 
 Fixpoint prepeat {F A} (x: F A) n : plist F (trepeat A n) :=
   match n with 0 => -[] | S m => x -:: prepeat x m end.
@@ -331,6 +345,57 @@ Proof.
   move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
 Qed.
 
+(* Products of types *)
+
+Definition xprod_split_l {t1 t2} (x : xprod (t1 ^++ t2)) : xprod t1.
+  induction t1; simpl in *; intuition.
+Defined.
+
+Definition xprod_split_r {t1 t2} (x : xprod (t1 ^++ t2)) : xprod t2.
+  induction t1; simpl in *; intuition.
+Defined.
+
+Definition xprod_split {t1 t2} (x : xprod (t1 ^++ t2)) : xprod t1 * xprod t2.
+  induction t1; simpl in *; intuition.
+Defined.
+
+Definition xprod_singleton {A B} (f : A → B) : xprod ^[A] → xprod ^[B].
+  simpl; intuition.
+Qed.
+
+Definition xprod_bimap {s1 s2 t1 t2} (f : xprod s1 → xprod s2) (g : xprod t1 → xprod t2) : xprod (s1 ^++ t1) → xprod (s2 ^++ t2).
+  intros; apply papp; eauto using xprod_split_l, xprod_split_r, papp.
+Defined.
+
+Lemma xprod_split_l_papp {T1 T2} (t1 : xprod T1) (t2 : xprod T2) : xprod_split_l (t1 -++ t2) = t1.
+Proof.
+  induction T1.
+  - by destruct t1.
+  - destruct t1. simpl. f_equal. apply IHT1. 
+Qed.
+
+(* TODO(xavier): use elim/IndPrinp: here *)
+Lemma xprod_split_r_papp {T1 T2} (t1 : xprod T1) (t2 : xprod T2) : xprod_split_r (t1 -++ t2) = t2.
+Proof.
+  induction T1 as [|???IH]; destruct t1; simpl.
+  - done.
+  - by simpl; rewrite IH.
+Qed.  
+
+Lemma bimap_distr {T1 T2 S1 S2} f g t1 t2 : 
+  @xprod_bimap T1 T2 S1 S2 f g (t1 -++ t2) = f t1 -++ g t2.
+Proof.
+  rewrite /xprod_bimap xprod_split_l_papp !xprod_split_r_papp //.
+Qed. 
+
+Definition xprod_second {s1 t1 t2} (g : xprod t1 → xprod t2) : xprod (s1 ^++ t1) → xprod (s1 ^++ t2).
+  eauto using xprod_bimap.
+Qed.
+
+Definition xprod_first {s1 s2 t1} (g : xprod s1 → xprod s2) : xprod (s1 ^++ t1) → xprod (s2 ^++ t1).
+  eauto using xprod_bimap.
+Qed.
+
 (** * Sum *)
 
 Inductive xsum As : Type := xinj (i: nat) : tnthe As i → xsum As.
@@ -417,6 +482,17 @@ Fixpoint big_sepHLZip {F G H As Bs} (Φ: ∀A B, F A → G B → H A B → PROP)
   | x +:: xl', y +:: yl', z -:: zl' => Φ _ _ x y z ∗ big_sepHLZip Φ xl' yl' zl'
   | _, _, _ => False end%I.
 
+Fixpoint big_sepHLZip' {F G As} (Φ: ∀A, F A → G A → PROP)
+    (xl: hlist F As) (yl: hlist G As) : PROP.
+    refine (
+      (match xl in hlist _ a, yl in hlist _ b return a = b → PROP with
+      | x +:: xs, y +:: yl => λ eq , Φ _ x (_ y) ∗ _
+      | _, _ => λ eq , True%I
+      end eq_refl)%I).
+    intro.
+    inversion eq; subst. assumption.
+    apply (big_sepHLZip' F G t Φ xs). by inversion eq;subst.
+  Defined.
 End def.
 
 Notation "[∗ hlist] x ∈ xl , P" := (big_sepHL (λ _ x, P%I) xl)
@@ -440,4 +516,35 @@ Lemma big_sepHL_app {F As Bs} (Φ: ∀A, F A → PROP) (l: hlist F As) (l': hlis
   ([∗ hlist] x ∈ l, Φ _ x) ∗ ([∗ hlist] x ∈ l', Φ _ x).
 Proof. elim l; [by rewrite left_id|]=>/= > ->. by rewrite assoc. Qed.
 
+Lemma big_sepHLZip'_app {F G As Bs} (Φ: ∀A, F A → G A → PROP) (l : hlist F As) (l' : hlist F Bs) (m : hlist G As) (m' : hlist G Bs) :
+  big_sepHLZip' Φ (l h++ l') (m h++ m') ⊣⊢ big_sepHLZip' Φ l m ∗ big_sepHLZip' Φ l' m'.
+Proof.
+  induction As as [|???IH]; dependent destruction l; dependent destruction m;
+    [rewrite left_id| simpl; rewrite -assoc IH]; done.
+Qed.
+
+Lemma big_sepHLZip'_cons {A F G As} (Φ: ∀A, F A → G A → PROP) (hl : hlist F As) (il : hlist G As) (x : F A) (y : G A) :
+  big_sepHLZip' Φ (x +:: hl) (y +:: il) ⊣⊢ Φ _ x y ∗ big_sepHLZip' Φ hl il.
+Proof. done. Qed.
+
+Lemma big_sepHLZip'_elem_of {A F G As} (Φ: ∀A, F A → G A → PROP) (hl : hlist F As) (il : hlist G As) (x : F A) :
+x ∈ hl → big_sepHLZip' Φ hl il ⊢ ∃ v, Φ _ x v.
+Proof.
+  intros.
+  induction H0 as [| ???????IH]; dependent destruction il; rewrite big_sepHLZip'_cons.
+  - iIntros "[? _]". by iExists g.
+  - iIntros "[_ H]". by rewrite IH.
+Qed. 
+
+Lemma big_sepHL_elem_of {A F As} (Φ : ∀ A, F A → PROP) (hl : hlist F As) x `{!Absorbing (Φ A x)} :
+x ∈ hl → ([∗ hlist] y ∈ hl, Φ _ y) ⊢ Φ _ x.
+Proof.
+  intros.
+  induction H0.
+  - simpl. by iIntros "[? _]".
+  - simpl. iIntros "[_ ?]". 
+    specialize (IHelem_of_hlist Absorbing0).
+    by iApply IHelem_of_hlist.
+Qed. 
 End lemmas.
+

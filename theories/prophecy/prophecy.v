@@ -249,6 +249,12 @@ Proof.
   by rewrite Iff.
 Qed.
 
+Global Instance proph_obs_proper_eq :
+Proper (pointwise_relation _ (=) ==> (⊣⊢)) proph_obs.
+  move=> ?? Iff. rewrite /proph_obs. do 4 f_equiv. apply forall_proper => ?.
+  by rewrite Iff.
+Qed.
+
 (** Manipulating Tokens *)
 
 Lemma proph_tok_singleton ξ q : q:[ξ] ⊣⊢ q:+[[ξ]].

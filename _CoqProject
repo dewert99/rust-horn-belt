@@ -43,9 +43,10 @@ theories/typing/base.v
 theories/typing/lft_contexts.v
 theories/typing/uniq_cmra.v
 theories/typing/type.v
-# theories/typing/type_context.v
-# theories/typing/cont_context.v
+theories/typing/cont_context.v
+theories/typing/type_context.v
 theories/typing/maybe_uninit.v
+# theories/typing/uninit.v
 theories/typing/bool.v
 theories/typing/int.v
 theories/typing/mod_ty.v
@@ -58,7 +59,7 @@ theories/typing/own.v
 theories/typing/shr_bor.v
 theories/typing/uniq_bor.v
 # theories/typing/function.v
-# theories/typing/programs.v
+theories/typing/programs.v
 # theories/typing/borrow.v
 # theories/typing/cont.v
 theories/typing/fixpoint.v
