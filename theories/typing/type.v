@@ -853,23 +853,31 @@ Section subtyping.
       ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ (ty.(ty_lft) ≡ₗ ty'.(ty_lft)) ∗
       (□ ∀vπ d tid vl, ty.(ty_own) (vπ,d) tid vl ↔ ty'.(ty_own) (f∘vπ,d) tid vl) ∗
       (□ ∀vπ d κ tid l, ty.(ty_shr) (vπ,d) κ tid l ↔ ty'.(ty_shr) (f∘vπ,d) κ tid l)).
-  Proof.
-    move=> Eq_gf Eq_fg. split.
-    - iIntros ([EQ1 EQ2] ?) "HL".
-      iDestruct (EQ1 with "HL") as "#EQ1". iDestruct (EQ2 with "HL") as "#EQ2".
-      iIntros "!> #HE".
-      iDestruct ("EQ1" with "HE") as "($ & $ & #Ho1 & #Hs1)".
-      iDestruct ("EQ2" with "HE") as "(_ & $ & #Ho2 & #Hs2)".
-      iSplit; iIntros "!> *"; iSplit; iIntros "Own";
-      [by iApply "Ho1"| |by iApply "Hs1"|];
-      [iDestruct ("Ho2" with "Own") as "?"|iDestruct ("Hs2" with "Own") as "?"];
+  Proof. move=> Eq_gf Eq_fg. split.
+    - iIntros ([Sub Sub'] ?) "L". iDestruct (Sub with "L") as "#Sub".
+      iDestruct (Sub' with "L") as "#Sub'". iIntros "!> #E".
+      iDestruct ("Sub" with "E") as "[$[$[SOwn SShr]]]".
+      iDestruct ("Sub'" with "E") as "[_[$[SOwn' SShr']]]".
+      iSplit; iIntros "!>*"; iSplit; iIntros "X"; [by iApply "SOwn"| |by iApply "SShr"|];
+      [iDestruct ("SOwn'" with "X") as "?"|iDestruct ("SShr'" with "X") as "?"];
       by rewrite compose_assoc Eq_gf.
-    - intros EQ. split; iIntros (?) "HL";
-      iDestruct (EQ with "HL") as "#EQ"; iIntros "!> #HE";
-      iDestruct ("EQ" with "HE") as "(% & [??] & #Ho & #Hs)";
-      (iSplit; [done|]; iSplit; [done|]; iSplit); iIntros "!> * Own";
-      [by iApply "Ho"|by iApply "Hs"| |]; [iApply "Ho"|iApply "Hs"];
+    - move=> Eqt. split; iIntros (?) "L";
+      iDestruct (Eqt with "L") as "#Eqt"; iIntros "!> #E";
+      iDestruct ("Eqt" with "E") as (?) "[[??][EOwn EShr]]";
+      do 2 (iSplit; [done|]); iSplit; iIntros "!>* X";
+      [by iApply "EOwn"|by iApply "EShr"| |]; [iApply "EOwn"|iApply "EShr"];
       by rewrite compose_assoc Eq_fg.
+  Qed.
+
+  Lemma eqtype_id_unfold {A} E L (ty ty': _ A) :
+    eqtype E L id id ty ty' ↔
+    ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
+      ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ (ty.(ty_lft) ≡ₗ ty'.(ty_lft)) ∗
+      (□ ∀vπd tid vl, ty.(ty_own) vπd tid vl ↔ ty'.(ty_own) vπd tid vl) ∗
+      (□ ∀vπd κ tid l, ty.(ty_shr) vπd κ tid l ↔ ty'.(ty_shr) vπd κ tid l)).
+  Proof.
+    rewrite eqtype_unfold; [|done|done]. apply forall_proper=> *.
+    do 7 f_equiv; (iSplit; [by iIntros "?" ([??])|by iIntros "?" (??)]).
   Qed.
 
   Lemma eqtype_refl {A} E L (ty: _ A) : eqtype E L id id ty ty.

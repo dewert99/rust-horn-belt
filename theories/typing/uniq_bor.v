@@ -33,8 +33,8 @@ Section uniq_bor.
     iExists d, l, ξ. iSplit; [iPureIntro; lia|]. do 2 (iSplit; [done|]). iFrame.
   Qed.
   Next Obligation.
-    move=> ????[|d']*/=; iDestruct 1 as (d l ξ -> ?) "[?[??]]"; [lia|].
-    iExists d', l, ξ. do 2 (iSplit; [done|]). iFrame.
+    move=> ????[|d']*/=; iDestruct 1 as (d l ξ ->?) "[Bor [Bor' ?]]"; [lia|].
+    iExists d', l, ξ. do 2 (iSplit; [done|]). iFrame "Bor Bor'".
     iApply ty_shr_depth_mono; [|done]. lia.
   Qed.
   Next Obligation.
@@ -62,86 +62,105 @@ Section uniq_bor.
     iMod (bor_sep with "LFT Bor") as "[BorOwn Bor]"; [done|].
     iMod (bor_sep with "LFT Bor") as "[_ BorPc]"; [done|].
     iMod (bor_combine with "LFT BorVo BorPc") as "Bor"; [done|].
-    iMod (bor_acc_cons with "LFT Bor Tok") as "[[>Vo Pc] Close]"; [done|].
-    iMod (uniq_agree with "Vo Pc") as (<-) "[Vo Pc]".
+    iMod (bor_acc_cons with "LFT Bor Tok") as "[[Vo Pc] Close]"; [done|].
+    iMod (uniq_strip_later with "Vo Pc") as (<-) "[Vo Pc]".
     iDestruct (uniq_proph_tok with "Vo Pc") as "[Vo [PTok Wand]]".
     iMod ("Close" with "[Vo Wand] PTok") as "[BorPTok Tok]".
     { iIntros "!> >PTok !>!>". iFrame "Vo". by iApply "Wand". }
-    iMod (ty_share with "LFT [] BorOwn Tok") as "Big"; first done.
+    iMod (ty_share with "LFT [] BorOwn Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
-    iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Big").
+    iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Upd").
     rewrite heap_mapsto_vec_singleton.
-    iDestruct (bor_fracture (λ q, _ ↦{q} _)%I with "LFT BorMt") as ">?"; [done|].
-    iDestruct (bor_fracture (λ q, q:[_])%I with "LFT BorPTok") as ">?"; [done|].
-    iIntros "!> >[? $] !>". iExists d', l, ξ. iFrame. iSplit; [done|].
+    iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT BorMt") as "BorMt"; [done|].
+    iMod (bor_fracture (λ q, q:[_])%I with "LFT BorPTok") as "BorPTok"; [done|].
+    iIntros "!> >[? $] !>". iExists d', l, ξ. iFrame "BorMt BorPTok". iSplit; [done|].
     iSplit; [iPureIntro; apply proph_dep_one|]. by iApply ty_shr_depth_mono.
   Qed.
   Next Obligation.
-  Admitted.
+    move=> */=. iIntros "#LFT #?". iDestruct 1 as (d l ξ Le->Eq) "[Vo Bor]".
+    move: Le=> /succ_le [?[->Le]]/=. iDestruct 1 as "[Tok Tok']".
+    iMod (lft_incl_acc with "[] Tok") as (?) "[Tok PreTok]"; first done.
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
+    iMod (bor_acc with "LFT Bor Tok") as "[Big Close']"; [done|]. iIntros "!>!>!>".
+    iDestruct "Big" as (?) "[Own [#Time Pc]]". iDestruct "Own" as (vl) "[Mt Own]".
+    iDestruct (uniq_agree with "Vo Pc") as "#<-".
+    iDestruct (uniq_proph_tok with "Vo Pc") as "[Vo [PTok' PrePc]]".
+    iMod (ty_own_proph with "LFT [] Own Tok'") as "Upd"; first done.
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
+    iApply step_fupdN_nmono; [apply Le|]. iApply (step_fupdN_wand with "Upd").
+    iMod 1 as (ξs ??) "[PTok Close]". iModIntro. rewrite proph_tok_singleton.
+    iDestruct (proph_tok_combine with "PTok PTok'") as (q) "[PTok PrePToks]".
+    iExists (ξs ++ [ξ: proph_var]), q. iSplit.
+    { iPureIntro. apply proph_dep_pair; [done|]. rewrite Eq. apply proph_dep_one. }
+    iFrame "PTok". iIntros "PTok". iDestruct ("PrePToks" with "PTok") as "[PTok PTok']".
+    iMod ("Close" with "PTok") as "[Own $]". iDestruct ("PrePc" with "PTok'") as "Pc".
+    iMod ("Close'" with "[Mt Own Pc]") as "[? Tok]".
+    { iModIntro. iExists _. iFrame "Pc Time". iExists vl. iFrame. }
+    iMod ("PreTok" with "Tok") as "$". iModIntro. iExists d, l, ξ.
+    iSplit; [iPureIntro; lia|]. do 2 (iSplit; [done|]). iFrame.
+  Qed.
   Next Obligation.
-  Admitted.
-
-(*
-  Global Instance uniq_mono E L :
-    Proper (flip (lctx_lft_incl E L) ==> eqtype E L ==> subtype E L) uniq_bor.
-  Proof.
-    intros κ1 κ2 Hκ ty1 ty2. rewrite eqtype_unfold=>Hty. iIntros (?) "HL".
-    iDestruct (Hty with "HL") as "#Hty". iDestruct (Hκ with "HL") as "#Hκ".
-    iIntros "!> #HE". iSplit; first done.
-    iDestruct ("Hty" with "HE") as "(_ & #[Hout1 Hout2] & #Ho & #Hs)";
-      [done..|clear Hty].
-    iSpecialize ("Hκ" with "HE"). iSplit; [|iSplit; iModIntro].
-    - by iApply lft_intersect_mono.
-    - iIntros ([|] ? [|[[]|][]]) "[#? H] //". iSplitR.
-      + by do 2 (iApply lft_incl_trans; [done|]).
-      + iDestruct "H" as (???) "[? H]". iExists _, _. iFrame "∗ %".
-        iApply (bor_shorten with "Hκ"). iApply bor_iff; last done.
-        iNext. iModIntro.
-        by iSplit; iIntros "H"; iDestruct "H" as (?) "(?&?&H)";
-        iDestruct "H" as (?) "[??]"; iExists _; iFrame; iExists vl; iFrame; iApply "Ho".
-    - iIntros (κ ??) "H". iDestruct "H" as (l') "[Hbor #Hupd]". iExists l'.
-      iFrame. by iApply "Hs".
+    move=> */=. iIntros "#LFT #In #?". iDestruct 1 as (d l ξ ->?) "[?[#Bor Shr]]".
+    iDestruct 1 as "[Tok Tok']". iIntros "!>!>".
+    iDestruct (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; first done.
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
+    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξs q' ?) "[PTok Close]".
+    iMod (lft_incl_acc with "In Tok'") as (?) "[Tok PreTok]"; [done|].
+    iMod (frac_bor_acc with "LFT Bor Tok") as (?) "[>PTok' Close']"; [done|].
+    rewrite proph_tok_singleton.
+    iDestruct (proph_tok_combine with "PTok PTok'") as (q) "[PTok PrePToks]". iModIntro.
+    iExists (ξs ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_pair|].
+    iFrame "PTok". iIntros "PTok". iDestruct ("PrePToks" with "PTok") as "[PTok PTok']".
+    iMod ("Close" with "PTok") as "[? $]". iMod ("Close'" with "PTok'") as "Tok".
+    iMod ("PreTok" with "Tok") as "$". iModIntro. iExists d, l, ξ.
+    by do 4 (iSplit; [done|]).
   Qed.
-  Global Instance uniq_mono_flip E L :
-    Proper (lctx_lft_incl E L ==> eqtype E L ==> flip (subtype E L)) uniq_bor.
-  Proof. intros ??????. apply uniq_mono. done. by symmetry. Qed.
-  Global Instance uniq_proper E L :
-    Proper (lctx_lft_eq E L ==> eqtype E L ==> eqtype E L) uniq_bor.
-  Proof. intros ??[]; split; by apply uniq_mono. Qed.
 
-  Global Instance uniq_type_contractive κ : TypeContractive (uniq_bor κ).
+  Global Instance uniq_mono {A} E L : Proper
+    (flip (lctx_lft_incl E L) ==> eqtype E L id id ==> subtype E L id) (@uniq_bor A).
   Proof.
-    split.
-    - apply (type_lft_morphism_add _ κ [κ] []) => ?.
-      + iApply lft_equiv_refl.
-      + by rewrite /= elctx_interp_app elctx_interp_ty_outlives_E
-                   /elctx_interp /= left_id right_id.
+    move=> ?? In ?? /eqtype_id_unfold Eqt. iIntros (?) "L".
+    iDestruct (Eqt with "L") as "#Eqt". iDestruct (In with "L") as "#In". iIntros "!> #E".
+    iSplit; [done|]. iDestruct ("Eqt" with "E") as (?) "[[??] [#EqOwn #EqShr]]".
+    iSpecialize ("In" with "E"). iSplit; [by iApply lft_intersect_mono|].
+    iSplit; iModIntro.
+    - iIntros "*". iDestruct 1 as (d' l' ξ ?->?) "[Vo Bor]". iExists d', l', ξ.
+      do 3 (iSplit; [done|]). iFrame "Vo". iApply (bor_shorten with "In").
+      iApply bor_iff; [|done]. iIntros "!>!>".
+      iSplit; iDestruct 1 as (vπd) "[Own Misc]"; iExists vπd; iFrame "Misc";
+      iDestruct "Own" as (vl) "[Mt Own]"; iExists vl; iFrame "Mt"; by iApply "EqOwn".
+    - iIntros "*". iDestruct 1 as (d' l' ξ ??) "[?[??]]". iExists d', l', ξ.
+      do 4 (iSplit; [done|]). by iApply "EqShr".
+  Qed.
+  Global Instance uniq_mono_flip {A} E L : Proper
+    (lctx_lft_incl E L ==> eqtype E L id id ==> flip (subtype E L id)) (@uniq_bor A).
+  Proof. move=> ??????. apply uniq_mono; by [|apply eqtype_symm]. Qed.
+  Global Instance uniq_proper {A} E L : Proper
+    (lctx_lft_eq E L ==> eqtype E L id id ==> eqtype E L id id) (@uniq_bor A).
+  Proof. move=> ??[]; split; apply uniq_mono=>//; by apply eqtype_symm. Qed.
+
+  Global Instance uniq_type_contractive {A} κ : TypeContractive (@uniq_bor A κ).
+  Proof. split.
+    - apply (type_lft_morphism_add _ κ [κ] [])=> ?; [by iApply lft_equiv_refl|].
+      by rewrite elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp
+        /= left_id right_id.
     - done.
-    - move=> ??? Hsz Hl HE Ho ??? vl /=. f_equiv.
-      + apply equiv_dist. iDestruct Hl as "#[??]".
-        iSplit; iIntros "#H"; (iApply lft_incl_trans; [iApply "H"|done]).
-      + repeat (apply Ho || f_contractive || f_equiv).
-    - move=> ??????? Hs ??? /=. repeat (apply Hs || f_contractive || f_equiv).
+    - move=> */=. do 17 (f_contractive || f_equiv). by simpl in *.
+    - move=> */=. do 11 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
-  Global Instance uniq_ne κ : NonExpansive (uniq_bor κ).
+  Global Instance uniq_ne {A} κ : NonExpansive (@uniq_bor A κ).
   Proof. solve_ne_type. Qed.
 
-  Global Instance uniq_send κ ty :
-    Send ty → Send (uniq_bor κ ty).
+  Global Instance uniq_send {A} κ ty : Send ty → Send (@uniq_bor A κ ty).
   Proof.
-    intros Hsend [] tid1 tid2 [|[[]|][]]=>//=. do 7 f_equiv. iIntros "?".
-    iApply bor_iff; last done. iNext. iModIntro. iApply bi.equiv_iff.
-    do 7 f_equiv. by iSplit; iIntros "."; iApply Hsend.
+    move=> Send ?*/=. do 10 f_equiv. iIntros "?". iApply bor_iff; last done.
+    iApply bi.equiv_iff. do 6 f_equiv. by iSplit; iIntros "?"; iApply Send.
   Qed.
 
-  Global Instance uniq_sync κ ty :
-    Sync ty → Sync (uniq_bor κ ty).
-  Proof.
-    iIntros (Hsync κ' tid1 tid2 l) "H". iDestruct "H" as (l') "[Hm #Hshr]".
-    iExists l'. iFrame "Hm". by iApply Hsync.
-  Qed.
-*)
+  Global Instance uniq_sync {A} κ ty : Sync ty → Sync (@uniq_bor A κ ty).
+  Proof. move=> Sync ?*/=. do 11 f_equiv. iApply Sync. Qed.
+
 End uniq_bor.
 
 Notation "&uniq{ κ }" := (uniq_bor κ) (format "&uniq{ κ }") : lrust_type_scope.

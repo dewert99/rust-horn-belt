@@ -260,7 +260,10 @@ Qed.
 
 (** Manipulating Tokens *)
 
-Lemma proph_tok_app ξs ζs q q' :
+Lemma proph_tok_singleton ξ q : q:[ξ] ⊣⊢ q:+[[ξ]].
+Proof. by rewrite /proph_toks /= right_id. Qed.
+
+Lemma proph_tok_combine ξs ζs q q' :
   q:+[ξs] -∗ q':+[ζs] -∗
     ∃q'', q'':+[ξs ++ ζs] ∗ (q'':+[ξs ++ ζs] -∗ q:+[ξs] ∗ q':+[ζs]).
 Proof.

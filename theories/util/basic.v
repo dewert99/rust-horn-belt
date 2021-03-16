@@ -10,7 +10,7 @@ Proof. move: n=> [|n'] => Le. { inversion Le. } exists n'. lia. Qed.
 
 Lemma compose_assoc {A B C D} (f: A → B) (g: B → C) (h: C → D) :
   h ∘ (g ∘ f) = (h ∘ g) ∘ f.
-Proof. by rewrite /compose. Qed.
+Proof. done. Qed.
 
 Definition s_comb {A B C} (f: A → B → C) (g: A → B) x := (f x) (g x).
 Infix "⊛" := s_comb (left associativity, at level 50).
