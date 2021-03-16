@@ -64,9 +64,9 @@ Section uniq_bor.
     iMod (bor_combine with "LFT BorVo BorPc") as "Bor"; [done|].
     iMod (bor_acc_cons with "LFT Bor Tok") as "[[Vo Pc] Close]"; [done|].
     iMod (uniq_strip_later with "Vo Pc") as (<-) "[Vo Pc]".
-    iDestruct (uniq_proph_tok with "Vo Pc") as "[Vo [PTok Wand]]".
-    iMod ("Close" with "[Vo Wand] PTok") as "[BorPTok Tok]".
-    { iIntros "!> >PTok !>!>". iFrame "Vo". by iApply "Wand". }
+    iDestruct (uniq_proph_tok with "Vo Pc") as "[Vo [PTok PrePc]]".
+    iMod ("Close" with "[Vo PrePc] PTok") as "[BorPTok Tok]".
+    { iIntros "!> >PTok !>!>". iFrame "Vo". by iApply "PrePc". }
     iMod (ty_share with "LFT [] BorOwn Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
     iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Upd").

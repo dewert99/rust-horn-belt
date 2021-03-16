@@ -18,7 +18,7 @@ Lemma step_fupdN_combine n E P Q :
   (|={E}▷=>^n P) -∗ (|={E}▷=>^n Q) -∗ (|={E}▷=>^n (P ∗ Q)).
 Proof.
   elim n=> /=[|?]; [iIntros; by iFrame|]. iIntros (IH) ">UpdP >UpdQ !>!>".
-  by iMod (IH with "UpdP UpdQ") as "?".
+  by iMod (IH with "UpdP UpdQ").
 Qed.
 
 End lemmas.
