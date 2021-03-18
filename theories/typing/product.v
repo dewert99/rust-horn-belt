@@ -269,36 +269,8 @@ Section product.
       by f_equiv; apply type_contractive_ty_shr.
   Qed.
 
-  (* Global Instance product2_ne {A B} :
-    NonExpansive2 (@product2 A B).
-  Proof.
-    split.
-    - pose proof (type_non_expansive_ty_size (A := (A * B)%type)). rewrite !(type_non_expansive_ty_size (T:=T1) ty1 ty2) //.
-    rewrite !(type_non_expansive_ty_size (T:=T2) ty1 ty2) //.
-  solve_ne_type. Qed. *)
-
-  Global Instance product2_mono A B E L :
-    Proper (subtype E L id ==> subtype E L id ==> subtype E L id) (@product2 A B).
-  Proof.
-    iIntros (ty11 ty12 H1 ty21 ty22 H2). iIntros (qL) "HL".
-    iDestruct (H1 with "HL") as "#H1". iDestruct (H2 with "HL") as "#H2".
-    iIntros "!> #HE".
-    iDestruct ("H1" with "HE") as "(% & #Hout1 & #Ho1 & #Hs1)". iClear (H1) "H1".
-    iDestruct ("H2" with "HE") as "(% & #Hout2 & #Ho2 & #Hs2)". iClear (H2) "H2".
-    iSplit; first by (iPureIntro; simpl; f_equal). iSplit; [|iSplit; iModIntro].
-    - rewrite !lft_intersect_list_app. by iApply lft_intersect_mono.
-    - iIntros (????) "H /=". iDestruct "H" as (vl1 vl2) "(-> & Hown1 & Hown2)".
-      iExists _, _. iSplit. done. iSplitL "Hown1".
-      + by iApply "Ho1".
-      + by iApply "Ho2".
-    - iIntros (?????) "/= #[Hshr1 Hshr2]". iSplit.
-      + by iApply "Hs1".
-      + rewrite -(_ : ty_size ty11 = ty_size ty12) //. by iApply "Hs2".
-  Qed.
-
-  Global Instance product2_proper A B E L:
-    Proper (eqtype E L id id ==> eqtype E L id id ==> eqtype E L id id) (@product2 A B).
-  Proof. by intros ??[]??[]; split; apply product2_mono. Qed.
+  Global Instance product2_ne {A B} : NonExpansive2 (@product2 A B).
+  Proof. solve_ne_type. Qed.
 
   Global Instance product2_copy {A B} `{!Copy ty1} `{!Copy ty2} :
     Copy (@product2 A B ty1 ty2).
@@ -339,6 +311,31 @@ Section product.
   Proof.
     iIntros (κ tid1 ti2 l l') "[#Hshr1 #Hshr2]". iSplit; by iApply @sync_change_tid.
   Qed.
+
+  Lemma product2_subtype {A B A' B'} E L (f: A → A') (g: B → B') ty1 ty2 ty1' ty2' :
+    subtype E L f ty1 ty1' → subtype E L g ty2 ty2' →
+    subtype E L (pairmap f g) (product2 ty1 ty2) (product2 ty1' ty2').
+  Proof.
+    move=> H1 H2. iIntros (qL) "HL".
+    iDestruct (H1 with "HL") as "#H1". iDestruct (H2 with "HL") as "#H2".
+    iIntros "!> #HE".
+    iDestruct ("H1" with "HE") as "(% & #Hout1 & #Ho1 & #Hs1)". iClear (H1) "H1".
+    iDestruct ("H2" with "HE") as "(% & #Hout2 & #Ho2 & #Hs2)". iClear (H2) "H2".
+    iSplit; first by (iPureIntro; simpl; f_equal). iSplit; [|iSplit; iModIntro].
+    - rewrite !lft_intersect_list_app. by iApply lft_intersect_mono.
+    - iIntros (????) "H /=". iDestruct "H" as (vl1 vl2) "(-> & Hown1 & Hown2)".
+      iExists _, _. iSplit. done. iSplitL "Hown1".
+      + by iApply "Ho1".
+      + by iApply "Ho2".
+    - iIntros (?????) "/= #[Hshr1 Hshr2]". iSplit.
+      + by iApply "Hs1".
+      + rewrite -(_ : ty_size ty1 = ty_size ty1') //. by iApply "Hs2".
+  Qed.
+
+  Lemma product2_eqtype {A B A' B'} E L (f: A → A') f' (g: B → B') g' ty1 ty2 ty1' ty2' :
+    eqtype E L f f' ty1 ty1' → eqtype E L g g' ty2 ty2' →
+    eqtype E L (pairmap f g) (pairmap f' g') (product2 ty1 ty2) (product2 ty1' ty2').
+  Proof. move=> [??] [??]. split; by apply product2_subtype. Qed.
 
   (*
   Definition product := foldr product2 unit0.

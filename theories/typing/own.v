@@ -135,7 +135,34 @@ Section own.
     iExists l'; by iFrame.
   Qed.
 
-  Lemma own_type_incl A B (f : A → B) n m ty1 ty2 :
+  Global Instance own_type_contractive A n : @TypeContractive _ _ A A (own_ptr n).
+  Proof.
+    split.
+    - apply (type_lft_morphism_add _ static [] []) => ?.
+      + rewrite left_id. iApply lft_equiv_refl.
+      + by rewrite /= /elctx_interp /= left_id right_id.
+    - done.
+    - move=> ??? Hsz ?? Ho ? [? [|depth]]? [|[[|l|]|] []] //=.
+      rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
+    - move=> ??????? Hs [? [|?]] ??? /=;  repeat (apply Hs || f_contractive || f_equiv).
+  Qed.
+  Global Instance own_ne A n : NonExpansive (@own_ptr A n).
+  Proof. solve_ne_type. Qed.
+
+  Global Instance own_send A n ty : Send ty → Send (@own_ptr A n ty).
+  Proof.
+    iIntros (Hsend tid1 tid2 [? [|depth]] [|[[| |]|][]]) "H"; try done.
+    iDestruct "H" as "[Hm $]". iNext. iApply (heap_mapsto_pred_wand with "Hm").
+    iIntros (vl) "?". by iApply Hsend.
+  Qed.
+
+  Global Instance own_sync A n ty : Sync ty → Sync (@own_ptr A n ty).
+  Proof.
+    iIntros (Hsync tid1 tid2 [? [|?]] κ  l) "H"; first done. iDestruct "H" as (l') "[Hm #Hshr]".
+    iExists _. iFrame "Hm". by iApply Hsync.
+  Qed.
+
+  Lemma own_type_incl {A B} n m (f: A → B) ty1 ty2 :
     ▷ ⌜n = m⌝ -∗ type_incl f ty1 ty2 -∗ type_incl f (own_ptr n ty1) (own_ptr m ty2).
   Proof.
     iIntros "#Heq #(Hsz & Hout & Ho & Hs)".
@@ -147,91 +174,24 @@ Section own.
     - iIntros (?[|depth] ???) "H"; first done. iDestruct "H" as (l') "[Hfb #Hshr]".
       iExists l'. iFrame. iApply ("Hs" with "Hshr").
   Qed.
-  
-  Global Instance own_mono A E L n :
-    Proper (subtype E L id ==> subtype E L id) (@own_ptr A n).
+
+  Lemma own_subtype {A B} E L n (f: A → B) ty ty' :
+    subtype E L f ty ty' → subtype E L f (own_ptr n ty) (own_ptr n ty').
   Proof.
-    intros ty1 ty2 Hincl. iIntros (qL) "HL".
-    iDestruct (Hincl with "HL") as "#Hincl".
-    iClear "∗". iIntros "!> #HE".
-    iApply own_type_incl; first by auto. iApply "Hincl"; auto.
+    move=> Sub. iIntros (?) "L". iDestruct (Sub with "L") as "#Incl".
+    iIntros "!> #E". iApply own_type_incl; by [|iApply "Incl"].
   Qed.
 
-  Lemma own_mono' A E L n1 n2 ty1 ty2 :
-    n1 = n2 → subtype E L id ty1 ty2 → subtype E L id (own_ptr n1 ty1) (@own_ptr A n2 ty2).
-  Proof. intros -> *. by apply own_mono. Qed.
+  Lemma own_eqtype {A B} E L n (f: A → B) g ty ty' :
+    eqtype E L f g ty ty' → eqtype E L f g (own_ptr n ty) (own_ptr n ty').
+  Proof. move=> [??]. split; by apply own_subtype. Qed.
 
-  Global Instance own_proper A E L n :
-    Proper (eqtype E L id id ==> eqtype E L id id) (@own_ptr A n).
-  Proof. intros ??[]; split; by apply own_mono. Qed.
-
-  Lemma own_proper' A E L n1 n2 ty1 ty2 :
-    n1 = n2 → eqtype E L id id ty1 ty2 → eqtype E L id id (@own_ptr A n1 ty1) (@own_ptr A n2 ty2).
-  Proof. intros -> *. by apply own_proper. Qed.
-
-  Global Instance own_type_contractive A n : @TypeContractive _ _ A A (own_ptr n).
-  Proof.
-    split.
-    - apply (type_lft_morphism_add _ static [] []) => ?.
-      + rewrite left_id. iApply lft_equiv_refl.
-      + by rewrite /= /elctx_interp /= left_id right_id.
-    - done.
-    - move=> ??? Hsz ?? Ho ? [? [|depth]]? [|[[|l|]|] []] //=.
-      rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
-    - move=> ??????? Hs [? [|?]] ??? /=;  repeat (apply Hs || f_contractive || f_equiv).  
-  Qed.
-
-  Global Instance own_ne A n : NonExpansive (@own_ptr A n).
-  Proof. solve_ne_type. Qed.
-
-  Global Instance own_send A n ty :
-    Send ty → Send (@own_ptr A n ty).
-  Proof.
-    iIntros (Hsend tid1 tid2 [? [|depth]] [|[[| |]|][]]) "H"; try done.
-    iDestruct "H" as "[Hm $]". iNext. iApply (heap_mapsto_pred_wand with "Hm").
-    iIntros (vl) "?". by iApply Hsend.
-  Qed.
-
-  Global Instance own_sync A n ty :
-    Sync ty → Sync (@own_ptr A n ty).
-  Proof.
-    iIntros (Hsync tid1 tid2 [? [|?]] κ  l) "H"; first done. iDestruct "H" as (l') "[Hm #Hshr]".
-    iExists _. iFrame "Hm". by iApply Hsync.
-  Qed.
 End own.
-
 
 Section box.
   Context `{!typeG Σ}.
 
   Definition box {A} (ty : type A) := own_ptr ty.(ty_size) ty.
-
-  Lemma box_type_incl A ty1 ty2:
-    type_incl id ty1 ty2 -∗ type_incl id (@box A ty1) (@box A ty2).
-  Proof.
-    iIntros "#Hincl". iApply own_type_incl; last done.
-    iDestruct "Hincl" as "(? & _ & _)". done.
-  Qed.
-
-  Global Instance box_mono A E L :
-    Proper (subtype E L id ==> subtype E L id) (@box A).
-  Proof.
-    intros ty1 ty2 Hincl. iIntros (qL) "HL".
-    iDestruct (Hincl with "HL") as "#Hincl".
-    iClear "∗". iIntros "!> #HE".
-    iApply box_type_incl. iApply "Hincl"; auto.
-  Qed.
-
-  Lemma box_mono' A E L ty1 ty2 :
-    subtype E L id ty1 ty2 → subtype E L id (@box A ty1) (@box A ty2).
-  Proof. intros. by apply box_mono. Qed.
-
-  Global Instance box_proper A E L :
-    Proper (eqtype E L id id ==> eqtype E L id id) (@box A).
-  Proof. intros ??[]; split; by apply box_mono. Qed.
-  Lemma box_proper' A E L ty1 ty2 :
-    eqtype E L id id ty1 ty2 → eqtype E L id id (@box A ty1) (@box A ty2).
-  Proof. intros. by apply box_proper. Qed.
 
   Global Instance box_type_contractive A : TypeContractive (@box A).
   Proof.
@@ -244,9 +204,26 @@ Section box.
       rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
     - move=> ??????? Hs [? [|?]] ??? /=; repeat (apply Hs || f_contractive || f_equiv).
   Qed.
-
   Global Instance box_ne A : NonExpansive (@box A).
   Proof. solve_ne_type. Qed.
+
+  Lemma box_type_incl {A B} (f: A → B) ty ty':
+    type_incl f ty ty' -∗ type_incl f (box ty) (box ty').
+  Proof.
+    iIntros "#Incl". iApply own_type_incl; [|done]. by iDestruct "Incl" as "[??]".
+  Qed.
+
+  Lemma box_subtype {A B} E L (f: A → B) ty ty' :
+    subtype E L f ty ty' → subtype E L f (box ty) (box ty').
+  Proof.
+    move=> Sub. iIntros (?) "L". iDestruct (Sub with "L") as "#Incl".
+    iIntros "!> #?". iApply box_type_incl. by iApply "Incl".
+  Qed.
+
+  Lemma box_eqtype {A B} E L (f: A → B) g ty ty' :
+    eqtype E L f g ty ty' → eqtype E L f g (box ty) (box ty').
+  Proof. move=> [??]. split; by apply box_subtype. Qed.
+
 End box.
 
 Section util.
@@ -279,6 +256,7 @@ Section util.
       iExists vl. rewrite /= vec_to_list_length. auto.
   Qed.*)
 End util.
+
 (*
 Section typing.
   Context `{!typeG Σ}.
@@ -348,7 +326,7 @@ Section typing.
   Proof.
     iIntros (????) "Htyp". iApply type_let; [by apply type_new_instr|solve_typing|].
     iIntros (v). iApply typed_body_mono; last iApply "Htyp"; try done.
-    by apply (tctx_incl_frame_r _ [_] [_]), subtype_tctx_incl, own_mono.
+    by apply (tctx_incl_frame_r _ [_] [_]), subtype_tctx_incl, own_subtype.
   Qed.
 
   Lemma type_delete_instr {E L} ty (n : Z) p :
@@ -432,10 +410,12 @@ Section typing.
       + done.
   Qed.
 End typing.
+*)
 
-Global Hint Resolve own_mono' own_proper' box_mono' box_proper'
-             write_own read_own_copy : lrust_typing.
+Global Hint Resolve own_subtype own_eqtype box_subtype box_eqtype
+            (* write_own read_own_copy *) : lrust_typing.
 (* By setting the priority high, we make sure copying is tried before
    moving. *)
+(*
 Global Hint Resolve read_own_move | 100 : lrust_typing.
-  *)
+*)
