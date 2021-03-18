@@ -296,7 +296,7 @@ Section product.
 
   Lemma product2_subtype {A B A' B'} E L (f: A → A') (g: B → B') ty1 ty2 ty1' ty2' :
     subtype E L f ty1 ty1' → subtype E L g ty2 ty2' →
-    subtype E L (pairmap f g) (product2 ty1 ty2) (product2 ty1' ty2').
+    subtype E L (pair_map f g) (product2 ty1 ty2) (product2 ty1' ty2').
   Proof.
     move=> H1 H2. iIntros (qL) "HL".
     iDestruct (H1 with "HL") as "#H1". iDestruct (H2 with "HL") as "#H2".
@@ -316,7 +316,7 @@ Section product.
 
   Lemma product2_eqtype {A B A' B'} E L (f: A → A') f' (g: B → B') g' ty1 ty2 ty1' ty2' :
     eqtype E L f f' ty1 ty1' → eqtype E L g g' ty2 ty2' →
-    eqtype E L (pairmap f g) (pairmap f' g') (product2 ty1 ty2) (product2 ty1' ty2').
+    eqtype E L (pair_map f g) (pair_map f' g') (product2 ty1 ty2) (product2 ty1' ty2').
   Proof. move=> [??] [??]. split; by apply product2_subtype. Qed.
 
   (*
