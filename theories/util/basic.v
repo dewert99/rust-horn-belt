@@ -4,7 +4,7 @@ From stdpp Require Import prelude.
 (** * Utility for Natural Numbers *)
 
 Lemma succ_le m n : S m ≤ n → ∃n', n = S n' ∧ m ≤ n'.
-Proof. move: n=> [|n'] => Le. { inversion Le. } exists n'. lia. Qed.
+Proof. move: n=> [|n'] => Le; [by inversion Le|exists n'; lia]. Qed.
 
 (** * Utility for Point-Free Style *)
 

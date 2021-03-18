@@ -47,28 +47,27 @@ Section own.
   Program Definition own_ptr {A} (n : nat) (ty : type A) :=
     {| ty_size := 1;
        ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
-       ty_own depth tid vl :=
-         match depth, vl return _ with
-         | (asn, S depth), [ #(LitLoc l) ] =>
+       ty_own vπd tid vl :=
+         match vπd, vl return _ with
+         | (asn, S d), [ #(LitLoc l) ] =>
          (* We put a later in front of the †{q}, because we cannot use
             [ty_size_eq] on [ty] at step index 0, which would in turn
             prevent us to prove [subtype_own].
 
             Since this assertion is timeless, this should not cause
             problems. *)
-           ▷ (l ↦∗: ty.(ty_own) (asn, depth) tid ∗ freeable_sz n ty.(ty_size) l)
+           ▷ (l ↦∗: ty.(ty_own) (asn, d) tid ∗ freeable_sz n ty.(ty_size) l)
          | _, _ => False
          end%I;
-         ty_shr depth κ tid l :=
-          match depth return _ with
-          | (asn, S n) =>
-            (∃ l':loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) (asn, n) κ tid l')%I
+         ty_shr vπd κ tid l :=
+          match vπd return _ with
+          | (asn, S d) =>
+            (∃ l':loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) (asn, d) κ tid l')%I
           | _ => False
           end%I
     |}.
-    Next Obligation. iIntros (A q ty [? [|depth]] κ tid l); typeclasses eauto. Qed.
-
-    Next Obligation. by iIntros (A q ty [? [|depth]] tid [|[[]|][]]) "H". Qed.
+  Next Obligation. iIntros (A q ty [? [|depth]] κ tid l); typeclasses eauto. Qed.
+  Next Obligation. by iIntros (A q ty [? [|depth]] tid [|[[]|][]]) "H". Qed.
   Next Obligation.
     intros A n ty [|depth1] [|depth2] asn tid vl Hdepth12;
       [iIntros "[]"|iIntros "[]"|lia|].
@@ -91,10 +90,10 @@ Section own.
   Qed.
 
   Next Obligation.
-    iIntros (A n ty N asn depth κ l tid ??) "/= #LFT #Hout Hshr Htok".
+    iIntros (A n ty N asn vπd κ l tid ??) "/= #LFT #Hout Hshr Htok".
     iMod (bor_exists with "LFT Hshr") as (vl) "Hb"; first solve_ndisj.
     iMod (bor_sep with "LFT Hb") as "[Hb1 Hb2]"; first solve_ndisj.
-    destruct depth as [|depth], vl as [|[[|l'|]|][]];
+    destruct vπd as [|deoth], vl as [|[[|l'|]|][]];
       try (iMod (bor_persistent with "LFT Hb2 Htok") as "[>[]_]"; solve_ndisj).
     rewrite heap_mapsto_vec_singleton bi.later_sep.
     iMod (bor_sep with "LFT Hb2") as "[Hb2 _]"; first solve_ndisj.
@@ -229,18 +228,18 @@ End box.
 Section util.
   Context `{!typeG Σ}.
 
-  Lemma ownptr_own A n (ty : type A) tid depth v :
-    (own_ptr n ty).(ty_own) depth tid [v] ⊣⊢
+  Lemma ownptr_own A n (ty : type A) tid vπd v :
+    (own_ptr n ty).(ty_own) vπd tid [v] ⊣⊢
        ∃ (l : loc) (vl : vec val ty.(ty_size)),
-         ⌜depth.2 > 0⌝%nat ∗ ⌜v = #l⌝ ∗ ▷ l ↦∗ vl ∗
-         ▷ ty.(ty_own) (depth.1, (pred depth.2)) tid vl ∗ ▷ freeable_sz n ty.(ty_size) l.
+         ⌜vπd.2 > 0⌝%nat ∗ ⌜v = #l⌝ ∗ ▷ l ↦∗ vl ∗
+         ▷ ty.(ty_own) (vπd.1, (pred vπd.2)) tid vl ∗ ▷ freeable_sz n ty.(ty_size) l.
   Proof.
     iSplit.
-    - iIntros "Hown". destruct depth as [? [|depth]], v as [[|l|]|]; try done.
+    - iIntros "Hown". destruct vπd as [? [|depth]], v as [[|l|]|]; try done.
       iExists l. iDestruct "Hown" as "[Hown $]". rewrite heap_mapsto_ty_own.
       iDestruct "Hown" as (vl) "[??]". simpl. eauto with iFrame lia.
     - iIntros "Hown". iDestruct "Hown" as (l vl) "(% & -> & ? & ? & ?)".
-      destruct depth as [? [|depth]]; simpl in *; try lia. iFrame. iExists _. iFrame.
+      destruct vπd as [? [|depth]]; simpl in *; try lia. iFrame. iExists _. iFrame.
   Qed.
   (*
   Lemma ownptr_uninit_own n m tid depth v :

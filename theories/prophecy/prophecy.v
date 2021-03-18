@@ -145,16 +145,16 @@ Local Notation "π ! L" := (proph_modify π L) (at level 30, format "π  !  L").
 
 Local Lemma proph_modify_eqv L : ∀π, π ! L .≡~{res L}≡ π.
 Proof.
-  elim L=> [|[??]?] /=; [done|] => Eqv ?? /not_elem_of_cons [??].
-  rewrite Eqv; [|done]. by apply proph_upd_lookup_ne.
+  elim: L=> /=[|[??]? IH]; [done|]=> > /not_elem_of_cons [??].
+  rewrite IH; [|done]. by apply proph_upd_lookup_ne.
 Qed.
 
 Local Lemma proph_ok_modify_sat L : .✓ L → ∀π, π ! L ◁ L.
 Proof.
-  rewrite /proph_sat. elim L=> [|[ξ vπ] L'] /=; [done|] => IH [? [? /IH ?]] ?.
+  rewrite /proph_sat. elim: L=> /=[|[ξ vπ] L' IH]; [done|]. move=> [?[? /IH ?]]?.
   apply Forall_cons =>/=. split; [|done]. rewrite proph_modify_eqv; [|done].
-  rewrite proph_upd_lookup. symmetry. set L₀ := .{ξ:=vπ} :: L'.
-  have Dep': vπ ./~ res L₀ by done. apply Dep', (proph_modify_eqv L₀).
+  rewrite proph_upd_lookup. symmetry. set L := .{ξ:=vπ} :: L'.
+  have Dep': vπ ./~ res L by done. apply Dep', (proph_modify_eqv L).
 Qed.
 
 Local Lemma proph_ok_sat L : .✓ L → ∃π, π ◁ L.

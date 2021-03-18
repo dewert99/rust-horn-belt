@@ -54,7 +54,7 @@ Section uniq_bor.
     do 2 (iMod (bor_sep_persistent with "LFT Bor Tok") as "[>-> [Bor Tok]]"; [done|]).
     iMod (bor_sep with "LFT Bor") as "[BorVo Bor]"; [done|].
     iMod (bor_unnest with "LFT Bor") as "Bor"; [done|].
-    move: Le=> /succ_le /=[d'[->Le]] /=. iIntros "!>!>!>".
+    move: Le=> /succ_le /=[d'[->Le]]. iIntros "!>!>!>".
     iMod (bor_shorten with "[] Bor") as "Bor".
     { iApply lft_incl_glb; [|iApply lft_incl_refl].
       iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }

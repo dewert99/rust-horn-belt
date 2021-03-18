@@ -94,8 +94,8 @@ Lemma ty_outlives_E_elctx_sat `{!typeG Σ} {A} E L (ty: _ A) α β :
   ty_outlives_E ty β ⊆+ E → lctx_lft_incl E L α β →
   elctx_sat E L (ty_outlives_E ty α).
 Proof.
-  rewrite /ty_outlives_E. elim ty.(ty_lfts); [by solve_typing|].
-  move=> ?? IH Sub Incl. apply elctx_sat_lft_incl.
+  rewrite /ty_outlives_E. elim ty.(ty_lfts)=> [|?? IH]; [by solve_typing|].
+  move=> Sub Incl. apply elctx_sat_lft_incl.
   - etrans; [by apply Incl|].
     eapply lctx_lft_incl_external, elem_of_submseteq, Sub. set_solver.
   - apply IH, Incl. etrans; [|by apply Sub]. by apply submseteq_cons.
@@ -123,7 +123,7 @@ Lemma tyl_outlives_E_elctx_sat `{!typeG Σ} {As} E L (tyl: typel As) α β :
   tyl_outlives_E tyl β ⊆+ E → lctx_lft_incl E L α β →
   elctx_sat E L (tyl_outlives_E tyl α).
 Proof.
-  elim tyl=> [|> IH]; [solve_typing|]=> Outlv Incl. apply elctx_sat_app.
+  elim: tyl=> [|> IH]; [solve_typing|]=> Outlv Incl. apply elctx_sat_app.
   - eapply ty_outlives_E_elctx_sat; [|by apply Incl]. etrans; [|by apply Outlv].
     by apply submseteq_inserts_r.
   - apply IH; [|done]. etrans; [|by apply Outlv]. by apply submseteq_inserts_l.
@@ -279,12 +279,12 @@ Section ofe.
   Global Instance tyl_outlives_E_ne {As} n :
     Proper (dist n ==> (=) ==> (=)) (@tyl_outlives_E _ _ As).
   Proof.
-    move=> ?? Eqv ??->. rewrite /tyl_outlives_E. by elim Eqv=> /=[|> ->_->].
+    move=> ?? Eqv ??->. rewrite /tyl_outlives_E. by elim: Eqv=> /=[|> ->_->].
   Qed.
   Global Instance tyl_outlives_E_proper {A} :
     Proper ((≡) ==> (=) ==> (=)) (@tyl_outlives_E _ _ A).
   Proof.
-    move=> ?? Eqv ??->. rewrite /tyl_outlives_E. by elim Eqv=> /=[|> ->_->].
+    move=> ?? Eqv ??->. rewrite /tyl_outlives_E. by elim: Eqv=> /=[|> ->_->].
   Qed.
 
   Global Instance ty_own_ne {A} n:
@@ -448,8 +448,8 @@ Lemma type_lft_morphism_elctx_interp_proper {A B} (T: _ A → _ B)
   elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
   elctx_interp (T ty).(ty_E) ≡ elctx_interp (T ty').(ty_E).
 Proof.
-  intros Eqv Hl. destruct HT as [α βs E Hα HE|α E Hα HE]; [|by rewrite !HE].
-  rewrite !HE Eqv. do 5 f_equiv. by apply lft_incl_equiv_proper_r.
+  move=> EqvE EqvLft. move: HT=> [|] > ? HE; [|by rewrite !HE].
+  rewrite !HE EqvE. do 5 f_equiv. by apply lft_incl_equiv_proper_r.
 Qed.
 
 Lemma type_lft_morphism_ext {A B} (T U: _ A → _ B) :
@@ -677,57 +677,54 @@ Section type.
   Lemma shr_locsE_shift l n m :
     shr_locsE l (n + m) = shr_locsE l n ∪ shr_locsE (l +ₗ n) m.
   Proof.
-    revert l; induction n; intros l.
-    - rewrite shift_loc_0. set_solver+.
-    - rewrite -Nat.add_1_l Nat2Z.inj_add /= IHn shift_loc_assoc. set_solver+.
+    move: l. elim: n=> [|? IH]=> l /=.
+    - rewrite shift_loc_0 /=. set_solver+.
+    - rewrite -Nat.add_1_l Nat2Z.inj_add IH shift_loc_assoc. set_solver+.
   Qed.
 
   Lemma shr_locsE_disj l n m :
     shr_locsE l n ## shr_locsE (l +ₗ n) m.
   Proof.
-    revert l; induction n; intros l.
-    - simpl. set_solver+.
-    - rewrite -Nat.add_1_l Nat2Z.inj_add /=.
-      apply disjoint_union_l. split; [|rewrite -shift_loc_assoc; exact: IHn].
-      clear IHn. revert n; induction m; intros n; simpl; first set_solver+.
-      rewrite shift_loc_assoc. apply disjoint_union_r. split.
-      + apply ndot_ne_disjoint. destruct l. intros [=]. lia.
-      + rewrite -Z.add_assoc. move:(IHm (n + 1)). rewrite Nat2Z.inj_add //.
+    move: l. elim: n=> [|n IHn]=> l /=; [set_solver+|].
+    rewrite -Nat.add_1_l Nat2Z.inj_add. apply disjoint_union_l.
+    split; [|rewrite -shift_loc_assoc; by exact: IHn].
+    clear IHn. move: n. elim: m=> [|? IHm]=> n; [set_solver+|]. simpl.
+    rewrite shift_loc_assoc. apply disjoint_union_r. split.
+    - apply ndot_ne_disjoint. case l=> * [=]. lia.
+    - rewrite -Z.add_assoc. move: (IHm (n + 1)). by rewrite Nat2Z.inj_add.
   Qed.
 
   Lemma shr_locsE_shrN l n : shr_locsE l n ⊆ ↑shrN.
   Proof.
-    revert l; induction n=>l /=; first by set_solver+.
-    apply union_least; last by auto. solve_ndisj.
+    move: l. elim: n=> /=[|??]=> l; [set_solver+|].
+    apply union_least; [solve_ndisj|done].
   Qed.
 
   Lemma shr_locsE_subseteq l n m : n ≤ m → shr_locsE l n ⊆ shr_locsE l m.
   Proof.
-    induction 1; first done. etrans; first done.
-    rewrite -Nat.add_1_l [(_ + _)]comm_L shr_locsE_shift. set_solver+.
+    elim; [done|]=> > ? In. etrans; [by apply In|].
+    rewrite -Nat.add_1_r shr_locsE_shift. set_solver+.
   Qed.
 
   Lemma shr_locsE_split_tok l n m tid :
     na_own tid (shr_locsE l (n + m)) ⊣⊢
     na_own tid (shr_locsE l n) ∗ na_own tid (shr_locsE (l +ₗ n) m).
-  Proof. rewrite shr_locsE_shift na_own_union //. apply shr_locsE_disj. Qed.
+  Proof. rewrite shr_locsE_shift na_own_union; by [|apply shr_locsE_disj]. Qed.
 
-  Global Instance copy_equiv {A} : Proper (equiv ==> impl) (@Copy _ _ A).
+  Global Instance copy_equiv {A} : Proper ((≡) ==> impl) (@Copy _ _ A).
   Proof.
-    intros ty ty' [EQsz%leibniz_equiv EQlfts EQE EQown EQshr] Hty. split.
-    - intros. rewrite -EQown. apply _.
-    - intros *. rewrite -EQsz -EQshr. setoid_rewrite <-EQown.
-      apply copy_shr_acc.
+    move=> ty ty' [EqSz _ _ EqOwn EqShr] ?. split=> >.
+    - rewrite -EqOwn. apply _.
+    - rewrite -EqSz -EqShr. setoid_rewrite <-EqOwn. apply copy_shr_acc.
   Qed.
 
   Global Program Instance ty_of_st_copy {A} (st: _ A) : Copy (ty_of_st st).
   Next Obligation.
-    move=> *. iIntros "#LFT #Hshr Htok Hlft /=".
-    iDestruct (na_own_acc with "Htok") as "[$ Htok]"; [solve_ndisj|].
-    iDestruct "Hshr" as (?) "[Hf Hown]".
-    iMod (frac_bor_acc with "LFT Hf Hlft") as (?) "[>Hmt Hclose]"; [solve_ndisj|].
-    iModIntro. iExists _, _. iFrame "Hmt Hown". iIntros "Htok2".
-    iDestruct ("Htok" with "Htok2") as "$". iIntros "Hmt". by iApply "Hclose".
+    move=> *. iIntros "#LFT #Shr Tok LTok". iDestruct "Shr" as (?) "[Bor Own]".
+    iDestruct (na_own_acc with "Tok") as "[$ PreTok]"; [solve_ndisj|].
+    iMod (frac_bor_acc with "LFT Bor LTok") as (?) "[>Mt Close]"; [solve_ndisj|].
+    iModIntro. iExists _, _. iFrame "Mt Own". iIntros "Tok".
+    iDestruct ("PreTok" with "Tok") as "$". iIntros "?". by iApply "Close".
   Qed.
 
   (** Lemmas on Send and Sync *)
@@ -740,8 +737,8 @@ Section type.
 
   Global Instance ty_of_st_sync {A} (st: _ A) : Send (ty_of_st st) → Sync (ty_of_st st).
   Proof.
-    move=> Hsend >. iDestruct 1 as (vl) "[Hm Hown]".
-    iExists vl. iFrame "Hm". iNext. by iApply Hsend.
+    move=> Send >. iDestruct 1 as (vl) "[Bor Own]".
+    iExists vl. iFrame "Bor". iNext. by iApply Send.
   Qed.
 
   Lemma send_change_tid' {A} (ty: _ A) vπd tid tid' vl :
@@ -792,11 +789,11 @@ Section subtyping.
   Lemma type_incl_trans {A B C} (f: A → B) (g: B → C) ty ty' ty'' :
     type_incl f ty ty' -∗ type_incl g ty' ty'' -∗ type_incl (g ∘ f) ty ty''.
   Proof.
-    iIntros "(% & #Lft & #Own & #Shr) (% & #Lft' & #Own' & #Shr')".
+    iIntros "[%[#Lft[#Own #Shr]]] [%[#Lft'[#Own' #Shr']]]".
     iSplit. { iPureIntro. by etrans. } iSplit; [|iSplit].
     - iApply lft_incl_trans; [iApply "Lft'"|iApply "Lft"].
-    - iIntros (????) "!>?". iApply "Own'". by iApply "Own".
-    - iIntros (?????) "!>?". iApply "Shr'". by iApply "Shr".
+    - iIntros "!> * ?". iApply "Own'". by iApply "Own".
+    - iIntros "!> * ?". iApply "Shr'". by iApply "Shr".
   Qed.
 
   Lemma subtype_refl {A} E L (ty: _ A) : subtype E L id ty ty.
@@ -805,19 +802,17 @@ Section subtyping.
   Lemma subtype_trans {A B C} E L (f: A → B) (g: B → C) ty ty' ty'' :
     subtype E L f ty ty' → subtype E L g ty' ty'' → subtype E L (g ∘ f) ty ty''.
   Proof.
-    move=> Sub Sub'. iIntros (?) "L". iDestruct (Sub with "L") as "#Wand".
-    iDestruct (Sub' with "L") as "#Wand'". iIntros "!> #E".
-    iDestruct ("Wand" with "E") as "Incl". iDestruct ("Wand'" with "E") as "Incl'".
-    iApply (type_incl_trans with "Incl Incl'").
+    move=> Sub Sub'. iIntros (?) "L". iDestruct (Sub with "L") as "#Incl".
+    iDestruct (Sub' with "L") as "#Incl'". iIntros "!> #E".
+    iApply type_incl_trans; by [iApply "Incl"|iApply "Incl'"].
   Qed.
 
   Lemma subtype_weaken {A B} E E' L L' (f: A → B) ty ty' :
     E ⊆+ E' → L ⊆+ L' → subtype E L f ty ty' → subtype E' L' f ty ty'.
   Proof.
-    iIntros (?? Hsub ?) "HL". iDestruct (Hsub with "[HL]") as "#Hsub".
-    { rewrite /llctx_interp. by iApply big_sepL_submseteq. }
-    iClear "∗". iIntros "!> #HE". iApply "Hsub".
-    rewrite /elctx_interp. by iApply big_sepL_submseteq.
+    move=> ?? Sub. iIntros (?) "L".
+    iDestruct (Sub with "[L]") as "#Incl"; [by iApply big_sepL_submseteq|].
+    iIntros "!> #E". iApply "Incl". by iApply big_sepL_submseteq.
   Qed.
 
 (* This lemma is not supported.
@@ -926,8 +921,8 @@ Section subtyping.
       (∀vπ d tid vl, st.(st_own) (vπ,d) tid vl -∗ st'.(st_own) (f∘vπ,d) tid vl))) →
     subtype E L f st st'.
   Proof.
-    intros Hst. iIntros (?) "HL". iDestruct (Hst with "HL") as "#Hst".
-    iIntros "!> #HE". iDestruct ("Hst" with "HE") as (?) "[??]".
+    move=> Sub. iIntros (?) "L". iDestruct (Sub with "L") as "#Incl".
+    iIntros "!> #E". iDestruct ("Incl" with "E") as (?) "[??]".
     by iApply type_incl_simple_type.
   Qed.
 
@@ -952,8 +947,8 @@ Section subtyping.
       (∀v tid vl, pt.(pt_own) v tid vl -∗ pt'.(pt_own) (f v) tid vl))) →
     subtype E L f pt pt'.
   Proof.
-    intros Hst. iIntros (?) "HL". iDestruct (Hst with "HL") as "#Hst".
-    iIntros "!> #HE". iDestruct ("Hst" with "HE") as (?) "[??]".
+    move=> Sub. iIntros (?) "L". iDestruct (Sub with "L") as "#Incl".
+    iIntros "!> #E". iDestruct ("Incl" with "E") as (?) "[??]".
     by iApply type_incl_plain_type.
   Qed.
 
