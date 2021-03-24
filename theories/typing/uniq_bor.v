@@ -49,8 +49,7 @@ Section uniq_bor.
     iMod (bor_exists with "LFT Bor") as (d) "Bor"; [done|].
     iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
     iMod (bor_exists with "LFT Bor") as (ξ) "Bor"; [done|].
-    iMod (bor_sep_persistent with "LFT Bor Tok") as "[>Le [Bor Tok]]"; [done|].
-    iDestruct "Le" as %Le.
+    iMod (bor_sep_persistent with "LFT Bor Tok") as "[>%Le [Bor Tok]]"; [done|].
     do 2 (iMod (bor_sep_persistent with "LFT Bor Tok") as "[>-> [Bor Tok]]"; [done|]).
     iMod (bor_sep with "LFT Bor") as "[BorVo Bor]"; [done|].
     iMod (bor_unnest with "LFT Bor") as "Bor"; [done|].
