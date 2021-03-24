@@ -5,7 +5,6 @@ From lrust.lang Require Import heap.
 From lrust.typing Require Export type.
 From lrust.typing Require Import uniq_cmra.
 (* From lrust.typing Require Import lft_contexts type_context programs. *)
-From iris_string_ident Require Import ltac2_string_ident.
 Set Default Proof Using "Type".
 
 Section uniq_bor.
