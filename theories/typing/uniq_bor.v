@@ -130,12 +130,12 @@ Section typing.
 
   Global Instance uniq_send {A} κ (ty: _ A) : Send ty → Send (&uniq{κ} ty).
   Proof.
-    move=> Send ?*/=. do 10 f_equiv. iIntros "?". iApply bor_iff; last done.
-    iApply bi.equiv_iff. do 6 f_equiv. by iSplit; iIntros "?"; iApply Send.
+    move=> Send ?*/=. do 10 f_equiv. iIntros "?". iApply bor_iff; [|done].
+    iApply bi.equiv_iff. do 6 f_equiv. iSplit; iApply Send.
   Qed.
 
   Global Instance uniq_sync {A} κ (ty: _ A) : Sync ty → Sync (&uniq{κ} ty).
-  Proof. move=> Sync ?*/=. do 11 f_equiv. iApply Sync. Qed.
+  Proof. move=> ??*/=. by do 11 f_equiv. Qed.
 
   Lemma uniq_subtype {A} E L κ κ' (ty ty': _ A) :
     lctx_lft_incl E L κ' κ → eqtype E L id id ty ty' →

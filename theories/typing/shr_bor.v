@@ -47,7 +47,7 @@ Section typing.
   Context `{!typeG Σ}.
 
   Global Instance shr_send {A} κ (ty: _ A) : Sync ty → Send (&shr{κ} ty).
-  Proof. move=> Sync ?*/=. do 6 f_equiv. by iApply Sync. Qed.
+  Proof. move=> ??*/=. by do 6 f_equiv. Qed.
 
   Lemma shr_type_incl {A B} κ κ' (f: A → B) ty ty' :
     κ' ⊑ κ -∗ type_incl f ty ty' -∗ type_incl f (&shr{κ} ty) (&shr{κ'} ty').
