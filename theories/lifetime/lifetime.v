@@ -165,6 +165,13 @@ Proof.
   by iMod ("Hob" with "HP") as "[_ $]".
 Qed.
 
+Lemma bor_sep_persistent P `{!Persistent P} Q E κ q :
+  ↑lftN ⊆ E → lft_ctx -∗ &{κ} (P ∗ Q) -∗ q.[κ] ={E}=∗ ▷ P ∗ &{κ} Q ∗ q.[κ].
+Proof.
+  iIntros (?) "#LFT Bor Tok". iMod (bor_sep with "LFT Bor") as "[Bor $]"; [done|].
+  by iMod (bor_persistent with "LFT Bor Tok") as "[$$]".
+Qed.
+
 Lemma later_bor_static E P :
   ↑lftN ⊆ E →
   lft_ctx -∗ ▷ P ={E}=∗ &{static} P.

@@ -10,13 +10,6 @@ Set Default Proof Using "Type".
 Section uniq_bor.
   Context `{!typeG Σ}.
 
-  Lemma bor_sep_persistent E κ P `{!Persistent P} Q q :
-    ↑lftN ⊆ E → lft_ctx -∗ &{κ} (P ∗ Q) -∗ q.[κ] ={E}=∗ ▷ P ∗ &{κ} Q ∗ q.[κ].
-  Proof.
-    iIntros (?) "#LFT Bor Tok". iMod (bor_sep with "LFT Bor") as "[Bor $]"; [done|].
-    by iMod (bor_persistent with "LFT Bor Tok") as "[$$]".
-  Qed.
-
   Program Definition uniq_bor {A} (κ: lft) (ty: type A) : type (A * A) := {|
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
     ty_own vπd tid vl := ∃d (l: loc) (ξ: proph_var' A), ⌜S d ≤ vπd.2⌝ ∗ ⌜vl = [ #l]⌝ ∗
