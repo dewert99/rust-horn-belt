@@ -108,12 +108,10 @@ Proof.
       [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
 Qed.
 
-Definition tyl_lfts `{!typeG Σ} {As} (tyl: typel As) : list lft :=
-  concat ((λ _, ty_lfts) +<$> tyl).
-Definition tyl_E `{!typeG Σ} {As} (tyl: typel As) : elctx :=
-  concat ((λ _, ty_E) +<$> tyl).
-Definition tyl_outlives_E `{!typeG Σ} {As} (tyl: typel As) κ : elctx :=
-  concat ((λ _ ty, ty_outlives_E ty κ) +<$> tyl).
+Notation tyl_lfts tyl := (concat ((λ _, ty_lfts) +<$> tyl)).
+Notation tyl_lft tyl := (lft_intersect_list (tyl_lfts tyl)).
+Notation tyl_E tyl := (concat ((λ _, ty_E) +<$> tyl)).
+Notation tyl_outlives_E tyl κ := (concat ((λ _ ty, ty_outlives_E ty κ) +<$> tyl)).
 
 Lemma tyl_outlives_E_elctx_sat `{!typeG Σ} {As} E L (tyl: typel As) α β :
   tyl_outlives_E tyl β ⊆+ E → lctx_lft_incl E L α β →
@@ -267,21 +265,6 @@ Section ofe.
   Proof. rewrite /ty_outlives_E. by move=> ?? [_ -> _ _ _]. Qed.
 
   Global Instance hlist_dist_type {As} : Dist (typel As) := @hlist_dist (@typeO) _.
-
-  Global Instance tyl_E_ne {As} n : Proper (dist n ==> (=)) (@tyl_E _ _ As).
-  Proof. move=> ??. rewrite /tyl_E. by elim=> /=[|> ->_->]. Qed.
-  Global Instance tyl_E_proper {As} : Proper ((≡) ==> (=)) (@tyl_E _ _ As).
-  Proof. move=> ??. rewrite /tyl_E. by elim=> /=[|> ->_->]. Qed.
-  Global Instance tyl_outlives_E_ne {As} n :
-    Proper (dist n ==> (=) ==> (=)) (@tyl_outlives_E _ _ As).
-  Proof.
-    move=> ?? Eqv ??->. rewrite /tyl_outlives_E. by elim: Eqv=> /=[|> ->_->].
-  Qed.
-  Global Instance tyl_outlives_E_proper {A} :
-    Proper ((≡) ==> (=) ==> (=)) (@tyl_outlives_E _ _ A).
-  Proof.
-    move=> ?? Eqv ??->. rewrite /tyl_outlives_E. by elim: Eqv=> /=[|> ->_->].
-  Qed.
 
   Global Instance ty_own_ne {A} n:
     Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@ty_own _ _ A).

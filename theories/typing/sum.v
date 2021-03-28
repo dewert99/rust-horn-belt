@@ -1,7 +1,8 @@
 From iris.proofmode Require Import tactics.
 From iris.algebra Require Import list.
 From iris.bi Require Import fractional.
-From lrust.typing Require Export lft_contexts type.
+From lrust.util Require Import types.
+From lrust.typing Require Export (** lft_contexts *) type.
 Set Default Proof Using "Type".
 
 Section sum.
@@ -10,94 +11,114 @@ Section sum.
   (* We define the actual empty type as being the empty sum, so that it is
      convertible to it---and in particular, we can pattern-match on it
      (as in, pattern-match in the language of lambda-rust, not in Coq). *)
-  Program Definition emp0 : type :=
-    {| ty_size := 1%nat; ty_lfts := []; ty_E := [];
-       ty_own depth tid vl := False%I; ty_shr κ tid l := False%I |}.
-  Next Obligation. iIntros (???) "[]". Qed.
-  Next Obligation. iIntros (?????) "[]". Qed.
-  Next Obligation.
-    iIntros (E depth κ l tid ??) "#LFT _ Hown Htok !>". iApply step_fupdN_intro=>//.
-    iIntros "!>". iMod (bor_acc with "LFT Hown Htok") as "[>H _]"; first done.
-    iDestruct "H" as (?) "[_ []]".
-  Qed.
-  Next Obligation. iIntros (κ κ' tid l) "#Hord []". Qed.
+  Program Definition emp0 : type Empty_set := {|
+    ty_size := 1;  ty_lfts := [];  ty_E := [];
+    ty_own _ _ _ := False%I;  ty_shr _ _ _ _ := False%I
+  |}.
+  Next Obligation. by iIntros. Qed.
+  Next Obligation. by iIntros. Qed.
+  Next Obligation. by iIntros. Qed.
+  Next Obligation. by iIntros. Qed.
+  Next Obligation. move=> ? []. apply inhabitant. Qed.
+  Next Obligation. move=> ? []. apply inhabitant. Qed.
+  Next Obligation. move=> ? []. apply inhabitant. Qed.
 
-  Definition is_pad i tyl (vl : list val) : iProp Σ :=
-    ⌜((nth i tyl emp0).(ty_size) + length vl)%nat = (max_list_with ty_size tyl)⌝%I.
+  Implicit Type (i: nat) (vl: list val).
 
-  Lemma split_sum_mt l depth tid q tyl :
-    (l ↦∗{q}: λ vl,
-         ∃ (i : nat) vl' vl'', ⌜vl = #i :: vl' ++ vl''⌝ ∗
-                               ⌜length vl = S (max_list_with ty_size tyl)⌝ ∗
-                               (nth i tyl emp0).(ty_own) depth tid vl')%I
-    ⊣⊢ ∃ (i : nat), (l ↦{q} #i ∗
-                     (l +ₗ (S $ (nth i tyl emp0).(ty_size))) ↦∗{q}: is_pad i tyl) ∗
-                              (l +ₗ 1) ↦∗{q}: (nth i tyl emp0).(ty_own) depth tid.
-  Proof.
-    iSplit; iIntros "H".
-    - iDestruct "H" as (vl) "[Hmt Hown]". iDestruct "Hown" as (i vl' vl'') "(% & % & Hown)".
-      subst. iExists i. iDestruct (heap_mapsto_vec_cons with "Hmt") as "[$ Hmt]".
-      iDestruct (ty_size_eq with "Hown") as "#EQ". iDestruct "EQ" as %Hvl'.
-      iDestruct (heap_mapsto_vec_app with "Hmt") as "[Hmt Htail]". iSplitL "Htail".
-      + iExists vl''. rewrite (shift_loc_assoc_nat _ 1) Hvl'. iFrame. iPureIntro.
-        rewrite -Hvl'. simpl in *. rewrite -app_length. congruence.
+  Definition is_pad {As} i (tyl: typel As) vl : iProp Σ :=
+    ⌜((hnth tyl i emp0).(ty_size) + length vl)%nat = max_hlist_with (λ _, ty_size) tyl⌝.
+
+  Lemma split_sum_mt {As} (tyl: typel As) vπ d l tid q :
+    (l ↦∗{q}: λ vl, ∃i vπ' vl' vl'', ⌜vπ = xinj i ∘ vπ'⌝ ∗
+      ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_hlist_with (λ _, ty_size) tyl)⌝ ∗
+      (hnth tyl i emp0).(ty_own) (vπ',d) tid vl')%I ⊣⊢
+    ∃i vπ', ⌜vπ = xinj i ∘ vπ'⌝ ∗
+      (l ↦{q} #i ∗ (l +ₗ S (hnth tyl i emp0).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
+      (l +ₗ 1) ↦∗{q}: (hnth tyl i emp0).(ty_own) (vπ',d) tid.
+  Proof. iSplit.
+    - iDestruct 1 as (vl) "[Mt Own]".
+      iDestruct "Own" as (i vπ' vl' vl'' ->->[=]) "Own". iExists i, vπ'. iSplit; [done|].
+      iDestruct (ty_size_eq with "Own") as "%Eq'".
+      iDestruct (heap_mapsto_vec_cons with "Mt") as "[$ Mt]".
+      iDestruct (heap_mapsto_vec_app with "Mt") as "[Mt Mt']".
+      iSplitL "Mt'".
+      + iExists vl''. rewrite (shift_loc_assoc_nat _ 1) Eq'. iFrame. iPureIntro.
+        by rewrite -Eq' -app_length.
       + iExists vl'. by iFrame.
-    - iDestruct "H" as (i) "[[Hmt1 Htail] Hown]".
-      iDestruct "Hown" as (vl') "[Hmt2 Hown]". iDestruct "Htail" as (vl'') "[Hmt3 %]".
-      iDestruct (ty_size_eq with "Hown") as "#EQ". iDestruct "EQ" as %Hvl'.
-      iExists (#i::vl'++vl'').
-      rewrite heap_mapsto_vec_cons heap_mapsto_vec_app (shift_loc_assoc_nat _ 1) Hvl'.
-      iFrame. iExists i, vl', vl''. iSplit; first done. iFrame. iPureIntro.
-      simpl. f_equal. by rewrite app_length Hvl'.
+    - iDestruct 1 as (i vπ' ->) "[[Mt Mt'']Own]".
+      iDestruct "Own" as (vl') "[Mt' Own]". iDestruct "Mt''" as (vl'') "[Mt'' %]".
+      iDestruct (ty_size_eq with "Own") as "%Eq". iExists (#i :: vl' ++ vl'').
+      rewrite heap_mapsto_vec_cons heap_mapsto_vec_app (shift_loc_assoc_nat _ 1) Eq.
+      iFrame "Mt Mt' Mt''". iExists i, vπ', vl', vl''. do 2 (iSplit; [done|]).
+      iFrame "Own". iPureIntro. simpl. f_equal. by rewrite app_length Eq.
   Qed.
 
-  Program Definition sum (tyl : list type) :=
-    {| ty_size := S (max_list_with ty_size tyl);
-       ty_lfts := tyl_lfts tyl; ty_E := tyl_E tyl;
-       ty_own depth tid vl :=
-         (∃ (i : nat) vl' vl'', ⌜vl = #i :: vl' ++ vl''⌝ ∗
-                                ⌜length vl = S (max_list_with ty_size tyl)⌝ ∗
-                                (nth i tyl emp0).(ty_own) depth tid vl')%I;
-       ty_shr κ tid l :=
-         (∃ (i : nat),
-           &frac{κ} (λ q, l ↦{q} #i ∗
-                     (l +ₗ (S $ (nth i tyl emp0).(ty_size))) ↦∗{q}: is_pad i tyl) ∗
-               (nth i tyl emp0).(ty_shr) κ tid (l +ₗ 1))%I
-    |}.
-  Next Obligation.
-    iIntros (tyl depth tid vl) "Hown". iDestruct "Hown" as (i vl' vl'') "(%&%&_)".
-    subst. done.
-  Qed.
-  Next Obligation.
-    move=>tyl depth1 depth2 tid vl Hdepth /=.
-    iDestruct 1 as (i vl' vl'' -> [= EQl]) "?". iExists _, _, _. rewrite /= EQl.
-    do 2 (iSplitR; [done|]). by iApply ty_own_depth_mono.
-  Qed.
-  Next Obligation.
-    intros tyl E depth κ l tid. iIntros (??) "#LFT #Houtlives Hown Htok". rewrite split_sum_mt.
-    iMod (bor_exists with "LFT Hown") as (i) "Hown"; first solve_ndisj.
-    iMod (bor_sep with "LFT Hown") as "[Hmt Hown]"; first solve_ndisj.
-    iMod ((nth i tyl emp0).(ty_share) with "LFT [] Hown Htok") as "H"; try done.
-    { destruct (decide (i < length tyl)%nat) as [Hi|].
-      - iApply lft_incl_trans; [done|]. iClear "Houtlives LFT".
-        iInduction tyl as [|ty tyl] "IH" forall (i Hi); [simpl in Hi; lia|].
-        simpl in Hi. rewrite /= lft_intersect_list_app. destruct i.
-        + iApply lft_intersect_incl_l.
-        + iApply lft_incl_trans; [|iApply "IH"; auto with lia].
-          iApply lft_intersect_incl_r.
-      - rewrite nth_overflow; [|lia]. iApply lft_incl_static. }
-    iModIntro. iApply (step_fupdN_wand with "H"). iIntros ">[#Hshr $]".
-    iMod (bor_fracture with "LFT [Hmt]") as "H'"; first solve_ndisj; last eauto.
-    by iFrame.
-  Qed.
-  Next Obligation.
-    iIntros (tyl κ κ' tid l) "#Hord H".
-    iDestruct "H" as (i) "[Hown0 Hown]". iExists i.
-    iSplitL "Hown0".
-    - by iApply (frac_bor_shorten with "Hord").
-    - iApply ((nth i tyl emp0).(ty_shr_mono) with "Hord"); done.
+  Local Lemma ty_lfts_incl {As} (tyl: typel As) i :
+    ⊢ tyl_lft tyl ⊑ ty_lft (hnth tyl i emp0).
+  Proof.
+    elim: tyl i=> /=[|?? ty tyl IH] [|j];
+      [by iApply lft_incl_refl|by iApply lft_incl_refl| |];
+      rewrite lft_intersect_list_app; [by iApply lft_intersect_incl_l|].
+    iApply lft_incl_trans; by [iApply lft_intersect_incl_r|iApply IH].
   Qed.
 
+  Program Definition sum {As} (tyl: typel As) := {|
+    ty_size := S (max_hlist_with (λ _, ty_size) tyl);
+    ty_lfts := tyl_lfts tyl;  ty_E := tyl_E tyl;
+    ty_own vπd tid vl := (∃i vπ' vl' vl'', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
+      ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_hlist_with (λ _, ty_size) tyl)⌝ ∗
+      (hnth tyl i emp0).(ty_own) (vπ',vπd.2) tid vl')%I;
+    ty_shr vπd κ tid l := (∃i vπ', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
+      &frac{κ} (λ q, l ↦{q} #i ∗
+        (l +ₗ S (hnth tyl i emp0).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
+      (hnth tyl i emp0).(ty_shr) (vπ',vπd.2) κ tid (l +ₗ 1))%I
+  |}.
+  Next Obligation. move=> *. by iDestruct 1 as (???????) "?". Qed.
+  Next Obligation.
+    move=> */=. iDestruct 1 as (i vπ' vl' vl'' ->->->) "?".
+    iExists i, vπ', vl', vl''. do 3 (iSplit; [done|]). by iApply ty_own_depth_mono.
+  Qed.
+  Next Obligation.
+    move=> */=. iDestruct 1 as (i vπ' ->) "[??]". iExists i, vπ'.
+    do 2 (iSplit; [done|]). by iApply ty_shr_depth_mono.
+  Qed.
+  Next Obligation.
+    move=> */=. iIntros "In". iDestruct 1 as (i vπ' ->) "[??]". iExists i, vπ'.
+    iSplit; [done|]. iSplit;
+      by [iApply (frac_bor_shorten with "In")|iApply (ty_shr_lft_mono with "In")].
+  Qed.
+  Next Obligation.
+    move=> */=. iIntros "#LFT #? Bor Tok". rewrite split_sum_mt.
+    iMod (bor_exists with "LFT Bor") as (i) "Bor"; [done|].
+    iMod (bor_exists_tok with "LFT Bor Tok") as (vπ') "[Bor Tok]"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor Tok") as "[>->[Bor Tok]]"; [done|].
+    iMod (bor_sep with "LFT Bor") as "[Mt Bor]"; [done|].
+    iMod (ty_share with "LFT [] Bor Tok") as "Upd"; [done| |].
+    { iApply lft_incl_trans; by [|iApply ty_lfts_incl]. }
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >[Shr $]".
+    iMod (bor_fracture (λ q, _ ↦{q} _ ∗ _ ↦∗{q}: _)%I with "LFT Mt") as "?"; [done|].
+    iModIntro. iExists i, vπ'. iSplit; [done|]. iFrame.
+  Qed.
+  Next Obligation.
+    move=> */=. iIntros "#LFT #?". iDestruct 1 as (i vπ' vl' vl'' ->->->) "Own".
+    iIntros "Tok". iMod (ty_own_proph with "LFT [] Own Tok") as "Upd"; first done.
+    { iApply lft_incl_trans; by [|iApply ty_lfts_incl]. } iModIntro.
+    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q' ?) "[PTok Close]".
+    iModIntro. iExists ξs, q'. iSplit. { iPureIntro. by apply proph_dep_constr. }
+    iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[?$]".
+    iModIntro. iExists i, vπ', vl', vl''. by do 3 (iSplit; [done|]).
+  Qed.
+  Next Obligation.
+    move=> */=. iIntros "#LFT #In #?". iDestruct 1 as (i vπ' ->) "[Bor Shr]".
+    iIntros "Tok". iMod (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; first done.
+    { iApply lft_incl_trans; by [|iApply ty_lfts_incl]. } iIntros "!>!>".
+    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q' ?) "[PTok Close]".
+    iModIntro. iExists ξs, q'. iSplit. { iPureIntro. by apply proph_dep_constr. }
+    iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[?$]".
+    iModIntro. iExists i, vπ'. by do 2 (iSplit; [done|]).
+  Qed.
+
+(*
   Global Instance sum_ne : NonExpansive sum.
   Proof.
     intros n x y EQ.
@@ -338,11 +359,14 @@ Section sum.
   Definition emp_type := sum [].
 
   Global Instance emp_type_empty : Empty type := emp_type.
+*)
 End sum.
 
+(*
 (* Σ is commonly used for the current functor. So it cannot be defined
    as Π for products. We stick to the following form. *)
 Notation "Σ[ ty1 ; .. ; tyn ]" :=
   (sum (cons ty1%T (..(cons tyn%T nil)..))) : lrust_type_scope.
 
 Global Hint Resolve sum_mono' sum_proper' : lrust_typing.
+*)

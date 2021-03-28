@@ -54,7 +54,7 @@ theories/typing/uniq_bor.v
 theories/typing/mod_ty.v
 theories/typing/product.v
 # theories/typing/product_split.v
-# theories/typing/sum.v
+theories/typing/sum.v
 # theories/typing/function.v
 # theories/typing/programs.v
 # theories/typing/borrow.v

@@ -104,6 +104,16 @@ Proof.
   - iExists inhabitant. by iApply (bor_fake with "LFT").
 Qed.
 
+Lemma bor_exists_tok {A} (Φ : A → iProp Σ) E κ q :
+  ↑lftN ⊆ E → lft_ctx -∗ &{κ}(∃ x, Φ x) -∗ q.[κ] ={E}=∗ ∃ x, &{κ}(Φ x) ∗ q.[κ].
+Proof.
+  iIntros (?) "#LFT Bor Tok".
+  iMod (bor_acc_cons with "LFT Bor Tok") as "[Own Close]"; [done|].
+  iMod (bi.later_exist_except_0 with "Own") as (x) "Own".
+  iMod ("Close" with "[] Own") as "[?$]". { iIntros "!> Own !>!>". by iExists x. }
+  iModIntro. by iExists x.
+Qed.
+
 Lemma bor_or E κ P Q :
   ↑lftN ⊆ E →
   lft_ctx -∗ &{κ}(P ∨ Q) ={E}=∗ (&{κ}P ∨ &{κ}Q).

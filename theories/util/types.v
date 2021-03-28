@@ -5,7 +5,7 @@ From iris.base_logic Require Export iprop.
 (** We avoid using [list Type] because that can cause universe inconsistency *)
 
 Inductive Types := tnil: Types | tcons: Type → Types → Types.
-Implicit Type As: Types.
+Implicit Type (A B: Type) (As Bs: Types).
 
 Notation "^[ ]" := tnil (at level 5, format "^[ ]").
 Infix "^::" := tcons (at level 60, right associativity).
@@ -15,6 +15,9 @@ Notation "^[ A ; .. ; B ]" := (A ^:: .. (B ^:: ^[]) ..)
 Fixpoint tapp As Bs :=
   match As with ^[] => Bs | A ^:: As' => A ^:: tapp As' Bs end.
 Infix "^++" := tapp (at level 60, right associativity).
+
+Fixpoint tnth As (i: nat) B := match As with
+  ^[] => B | A ^:: As' => match i with 0 => A | S j => tnth As' j B end end.
 
 (** * Heterogeneous List *)
 
@@ -42,6 +45,12 @@ Infix "+<$>" := hmap (at level 61, left associativity).
 Fixpoint hhmap {F G As} (f: ∀A, F A → G A) (xl: hlist F As) : hlist G As :=
   match xl with +[] => +[] | x +:: xl' => f _ x +:: hhmap f xl' end.
 Infix "+<$>+" := hhmap (at level 61, left associativity).
+
+Fixpoint hnth {F As B} (xl: hlist F As) (i: nat) (y: F B) : F (tnth As i B) :=
+  match xl with +[] => y | x +:: xl' => match i with 0 => x | S j => hnth xl' j y end end.
+
+Fixpoint max_hlist_with {F As} (f: ∀A, F A → nat) (xl: hlist F As) : nat :=
+  match xl with +[] => 0 | x +:: xl' => f _ x `max` max_hlist_with f xl' end.
 
 Inductive HForall {F} (Φ: ∀A, F A → Prop) : ∀{As: Types}, hlist F As → Prop :=
 | HForall_nil: HForall Φ +[]
@@ -115,3 +124,8 @@ Fixpoint papp {F As Bs} (xl: list_prod F As) (yl: list_prod F Bs)
   : list_prod F (As ^++ Bs) := match As, xl with
   | ^[], -[] => yl | A ^:: As', x -:: xl' => x -:: papp xl' yl end.
 Infix "-++" := papp (at level 60, right associativity).
+
+(** * Sum *)
+
+Inductive xsum As : Type := xinj (i: nat) : tnth As i Empty_set → xsum As.
+Arguments xinj {_} _ _.
