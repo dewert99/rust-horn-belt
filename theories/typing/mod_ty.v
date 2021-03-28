@@ -73,7 +73,7 @@ Section typing.
 
   Lemma mod_ty_eqtype_inout `{Inj A B (=) (=) f} E L g ty :
     f ∘ g = id → eqtype E L g f ty (mod_ty f ty).
-  Proof. move=> ?. split; [apply mod_ty_subtype_in|by apply mod_ty_subtype_out]. Qed.
+  Proof. move=> ?. by split; [apply mod_ty_subtype_in|apply mod_ty_subtype_out]. Qed.
 
   Lemma mod_ty_subtype `{Inj A B (=) (=) f, Inj A' B' (=) (=) f'} E L h g' ty ty' :
     f' ∘ g' = id → subtype E L h ty ty' →
