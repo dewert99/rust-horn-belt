@@ -11,14 +11,10 @@ Section sum.
   (* We define the actual empty type as being the empty sum, so that it is
      convertible to it---and in particular, we can pattern-match on it
      (as in, pattern-match in the language of lambda-rust, not in Coq). *)
-  Program Definition emp0 : type Empty_set := {|
-    ty_size := 1;  ty_lfts := [];  ty_E := [];
-    ty_own _ _ _ := False%I;  ty_shr _ _ _ _ := False%I
-  |}.
-  Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
-  Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
-  Next Obligation. move=> ? []. apply inhabitant. Qed.
-  Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
+  Program Definition emp0 : type Empty_set :=
+    {| pt_size := 1;  pt_own _ _ _ := False%I; |}.
+  Next Obligation. by iIntros. Qed.
+  Global Instance emp0_send: Send emp0. Proof. done. Qed.
 
   Notation hnthe := (hnth emp0).
 
@@ -328,29 +324,17 @@ Section sum.
       iMod ("Hclose'" with "Htl [$H↦Cf $H↦C]") as "[$$]". iApply "Hclose".
       iFrame. iExists pad. by iFrame.
   Qed.
-
-  Global Instance sum_send tyl : ListSend tyl → Send (sum tyl).
-  Proof.
-    iIntros (Hsend depth tid1 tid2 vl) "H".
-    iDestruct "H" as (i vl' vl'') "(% & % & Hown)".
-    iExists _, _, _. iSplit; first done. iSplit; first done.
-    iApply @send_change_tid; last done.
-    edestruct nth_in_or_default as [| ->]; first by eapply List.Forall_forall.
-    iIntros (????) "[]".
-  Qed.
-
-  Global Instance sum_sync tyl : ListSync tyl → Sync (sum tyl).
-  Proof.
-    iIntros (Hsync κ tid1 tid2 l) "H". iDestruct "H" as (i) "[Hframe Hown]".
-    iExists _. iFrame "Hframe". iApply @sync_change_tid; last done.
-    edestruct nth_in_or_default as [| ->]; first by eapply List.Forall_forall.
-    iIntros (????) "[]".
-  Qed.
-
-  Definition emp_type := sum [].
-
-  Global Instance emp_type_empty : Empty type := emp_type.
 *)
+
+  Global Instance sum_send {As} (tyl: _ As) : ListSend tyl → Send (sum tyl).
+  Proof. move=> Send ?*/=. do 11 f_equiv. by eapply HForall_hnth in Send. Qed.
+
+  Global Instance sum_sync {As} (tyl: _ As) : ListSync tyl → Sync (sum tyl).
+  Proof. move=> Sync ?*/=. do 6 f_equiv. by eapply HForall_hnth in Sync. Qed.
+
+  Definition emp_type: type (xsum ^[]) := sum +[].
+  Global Instance emp_type_empty : Empty (type (xsum ^[])) := emp_type.
+
 End sum.
 
 (*

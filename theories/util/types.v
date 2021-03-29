@@ -58,11 +58,23 @@ Inductive HForall {F} (Φ: ∀A, F A → Prop) : ∀{As: Types}, hlist F As → 
 | HForall_cons {A As} (x: _ A) (xl: _ As) :
     Φ _ x → HForall Φ xl → HForall Φ (x +:: xl).
 
+Lemma HForall_hnth {F As B} (Φ: ∀A, F A → Prop) (y: _ B) (xl: _ As) i :
+  Φ _ y → HForall Φ xl → Φ _ (hnth y xl i).
+Proof.
+  move=> ? All. move: i. elim: All=> /=[|> ?? IH]; [by move=> ?|]. by case=> [|?].
+Qed.
+
 Inductive HForall2 {F G} (Φ: ∀A, F A → G A → Prop)
   : ∀{As}, hlist F As → hlist G As → Prop :=
 | HForall2_nil: HForall2 Φ +[] +[]
 | HForall2_cons {A As} (x: _ A) (y: _ A) (xl: _ As) (yl: _ As) :
     Φ _ x y → HForall2 Φ xl yl → HForall2 Φ (x +:: xl) (y +:: yl).
+
+Lemma HForall2_hnth {F G As B} (Φ: ∀A, F A → G A → Prop) (y y': _ B) (xl xl': _ As) i :
+  Φ _ y y' → HForall2 Φ xl xl' → Φ _ (hnth y xl i) (hnth y' xl' i).
+Proof.
+  move=> ? All. move: i. elim: All=> /=[|> ?? IH]; [by move=> ?|]. by case=> [|?].
+Qed.
 
 Fixpoint big_sepHL {Σ F As} (Φ: ∀A, F A → iProp Σ) (xl: hlist F As) : iProp Σ :=
   match xl with +[] => True | x +:: xl' => Φ _ x ∗ big_sepHL Φ xl' end.
@@ -96,10 +108,7 @@ Global Instance hlist_equiv {As} : Equiv (hlist F As) := HForall2 (λ _, (≡)).
 
 Global Instance hnth_proper {As B} :
   Proper ((≡) ==> (≡) ==> forall_relation (λ _, (≡))) (@hnth F As B).
-Proof.
-  move=> ????? Eqv. elim: Eqv=> /=[|> ?? IH]; [by move=> ?|].
-  move=> /=[|i]; by [|apply IH].
-Qed.
+Proof. move=> ???????. by apply (HForall2_hnth _). Qed.
 
 End setoid.
 
@@ -113,10 +122,7 @@ Proof. move=> ???????. by constructor. Qed.
 
 Global Instance hnth_ne {As B} n :
 Proper ((dist n) ==> (dist n) ==> forall_relation (λ _, dist n)) (@hnth F As B).
-Proof.
-  move=> ????? Eqv. elim: Eqv=> /=[|> ?? IH]; [by move=> ?|].
-  move=> /=[|i]; by [|apply IH].
-Qed.
+Proof. move=> ???????. by apply (HForall2_hnth (λ A, ofe_dist (F A) n)). Qed.
 
 End ofe.
 

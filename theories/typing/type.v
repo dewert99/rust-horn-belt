@@ -697,7 +697,7 @@ Section type.
     - rewrite -EqSz -EqShr. setoid_rewrite <-EqOwn. apply copy_shr_acc.
   Qed.
 
-  Global Program Instance ty_of_st_copy {A} (st: _ A) : Copy (ty_of_st st).
+  Global Program Instance simple_type_copy {A} (st: simple_type A) : Copy st.
   Next Obligation.
     move=> *. iIntros "#LFT #Shr Tok LTok". iDestruct "Shr" as (?) "[Bor Own]".
     iDestruct (na_own_acc with "Tok") as "[$ PreTok]"; [solve_ndisj|].
@@ -714,10 +714,10 @@ Section type.
   Global Instance sync_equiv {A} : Proper (equiv ==> impl) (@Sync _ _ A).
   Proof. move=> ?? [_ _ _ _ Eqv] ?. rewrite /Sync=> *. by rewrite -!Eqv. Qed.
 
-  Global Instance ty_of_st_sync {A} (st: _ A) : Send (ty_of_st st) → Sync (ty_of_st st).
+  Global Instance simple_type_sync {A} (st: simple_type A) : Send st → Sync st.
   Proof.
-    move=> Send >. iDestruct 1 as (vl) "[Bor Own]".
-    iExists vl. iFrame "Bor". iNext. by iApply Send.
+    move=> Send >. iDestruct 1 as (vl) "[Bor Own]". iExists vl. iFrame "Bor".
+    iNext. by iApply Send.
   Qed.
 
   Lemma send_change_tid' {A} (ty: _ A) vπd tid tid' vl :
