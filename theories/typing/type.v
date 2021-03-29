@@ -178,7 +178,7 @@ Next Obligation.
   iMod (st_own_proph with "LFT Incl Own Tok") as "Upd"; [done|].
   iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q' ?) "[Ptoks Upd]".
   iModIntro. iExists ξs, q'. iSplit; [done|]. iFrame "Ptoks". iIntros "Tok".
-  iMod ("Upd" with "Tok") as "[? $]". iModIntro. iExists vl. iFrame.
+  iMod ("Upd" with "Tok") as "[?$]". iModIntro. iExists vl. iFrame.
 Qed.
 
 Coercion ty_of_st: simple_type >-> type.

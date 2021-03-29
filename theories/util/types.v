@@ -22,7 +22,7 @@ Fixpoint tnth B As (i: nat) := match As with
 
 (** * Heterogeneous List *)
 
-Inductive hlist F : Types → Type :=
+Inductive hlist (F: Type → Type) : Types → Type :=
 | hnil: hlist F ^[]
 | hcons {A As} : F A → hlist F As → hlist F (A ^:: As).
 Notation "+[ ]" := (hnil _) (at level 1, format "+[ ]").
@@ -82,7 +82,7 @@ Notation "'[∗' 'hlist]' x ∈ xl , P" := (big_sepHL (λ _ x, P) xl)
   (at level 200, xl at level 10, x at level 1, right associativity,
    format "[∗  hlist]  x  ∈  xl ,  P") : bi_scope.
 
-Inductive hlist2 F : Types → Types → Type :=
+Inductive hlist2 (F: Type → Type → Type) : Types → Types → Type :=
 | hnil2: hlist2 F ^[] ^[]
 | hcons2 {A B As Bs} : F A B → hlist2 F As Bs → hlist2 F (A ^:: As) (B ^:: Bs).
 Notation "+2[ ]" := (hnil2 _) (at level 1, format "+2[ ]").

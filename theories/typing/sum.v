@@ -32,8 +32,8 @@ Section sum.
       (l +ₗ 1) ↦∗{q}: (hnthe tyl i).(ty_own) (vπ',d) tid.
   Proof. iSplit.
     - iDestruct 1 as (vl) "[Mt Own]".
-      iDestruct "Own" as (i vπ' vl' vl'' ->->[=]) "Own". iExists i, vπ'. iSplit; [done|].
-      iDestruct (ty_size_eq with "Own") as "%Eq'".
+      iDestruct "Own" as (i vπ' vl' vl'' ->->[=]) "Own". iExists i, vπ'.
+      iSplit; [done|]. iDestruct (ty_size_eq with "Own") as "%Eq'".
       iDestruct (heap_mapsto_vec_cons with "Mt") as "[$ Mt]".
       iDestruct (heap_mapsto_vec_app with "Mt") as "[Mt Mt']".
       iSplitL "Mt'".
@@ -285,46 +285,36 @@ Section sum.
   Lemma nth_empty {A : Type} i (d : A) :
     nth i [] d = d.
   Proof. by destruct i. Qed.
-
-  Global Instance sum_copy tyl : ListCopy tyl → Copy (sum tyl).
-  Proof.
-    intros HFA. split.
-    - intros depth tid vl.
-      cut (∀ i vl', Persistent ((nth i tyl emp0).(ty_own) depth tid vl')). by apply _.
-      intros. apply @copy_persistent.
-      edestruct nth_in_or_default as [| ->]; [by eapply List.Forall_forall| ].
-      split; first by apply _. iIntros (?????????) "? []".
-    - intros depth κ tid E F l q ? HF.
-      iIntros "#LFT #H Htl [Htok1 Htok2]". iDestruct "H" as (i) "[Hfrac Hshr]".
-      iMod (frac_bor_acc with "LFT Hfrac Htok1")
-        as (q'1) "[>[H↦i Hpad] Hclose]"; first solve_ndisj.
-      iDestruct "Hpad" as (pad) "[Hpad %]".
-      assert (Copy (nth i tyl emp0)).
-      { edestruct nth_in_or_default as [| ->]; first by eapply List.Forall_forall.
-        split; first by apply _. iIntros (?????????) "? []". }
-      iMod (@copy_shr_acc _ _ (nth i tyl emp0) with "LFT Hshr Htl Htok2")
-        as (q'2 vl) "(Htl & H↦C & #HownC & Hclose')"; try done.
-      { rewrite <-HF. simpl. rewrite <-union_subseteq_r.
-        apply shr_locsE_subseteq. lia. }
-      iDestruct (na_own_acc with "Htl") as "[$ Htlclose]".
-      { apply difference_mono_l.
-        trans (shr_locsE (l +ₗ 1) (max_list_with ty_size tyl)).
-        - apply shr_locsE_subseteq. lia.
-        - set_solver+. }
-      destruct (Qp_lower_bound q'1 q'2) as (q' & q'01 & q'02 & -> & ->).
-      iExists q', (#i :: vl ++ pad).
-      rewrite heap_mapsto_vec_cons heap_mapsto_vec_app shift_loc_assoc
-              -Nat.add_1_l Nat2Z.inj_add.
-      iDestruct "H↦i" as "[$ H↦if]". iDestruct "H↦C" as "[$ H↦Cf]".
-      iDestruct (ty_size_eq with "HownC") as ">->".
-      iDestruct "Hpad" as "[$ Hpadf]". iSplitR.
-      { iExists _, _, _. iSplitR; [done|]. iFrame "HownC". rewrite /= app_length.
-        iDestruct (ty_size_eq with "HownC") as ">->". auto. }
-      iIntros "!> Htl (H↦i & H↦C & Hpad)". iDestruct ("Htlclose" with "Htl") as "Htl".
-      iMod ("Hclose'" with "Htl [$H↦Cf $H↦C]") as "[$$]". iApply "Hclose".
-      iFrame. iExists pad. by iFrame.
-  Qed.
 *)
+
+  Global Instance sum_copy {As} (tyl: _ As) : ListCopy tyl → Copy (sum tyl).
+  Proof.
+    move=> ?. have Copy: ∀i, Copy (hnthe tyl i).
+    { move=> *. apply (HForall_hnth (λ A, @Copy _ _ A)); by [apply _|]. }
+    split; [apply _|]. move=>/= ????? l ?? SubF. iIntros "#LFT".
+    iDestruct 1 as (i vπd ->) "[Bor Shr]". iIntros "Na [Tok Tok']".
+    iMod (frac_bor_acc with "LFT Bor Tok") as (q) "[>[Idx Pad] Close]";
+    [solve_ndisj|]. iDestruct "Pad" as (vl') "[Pad %]".
+    iMod (copy_shr_acc with "LFT Shr Na Tok'") as
+      (q' vl) "[Na[Mt[#Own Close']]]"; first done.
+    { rewrite <-SubF, <-union_subseteq_r. apply shr_locsE_subseteq. lia. }
+    iDestruct (na_own_acc with "Na") as "[$ Close'']".
+    { apply difference_mono_l.
+      trans (shr_locsE (l +ₗ 1) (max_hlist_with (λ _, ty_size) tyl)).
+      { apply shr_locsE_subseteq. lia. } { set_solver+. } }
+    move: (Qp_lower_bound q q')=> [q''[?[?[->->]]]].
+    iExists q'', (#i :: vl ++ vl').
+    rewrite heap_mapsto_vec_cons heap_mapsto_vec_app shift_loc_assoc
+      -Nat.add_1_l Nat2Z.inj_add.
+    iDestruct "Idx" as "[$ Idx]". iDestruct "Mt" as "[$ Mt]".
+    iDestruct (ty_size_eq with "Own") as ">%Eq". rewrite Eq.
+    iDestruct "Pad" as "[$ Pad]". iSplitR.
+    { iIntros "!>!>". iExists i, vπd, vl, vl'. do 2 (iSplit; [done|]).
+      iFrame "Own". rewrite /= app_length Eq. iPureIntro. by f_equal. }
+    iIntros "!> Na [Idx'[Mt' Pad']]". iDestruct ("Close''" with "Na") as "Na".
+    iMod ("Close'" with "Na [$Mt $Mt']") as "[$$]". iApply "Close".
+    iFrame "Idx Idx'". iExists vl'. by iFrame.
+  Qed.
 
   Global Instance sum_send {As} (tyl: _ As) : ListSend tyl → Send (sum tyl).
   Proof. move=> Send ?*/=. do 11 f_equiv. by eapply HForall_hnth in Send. Qed.

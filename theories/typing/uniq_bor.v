@@ -30,7 +30,7 @@ Section uniq_bor.
     iApply ty_shr_depth_mono; [|done]. lia.
   Qed.
   Next Obligation.
-    move=> *. iIntros "#In". iDestruct 1 as (d l ξ -> ?) "[?[??]]". iExists d, l, ξ.
+    move=> *. iIntros "#In". iDestruct 1 as (d l ξ ->?) "[?[??]]". iExists d, l, ξ.
     do 2 (iSplit; [done|]). do 2 (iSplit; [by iApply frac_bor_shorten|]).
     by iApply ty_shr_lft_mono.
   Qed.
@@ -65,7 +65,7 @@ Section uniq_bor.
     rewrite heap_mapsto_vec_singleton.
     iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT BorMt") as "BorMt"; [done|].
     iMod (bor_fracture (λ q, q:[_])%I with "LFT BorPTok") as "BorPTok"; [done|].
-    iIntros "!> >[? $] !>". iExists d', l, ξ. iFrame "BorMt BorPTok". iSplit; [done|].
+    iIntros "!> >[?$] !>". iExists d', l, ξ. iFrame "BorMt BorPTok". iSplit; [done|].
     iSplit; [iPureIntro; apply proph_dep_one|]. by iApply ty_shr_depth_mono.
   Qed.
   Next Obligation.
@@ -103,7 +103,7 @@ Section uniq_bor.
     iDestruct (proph_tok_combine with "PTok PTok'") as (q) "[PTok PrePToks]". iModIntro.
     iExists (ξs ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_pair|].
     iFrame "PTok". iIntros "PTok". iDestruct ("PrePToks" with "PTok") as "[PTok PTok']".
-    iMod ("Close" with "PTok") as "[? $]". iMod ("Close'" with "PTok'") as "Tok".
+    iMod ("Close" with "PTok") as "[?$]". iMod ("Close'" with "PTok'") as "Tok".
     iMod ("PreTok" with "Tok") as "$". iModIntro. iExists d, l, ξ.
     by do 4 (iSplit; [done|]).
   Qed.
@@ -130,8 +130,8 @@ Section typing.
 
   Global Instance uniq_send {A} κ (ty: _ A) : Send ty → Send (&uniq{κ} ty).
   Proof.
-    move=> Send ?*/=. do 10 f_equiv. iIntros "?". iApply bor_iff; [|done].
-    iApply bi.equiv_iff. do 6 f_equiv. iSplit; iApply Send.
+    move=> Send ?*/=. do 10 f_equiv. iApply bor_iff. iApply bi.equiv_iff.
+    do 6 f_equiv. iSplit; iApply Send.
   Qed.
 
   Global Instance uniq_sync {A} κ (ty: _ A) : Sync ty → Sync (&uniq{κ} ty).
