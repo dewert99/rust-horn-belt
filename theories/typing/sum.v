@@ -15,26 +15,25 @@ Section sum.
     ty_size := 1;  ty_lfts := [];  ty_E := [];
     ty_own _ _ _ := False%I;  ty_shr _ _ _ _ := False%I
   |}.
-  Next Obligation. by iIntros. Qed.
-  Next Obligation. by iIntros. Qed.
-  Next Obligation. by iIntros. Qed.
-  Next Obligation. by iIntros. Qed.
+  Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
+  Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
   Next Obligation. move=> ? []. apply inhabitant. Qed.
-  Next Obligation. move=> ? []. apply inhabitant. Qed.
-  Next Obligation. move=> ? []. apply inhabitant. Qed.
+  Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
+
+  Notation hnthe := (hnth emp0).
 
   Implicit Type (i: nat) (vl: list val).
 
   Definition is_pad {As} i (tyl: typel As) vl : iProp Σ :=
-    ⌜((hnth tyl i emp0).(ty_size) + length vl)%nat = max_hlist_with (λ _, ty_size) tyl⌝.
+    ⌜((hnthe tyl i).(ty_size) + length vl)%nat = max_hlist_with (λ _, ty_size) tyl⌝.
 
   Lemma split_sum_mt {As} (tyl: typel As) vπ d l tid q :
     (l ↦∗{q}: λ vl, ∃i vπ' vl' vl'', ⌜vπ = xinj i ∘ vπ'⌝ ∗
       ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_hlist_with (λ _, ty_size) tyl)⌝ ∗
-      (hnth tyl i emp0).(ty_own) (vπ',d) tid vl')%I ⊣⊢
+      (hnthe tyl i).(ty_own) (vπ',d) tid vl')%I ⊣⊢
     ∃i vπ', ⌜vπ = xinj i ∘ vπ'⌝ ∗
-      (l ↦{q} #i ∗ (l +ₗ S (hnth tyl i emp0).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
-      (l +ₗ 1) ↦∗{q}: (hnth tyl i emp0).(ty_own) (vπ',d) tid.
+      (l ↦{q} #i ∗ (l +ₗ S (hnthe tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
+      (l +ₗ 1) ↦∗{q}: (hnthe tyl i).(ty_own) (vπ',d) tid.
   Proof. iSplit.
     - iDestruct 1 as (vl) "[Mt Own]".
       iDestruct "Own" as (i vπ' vl' vl'' ->->[=]) "Own". iExists i, vπ'. iSplit; [done|].
@@ -54,7 +53,7 @@ Section sum.
   Qed.
 
   Local Lemma ty_lfts_incl {As} (tyl: typel As) i :
-    ⊢ tyl_lft tyl ⊑ ty_lft (hnth tyl i emp0).
+    ⊢ tyl_lft tyl ⊑ ty_lft (hnthe tyl i).
   Proof.
     elim: tyl i=> /=[|?? ty tyl IH] [|j];
       [by iApply lft_incl_refl|by iApply lft_incl_refl| |];
@@ -67,11 +66,11 @@ Section sum.
     ty_lfts := tyl_lfts tyl;  ty_E := tyl_E tyl;
     ty_own vπd tid vl := (∃i vπ' vl' vl'', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
       ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_hlist_with (λ _, ty_size) tyl)⌝ ∗
-      (hnth tyl i emp0).(ty_own) (vπ',vπd.2) tid vl')%I;
+      (hnthe tyl i).(ty_own) (vπ',vπd.2) tid vl')%I;
     ty_shr vπd κ tid l := (∃i vπ', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
       &frac{κ} (λ q, l ↦{q} #i ∗
-        (l +ₗ S (hnth tyl i emp0).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
-      (hnth tyl i emp0).(ty_shr) (vπ',vπd.2) κ tid (l +ₗ 1))%I
+        (l +ₗ S (hnthe tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
+      (hnthe tyl i).(ty_shr) (vπ',vπd.2) κ tid (l +ₗ 1))%I
   |}.
   Next Obligation. move=> *. by iDestruct 1 as (???????) "?". Qed.
   Next Obligation.
@@ -118,29 +117,21 @@ Section sum.
     iModIntro. iExists i, vπ'. by do 2 (iSplit; [done|]).
   Qed.
 
-(*
-  Global Instance sum_ne : NonExpansive sum.
+  Global Instance sum_ne {As} : NonExpansive (@sum As).
   Proof.
-    intros n x y EQ.
-    assert (EQmax : max_list_with ty_size x = max_list_with ty_size y).
-    { induction EQ as [|???? EQ _ IH]=>//=.
-      rewrite IH. f_equiv. apply EQ. }
-    (* TODO: If we had the right lemma relating nth, (Forall2 R) and R, we should
-       be able to make this more automatic. *)
-    assert (EQnth :∀ i, type_dist n (nth i x emp0) (nth i y emp0)).
-    { clear EQmax. induction EQ as [|???? EQ _ IH]=>-[|i] //=. }
-    constructor; simpl.
-    - by rewrite EQmax.
-    - clear -EQ. induction EQ as [|???? EQ _ IH]=>//=.
-      rewrite /tyl_lfts /=. f_equiv; [|done]. apply EQ.
-    - clear -EQ. induction EQ as [|???? EQ _ IH]=>//=.
-      rewrite /tyl_E /=. f_equiv; [|done]. apply EQ.
-    - intros tid vl. rewrite EQmax.
-      solve_proper_core ltac:(fun _ => exact:EQnth || f_equiv).
-    - intros κ tid l. unfold is_pad. rewrite EQmax.
-      solve_proper_core ltac:(fun _ => exact:EQnth || (eapply ty_size_ne; try reflexivity) || f_equiv).
+    move=> n tyl tyl' Eqv.
+    have EqSize: max_hlist_with (λ _, ty_size) tyl = max_hlist_with (λ _, ty_size) tyl'.
+    { elim: Eqv=> /=[|>Eqv ? ->]; [done|]. f_equiv. apply Eqv. }
+    split=>/=.
+    - by rewrite EqSize.
+    - elim: Eqv=> /=[|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
+    - elim: Eqv=> /=[|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
+    - move=> *. rewrite EqSize. do 12 f_equiv. by apply @hnth_ne.
+    - move=> *. rewrite /is_pad EqSize.
+      repeat ((by apply @hnth_ne) || eapply ty_size_ne || f_equiv).
   Qed.
 
+(*
   Lemma product_lft_morphism Tl:
     Forall TypeLftMorphism Tl →
     TypeLftMorphism (λ ty, sum ((λ T, T ty) <$> Tl)).

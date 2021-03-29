@@ -1,3 +1,4 @@
+Require Import Equality.
 From iris.algebra Require Import monoid ofe.
 From iris.base_logic Require Export iprop.
 
@@ -16,8 +17,8 @@ Fixpoint tapp As Bs :=
   match As with ^[] => Bs | A ^:: As' => A ^:: tapp As' Bs end.
 Infix "^++" := tapp (at level 60, right associativity).
 
-Fixpoint tnth As (i: nat) B := match As with
-  ^[] => B | A ^:: As' => match i with 0 => A | S j => tnth As' j B end end.
+Fixpoint tnth B As (i: nat) := match As with
+  ^[] => B | A ^:: As' => match i with 0 => A | S j => tnth B As' j end end.
 
 (** * Heterogeneous List *)
 
@@ -46,8 +47,8 @@ Fixpoint hhmap {F G As} (f: ∀A, F A → G A) (xl: hlist F As) : hlist G As :=
   match xl with +[] => +[] | x +:: xl' => f _ x +:: hhmap f xl' end.
 Infix "+<$>+" := hhmap (at level 61, left associativity).
 
-Fixpoint hnth {F As B} (xl: hlist F As) (i: nat) (y: F B) : F (tnth As i B) :=
-  match xl with +[] => y | x +:: xl' => match i with 0 => x | S j => hnth xl' j y end end.
+Fixpoint hnth {F As B} (y: F B) (xl: hlist F As) (i: nat) : F (tnth B As i) :=
+  match xl with +[] => y | x +:: xl' => match i with 0 => x | S j => hnth y xl' j end end.
 
 Fixpoint max_hlist_with {F As} (f: ∀A, F A → nat) (xl: hlist F As) : nat :=
   match xl with +[] => 0 | x +:: xl' => f _ x `max` max_hlist_with f xl' end.
@@ -93,6 +94,13 @@ Context {F: Type → Type} `{∀A, Equiv (F A)}.
 
 Global Instance hlist_equiv {As} : Equiv (hlist F As) := HForall2 (λ _, (≡)).
 
+Global Instance hnth_proper {As B} :
+  Proper ((≡) ==> (≡) ==> forall_relation (λ _, (≡))) (@hnth F As B).
+Proof.
+  move=> ????? Eqv. elim: Eqv=> /=[|> ?? IH]; [by move=> ?|].
+  move=> /=[|i]; by [|apply IH].
+Qed.
+
 End setoid.
 
 Section ofe.
@@ -102,6 +110,13 @@ Global Instance hlist_dist {As} : Dist (hlist F As) :=
   λ n, HForall2 (λ _, dist n).
 Global Instance hcons_ne {A As} : NonExpansive2 (@hcons F A As).
 Proof. move=> ???????. by constructor. Qed.
+
+Global Instance hnth_ne {As B} n :
+Proper ((dist n) ==> (dist n) ==> forall_relation (λ _, dist n)) (@hnth F As B).
+Proof.
+  move=> ????? Eqv. elim: Eqv=> /=[|> ?? IH]; [by move=> ?|].
+  move=> /=[|i]; by [|apply IH].
+Qed.
 
 End ofe.
 
@@ -127,5 +142,8 @@ Infix "-++" := papp (at level 60, right associativity).
 
 (** * Sum *)
 
-Inductive xsum As : Type := xinj (i: nat) : tnth As i Empty_set → xsum As.
+Inductive xsum As : Type := xinj (i: nat) : tnth Empty_set As i → xsum As.
 Arguments xinj {_} _ _.
+
+Global Instance xinj_inj {As} i : Inj (=) (=) (@xinj As i).
+Proof. move=> ?? Eq. by dependent destruction Eq. Qed.

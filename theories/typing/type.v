@@ -243,7 +243,7 @@ Section ofe.
     move=> [[[[??]?]?]?]; simpl in *; constructor; try apply leibniz_equiv;
     try done; by eapply (discrete_iff _ _).
   Qed.
-  Canonical Structure typeO {A} : ofe := Ofe (type A) type_ofe_mixin.
+  Canonical Structure typeO A : ofe := Ofe (type A) type_ofe_mixin.
 
   Global Instance ty_size_ne {A} n : Proper (dist n ==> (=)) (@ty_size _ _ A).
   Proof. move=> ?? Eqv. apply Eqv. Qed.
@@ -298,7 +298,7 @@ Section ofe.
     apply (iso_ofe_mixin ty_of_st); (split=> Eqv; split; try by apply Eqv);
     move=> > /=; f_equiv; f_equiv; by move: Eqv=> [_ _ _ ->].
   Qed.
-  Canonical Structure simple_typeO {A} : ofe := Ofe (simple_type A) simple_type_ofe_mixin.
+  Canonical Structure simple_typeO A : ofe := Ofe (simple_type A) simple_type_ofe_mixin.
 
   Global Instance st_own_ne n {A} :
     Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@st_own _ _ A).
@@ -339,7 +339,7 @@ Section ofe.
     move=> [??]; simpl in *; constructor; try apply leibniz_equiv;
     try done; by eapply (discrete_iff _ _).
   Qed.
-  Canonical Structure plain_typeO {A} : ofe := Ofe (plain_type A) plain_type_ofe_mixin.
+  Canonical Structure plain_typeO A : ofe := Ofe (plain_type A) plain_type_ofe_mixin.
 
   Global Instance pt_own_ne n {A} :
     Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@pt_own _ _ A).
