@@ -11,8 +11,7 @@ Section bool.
   |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
-  Global Instance bool_send: Send bool.
-  Proof. done. Qed.
+  Global Instance bool_send: Send bool. Proof. done. Qed.
 End bool.
 
 (*

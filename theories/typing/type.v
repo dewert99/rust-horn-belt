@@ -794,23 +794,31 @@ Section subtyping.
     iIntros "!> #E". iApply "Incl". by iApply big_sepL_submseteq.
   Qed.
 
-(* This lemma is not supported.
-  Lemma subtype_Forall2_llctx E L tys1 tys2 qL :
-    Forall2 (subtype E L) tys1 tys2 →
-    llctx_interp L qL -∗ □ (elctx_interp E -∗
-           [∗ list] tys ∈ (zip tys1 tys2), type_incl (tys.1) (tys.2)).
+  Definition subtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
+    (fl: plist2 (→) As Bs) : Prop :=
+    (HForallZip (λ A B ty ty' f, @subtype _ _ A B E L f ty ty') tyl tyl' fl).
+  Definition eqtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
+    (fgl: plist2 (λ A B, prod (A → B) (B → A)) As Bs) : Prop :=
+    (HForallZip (λ A B ty ty' fg, @eqtype _ _ A B E L fg.1 fg.2 ty ty') tyl tyl' fgl).
+
+  Lemma subtypel_llctx_nth {C As Bs} E L (ty: _ C) (tyl: _ As) (tyl': _ Bs) fl qL :
+    subtypel E L tyl tyl' fl → llctx_interp L qL -∗ □ (elctx_interp E -∗
+      ∀i, type_incl (p2nth id fl i) (hnth ty tyl i) (hnth ty tyl' i))%I.
   Proof.
-    iIntros (Htys) "HL".
-    iAssert ([∗ list] tys ∈ zip tys1 tys2,
-             □ (elctx_interp E -∗ type_incl (tys.1) (tys.2)))%I as "#Htys".
-    { iApply big_sepL_forall. iIntros (k [ty1 ty2] Hlookup).
-      move:Htys => /Forall2_Forall /Forall_forall=>Htys.
-      iDestruct (Htys (ty1, ty2) with "HL") as "H"; [|done].
-      exact: elem_of_list_lookup_2. }
-    iIntros "!# #HE". iApply (big_sepL_impl with "[$Htys]").
-    iIntros "!# * % #Hincl". by iApply "Hincl".
+    elim=> /=[|>Sub _ IH]. { iIntros "_!>_" (?). iApply type_incl_refl. } iIntros "L".
+    iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
+    iIntros "!> #E" (i). iDestruct ("Sub" with "E") as "Sub'".
+    iDestruct ("IH" with "E") as "IH'". by case i=> [|j].
   Qed.
-*)
+
+  Lemma subtypel_llctx_bigsep {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl qL :
+    subtypel E L tyl tyl' fl → llctx_interp L qL -∗ □ (elctx_interp E -∗
+      [∗ hlist] ty; ty';- f ∈ tyl; tyl';- fl, type_incl f ty ty')%I.
+  Proof.
+    elim=> /=[|>Sub _ IH]; [by iIntros "_!>_"|]. iIntros "L".
+    iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
+    iIntros "!> #E". iDestruct ("Sub" with "E") as "$". iDestruct ("IH" with "E") as "$".
+  Qed.
 
   (** Type Equivalence *)
 

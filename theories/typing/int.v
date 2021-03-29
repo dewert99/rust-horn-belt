@@ -11,8 +11,7 @@ Section int.
   |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
-  Global Instance int_send: Send int.
-  Proof. done. Qed.
+  Global Instance int_send: Send int. Proof. done. Qed.
 End int.
 
 (*

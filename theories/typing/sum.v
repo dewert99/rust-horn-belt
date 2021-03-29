@@ -225,72 +225,51 @@ Section sum.
       destruct (Tl' !! i); [|by rewrite !right_absorb]. simpl.
       repeat ((by apply HTl') || (by apply Hsz0) || f_equiv).
   Qed.
-
-  Global Instance sum_mono E L :
-    Proper (Forall2 (subtype E L) ==> subtype E L) sum.
-  Proof.
-    iIntros (tyl1 tyl2 Htyl qL) "HL".
-    iAssert (□ (lft_contexts.elctx_interp E -∗ ⌜max_list_with ty_size tyl1 = max_list_with ty_size tyl2⌝))%I with "[#]" as "#Hleq".
-    { iInduction Htyl as [|???? Hsub] "IH".
-      { iClear "∗". iIntros "!> _". done. }
-      iDestruct (Hsub with "HL") as "#Hsub". iDestruct ("IH" with "HL") as "{IH} #IH".
-      iModIntro. iIntros "#HE". iDestruct ("Hsub" with "HE") as "(% & _ & _)".
-      iDestruct ("IH" with "HE") as %IH. iPureIntro. simpl. inversion_clear IH. by f_equal. }
-    iDestruct (subtype_Forall2_llctx with "HL") as "#Htyl"; first done.
-    iClear "HL". iIntros "!> #HE".
-    iDestruct ("Hleq" with "HE") as %Hleq. iSpecialize ("Htyl" with "HE"). iClear "Hleq HE".
-    iAssert (∀ i, type_incl (nth i tyl1 emp0) (nth i tyl2 emp0))%I with "[#]" as "#Hty".
-      { iIntros (i). edestruct (nth_lookup_or_length tyl1 i) as [Hl1|Hl]; last first.
-        { rewrite nth_overflow // nth_overflow; first by iApply type_incl_refl.
-          by erewrite <-Forall2_length. }
-        edestruct @Forall2_lookup_l as (ty2 & Hl2 & _); [done..|].
-        iDestruct (big_sepL_lookup with "Htyl") as "Hty".
-        { rewrite lookup_zip_with. erewrite Hl1. simpl.
-          rewrite Hl2 /=. done. }
-        rewrite (nth_lookup_Some tyl2 _ _ ty2) //. }
-    apply Forall2_length in Htyl.
-    clear -Hleq Htyl. iSplit; [|iSplit; [|iSplit]].
-    - simpl. by rewrite Hleq.
-    - iClear (Hleq) "Hty".
-      iInduction tyl1 as [|ty1 tyl1 IH] "IH" forall (tyl2 Htyl);
-           destruct tyl2 as [|ty2 tyl2]=>//=.
-      + iApply lft_incl_refl.
-      + iDestruct "Htyl" as "[Hty Htyl]".
-        rewrite !lft_intersect_list_app.
-        iApply lft_intersect_mono; [|by iApply "IH"; auto].
-        iDestruct "Hty" as "(_ & $ & _ & _)".
-    - iModIntro. iIntros (depth tid vl) "H". iDestruct "H" as (i vl' vl'') "(-> & % & Hown)".
-      iExists i, vl', vl''. iSplit; first done.
-      iSplit; first by rewrite -Hleq.
-      iDestruct ("Hty" $! i) as "(_ & _ & #Htyi & _)". by iApply "Htyi".
-    - iModIntro. iIntros (κ tid l) "H". iDestruct "H" as (i) "(Hmt & Hshr)".
-      iExists i. iSplitR "Hshr".
-      + rewrite /is_pad -Hleq. iDestruct ("Hty" $! i) as "(Hlen & _)".
-        iDestruct "Hlen" as %<-. done.
-      + iDestruct ("Hty" $! i) as "(_ & _ & _ & #Htyi)". by iApply "Htyi".
-  Qed.
-  Lemma sum_mono' E L tyl1 tyl2 :
-    Forall2 (subtype E L) tyl1 tyl2 → subtype E L (sum tyl1) (sum tyl2).
-  Proof. apply sum_mono. Qed.
-  Global Instance sum_proper E L :
-    Proper (Forall2 (eqtype E L) ==> eqtype E L) sum.
-  Proof.
-    intros tyl1 tyl2 Heq; split; eapply sum_mono; [|rewrite -Forall2_flip];
-      (eapply Forall2_impl; [done|by intros ?? []]).
-  Qed.
-  Lemma sum_proper' E L tyl1 tyl2 :
-    Forall2 (eqtype E L) tyl1 tyl2 → eqtype E L (sum tyl1) (sum tyl2).
-  Proof. apply sum_proper. Qed.
-
-  Lemma nth_empty {A : Type} i (d : A) :
-    nth i [] d = d.
-  Proof. by destruct i. Qed.
 *)
+
+  Lemma sum_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
+    subtypel E L tyl tyl' fl → subtype E L (xsum_map fl) (sum tyl) (sum tyl').
+  Proof.
+    move=> Subs. iIntros (?) "L".
+    iAssert (□ (lft_contexts.elctx_interp E -∗ ⌜max_hlist_with (λ _, ty_size) tyl =
+      max_hlist_with (λ _, ty_size) tyl'⌝))%I as "#Size".
+    { iInduction Subs as [|?????????? Sub Subs] "IH"; [by iIntros "!>_"|].
+      iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
+      iIntros "!> E /=". iDestruct ("Sub" with "E") as (->) "#_".
+      by iDestruct ("IH'" with "E") as %->. }
+    iAssert (□ (lft_contexts.elctx_interp E -∗ tyl_lft tyl' ⊑ tyl_lft tyl))%I as "#Lft".
+    { iClear "Size". iInduction Subs as [|?????????? Sub Subs] "IH".
+      { iIntros "!>_". by iApply lft_incl_refl. }
+      iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
+      iIntros "!> E /=". iDestruct ("Sub" with "E") as (?) "#[?_]".
+      iDestruct ("IH'" with "E") as "#?".
+      rewrite !lft_intersect_list_app. by iApply lft_intersect_mono. }
+    move/subtypel_llctx_nth in Subs. iDestruct (Subs with "L") as "#Subs".
+    iIntros "!> #E". iDestruct ("Size" with "E") as "%Size".
+    iDestruct ("Lft" with "E") as "?". iDestruct ("Subs" with "E") as "Incl".
+    iSplit; simpl; [iPureIntro; by f_equal|]. iSplit; [done|].
+    iSplit; iModIntro; iIntros "*".
+    - iDestruct 1 as (i vπ' vl' vl'' ->->->) "Own".
+      iExists i, (p2nth id fl i ∘ vπ'), vl', vl''. rewrite Size. do 3 (iSplit; [done|]).
+      iDestruct ("Incl" $! i) as (_) "[_[SubOwn _]]". by iApply "SubOwn".
+    - iDestruct 1 as (i vπ' ->) "[Bor Shr]". iExists i, (p2nth id fl i ∘ vπ').
+      rewrite /is_pad Size. iDestruct ("Incl" $! i) as (->) "[_[_ SubShr]]".
+      do 2 (iSplit; [done|]). by iApply "SubShr".
+  Qed.
+
+  Lemma sum_eqtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fgl :
+    eqtypel E L tyl tyl' fgl →
+    eqtype E L (xsum_map $ (λ _ _, fst) -2<$>- fgl)
+      (xsum_map $ p2flip $ (λ _ _, snd) -2<$>- fgl) (sum tyl) (sum tyl').
+  Proof.
+    move=> ?. split; apply sum_subtype; [|apply HForallZip_flip];
+      (eapply HForallZip_impl; [|done]); by move=>/= >[].
+  Qed.
 
   Global Instance sum_copy {As} (tyl: _ As) : ListCopy tyl → Copy (sum tyl).
   Proof.
     move=> ?. have Copy: ∀i, Copy (hnthe tyl i).
-    { move=> *. apply (HForall_hnth (λ A, @Copy _ _ A)); by [apply _|]. }
+    { move=> *. apply (HForall_nth (λ A, @Copy _ _ A)); by [apply _|]. }
     split; [apply _|]. move=>/= ????? l ?? SubF. iIntros "#LFT".
     iDestruct 1 as (i vπd ->) "[Bor Shr]". iIntros "Na [Tok Tok']".
     iMod (frac_bor_acc with "LFT Bor Tok") as (q) "[>[Idx Pad] Close]";
@@ -317,21 +296,19 @@ Section sum.
   Qed.
 
   Global Instance sum_send {As} (tyl: _ As) : ListSend tyl → Send (sum tyl).
-  Proof. move=> Send ?*/=. do 11 f_equiv. by eapply HForall_hnth in Send. Qed.
+  Proof. move=> Send ?*/=. do 11 f_equiv. by eapply HForall_nth in Send. Qed.
 
   Global Instance sum_sync {As} (tyl: _ As) : ListSync tyl → Sync (sum tyl).
-  Proof. move=> Sync ?*/=. do 6 f_equiv. by eapply HForall_hnth in Sync. Qed.
+  Proof. move=> Sync ?*/=. do 6 f_equiv. by eapply HForall_nth in Sync. Qed.
 
   Definition emp_type: type (xsum ^[]) := sum +[].
   Global Instance emp_type_empty : Empty (type (xsum ^[])) := emp_type.
 
 End sum.
 
-(*
 (* Σ is commonly used for the current functor. So it cannot be defined
    as Π for products. We stick to the following form. *)
 Notation "Σ[ ty1 ; .. ; tyn ]" :=
-  (sum (cons ty1%T (..(cons tyn%T nil)..))) : lrust_type_scope.
+  (sum (ty1%T +:: ..(+[tyn%T])..)) : lrust_type_scope.
 
-Global Hint Resolve sum_mono' sum_proper' : lrust_typing.
-*)
+Global Hint Resolve sum_subtype sum_eqtype : lrust_typing.
