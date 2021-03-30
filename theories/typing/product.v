@@ -18,7 +18,7 @@ Section product.
      difference. *)
   Program Definition unit0 {A} : type A :=
     {| ty_size := 0; ty_lfts := []; ty_E := [];
-       ty_own vπd tid vl := ⌜vl = [] ∧ vπd.1 ./ []⌝%I; ty_shr d κ tid l := ⌜ d.1 ./ [] ⌝%I |}.
+       ty_own vπd tid vl := ⌜vl = [] ∧ vπd.1 ./ []⌝%I; ty_shr vπd κ tid l := ⌜ vπd.1 ./ [] ⌝%I |}.
 
   Next Obligation. move=> */=. by iIntros "[-> _]". Qed.
   Next Obligation. by iIntros. Qed.

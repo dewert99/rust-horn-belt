@@ -245,6 +245,8 @@ Section ofe.
   Qed.
   Canonical Structure typeO A : ofe := Ofe (type A) type_ofe_mixin.
 
+  Global Instance typel_dist {As} : Dist (typel As) := @hlist_dist typeO _.
+
   Global Instance ty_size_ne {A} n : Proper (dist n ==> (=)) (@ty_size _ _ A).
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_size_proper {A} : Proper ((≡) ==> (=)) (@ty_size _ _ A).
@@ -263,8 +265,6 @@ Section ofe.
   Global Instance ty_outlives_E_proper {A} :
     Proper ((≡) ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
   Proof. rewrite /ty_outlives_E. by move=> ?? [_ -> _ _ _]. Qed.
-
-  Global Instance hlist_dist_type {As} : Dist (typel As) := @hlist_dist (@typeO) _.
 
   Global Instance ty_own_ne {A} n:
     Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@ty_own _ _ A).

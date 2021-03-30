@@ -308,7 +308,7 @@ End sum.
 
 (* Σ is commonly used for the current functor. So it cannot be defined
    as Π for products. We stick to the following form. *)
-Notation "Σ[ ty1 ; .. ; tyn ]" :=
-  (sum (ty1%T +:: ..(+[tyn%T])..)) : lrust_type_scope.
+Notation "Σ[ ty ; .. ; ty' ]" := (sum (ty%T +:: ..(+[ty'%T])..))
+  (format "Σ[ ty ;  .. ;  ty' ]") : lrust_type_scope.
 
 Global Hint Resolve sum_subtype sum_eqtype : lrust_typing.

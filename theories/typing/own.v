@@ -49,20 +49,20 @@ Section own.
        ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
        ty_own vπd tid vl :=
          match vπd, vl return _ with
-         | (asn, S d), [ #(LitLoc l) ] =>
+         | (vπ, S d), [ #(LitLoc l) ] =>
          (* We put a later in front of the †{q}, because we cannot use
             [ty_size_eq] on [ty] at step index 0, which would in turn
             prevent us to prove [subtype_own].
 
             Since this assertion is timeless, this should not cause
             problems. *)
-           ▷ (l ↦∗: ty.(ty_own) (asn, d) tid ∗ freeable_sz n ty.(ty_size) l)
+           ▷ (l ↦∗: ty.(ty_own) (vπ,d) tid ∗ freeable_sz n ty.(ty_size) l)
          | _, _ => False
          end%I;
          ty_shr vπd κ tid l :=
           match vπd return _ with
-          | (asn, S d) =>
-            (∃ l':loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) (asn, d) κ tid l')%I
+          | (vπ, S d) =>
+            (∃ l':loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) (vπ,d) κ tid l')%I
           | _ => False
           end%I
     |}.
