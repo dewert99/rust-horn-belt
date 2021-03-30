@@ -251,10 +251,10 @@ Section sum.
     iSplit; iModIntro; iIntros "*".
     - iDestruct 1 as (i vπ' vl' vl'' ->->->) "Own".
       iExists i, (p2nth id fl i ∘ vπ'), vl', vl''. rewrite Size. do 3 (iSplit; [done|]).
-      iDestruct ("Incl" $! i) as (_) "[_[SubOwn _]]". by iApply "SubOwn".
+      iDestruct ("Incl" $! i) as (_) "[_[InOwn _]]". by iApply "InOwn".
     - iDestruct 1 as (i vπ' ->) "[Bor Shr]". iExists i, (p2nth id fl i ∘ vπ').
-      rewrite /is_pad Size. iDestruct ("Incl" $! i) as (->) "[_[_ SubShr]]".
-      do 2 (iSplit; [done|]). by iApply "SubShr".
+      rewrite /is_pad Size. iDestruct ("Incl" $! i) as (->) "[_[_ InShr]]".
+      do 2 (iSplit; [done|]). by iApply "InShr".
   Qed.
 
   Lemma sum_eqtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fgl :

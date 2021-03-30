@@ -768,15 +768,15 @@ Section subtyping.
   Lemma type_incl_trans {A B C} (f: A → B) (g: B → C) ty ty' ty'' :
     type_incl f ty ty' -∗ type_incl g ty' ty'' -∗ type_incl (g ∘ f) ty ty''.
   Proof.
-    iIntros "[%[#Lft[#Own #Shr]]] [%[#Lft'[#Own' #Shr']]]".
+    iIntros "[%[#InLft[#InOwn #InShr]]] [%[#InLft'[#InOwn' #InShr']]]".
     iSplit. { iPureIntro. by etrans. } iSplit; [|iSplit].
-    - iApply lft_incl_trans; [iApply "Lft'"|iApply "Lft"].
-    - iIntros "!> * ?". iApply "Own'". by iApply "Own".
-    - iIntros "!> * ?". iApply "Shr'". by iApply "Shr".
+    - iApply lft_incl_trans; [iApply "InLft'"|iApply "InLft"].
+    - iIntros "!>*?". iApply "InOwn'". by iApply "InOwn".
+    - iIntros "!>*?". iApply "InShr'". by iApply "InShr".
   Qed.
 
   Lemma subtype_refl {A} E L (ty: _ A) : subtype E L id ty ty.
-  Proof. iIntros (?) "_ !> _". iApply type_incl_refl. Qed.
+  Proof. iIntros (?) "_!>_". iApply type_incl_refl. Qed.
 
   Lemma subtype_trans {A B C} E L (f: A → B) (g: B → C) ty ty' ty'' :
     subtype E L f ty ty' → subtype E L g ty' ty'' → subtype E L (g ∘ f) ty ty''.
@@ -822,11 +822,11 @@ Section subtyping.
 
   (** Type Equivalence *)
 
-  Lemma equiv_subtype {A} E L ty ty' : ty ≡ ty' → subtype E L (@id A) ty ty'.
+  Lemma equiv_subtype {A} E L (ty ty': _ A) : ty ≡ ty' → subtype E L id ty ty'.
   Proof.
-    move=> Eqv ?. iIntros "_ !> _". iSplit. { iPureIntro. apply Eqv. }
+    move=> Eqv ?. iIntros "_!>_". iSplit. { iPureIntro. apply Eqv. }
     iSplit. { rewrite Eqv. iApply lft_incl_refl. }
-    iSplit; iIntros "!> *"; rewrite Eqv; iIntros "$".
+    iSplit; iIntros "!>*"; rewrite Eqv; iIntros "$".
   Qed.
 
   Lemma eqtype_unfold {A B} E L (f: A → B) g ty ty' : g ∘ f = id → f ∘ g = id →
@@ -838,16 +838,17 @@ Section subtyping.
   Proof. move=> Eq_gf Eq_fg. split.
     - iIntros ([Sub Sub'] ?) "L". iDestruct (Sub with "L") as "#Sub".
       iDestruct (Sub' with "L") as "#Sub'". iIntros "!> #E".
-      iDestruct ("Sub" with "E") as "[$[$[SOwn SShr]]]".
-      iDestruct ("Sub'" with "E") as "[_[$[SOwn' SShr']]]".
-      iSplit; iIntros "!>*"; iSplit; iIntros "X"; [by iApply "SOwn"| |by iApply "SShr"|];
-      [iDestruct ("SOwn'" with "X") as "?"|iDestruct ("SShr'" with "X") as "?"];
+      iDestruct ("Sub" with "E") as "[$[$[InOwn InShr]]]".
+      iDestruct ("Sub'" with "E") as "[_[$[InOwn' InShr']]]".
+      iSplit; iIntros "!>*"; iSplit; iIntros "Res";
+      [by iApply "InOwn"| |by iApply "InShr"|];
+      [iDestruct ("InOwn'" with "Res") as "?"|iDestruct ("InShr'" with "Res") as "?"];
       by rewrite compose_assoc Eq_gf.
     - move=> Eqt. split; iIntros (?) "L";
       iDestruct (Eqt with "L") as "#Eqt"; iIntros "!> #E";
-      iDestruct ("Eqt" with "E") as (?) "[[??][EOwn EShr]]";
+      iDestruct ("Eqt" with "E") as (?) "[[??][EqOwn EqShr]]";
       do 2 (iSplit; [done|]); iSplit; iIntros "!>* X";
-      [by iApply "EOwn"|by iApply "EShr"| |]; [iApply "EOwn"|iApply "EShr"];
+      [by iApply "EqOwn"|by iApply "EqShr"| |]; [iApply "EqOwn"|iApply "EqShr"];
       by rewrite compose_assoc Eq_fg.
   Qed.
 
@@ -895,11 +896,9 @@ Section subtyping.
     □ (∀vπ d tid vl, st.(st_own) (vπ,d) tid vl -∗ st'.(st_own) (f∘vπ,d) tid vl) -∗
     type_incl f st st'.
   Proof.
-    move=> ?. iIntros "#Hl #Ho". iSplit; [done|]. iSplit; [done|].
-    iSplit; iModIntro.
-    - iIntros. by iApply "Ho".
-    - iIntros (???) "/=". iDestruct 1 as (vl) "[Hf Hown]". iExists vl.
-      iFrame "Hf". by iApply "Ho".
+    move=> ?. iIntros "#InLft #InOwn". do 2 (iSplit; [done|]).
+    iSplit; iIntros "!>*"; [by iApply "InOwn"|]. iDestruct 1 as (vl) "[Bor Own]".
+    iExists vl. iFrame "Bor". by iApply "InOwn".
   Qed.
 
   Lemma subtype_simple_type {A B} E L (f: A → B) st st' :
@@ -920,12 +919,10 @@ Section subtyping.
     □ (∀v tid vl, pt.(pt_own) v tid vl -∗ pt'.(pt_own) (f v) tid vl) -∗
     type_incl f pt pt'.
   Proof.
-    move=> ?. iIntros "#Hl #Ho". iSplit; [done|]. iSplit; [done|].
-    iSplit; iModIntro =>/=.
-    - iDestruct 1 as (v ->) "?". iExists (f v). iSplit; [done|]. by iApply "Ho".
-    - iIntros (???). iDestruct 1 as (vl) "[Hf Hown]". iExists vl.
-      iFrame "Hf". iNext. iDestruct "Hown" as (v ->) "?". iExists (f v).
-      iSplit; [done|]. by iApply "Ho".
+    move=> ?. iIntros "#InLft #InOwn". do 2 (iSplit; [done|]). iSplit; iIntros "!>*/=".
+    - iDestruct 1 as (v ->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
+    - iDestruct 1 as (vl) "[Bor Own]". iExists vl. iFrame "Bor". iNext.
+      iDestruct "Own" as (v ->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
   Qed.
 
   Lemma subtype_plain_type {A B} E L (f: A → B) pt pt' :
@@ -934,8 +931,8 @@ Section subtyping.
       (∀v tid vl, pt.(pt_own) v tid vl -∗ pt'.(pt_own) (f v) tid vl))) →
     subtype E L f pt pt'.
   Proof.
-    move=> Sub. iIntros (?) "L". iDestruct (Sub with "L") as "#Incl".
-    iIntros "!> #E". iDestruct ("Incl" with "E") as (?) "[??]".
+    move=> Sub. iIntros (?) "L". iDestruct (Sub with "L") as "#Sub".
+    iIntros "!> #E". iDestruct ("Sub" with "E") as (?) "[??]".
     by iApply type_incl_plain_type.
   Qed.
 
@@ -947,12 +944,10 @@ Section type_util.
   Lemma heap_mapsto_ty_own {A} l (ty: _ A) vπd tid :
     l ↦∗: ty.(ty_own) vπd tid ⊣⊢
     ∃vl: vec val ty.(ty_size), l ↦∗ vl ∗ ty.(ty_own) vπd tid vl.
-  Proof.
-    iSplit.
-    - iIntros "H". iDestruct "H" as (vl) "[Hl Hown]".
-      iDestruct (ty_size_eq with "Hown") as %<-.
+  Proof. iSplit.
+    - iDestruct 1 as (vl) "[Mt Own]". iDestruct (ty_size_eq with "Own") as %<-.
       iExists (list_to_vec vl). rewrite vec_to_list_to_vec. iFrame.
-    - iIntros "H". iDestruct "H" as (?) "[Hl Hown]". eauto with iFrame.
+    - iDestruct 1 as (vl) "[Mt Own]". iExists vl. iFrame.
   Qed.
 End type_util.
 
