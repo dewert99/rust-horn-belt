@@ -2,6 +2,7 @@ Require Import Equality FunctionalExtensionality.
 From iris.algebra Require Import monoid ofe.
 From iris.base_logic Require Import iprop.
 From iris.proofmode Require Import tactics.
+From lrust.util Require Import basic.
 
 (** * List of Types *)
 (** We avoid using [list Type] because that can cause universe inconsistency *)
@@ -125,8 +126,21 @@ Infix "-::" := cons_pair (at level 60, right associativity).
 Notation "-[ a ; .. ; z ]" := (a -:: .. (z -:: -[]) ..)
   (at level 1, format "-[ a ;  .. ;  z ]").
 
+Definition pair_to_cons_pair {A B} (xy: _ A B) := xy.1 -:: xy.2.
+Definition cons_pair_to_pair {A B} (xy: _ A B) := (xy.(phead), xy.(ptail)).
+Definition cons_pair_map {A B A' B'} (f: A → A') (g: B → B') xy :=
+  f xy.(phead) -:: g xy.(ptail).
+
+Lemma pair_via_cons_pair {A B} : @cons_pair_to_pair A B ∘ pair_to_cons_pair = id.
+Proof. extensionality xy. by case xy. Qed.
+Lemma cons_pair_map_via_pair_map {A B A' B'} (f: A → A') (g: B → B') :
+  cons_pair_map f g = pair_to_cons_pair ∘ pair_map f g ∘ cons_pair_to_pair.
+Proof. extensionality xy. by case xy. Qed.
+
 Fixpoint plist (F: Type → Type) As : Type :=
   match As with ^[] => :1 | A ^:: As' => F A :* plist F As' end.
+
+Notation xprod := (plist id).
 
 Fixpoint papp {F As Bs} (xl: plist F As) (yl: plist F Bs) : plist F (As ^++ Bs) :=
   match As, xl with ^[], -[] => yl | _ ^:: _, x -:: xl' => x -:: papp xl' yl end.
@@ -141,21 +155,59 @@ Fixpoint plist2 (F: Type → Type → Type) As Bs : Type :=
 
 Fixpoint p2flip {F As Bs} : plist2 F As Bs → plist2 (flip F) Bs As :=
   match As, Bs with ^[], ^[] => id
-  | _ ^:: _, _ ^:: _ => λ xl, let: x -:: xl' := xl in x -:: p2flip xl'
+  | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), x -:: p2flip xl'
   | _, _ => λ xl, match xl with end end.
+
+Lemma p2flip_invol {F As Bs} (zl: _ F As Bs) : p2flip (p2flip zl) = zl.
+Proof.
+  dependent induction As; dependent induction Bs; simpl in *; try done.
+  case zl=> [??]. by f_equal.
+Qed.
+
+Fixpoint p2zip {F G As Bs} :
+  plist2 F As Bs → plist2 G As Bs → plist2 (λ A B, F A B * G A B)%type As Bs :=
+  match As, Bs with ^[], ^[] => λ _ _, -[]
+  | _ ^:: _, _ ^:: _ => λ '(x -:: xl') '(y -:: yl'), (x, y) -:: p2zip xl' yl'
+  | _, _ => λ xl _, match xl with end end.
 
 Fixpoint pp2map {F G As Bs} (f: ∀A B, F A B → G A B) : plist2 F As Bs → plist2 G As Bs :=
   match As, Bs with ^[], ^[] => id
-  | _ ^:: _, _ ^:: _ => λ xl, let: x -:: xl' := xl in f _ _ x -:: pp2map f xl'
+  | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), f _ _ x -:: pp2map f xl'
   | _, _ => λ xl, match xl with end end.
 Infix "-2<$>-" := pp2map (at level 61, left associativity).
+
+Lemma p2zip_fst {F G As Bs} (xl: _ F As Bs) (yl: _ G _ _) :
+  (λ _ _, fst) -2<$>- p2zip xl yl = xl.
+Proof.
+  dependent induction As; dependent induction Bs; case xl; case yl; try done.
+  move=>/= *. by f_equal.
+Qed.
+Lemma p2zip_snd {F G As Bs} (xl: _ F As Bs) (yl: _ G _ _) :
+  (λ _ _, snd) -2<$>- p2zip xl yl = yl.
+Proof.
+  dependent induction As; dependent induction Bs; case xl; case yl; try done.
+  move=>/= *. by f_equal.
+Qed.
 
 Fixpoint p2nth {F As Bs C D} (y: F C D) :
   plist2 F As Bs → ∀i, F (tnth C As i) (tnth D Bs i) :=
   match As, Bs with ^[], ^[] => λ _ _, y
-  | _ ^:: _, _ ^:: _ => λ xl i,
-      let: x -:: xl' := xl in match i with 0 => x | S j => p2nth y xl' j end
+  | _ ^:: _, _ ^:: _ => λ '(x -:: xl') i, match i with 0 => x | S j => p2nth y xl' j end
   | _, _ => λ xl _, match xl with end end.
+
+Fixpoint p2ids {As} : plist2 (→) As As :=
+  match As with ^[] => -[] | _ ^:: _ => id -:: p2ids end.
+
+Lemma p2ids_nth {B As} i : p2nth (@id B) (@p2ids As) i = id.
+Proof. move: i. elim As; [done|]=> ???. by case. Qed.
+
+Fixpoint xprod_map {As Bs} : plist2 (→) As Bs → xprod As → xprod Bs :=
+  match As, Bs with ^[], ^[] => λ _, id
+  | _ ^:: _, _ ^:: _ => λ '(f -:: fl'), cons_pair_map f (xprod_map fl')
+  | _, _ => λ fl _, match fl with end end.
+
+Lemma xprod_map_id {As} : xprod_map (@p2ids As) = id.
+Proof. elim As; [done|]=>/= ??->. extensionality xy. by case xy. Qed.
 
 Inductive HForallZip {F G H} (Φ: ∀A B, F A → G B → H A B → Prop)
   : ∀{As Bs}, hlist F As → hlist G Bs → plist2 H As Bs → Prop :=
@@ -164,18 +216,25 @@ Inductive HForallZip {F G H} (Φ: ∀A B, F A → G B → H A B → Prop)
     Φ _ _ x y z → HForallZip Φ xl yl zl →
     HForallZip Φ (x +:: xl) (y +:: yl) (z -:: zl).
 
-Lemma HForallZip_flip {F G H As Bs}
-  (Φ: ∀A B, _ → _ → _ → Prop) (xl: _ F As) (yl: _ G Bs) (zl: _ H _ _) :
-  HForallZip Φ xl yl zl → HForallZip (λ _ _, flip (Φ _ _)) yl xl (p2flip zl).
-Proof.
-  elim=> [|*]; [constructor|]. by apply (@HForallZip_cons _ _ (flip H)).
-Qed.
-
 Lemma HForallZip_impl {F G H H' As Bs} (Φ Ψ: ∀A B, _ → _ → _ → Prop)
   (f: ∀A B, H A B → H' _ _) (xl: _ F As) (yl: _ G Bs) zl :
   (∀A B x y z, Φ A B x y z → Ψ _ _ x y (f _ _ z)) →
   HForallZip Φ xl yl zl → HForallZip Ψ xl yl (f -2<$>- zl).
 Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
+
+Lemma HForallZip_flip {F G H As Bs}
+  (Φ: ∀A B, _ → _ → _ → Prop) (xl: _ F As) (yl: _ G Bs) (zl: _ H _ _) :
+  HForallZip Φ xl yl (p2flip zl) → HForallZip (λ _ _, flip (Φ _ _)) yl xl zl.
+Proof. rewrite -{2}(p2flip_invol zl). elim=>/= *; by constructor. Qed.
+
+Lemma HForallZip_zip {F G H H' As Bs} (Φ Ψ: ∀A B, _ → _ → _ → Prop)
+  (xl: _ F As) (yl: _ G Bs) (zl: _ H _ _) (zl': _ H' _ _) :
+  HForallZip (λ _ _ x y '(z, z'), Φ _ _ x y z ∧ Ψ _ _ x y z') xl yl (p2zip zl zl') →
+  HForallZip Φ xl yl zl ∧ HForallZip Ψ xl yl zl'.
+Proof.
+  rewrite -{2}(p2zip_fst zl zl'). rewrite -{3}(p2zip_snd zl zl').
+  elim=> [|??????[??] > [??]_[??]]; split; by constructor.
+Qed.
 
 Lemma HForallZip_nth {F G H C D As Bs} (Φ: ∀A B, F A → G B → H A B → Prop)
   (x: _ C) (y: _ D) z (xl: _ As) (yl: _ Bs) zl i :
@@ -194,6 +253,9 @@ Proof. move=> ?? Eq. by dependent destruction Eq. Qed.
 
 Definition xsum_map {As Bs} (fl: plist2 (→) As Bs) (xl: xsum As) : xsum Bs :=
   let: xinj i x := xl in xinj i (p2nth id fl i x).
+
+Lemma xsum_map_id {As} : xsum_map (@p2ids As) = id.
+Proof. extensionality x. case x=>/= *. by rewrite p2ids_nth. Qed.
 
 (** * Setoid *)
 

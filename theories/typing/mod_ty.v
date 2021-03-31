@@ -58,13 +58,6 @@ Section mod_ty.
     iModIntro. iExists vπ. by iSplit.
   Qed.
 
-  Global Instance mod_ty_type_nonexpansive {A B} (f: A → B) : TypeNonExpansive (mod_ty f).
-  Proof. split; [|done|move=> */=; by do 3 f_equiv|move=> */=; by do 3 f_equiv].
-    apply (type_lft_morphism_add _ static [] [])=> ?.
-    - rewrite left_id. apply lft_equiv_refl.
-    - by rewrite /elctx_interp /= left_id right_id.
-  Qed.
-
   Global Instance mod_ty_ne {A B} (f: A → B) : NonExpansive (mod_ty f).
   Proof. solve_ne_type. Qed.
 
@@ -72,6 +65,13 @@ End mod_ty.
 
 Section typing.
   Context `{!typeG Σ}.
+
+  Global Instance mod_ty_type_ne {A B} (f: A → B) : TypeNonExpansive (mod_ty f).
+  Proof. split; [|done|move=> */=; by do 3 f_equiv|move=> */=; by do 3 f_equiv].
+    apply (type_lft_morphism_add _ static [] [])=> ?.
+    - rewrite left_id. apply lft_equiv_refl.
+    - by rewrite /elctx_interp /= left_id right_id.
+  Qed.
 
   Global Instance mod_ty_copy {A B} (f: A → B) ty : Copy ty → Copy (mod_ty f ty).
   Proof.

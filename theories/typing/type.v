@@ -439,16 +439,13 @@ End type_lft_morphism.
 
 Class TypeContractive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
   type_contractive_type_lft_morphism : TypeLftMorphism T;
-
   type_contractive_ty_size ty ty' : (T ty).(ty_size) = (T ty').(ty_size);
-
   type_contractive_ty_own n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
     elctx_interp (ty.(ty_E)) ≡ elctx_interp (ty'.(ty_E)) →
     (∀vπd tid vl, dist_later n (ty.(ty_own) vπd tid vl) (ty'.(ty_own) vπd tid vl)) →
     (∀vπd κ tid l, ty.(ty_shr) vπd κ tid l ≡{n}≡ ty'.(ty_shr) vπd κ tid l) →
     (∀vπd tid vl, (T ty).(ty_own) vπd tid vl ≡{n}≡ (T ty').(ty_own) vπd tid vl);
-
   type_contractive_ty_shr n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
     elctx_interp (ty.(ty_E)) ≡ elctx_interp (ty'.(ty_E)) →
@@ -460,10 +457,8 @@ Class TypeContractive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
 
 Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
   type_non_expansive_type_lft_morphism :> TypeLftMorphism T;
-
   type_non_expansive_ty_size ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (T ty).(ty_size) = (T ty').(ty_size);
-
   type_non_expansive_ty_own n ty ty' :
     ty.(ty_size) = ty'.(ty_size) →
     (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
@@ -796,10 +791,11 @@ Section subtyping.
 
   Definition subtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
     (fl: plist2 (→) As Bs) : Prop :=
-    (HForallZip (λ A B ty ty' f, @subtype _ _ A B E L f ty ty') tyl tyl' fl).
+    HForallZip (λ _ _ ty ty' f, subtype E L f ty ty') tyl tyl' fl.
   Definition eqtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
-    (fgl: plist2 (λ A B, prod (A → B) (B → A)) As Bs) : Prop :=
-    (HForallZip (λ A B ty ty' fg, @eqtype _ _ A B E L fg.1 fg.2 ty ty') tyl tyl' fgl).
+    (fl: plist2 (→) As Bs) (gl: plist2 (→) Bs As) : Prop :=
+    HForallZip (λ _ _ ty ty' '(f, g), eqtype E L f g ty ty') tyl tyl'
+      (p2zip fl (p2flip gl)).
 
   Lemma subtypel_llctx_nth {C As Bs} E L (ty: _ C) (tyl: _ As) (tyl': _ Bs) fl qL :
     subtypel E L tyl tyl' fl → llctx_interp L qL -∗ □ (elctx_interp E -∗

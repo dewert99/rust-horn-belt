@@ -108,16 +108,6 @@ Section uniq_bor.
     by do 4 (iSplit; [done|]).
   Qed.
 
-  Global Instance uniq_type_contractive {A} κ : TypeContractive (@uniq_bor A κ).
-  Proof. split.
-    - apply (type_lft_morphism_add _ κ [κ] [])=> ?; [by iApply lft_equiv_refl|].
-      by rewrite elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp
-        /= left_id right_id.
-    - done.
-    - move=> */=. do 17 (f_contractive || f_equiv). by simpl in *.
-    - move=> */=. do 11 (f_contractive || f_equiv). by simpl in *.
-  Qed.
-
   Global Instance uniq_ne {A} κ : NonExpansive (@uniq_bor A κ).
   Proof. solve_ne_type. Qed.
 
@@ -127,6 +117,16 @@ Notation "&uniq{ κ }" := (uniq_bor κ) (format "&uniq{ κ }") : lrust_type_scop
 
 Section typing.
   Context `{!typeG Σ}.
+
+  Global Instance uniq_type_contractive {A} κ : TypeContractive (@uniq_bor _ _ A κ).
+  Proof. split.
+    - apply (type_lft_morphism_add _ κ [κ] [])=> ?; [by iApply lft_equiv_refl|].
+      by rewrite elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp
+        /= left_id right_id.
+    - done.
+    - move=> */=. do 17 (f_contractive || f_equiv). by simpl in *.
+    - move=> */=. do 11 (f_contractive || f_equiv). by simpl in *.
+  Qed.
 
   Global Instance uniq_send {A} κ (ty: _ A) : Send ty → Send (&uniq{κ} ty).
   Proof.

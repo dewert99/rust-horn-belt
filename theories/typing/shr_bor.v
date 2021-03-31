@@ -26,16 +26,6 @@ Section shr_bor.
     iMod ("Upd" with "PTok") as "[Shr $]". iExists d, l. by iFrame "Shr".
   Qed.
 
-  Global Instance shr_type_contractive {A} κ : TypeContractive (@shr_bor A κ).
-  Proof. split.
-    - apply (type_lft_morphism_add _ κ [κ] [])=> ?; [by apply lft_equiv_refl|].
-      by rewrite elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp
-        /= left_id right_id.
-    - done.
-    - move=> */=. by do 6 f_equiv.
-    - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
-  Qed.
-
   Global Instance shr_ne {A} κ : NonExpansive (@shr_bor A κ).
   Proof. solve_ne_type. Qed.
 
@@ -45,6 +35,16 @@ Notation "&shr{ κ }" := (shr_bor κ) (format "&shr{ κ }") : lrust_type_scope.
 
 Section typing.
   Context `{!typeG Σ}.
+
+  Global Instance shr_type_contractive {A} κ : TypeContractive (@shr_bor _ _ A κ).
+  Proof. split.
+    - apply (type_lft_morphism_add _ κ [κ] [])=> ?; [by apply lft_equiv_refl|].
+      by rewrite elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp
+        /= left_id right_id.
+    - done.
+    - move=> */=. by do 6 f_equiv.
+    - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
+  Qed.
 
   Global Instance shr_send {A} κ (ty: _ A) : Sync ty → Send (&shr{κ} ty).
   Proof. move=> ??*/=. by do 6 f_equiv. Qed.

@@ -227,45 +227,6 @@ Section sum.
   Qed.
 *)
 
-  Lemma sum_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
-    subtypel E L tyl tyl' fl → subtype E L (xsum_map fl) (sum tyl) (sum tyl').
-  Proof.
-    move=> Subs. iIntros (?) "L".
-    iAssert (□ (lft_contexts.elctx_interp E -∗ ⌜max_hlist_with (λ _, ty_size) tyl =
-      max_hlist_with (λ _, ty_size) tyl'⌝))%I as "#Size".
-    { iInduction Subs as [|?????????? Sub Subs] "IH"; [by iIntros "!>_"|].
-      iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
-      iIntros "!> E /=". iDestruct ("Sub" with "E") as (->) "#_".
-      by iDestruct ("IH'" with "E") as %->. }
-    iAssert (□ (lft_contexts.elctx_interp E -∗ tyl_lft tyl' ⊑ tyl_lft tyl))%I as "#Lft".
-    { iClear "Size". iInduction Subs as [|?????????? Sub Subs] "IH".
-      { iIntros "!>_". by iApply lft_incl_refl. }
-      iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
-      iIntros "!> E /=". iDestruct ("Sub" with "E") as (?) "#[?_]".
-      iDestruct ("IH'" with "E") as "#?".
-      rewrite !lft_intersect_list_app. by iApply lft_intersect_mono. }
-    move/subtypel_llctx_nth in Subs. iDestruct (Subs with "L") as "#Subs".
-    iIntros "!> #E". iDestruct ("Size" with "E") as "%Size".
-    iDestruct ("Lft" with "E") as "?". iDestruct ("Subs" with "E") as "Incl".
-    iSplit; simpl; [iPureIntro; by f_equal|]. iSplit; [done|].
-    iSplit; iModIntro; iIntros "*".
-    - iDestruct 1 as (i vπ' vl' vl'' ->->->) "Own".
-      iExists i, (p2nth id fl i ∘ vπ'), vl', vl''. rewrite Size. do 3 (iSplit; [done|]).
-      iDestruct ("Incl" $! i) as (_) "[_[InOwn _]]". by iApply "InOwn".
-    - iDestruct 1 as (i vπ' ->) "[Bor Shr]". iExists i, (p2nth id fl i ∘ vπ').
-      rewrite /is_pad Size. iDestruct ("Incl" $! i) as (->) "[_[_ InShr]]".
-      do 2 (iSplit; [done|]). by iApply "InShr".
-  Qed.
-
-  Lemma sum_eqtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fgl :
-    eqtypel E L tyl tyl' fgl →
-    eqtype E L (xsum_map $ (λ _ _, fst) -2<$>- fgl)
-      (xsum_map $ p2flip $ (λ _ _, snd) -2<$>- fgl) (sum tyl) (sum tyl').
-  Proof.
-    move=> ?. split; apply sum_subtype; [|apply HForallZip_flip];
-      (eapply HForallZip_impl; [|done]); by move=>/= >[].
-  Qed.
-
   Global Instance sum_copy {As} (tyl: _ As) : ListCopy tyl → Copy (sum tyl).
   Proof.
     move=> ?. have Copy: ∀i, Copy (hnthe tyl i).
@@ -297,12 +258,45 @@ Section sum.
 
   Global Instance sum_send {As} (tyl: _ As) : ListSend tyl → Send (sum tyl).
   Proof. move=> Send ?*/=. do 11 f_equiv. by eapply HForall_nth in Send. Qed.
-
   Global Instance sum_sync {As} (tyl: _ As) : ListSync tyl → Sync (sum tyl).
   Proof. move=> Sync ?*/=. do 6 f_equiv. by eapply HForall_nth in Sync. Qed.
 
-  Definition emp_type: type (xsum ^[]) := sum +[].
-  Global Instance emp_type_empty : Empty (type (xsum ^[])) := emp_type.
+  Lemma sum_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
+    subtypel E L tyl tyl' fl → subtype E L (xsum_map fl) (sum tyl) (sum tyl').
+  Proof.
+    move=> Subs. iIntros (?) "L".
+    iAssert (□ (lft_contexts.elctx_interp E -∗ ⌜max_hlist_with (λ _, ty_size) tyl =
+      max_hlist_with (λ _, ty_size) tyl'⌝))%I as "#Size".
+    { iInduction Subs as [|?????????? Sub Subs] "IH"; [by iIntros "!>_"|].
+      iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
+      iIntros "!> E /=". iDestruct ("Sub" with "E") as (->) "#_".
+      by iDestruct ("IH'" with "E") as %->. }
+    iAssert (□ (lft_contexts.elctx_interp E -∗ tyl_lft tyl' ⊑ tyl_lft tyl))%I as "#Lft".
+    { iClear "Size". iInduction Subs as [|?????????? Sub Subs] "IH".
+      { iIntros "!>_". by iApply lft_incl_refl. }
+      iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
+      iIntros "!> E /=". iDestruct ("Sub" with "E") as (?) "#[?_]".
+      iDestruct ("IH'" with "E") as "#?".
+      rewrite !lft_intersect_list_app. by iApply lft_intersect_mono. }
+    move/subtypel_llctx_nth in Subs. iDestruct (Subs with "L") as "#Subs".
+    iIntros "!> #E". iDestruct ("Size" with "E") as "%Size".
+    iDestruct ("Lft" with "E") as "?". iDestruct ("Subs" with "E") as "Incl".
+    iSplit; simpl; [iPureIntro; by f_equal|]. iSplit; [done|].
+    iSplit; iModIntro; iIntros "*".
+    - iDestruct 1 as (i vπ' vl' vl'' ->->->) "Own".
+      iExists i, (p2nth id fl i ∘ vπ'), vl', vl''. rewrite Size. do 3 (iSplit; [done|]).
+      iDestruct ("Incl" $! i) as (_) "[_[InOwn _]]". by iApply "InOwn".
+    - iDestruct 1 as (i vπ' ->) "[Bor Shr]". iExists i, (p2nth id fl i ∘ vπ').
+      rewrite /is_pad Size. iDestruct ("Incl" $! i) as (->) "[_[_ InShr]]".
+      do 2 (iSplit; [done|]). by iApply "InShr".
+  Qed.
+
+  Lemma sum_eqtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl gl :
+    eqtypel E L tyl tyl' fl gl →
+    eqtype E L (xsum_map fl) (xsum_map gl) (sum tyl) (sum tyl').
+  Proof.
+    move=> /HForallZip_zip [? /HForallZip_flip ?]. by split; apply sum_subtype.
+  Qed.
 
 End sum.
 
