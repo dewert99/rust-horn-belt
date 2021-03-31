@@ -6,9 +6,9 @@ Set Default Proof Using "Type".
 Section uninit.
   Context `{!typeG Σ}.
 
-  Program Definition uninit (n: nat) : type unit :=
-    {| pt_size := n;  pt_own _ _ vl := ⌜length vl = n⌝%I |}.
+  Program Definition uninit1 : type unit :=
+    {| pt_size := 1;  pt_own _ _ vl := ⌜length vl = 1⌝%I |}.
   Next Obligation. by iIntros. Qed.
-  Global Instance uninit_send n : Send (uninit n). Proof. done. Qed.
+  Global Instance uninit1_send : Send uninit1. Proof. done. Qed.
 
 End uninit.

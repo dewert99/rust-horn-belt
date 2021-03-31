@@ -1,14 +1,18 @@
 From iris.proofmode Require Import tactics.
 From iris.algebra Require Import list numbers.
 From lrust.util Require Import basic update.
-From lrust.typing Require Import lft_contexts uninit.
+From lrust.typing Require Import lft_contexts.
+From lrust.typing Require Export type.
 
 Set Default Proof Using "Type".
 
 Section product.
   Context `{!typeG Σ}.
 
-  Definition unit := uninit 0.
+  Program Definition unit: type unit :=
+    {| pt_size := 0;  pt_own _ _ vl := ⌜vl = nil⌝%I |}.
+  Next Obligation. iIntros. by subst. Qed.
+  Global Instance unit_send : Send unit. Proof. done. Qed.
 
   Lemma split_prod_mt {A B} (vπd1: _ A) (vπd2: _ B) tid ty1 ty2 q l :
     (l ↦∗{q}: λ vl, ∃ vl1 vl2,

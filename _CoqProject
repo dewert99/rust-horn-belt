@@ -45,7 +45,6 @@ theories/typing/uniq_cmra.v
 theories/typing/type.v
 # theories/typing/type_context.v
 # theories/typing/cont_context.v
-theories/typing/uninit.v
 theories/typing/bool.v
 theories/typing/int.v
 theories/typing/own.v
@@ -54,6 +53,7 @@ theories/typing/uniq_bor.v
 theories/typing/mod_ty.v
 theories/typing/product.v
 # theories/typing/product_split.v
+theories/typing/uninit.v
 theories/typing/sum.v
 # theories/typing/function.v
 # theories/typing/programs.v
