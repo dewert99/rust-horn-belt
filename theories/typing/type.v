@@ -204,7 +204,7 @@ Next Obligation. done. Qed.
 Next Obligation.
   move=> * /=. iIntros "_ _". iDestruct 1 as (?->) "?". iIntros "Ptok !>".
   iApply step_fupdN_intro; [done|]. iIntros "!>!>". iExists [], 1%Qp.
-  iSplit; [done|]. iSplit; [by rewrite /proph_toks|]. iIntros "_ !>".
+  do 2 (iSplit; [done|]). iIntros "_ !>".
   iFrame "Ptok". iExists v. by iSplit.
 Qed.
 

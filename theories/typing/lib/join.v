@@ -29,6 +29,10 @@ Section join.
       delete [ #R_A.(ty_size); "retA"] ;; delete [ #R_B.(ty_size); "retB"] ;;
       return: ["ret"].
 
+  (* TODO: Find a better spot for this. *)
+  Lemma Z_nat_add (n1 n2 : nat) : Z.to_nat (n1 + n2) = (n1 + n2)%nat.
+  Proof. rewrite Z2Nat.inj_add; [|lia..]. rewrite !Nat2Z.id //. Qed.
+
   Lemma join_type A B R_A R_B call_once_A call_once_B
         `(!Send A, !Send B, !Send R_A, !Send R_B) :
     (* A : FnOnce() -> R_A, as witnessed by the impl call_once_A *)

@@ -205,7 +205,6 @@ Definition proph_ctx: iProp Σ := inv prophN proph_inv.
 
 (** Prophecy Token *)
 Definition proph_tok ξ q : iProp Σ := own proph_name(◯ line ξ (fitem q)).
-Definition proph_toks ξs q : iProp Σ := [∗ list] ξ ∈ ξs, proph_tok ξ q.
 
 (** Prophecy Observation *)
 Local Definition proph_atom pli : iProp Σ :=
@@ -217,7 +216,7 @@ End defs.
 
 Notation "q :[ ξ ]" := (proph_tok ξ q)
   (at level 2, left associativity, format "q :[ ξ ]") : bi_scope.
-Notation "q :+[ ξs ]" := (proph_toks ξs q)
+Notation "q :+[ ξs ]" := ([∗ list] ξ ∈ ξs, q:[ξ])%I
   (at level 2, left associativity, format "q :+[ ξs ]") : bi_scope.
 Notation ".⟨ φπ ⟩" := (proph_obs φπ)
   (at level 1, format ".⟨ φπ ⟩") : bi_scope.
@@ -243,8 +242,6 @@ Global Instance proph_tok_as_fractional q ξ :
   AsFractional q:[ξ] (λ q, q:[ξ]%I) q.
 Proof. split; by [|apply _]. Qed.
 
-Global Instance proph_toks_timeless q ξs : Timeless q:+[ξs] := _.
-Global Instance proph_toks_fractional ξs : Fractional (λ q, q:+[ξs]%I) := _.
 Global Instance proph_toks_as_fractional q ξs :
   AsFractional q:+[ξs] (λ q, q:+[ξs]%I) q.
 Proof. split; by [|apply _]. Qed.
@@ -261,7 +258,7 @@ Qed.
 (** Manipulating Tokens *)
 
 Lemma proph_tok_singleton ξ q : q:[ξ] ⊣⊢ q:+[[ξ]].
-Proof. by rewrite /proph_toks /= right_id. Qed.
+Proof. by rewrite /= right_id. Qed.
 
 Lemma proph_tok_combine ξs ζs q q' :
   q:+[ξs] -∗ q':+[ζs] -∗

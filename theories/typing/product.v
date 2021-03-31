@@ -1,70 +1,14 @@
 From iris.proofmode Require Import tactics.
 From iris.algebra Require Import list numbers.
 From lrust.util Require Import basic update.
-From lrust.typing Require Import lft_contexts.
-From lrust.typing Require Export type.
+From lrust.typing Require Import lft_contexts uninit.
 
 Set Default Proof Using "Type".
 
 Section product.
   Context `{!typeG Σ}.
 
-  (* TODO: Find a better spot for this. *)
-  Lemma Z_nat_add (n1 n2 : nat) : Z.to_nat (n1 + n2) = (n1 + n2)%nat.
-  Proof. rewrite Z2Nat.inj_add; [|lia..]. rewrite !Nat2Z.id //. Qed.
-
-  (* "Pre"-unit.  We later define the full unit as the empty product.  That's
-     convertible, but products are opaque in some hint DBs, so this does make a
-     difference. *)
-  Program Definition unit0 {A} : type A :=
-    {| ty_size := 0; ty_lfts := []; ty_E := [];
-       ty_own vπd tid vl := ⌜vl = [] ∧ vπd.1 ./ []⌝%I; ty_shr vπd κ tid l := ⌜ vπd.1 ./ [] ⌝%I |}.
-
-  Next Obligation. move=> */=. by iIntros "[-> _]". Qed.
-  Next Obligation. by iIntros. Qed.
-  Next Obligation. by iIntros. Qed.
-  Next Obligation. by iIntros. Qed.
-  Next Obligation. iIntros (?????????) "#LFT ? H Htok".
-    iApply step_fupdN_intro=>//.
-    iModIntro. iNext.
-    iMod (bor_exists with "LFT H") as (vl) "H"; first done.
-    iMod (bor_sep with "LFT H") as "[_ H]"; first done.
-    iMod ((bor_persistent _ E) with "LFT H Htok") as "[> [_ ?] ?]"; first done.
-    by iFrame.
-  Qed.
-  Next Obligation. iIntros (?????????) "/= ? ? [% %] ?".
-    iModIntro.
-    iApply step_fupdN_intro=>//. iNext. iModIntro.
-    iExists [], q.
-    iSplit; first done.
-    iSplit; first by rewrite /proph_toks.
-    iIntros; iModIntro; iFrame; done.
-  Qed.
-
-  Next Obligation. iIntros (??????????) "/= ? ? ? % ?".
-  iModIntro. iApply step_fupdN_intro=>//. do 4 iModIntro.
-  iExists [], q.
-  iSplit; first done.
-  iSplit; first by rewrite /proph_toks.
-  iIntros. by iFrame.
-  Qed.
-
-  Global Instance unit0_copy {A} : Copy (@unit0 A).
-  Proof.
-    split.
-    - simpl. by apply _.
-    - iIntros (????????) "_ ? Hshr Htok $".
-      iDestruct (na_own_acc with "Htok") as "[$ Htok]"; first solve_ndisj.
-      iExists 1%Qp. iModIntro. iExists []. iSplitR; [by rewrite heap_mapsto_vec_nil|].
-      iDestruct "Hshr" as "%".
-      simpl. iSplitR; first by auto. iIntros "Htok2 _". by iApply "Htok".
-  Qed.
-
-  Global Instance unit0_send {A} : Send (@unit0 A).
-  Proof. by move=> *. Qed.
-
-  Global Instance unit0_sync {A} : Sync (@unit0 A).
-  Proof. by move=> *. Qed.
+  Definition unit := uninit 0.
 
   Lemma split_prod_mt {A B} (vπd1: _ A) (vπd2: _ B) tid ty1 ty2 q l :
     (l ↦∗{q}: λ vl, ∃ vl1 vl2,
@@ -85,12 +29,10 @@ Section product.
 
   Program Definition product2 {A B} (ty1 : type A) (ty2 : type B) : type (A * B) :=
     {| ty_size := ty1.(ty_size) + ty2.(ty_size);
-       ty_lfts := ty1.(ty_lfts) ++ ty2.(ty_lfts);
-       ty_E := ty1.(ty_E) ++ ty2.(ty_E);
-       ty_own vπd tid vl := (∃ vl1 vl2,
-         ⌜vl = vl1 ++ vl2⌝ ∗ ty1.(ty_own) (fst ∘ vπd.1, vπd.2) tid vl1 ∗ ty2.(ty_own) (snd ∘ vπd.1, vπd.2) tid vl2)%I;
-       ty_shr d κ tid l :=
-         (ty1.(ty_shr) (fst ∘ d.1, d.2) κ tid l ∗
+       ty_lfts := ty1.(ty_lfts) ++ ty2.(ty_lfts);  ty_E := ty1.(ty_E) ++ ty2.(ty_E);
+       ty_own vπd tid vl := (∃ vl1 vl2, ⌜vl = vl1 ++ vl2⌝ ∗
+        ty1.(ty_own) (fst ∘ vπd.1, vπd.2) tid vl1 ∗ ty2.(ty_own) (snd ∘ vπd.1, vπd.2) tid vl2)%I;
+       ty_shr d κ tid l := (ty1.(ty_shr) (fst ∘ d.1, d.2) κ tid l ∗
           ty2.(ty_shr) (snd ∘ d.1, d.2) κ tid (l +ₗ ty1.(ty_size)))%I |}.
   Next Obligation.
     move=> *. iDestruct 1 as (vl1 vl2 ->) "[H1 H2]".
@@ -254,10 +196,17 @@ Section product.
   Global Instance product2_ne {A B} : NonExpansive2 (@product2 A B).
   Proof. solve_ne_type. Qed.
 
-  Global Instance product2_copy {A B} `{!Copy ty1} `{!Copy ty2} :
-    Copy (@product2 A B ty1 ty2).
+End product.
+
+Notation "ty * ty'" := (product2 ty%T ty'%T) : lrust_type_scope.
+
+Section typing.
+  Context `{!typeG Σ}.
+
+  Global Instance product2_copy {A B} (ty1: _ A) (ty2: _ B) :
+    Copy ty1 → Copy ty2 → Copy (ty1 * ty2).
   Proof.
-    split; first (intros; apply _).
+    move=> ??. split; first (intros; apply _).
     intros vπd κ tid E F l q ? HF. iIntros "#LFT [H1 H2] Htl [Htok1 Htok2]".
     iMod (@copy_shr_acc with "LFT H1 Htl Htok1")
       as (q1 vl1) "(Htl & H↦1 & #H1 & Hclose1)"; first solve_ndisj.
@@ -280,23 +229,22 @@ Section product.
     iApply ("Hclose1" with "Htl [H1 H↦1f H↦1]"). by iFrame.
   Qed.
 
-  Global Instance product2_send {A B} `{!Send ty1} `{!Send ty2} :
-    Send (@product2 A B ty1 ty2).
+  Global Instance product2_send {A B} (ty1: _ A) (ty2: _ B) :
+    Send ty1 → Send ty2 → Send (ty1 * ty2).
   Proof.
-    iIntros (vπd tid1 tid2 vl) "H".
-    iDestruct "H" as (vl1 vl2 ->) "[Hown1 Hown2]".
+    move=> *?*. iDestruct 1 as (vl1 vl2 ->) "[Hown1 Hown2]".
     iExists _, _. iSplit; first done. iSplitL "Hown1"; by iApply @send_change_tid.
   Qed.
 
-  Global Instance product2_sync {A B} `{!Sync ty1} `{!Sync ty2} :
-    Sync (@product2 A B ty1 ty2).
+  Global Instance product2_sync {A B} (ty1: _ A) (ty2: _ B) :
+    Sync ty1 → Sync ty2 → Sync (ty1 * ty2).
   Proof.
-    iIntros (κ tid1 ti2 l l') "[#Hshr1 #Hshr2]". iSplit; by iApply @sync_change_tid.
+    move=> *?*. iIntros "* [#Hshr1 #Hshr2]". iSplit; by iApply @sync_change_tid.
   Qed.
 
   Lemma product2_subtype {A B A' B'} E L (f: A → A') (g: B → B') ty1 ty2 ty1' ty2' :
     subtype E L f ty1 ty1' → subtype E L g ty2 ty2' →
-    subtype E L (pair_map f g) (product2 ty1 ty2) (product2 ty1' ty2').
+    subtype E L (pair_map f g) (ty1 * ty2) (ty1' * ty2').
   Proof.
     move=> H1 H2. iIntros (qL) "HL".
     iDestruct (H1 with "HL") as "#H1". iDestruct (H2 with "HL") as "#H2".
@@ -316,7 +264,7 @@ Section product.
 
   Lemma product2_eqtype {A B A' B'} E L (f: A → A') f' (g: B → B') g' ty1 ty2 ty1' ty2' :
     eqtype E L f f' ty1 ty1' → eqtype E L g g' ty2 ty2' →
-    eqtype E L (pair_map f g) (pair_map f' g') (product2 ty1 ty2) (product2 ty1' ty2').
+    eqtype E L (pair_map f g) (pair_map f' g') (ty1 * ty2) (ty1' * ty2').
   Proof. move=> [??] [??]. split; by apply product2_subtype. Qed.
 
   (*
@@ -368,13 +316,8 @@ Section product.
     product (ty :: tyl) = product2 ty (product tyl) := eq_refl _.
   Definition product_nil :
     product [] = unit0 := eq_refl _.
-*)
-End product.
-(*
-Notation Π := product.
 
-Section typing.
-  Context `{!typeG Σ}.
+Notation Π := product.
 
   Global Instance prod2_assoc E L : Assoc (eqtype E L) product2.
   Proof.
@@ -436,8 +379,10 @@ Section typing.
     intro Hsat. eapply eq_ind; [done|]. clear Hsat. rewrite /ty_outlives_E /=.
     induction tyl as [|?? IH]=>//. rewrite /tyl_outlives_E /= fmap_app -IH //.
   Qed.
+*)
 End typing.
 
+(*
 Arguments product : simpl never.
 Global Hint Resolve product_mono' product_proper' ty_outlives_E_elctx_sat_product
   : lrust_typing. *)
