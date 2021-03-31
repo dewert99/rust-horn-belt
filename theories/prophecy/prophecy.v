@@ -1,5 +1,5 @@
 Import EqNotations.
-Require Import ClassicalDescription Equality.
+Require Import ClassicalDescription Equality FunctionalExtensionality.
 From stdpp Require Import strings.
 From iris.algebra Require Import auth cmra functions gmap csum frac agree.
 From iris.bi Require Import fractional.
@@ -73,12 +73,6 @@ Proof.
   move: (Eqv) (Eqv) => /Dep ? /Dep' ?. by apply (f_equal2 f).
 Qed.
 
-Lemma proph_dep_pair {A B} (vπ: _ → A * B) ξs ζs :
-  fst ∘ vπ ./ ξs → snd ∘ vπ ./ ζs → vπ ./ ξs ++ ζs.
-Proof.
-  move=> ??. rewrite (surjective_pairing_fun vπ). by apply proph_dep_constr2.
-Qed.
-
 Lemma proph_dep_destr {A B} f `{Inj A B (=) (=) f} vπ ξs :
   f ∘ vπ ./ ξs → vπ ./ ξs.
 Proof. by move=> Dep ?? /Dep/(inj f) ?. Qed.
@@ -87,6 +81,15 @@ Lemma proph_dep_destr2 {A B C} f `{Inj2 A B C (=) (=) (=) f} vπ wπ ξs :
   f ∘ vπ ⊛ wπ ./ ξs → vπ ./ ξs ∧ wπ ./ ξs.
 Proof.
   move=> Dep. split; move=> ?? /Dep Eq; apply (inj2 f) in Eq; by inversion Eq.
+Qed.
+
+Lemma proph_dep_unit (vπ: _ → unit) : vπ ./ [].
+Proof. suff ->: vπ = const (); [done|]. extensionality π. by case (vπ π). Qed.
+
+Lemma proph_dep_pair {A B} (vπ: _ → A * B) ξs ζs :
+  fst ∘ vπ ./ ξs → snd ∘ vπ ./ ζs → vπ ./ ξs ++ ζs.
+Proof.
+  move=> ??. rewrite (surjective_pairing_fun vπ). by apply proph_dep_constr2.
 Qed.
 
 (** * Prophecy Log *)

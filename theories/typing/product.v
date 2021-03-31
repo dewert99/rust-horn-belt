@@ -9,10 +9,29 @@ Set Default Proof Using "Type".
 Section product.
   Context `{!typeG Σ}.
 
-  Program Definition unit: type unit :=
-    {| pt_size := 0;  pt_own _ _ vl := ⌜vl = nil⌝%I |}.
-  Next Obligation. iIntros. by subst. Qed.
+  Program Definition unit: type unit := {|
+    ty_size := 0;  ty_lfts := [];  ty_E := [];
+    ty_own _ _ vl := ⌜vl = []⌝%I;  ty_shr _ _ _ _ := True%I
+  |}.
+  Next Obligation. iIntros. by subst. Qed. Next Obligation. by iIntros. Qed.
+  Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
+  Next Obligation. iIntros. iApply step_fupdN_intro; [done|]. by iFrame. Qed.
+  Next Obligation.
+    iIntros. iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>".
+    iExists [], 1%Qp=>/=. iSplit; [iPureIntro; by apply proph_dep_unit|]. by iFrame.
+  Qed.
+  Next Obligation.
+    iIntros. iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>!>!>".
+    iExists [], 1%Qp=>/=. iSplit; [iPureIntro; by apply proph_dep_unit|]. by iFrame.
+  Qed.
+  Global Instance unit_copy : Copy unit.
+  Proof.
+    split; [apply _|]. move=> */=. iIntros "_ _ Na $". iExists 1%Qp, []. iModIntro.
+    iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
+    rewrite heap_mapsto_vec_nil. do 2 (iSplit; [done|]). iIntros "?_!>". by iApply "ToNa".
+  Qed.
   Global Instance unit_send : Send unit. Proof. done. Qed.
+  Global Instance unit_sync : Sync unit. Proof. done. Qed.
 
   Lemma split_prod_mt {A B} (vπd1: _ A) (vπd2: _ B) tid ty1 ty2 q l :
     (l ↦∗{q}: λ vl, ∃ vl1 vl2,
