@@ -24,6 +24,9 @@ Fixpoint tnth B As (i: nat) := match As with
 
 Notation tnthe := (tnth Empty_set).
 
+Fixpoint trepeat A (n: nat) :=
+  match n with 0 => ^[] | S m => A ^:: trepeat A m end.
+
 (** * Heterogeneous List *)
 
 Inductive hlist (F: Type → Type) : Types → Type :=
@@ -55,6 +58,9 @@ Infix "+<$>+" := hhmap (at level 61, left associativity).
 Fixpoint hnth {F B As} (y: F B) (xl: hlist F As) (i: nat) : F (tnth B As i) :=
   match xl with +[] => y | x +:: xl' =>
     match i with 0 => x | S j => hnth y xl' j end end.
+
+Fixpoint hrepeat {F A} (x: F A) (n: nat) : hlist F (trepeat A n) :=
+  match n with 0 => +[] | S m => x +:: hrepeat x m end.
 
 Fixpoint max_hlist_with {F As} (f: ∀A, F A → nat) (xl: hlist F As) : nat :=
   match xl with +[] => 0 | x +:: xl' => f _ x `max` max_hlist_with f xl' end.

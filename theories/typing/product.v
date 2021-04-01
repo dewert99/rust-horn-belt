@@ -114,7 +114,7 @@ Section product.
   Global Instance prod_ne {A B} : NonExpansive2 (@r_prod A B).
   Proof. solve_ne_type. Qed.
 
-  Definition r_nil_unit: type :1 := <{const -[]}> r_unit.
+  Definition r_nil_unit: type :1 := <{const -[] }> r_unit.
 
   Definition r_cons_prod {A B} (ty: type A) (ty': type B)
     : type (A :* B) := <{prod_to_cons_prod}> (r_prod ty ty').
