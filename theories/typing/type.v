@@ -769,8 +769,8 @@ Section subtyping.
     - iIntros "!>*?". iApply "InShr'". by iApply "InShr".
   Qed.
 
-  Lemma subtype_refl {A} E L (ty: _ A) : subtype E L id ty ty.
-  Proof. iIntros (?) "_!>_". iApply type_incl_refl. Qed.
+  Global Instance subtype_refl {E L A} : Reflexive (subtype E L (@id A)).
+  Proof. move=> ??. iIntros "_!>_". iApply type_incl_refl. Qed.
 
   Lemma subtype_trans {A B C} E L (f: A → B) (g: B → C) ty ty' ty'' :
     subtype E L f ty ty' → subtype E L g ty' ty'' → subtype E L (g ∘ f) ty ty''.
@@ -858,8 +858,8 @@ Section subtyping.
     do 7 f_equiv; (iSplit; [by iIntros "?" ([??])|by iIntros "?" (??)]).
   Qed.
 
-  Lemma eqtype_refl {A} E L (ty: _ A) : eqtype E L id id ty ty.
-  Proof. split; apply subtype_refl. Qed.
+  Global Instance eqtype_refl {E L A} : Reflexive (eqtype E L (@id A) id).
+  Proof. done. Qed.
 
   Lemma equiv_eqtype {A} E L (ty ty': _ A) : ty ≡ ty' → eqtype E L id id ty ty'.
   Proof. by split; apply equiv_subtype. Qed.

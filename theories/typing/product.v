@@ -114,10 +114,10 @@ Section product.
   Global Instance prod_ne {A B} : NonExpansive2 (@r_prod A B).
   Proof. solve_ne_type. Qed.
 
-  Definition r_nil_unit: type :1 := <{ const -[] }> r_unit.
+  Definition r_nil_unit: type :1 := <{const -[]}> r_unit.
 
   Definition r_cons_prod {A B} (ty: type A) (ty': type B)
-    : type (A :* B) := <{ pair_to_cons_pair }> (r_prod ty ty').
+    : type (A :* B) := <{prod_to_cons_prod}> (r_prod ty ty').
 
   Global Instance cons_prod_ne {A B} : NonExpansive2 (@r_cons_prod A B).
   Proof. move=> ???????. rewrite /r_cons_prod. by do 2 f_equiv. Qed.
@@ -198,14 +198,14 @@ Section typing.
     TypeNonExpansive T → TypeNonExpansive T' → TypeNonExpansive (λ ty, T ty :* T' ty)%T.
   Proof.
     have ->: ((λ ty, T ty :* T' ty) =
-      <{pair_to_cons_pair}> ∘ λ ty, T ty * T' ty)%T by done.
+      <{prod_to_cons_prod}> ∘ λ ty, T ty * T' ty)%T by done.
     move=> ??. apply type_ne_ne_compose; apply _.
   Qed.
   Global Instance cons_prod_type_contractive {A B C} (T: _ A → _ B) (T': _ → _ C) :
     TypeContractive T → TypeContractive T' → TypeContractive (λ ty, T ty :* T' ty)%T.
   Proof.
     have ->: ((λ ty, T ty :* T' ty) =
-      <{pair_to_cons_pair}> ∘ λ ty, T ty * T' ty)%T by done.
+      <{prod_to_cons_prod}> ∘ λ ty, T ty * T' ty)%T by done.
     move=> ??. apply type_contractive_compose_left; apply _.
   Qed.
 
@@ -268,7 +268,7 @@ Section typing.
 
   Lemma prod_subtype {A B A' B'} E L (f: A → A') (g: B → B') ty1 ty2 ty1' ty2' :
     subtype E L f ty1 ty1' → subtype E L g ty2 ty2' →
-    subtype E L (pair_map f g) (ty1 * ty2) (ty1' * ty2').
+    subtype E L (prod_map f g) (ty1 * ty2) (ty1' * ty2').
   Proof.
     move=> Sub Sub'. iIntros (?) "L". iDestruct (Sub with "L") as "#Sub".
     iDestruct (Sub' with "L") as "#Sub'". iIntros "!> #E".
@@ -284,14 +284,14 @@ Section typing.
 
   Lemma prod_eqtype {A B A' B'} E L (f: A → A') f' (g: B → B') g' ty1 ty2 ty1' ty2' :
     eqtype E L f f' ty1 ty1' → eqtype E L g g' ty2 ty2' →
-    eqtype E L (pair_map f g) (pair_map f' g') (ty1 * ty2) (ty1' * ty2').
+    eqtype E L (prod_map f g) (prod_map f' g') (ty1 * ty2) (ty1' * ty2').
   Proof. move=> [??][??]. split; by apply prod_subtype. Qed.
 
   Lemma cons_prod_subtype {A B A' B'} E L (f: A → A') (g: B → B') ty1 ty2 ty1' ty2' :
     subtype E L f ty1 ty1' → subtype E L g ty2 ty2' →
-    subtype E L (cons_pair_map f g) (ty1 :* ty2) (ty1' :* ty2').
+    subtype E L (cons_prod_map f g) (ty1 :* ty2) (ty1' :* ty2').
   Proof.
-    move=> ??. rewrite cons_pair_map_via_pair_map.
+    move=> ??. rewrite cons_prod_map_via_prod_map.
     apply mod_ty_subtype; [apply iso|by apply prod_subtype].
   Qed.
 
@@ -313,13 +313,13 @@ Section typing.
     ty_outlives_E (ty * ty') ϝ = ty_outlives_E ty ϝ ++ ty_outlives_E ty' ϝ.
   Proof. by rewrite /ty_outlives_E /= fmap_app. Qed.
 
-  Lemma prod_assoc {A B C} E L (ty1: _ A) (ty2: _ B) (ty3: _ C) :
-    eqtype E L pair_assoc pair_assoc' (ty1 * (ty2 * ty3)) ((ty1 * ty2) * ty3).
+  Lemma r_prod_assoc {A B C} E L (ty1: _ A) (ty2: _ B) (ty3: _ C) :
+    eqtype E L prod_assoc prod_assoc' (ty1 * (ty2 * ty3)) ((ty1 * ty2) * ty3).
   Proof.
     have Eq: ∀vπ: proph_asn → (A * (B * C)),
-      fst ∘ (fst ∘ (pair_assoc ∘ vπ)) = fst ∘ vπ ∧
-      snd ∘ (fst ∘ (pair_assoc ∘ vπ)) = fst ∘ (snd ∘ vπ) ∧
-      snd ∘ (pair_assoc ∘ vπ) = snd ∘ (snd ∘ vπ).
+      fst ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ vπ ∧
+      snd ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ (snd ∘ vπ) ∧
+      snd ∘ (prod_assoc ∘ vπ) = snd ∘ (snd ∘ vπ).
     { move=> vπ. split; [|split]; extensionality xyz=>/=; by case (vπ xyz)=> [?[??]]. }
     apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=". iSplit; [iPureIntro; lia|].
     iSplit; [rewrite (assoc (++)); by iApply lft_equiv_refl|].
@@ -333,13 +333,16 @@ Section typing.
         iSplit; [by rewrite assoc|]. iFrame "Own1". iExists wl2, wl3. by iFrame.
     - rewrite -assoc shift_loc_assoc_nat. by iApply (bi.iff_refl True%I).
   Qed.
+  Lemma r_prod_assoc' {A B C} E L (ty1: _ A) (ty2: _ B) (ty3: _ C) :
+    eqtype E L prod_assoc' prod_assoc ((ty1 * ty2) * ty3) (ty1 * (ty2 * ty3)).
+  Proof. apply eqtype_symm, r_prod_assoc. Qed.
 
-  Lemma prod_left_id {A} E L (ty: _ A) :
-    eqtype E L pair_left_id pair_left_id' (() * ty) (ty).
+  Lemma r_prod_left_id {A} E L (ty: _ A) :
+    eqtype E L prod_left_id prod_left_id' (() * ty) (ty).
   Proof.
     apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=". iSplit; [done|].
     iSplit; [by iApply lft_equiv_refl|].
-    have Eq: ∀vπ: proph_asn → (() * A), pair_left_id ∘ vπ = snd ∘ vπ.
+    have Eq: ∀vπ: proph_asn → (() * A), prod_left_id ∘ vπ = snd ∘ vπ.
     { move=> vπ. extensionality π. simpl. by case (vπ π)=> [[]?]. }
     iSplit; iIntros "!> *"; rewrite Eq; [iSplit|].
     - by iDestruct 1 as (?? ->->) "Own /=".
@@ -347,12 +350,12 @@ Section typing.
     - rewrite left_id shift_loc_0. by iApply (bi.iff_refl True%I).
   Qed.
 
-  Lemma prod_right_id {A} E L (ty: _ A) :
-    eqtype E L pair_right_id pair_right_id' (ty * ()) (ty).
+  Lemma r_prod_right_id {A} E L (ty: _ A) :
+    eqtype E L prod_right_id prod_right_id' (ty * ()) (ty).
   Proof.
     apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=".
     rewrite !right_id. iSplit; [done|]. iSplit; [by iApply lft_equiv_refl|].
-    have Eq: ∀vπ: proph_asn → (A * ()), pair_right_id ∘ vπ = fst ∘ vπ.
+    have Eq: ∀vπ: proph_asn → (A * ()), prod_right_id ∘ vπ = fst ∘ vπ.
     { move=> vπ. extensionality π. simpl. by case (vπ π)=> [?[]]. }
     iSplit; iIntros "!> *"; rewrite Eq; [iSplit|].
     - iDestruct 1 as (?? ->) "[Own ->]". by rewrite right_id.
@@ -360,35 +363,35 @@ Section typing.
     - rewrite right_id. by iApply (bi.iff_refl True%I).
   Qed.
 
-(*
-  Lemma prod_flatten E L tyl1 tyl2 tyl3 :
-    eqtype E L (Π(tyl1 ++ Π tyl2 :: tyl3)) (Π(tyl1 ++ tyl2 ++ tyl3)).
+  Lemma xprod_app {As Bs} E L (tyl: _ As) (tyl': _ Bs) :
+    eqtype E L (curry papp) psep (Π tyl * Π tyl') (Π (tyl h++ tyl')).
   Proof.
-    unfold product. induction tyl1; simpl; last by f_equiv.
-    induction tyl2. by rewrite left_id. by rewrite /= -assoc; f_equiv.
+    elim: tyl=> [|A As' ty tyl Eq].
+    - have [->->]: curry (@papp id ^[] Bs) = prod_left_id ∘ prod_map (const ()) id ∧
+        @psep id ^[] Bs = prod_map (const -[]) id ∘ prod_left_id'.
+      { split; extensionality x; by [case x=> [[]?]|]. }
+      eapply eqtype_trans; [|apply r_prod_left_id]. apply prod_eqtype; [|done].
+      apply mod_ty_outin, functional_extensionality. by move=> [].
+    - have [->->]: curry (@papp id (A ^:: As') Bs) = prod_to_cons_prod ∘
+        prod_map id (curry papp) ∘ prod_assoc' ∘ prod_map cons_prod_to_prod id ∧
+        @psep id (A ^:: As') Bs = prod_map prod_to_cons_prod id ∘
+          (prod_assoc ∘ (prod_map id psep ∘ cons_prod_to_prod)).
+      { split; extensionality x; [by case x=> [[??]?]|]. case x=> [? xl]/=.
+        by case (psep xl). }
+      eapply eqtype_trans. { apply prod_eqtype; [apply mod_ty_outin, _|done]. }
+      eapply eqtype_trans. { apply r_prod_assoc'. } eapply eqtype_trans.
+      { apply prod_eqtype; [done|apply Eq]. } apply mod_ty_inout, _.
   Qed.
 
-  Lemma prod_flatten_l E L tyl1 tyl2 :
-    eqtype E L (Π(Π tyl1 :: tyl2)) (Π(tyl1 ++ tyl2)).
-  Proof. apply (prod_flatten _ _ []). Qed.
-  Lemma prod_flatten_r E L tyl1 tyl2 :
-    eqtype E L (Π(tyl1 ++ [Π tyl2])) (Π(tyl1 ++ tyl2)).
-  Proof. by rewrite (prod_flatten E L tyl1 tyl2 []) app_nil_r. Qed.
-  Lemma prod_app E L tyl1 tyl2 :
-    eqtype E L (Π[Π tyl1; Π tyl2]) (Π(tyl1 ++ tyl2)).
-  Proof. by rewrite -prod_flatten_r -prod_flatten_l. Qed.
-
-  Lemma ty_outlives_E_elctx_sat_product E L tyl α:
-    elctx_sat E L (tyl_outlives_E tyl α) →
-    elctx_sat E L (ty_outlives_E (Π tyl) α).
+  Lemma ty_outlives_E_elctx_sat_product {As} E L (tyl: _ As) α:
+    elctx_sat E L (tyl_outlives_E tyl α) → elctx_sat E L (ty_outlives_E (Π tyl) α).
   Proof.
-    intro Hsat. eapply eq_ind; [done|]. clear Hsat. rewrite /ty_outlives_E /=.
-    induction tyl as [|?? IH]=>//. rewrite /tyl_outlives_E /= fmap_app -IH //.
+    move=> ?. eapply eq_ind; [done|]. rewrite /ty_outlives_E /=.
+    elim tyl=> /=[|> IH]; [done|]. by rewrite fmap_app -IH.
   Qed.
-*)
+
 End typing.
 
-(*
-Arguments product : simpl never.
-Global Hint Resolve product_mono' product_proper' ty_outlives_E_elctx_sat_product
-  : lrust_typing. *)
+Arguments r_xprod : simpl never.
+Global Hint Resolve prod_subtype prod_eqtype ty_outlives_E_elctx_sat_product
+  : lrust_typing.

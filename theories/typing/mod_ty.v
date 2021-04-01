@@ -89,28 +89,31 @@ Section typing.
   Global Instance mod_ty_sync {A B} (f: A → B) ty : Sync ty → Sync (<{f}> ty).
   Proof. move=> ??*/=. by do 3 f_equiv. Qed.
 
-  Lemma mod_ty_subtype_in {A B} E L (f: A → B) ty : subtype E L f ty (<{f}> ty).
+  Lemma mod_ty_in {A B} E L (f: A → B) ty : subtype E L f ty (<{f}> ty).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>" (vπ) "*?"; iExists vπ; by iSplit.
   Qed.
 
-  Lemma mod_ty_subtype_out {A B} E L f g `{@SemiIso A B f g} ty :
+  Lemma mod_ty_out {A B} E L f g `{@SemiIso A B f g} ty :
     subtype E L g (<{f}> ty) ty.
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*/="; iDestruct 1 as (?->) "?"; by rewrite compose_assoc semi_iso.
   Qed.
 
-  Lemma mod_ty_eqtype_inout {A B} E L f g `{@SemiIso A B f g} ty :
+  Lemma mod_ty_inout {A B} E L f g `{@SemiIso A B f g} ty :
     eqtype E L f g ty (<{f}> ty).
-  Proof. by split; [apply mod_ty_subtype_in|apply mod_ty_subtype_out]. Qed.
+  Proof. by split; [apply mod_ty_in|apply mod_ty_out]. Qed.
+  Lemma mod_ty_outin {A B} E L f g `{@SemiIso A B f g} ty :
+    eqtype E L g f (<{f}> ty) ty.
+  Proof. by apply eqtype_symm, mod_ty_inout. Qed.
 
   Lemma mod_ty_subtype {A B A' B'} E L h f (f': A' → B') g `{@SemiIso A B f g} ty ty' :
     subtype E L h ty ty' → subtype E L (f' ∘ h ∘ g) (<{f}> ty) (<{f'}> ty').
   Proof.
-    move=> ??. eapply subtype_trans; [by apply mod_ty_subtype_out|].
-    eapply subtype_trans; by [|apply mod_ty_subtype_in].
+    move=> ??. eapply subtype_trans; [by apply mod_ty_out|].
+    eapply subtype_trans; by [|apply mod_ty_in].
   Qed.
 
   Lemma mod_ty_eqtype {A B A' B'} E L h h' f f' g g'

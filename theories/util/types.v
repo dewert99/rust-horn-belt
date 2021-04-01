@@ -42,6 +42,7 @@ Fixpoint happ {F As Bs} (xl: hlist F As) (yl: hlist F Bs)
   : hlist F (As ^++ Bs) :=
   match xl with +[] => yl | x +:: xl' => x +:: happ xl' yl end.
 Infix "+++" := happ (at level 60, right associativity).
+Infix "h++" := happ (at level 60, right associativity).
 
 Fixpoint hmap {F B As} (f: ∀A, F A → B) (xl: hlist F As) : list B :=
   match xl with +[] => [] | x +:: xl' => f _ x :: hmap f xl' end.
@@ -128,14 +129,14 @@ Infix "-::" := cons_pair (at level 60, right associativity).
 Notation "-[ a ; .. ; z ]" := (a -:: .. (z -:: -[]) ..)
   (at level 1, format "-[ a ;  .. ;  z ]").
 
-Definition pair_to_cons_pair {A B} '((x, y)) : _ A B := x -:: y.
-Definition cons_pair_to_pair {A B} '(x -:: y) : _ A B := (x, y).
-Global Instance pair_cons_pair_iso {A B} : Iso (@pair_to_cons_pair A B) cons_pair_to_pair.
+Definition prod_to_cons_prod {A B} '((x, y)) : _ A B := x -:: y.
+Definition cons_prod_to_prod {A B} '(x -:: y) : _ A B := (x, y).
+Global Instance prod_cons_prod_iso {A B} : Iso (@prod_to_cons_prod A B) cons_prod_to_prod.
 Proof. split; extensionality xy; by case xy. Qed.
 
-Definition cons_pair_map {A B A' B'} (f: A → A') (g: B → B') '(x -:: y) := f x -:: g y.
-Lemma cons_pair_map_via_pair_map {A B A' B'} (f: A → A') (g: B → B') :
-  cons_pair_map f g = pair_to_cons_pair ∘ pair_map f g ∘ cons_pair_to_pair.
+Definition cons_prod_map {A B A' B'} (f: A → A') (g: B → B') '(x -:: y) := f x -:: g y.
+Lemma cons_prod_map_via_prod_map {A B A' B'} (f: A → A') (g: B → B') :
+  cons_prod_map f g = prod_to_cons_prod ∘ prod_map f g ∘ cons_prod_to_prod.
 Proof. extensionality xy. by case xy. Qed.
 
 Fixpoint plist (F: Type → Type) As : Type :=
@@ -146,6 +147,18 @@ Notation xprod := (plist id).
 Fixpoint papp {F As Bs} (xl: plist F As) (yl: plist F Bs) : plist F (As ^++ Bs) :=
   match As, xl with ^[], -[] => yl | _ ^:: _, x -:: xl' => x -:: papp xl' yl end.
 Infix "-++" := papp (at level 60, right associativity).
+
+Fixpoint psep {F As Bs} (xl: plist F (As ^++ Bs)) : plist F As * plist F Bs :=
+  match As, xl with ^[], _ => (-[], xl) |
+    _ ^:: _, x -:: xl' => let: (yl, zl) := psep xl' in (x -:: yl, zl) end.
+
+Global Instance papp_psep_iso {F As Bs} : Iso (curry (@papp F As Bs)) psep.
+Proof.
+  elim As=> /=[|?? [Eq Eq']]; split; extensionality x; [by case x=> [[]?]|done| |];
+  [case x=> [[? xl]yl]|case x=> [? xl]]=>/=.
+  - move: Eq. by move/equal_f/(.$ (xl, yl))=>/= ->.
+  - move: Eq'. move/equal_f/(.$ xl)=>/=. by case: (psep xl)=> [??]=>/= ->.
+Qed.
 
 Fixpoint hlist_to_plist {F As} (xl: hlist F As) : plist F As :=
   match xl with +[] => -[] | x +:: xl' => x -:: hlist_to_plist xl' end.
