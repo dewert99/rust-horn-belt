@@ -116,7 +116,7 @@ Lemma tyl_outlives_E_elctx_sat `{!typeG Σ} {As} E L (tyl: typel As) α β :
   tyl_outlives_E tyl β ⊆+ E → lctx_lft_incl E L α β →
   elctx_sat E L (tyl_outlives_E tyl α).
 Proof.
-  elim: tyl=> [|> IH]; [solve_typing|]=> Outlv Incl. apply elctx_sat_app.
+  elim tyl; [solve_typing|]=> > IH Outlv Incl. apply elctx_sat_app.
   - eapply ty_outlives_E_elctx_sat; [|by apply Incl]. etrans; [|by apply Outlv].
     by apply submseteq_inserts_r.
   - apply IH; [|done]. etrans; [|by apply Outlv]. by apply submseteq_inserts_l.
@@ -650,7 +650,7 @@ Section type.
   Lemma shr_locsE_shift l n m :
     shr_locsE l (n + m) = shr_locsE l n ∪ shr_locsE (l +ₗ n) m.
   Proof.
-    move: l. elim: n=> [|? IH]=> l /=.
+    move: l. elim n=> [|? IH]=> l /=.
     - rewrite shift_loc_0 /=. set_solver+.
     - rewrite -Nat.add_1_l Nat2Z.inj_add IH shift_loc_assoc. set_solver+.
   Qed.
@@ -658,19 +658,18 @@ Section type.
   Lemma shr_locsE_disj l n m :
     shr_locsE l n ## shr_locsE (l +ₗ n) m.
   Proof.
-    move: l. elim: n=> [|n IHn]=> l /=; [set_solver+|].
+    move: l. elim: n; [set_solver+|]=> n IHn l /=.
     rewrite -Nat.add_1_l Nat2Z.inj_add. apply disjoint_union_l.
     split; [|rewrite -shift_loc_assoc; by exact: IHn].
-    clear IHn. move: n. elim: m=> [|? IHm]=> n; [set_solver+|]. simpl.
-    rewrite shift_loc_assoc. apply disjoint_union_r. split.
+    clear IHn. move: n. elim: m; [set_solver+|]=> ? IHm n.
+    rewrite/= shift_loc_assoc. apply disjoint_union_r. split.
     - apply ndot_ne_disjoint. case l=> * [=]. lia.
     - rewrite -Z.add_assoc. move: (IHm (n + 1)). by rewrite Nat2Z.inj_add.
   Qed.
 
   Lemma shr_locsE_shrN l n : shr_locsE l n ⊆ ↑shrN.
   Proof.
-    move: l. elim: n=> /=[|??]=> l; [set_solver+|].
-    apply union_least; [solve_ndisj|done].
+    move: l. elim: n; [set_solver+|]=>/= *. apply union_least; [solve_ndisj|done].
   Qed.
 
   Lemma shr_locsE_subseteq l n m : n ≤ m → shr_locsE l n ⊆ shr_locsE l m.

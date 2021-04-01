@@ -24,9 +24,6 @@ Fixpoint tnth B As (i: nat) := match As with
 
 Notation tnthe := (tnth Empty_set).
 
-Fixpoint trepeat A (n: nat) :=
-  match n with 0 => ^[] | S m => A ^:: trepeat A m end.
-
 (** * Heterogeneous List *)
 
 Inductive hlist (F: Type → Type) : Types → Type :=
@@ -58,9 +55,6 @@ Infix "+<$>+" := hhmap (at level 61, left associativity).
 Fixpoint hnth {F B As} (y: F B) (xl: hlist F As) (i: nat) : F (tnth B As i) :=
   match xl with +[] => y | x +:: xl' =>
     match i with 0 => x | S j => hnth y xl' j end end.
-
-Fixpoint hrepeat {F A} (x: F A) (n: nat) : hlist F (trepeat A n) :=
-  match n with 0 => +[] | S m => x +:: hrepeat x m end.
 
 Fixpoint max_hlist_with {F As} (f: ∀A, F A → nat) (xl: hlist F As) : nat :=
   match xl with +[] => 0 | x +:: xl' => f _ x `max` max_hlist_with f xl' end.
@@ -173,6 +167,18 @@ Fixpoint plist2 (F: Type → Type → Type) As Bs : Type :=
   match As, Bs with ^[], ^[] => :1 |
     A ^:: As', B ^:: Bs' => F A B :* plist2 F As' Bs' | _, _ => Empty_set end.
 
+Fixpoint pp2map {F G As Bs} (f: ∀A B, F A B → G A B) : plist2 F As Bs → plist2 G As Bs :=
+  match As, Bs with ^[], ^[] => id
+  | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), f _ _ x -:: pp2map f xl'
+  | _, _ => absurd end.
+Infix "-2<$>-" := pp2map (at level 61, left associativity).
+
+Fixpoint p2nth {F As Bs C D} (y: F C D) :
+  plist2 F As Bs → ∀i, F (tnth C As i) (tnth D Bs i) :=
+  match As, Bs with ^[], ^[] => λ _ _, y
+  | _ ^:: _, _ ^:: _ => λ '(x -:: xl') i, match i with 0 => x | S j => p2nth y xl' j end
+  | _, _ => absurd end.
+
 Fixpoint p2flip {F As Bs} : plist2 F As Bs → plist2 (flip F) Bs As :=
   match As, Bs with ^[], ^[] => id
   | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), x -:: p2flip xl'
@@ -190,12 +196,6 @@ Fixpoint p2zip {F G As Bs} :
   | _ ^:: _, _ ^:: _ => λ '(x -:: xl') '(y -:: yl'), (x, y) -:: p2zip xl' yl'
   | _, _ => absurd end.
 
-Fixpoint pp2map {F G As Bs} (f: ∀A B, F A B → G A B) : plist2 F As Bs → plist2 G As Bs :=
-  match As, Bs with ^[], ^[] => id
-  | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), f _ _ x -:: pp2map f xl'
-  | _, _ => absurd end.
-Infix "-2<$>-" := pp2map (at level 61, left associativity).
-
 Lemma p2zip_fst {F G As Bs} (xl: _ F As Bs) (yl: _ G _ _) :
   (λ _ _, fst) -2<$>- p2zip xl yl = xl.
 Proof.
@@ -208,12 +208,6 @@ Proof.
   dependent induction As; dependent induction Bs; case xl; case yl; try done.
   move=>/= *. by f_equal.
 Qed.
-
-Fixpoint p2nth {F As Bs C D} (y: F C D) :
-  plist2 F As Bs → ∀i, F (tnth C As i) (tnth D Bs i) :=
-  match As, Bs with ^[], ^[] => λ _ _, y
-  | _ ^:: _, _ ^:: _ => λ '(x -:: xl') i, match i with 0 => x | S j => p2nth y xl' j end
-  | _, _ => absurd end.
 
 Fixpoint p2ids {As} : plist2 (→) As As :=
   match As with ^[] => -[] | _ ^:: _ => id -:: p2ids end.

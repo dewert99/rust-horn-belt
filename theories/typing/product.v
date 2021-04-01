@@ -309,10 +309,6 @@ Section typing.
     move=> /HForallZip_zip[? /HForallZip_flip ?]. by split; apply xprod_subtype.
   Qed.
 
-  Lemma outlives_prod {A B} (ty: _ A) (ty': _ B) ϝ :
-    ty_outlives_E (ty * ty') ϝ = ty_outlives_E ty ϝ ++ ty_outlives_E ty' ϝ.
-  Proof. by rewrite /ty_outlives_E /= fmap_app. Qed.
-
   Lemma r_prod_assoc {A B C} E L (ty1: _ A) (ty2: _ B) (ty3: _ C) :
     eqtype E L prod_assoc prod_assoc' (ty1 * (ty2 * ty3)) ((ty1 * ty2) * ty3).
   Proof.
@@ -333,9 +329,6 @@ Section typing.
         iSplit; [by rewrite assoc|]. iFrame "Own1". iExists wl2, wl3. by iFrame.
     - rewrite -assoc shift_loc_assoc_nat. by iApply (bi.iff_refl True%I).
   Qed.
-  Lemma r_prod_assoc' {A B C} E L (ty1: _ A) (ty2: _ B) (ty3: _ C) :
-    eqtype E L prod_assoc' prod_assoc ((ty1 * ty2) * ty3) (ty1 * (ty2 * ty3)).
-  Proof. apply eqtype_symm, r_prod_assoc. Qed.
 
   Lemma r_prod_left_id {A} E L (ty: _ A) :
     eqtype E L prod_left_id prod_left_id' (() * ty) (ty).
@@ -363,28 +356,33 @@ Section typing.
     - rewrite right_id. by iApply (bi.iff_refl True%I).
   Qed.
 
-  Lemma xprod_app {As Bs} E L (tyl: _ As) (tyl': _ Bs) :
-    eqtype E L (curry papp) psep (Π tyl * Π tyl') (Π (tyl h++ tyl')).
+  Lemma xprod_app_prod {As Bs} E L (tyl: _ As) (tyl': _ Bs) :
+    eqtype E L psep (curry papp) (Π (tyl h++ tyl')) (Π tyl * Π tyl').
   Proof.
     elim: tyl=> [|A As' ty tyl Eq].
-    - have [->->]: curry (@papp id ^[] Bs) = prod_left_id ∘ prod_map (const ()) id ∧
-        @psep id ^[] Bs = prod_map (const -[]) id ∘ prod_left_id'.
+    - have [->->]: @psep id ^[] Bs = prod_map (const -[]) id ∘ prod_left_id' ∧
+        curry (@papp id ^[] Bs) = prod_left_id ∘ prod_map (const ()) id.
       { split; extensionality x; by [case x=> [[]?]|]. }
-      eapply eqtype_trans; [|apply r_prod_left_id]. apply prod_eqtype; [|done].
-      apply mod_ty_outin, functional_extensionality. by move=> [].
-    - have [->->]: curry (@papp id (A ^:: As') Bs) = prod_to_cons_prod ∘
-        prod_map id (curry papp) ∘ prod_assoc' ∘ prod_map cons_prod_to_prod id ∧
-        @psep id (A ^:: As') Bs = prod_map prod_to_cons_prod id ∘
-          (prod_assoc ∘ (prod_map id psep ∘ cons_prod_to_prod)).
-      { split; extensionality x; [by case x=> [[??]?]|]. case x=> [? xl]/=.
+      eapply eqtype_trans; [apply eqtype_symm; apply r_prod_left_id|].
+      apply prod_eqtype; [|done].
+      apply mod_ty_inout, functional_extensionality. by move=> [].
+    - have [->->]: @psep id (A ^:: As') Bs = prod_map prod_to_cons_prod id ∘
+          prod_assoc ∘ prod_map id psep ∘ cons_prod_to_prod ∧
+        curry (@papp id (A ^:: As') Bs) = prod_to_cons_prod ∘
+          (prod_map id (curry papp) ∘ (prod_assoc' ∘ prod_map cons_prod_to_prod id)).
+      { split; extensionality x; [|by case x=> [[??]?]]. case x=> [? xl]/=.
         by case (psep xl). }
-      eapply eqtype_trans. { apply prod_eqtype; [apply mod_ty_outin, _|done]. }
-      eapply eqtype_trans. { apply r_prod_assoc'. } eapply eqtype_trans.
-      { apply prod_eqtype; [done|apply Eq]. } apply mod_ty_inout, _.
+      eapply eqtype_trans. { apply mod_ty_outin, _. } eapply eqtype_trans.
+      { apply prod_eqtype; [done|apply Eq]. } eapply eqtype_trans.
+      { apply r_prod_assoc. } apply prod_eqtype; [apply mod_ty_inout, _|done].
   Qed.
 
-  Lemma ty_outlives_E_elctx_sat_product {As} E L (tyl: _ As) α:
-    elctx_sat E L (tyl_outlives_E tyl α) → elctx_sat E L (ty_outlives_E (Π tyl) α).
+  Lemma prod_outlives_E {A B} (ty: _ A) (ty': _ B) κ :
+    ty_outlives_E (ty * ty') κ = ty_outlives_E ty κ ++ ty_outlives_E ty' κ.
+  Proof. by rewrite /ty_outlives_E /= fmap_app. Qed.
+
+  Lemma xprod_outlives_E_elctx_sat {As} E L (tyl: _ As) κ:
+    elctx_sat E L (tyl_outlives_E tyl κ) → elctx_sat E L (ty_outlives_E (Π tyl) κ).
   Proof.
     move=> ?. eapply eq_ind; [done|]. rewrite /ty_outlives_E /=.
     elim tyl=> /=[|> IH]; [done|]. by rewrite fmap_app -IH.
@@ -393,5 +391,5 @@ Section typing.
 End typing.
 
 Arguments r_xprod : simpl never.
-Global Hint Resolve prod_subtype prod_eqtype ty_outlives_E_elctx_sat_product
+Global Hint Resolve prod_subtype prod_eqtype xprod_outlives_E_elctx_sat
   : lrust_typing.

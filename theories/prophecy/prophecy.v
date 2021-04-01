@@ -148,7 +148,7 @@ Local Notation "π ! L" := (proph_modify π L) (at level 30, format "π  !  L").
 
 Local Lemma proph_modify_eqv L : ∀π, π ! L .≡~{res L}≡ π.
 Proof.
-  elim: L=> /=[|[??]? IH]; [done|]=> > /not_elem_of_cons [??].
+  elim L=> /=[|[??]? IH]; [done|]=> > /not_elem_of_cons [??].
   rewrite IH; [|done]. by apply proph_upd_lookup_ne.
 Qed.
 
@@ -267,7 +267,7 @@ Lemma proph_tok_combine ξs ζs q q' :
   q:+[ξs] -∗ q':+[ζs] -∗
     ∃q'', q'':+[ξs ++ ζs] ∗ (q'':+[ξs ++ ζs] -∗ q:+[ξs] ∗ q':+[ζs]).
 Proof.
-  move: (Qp_lower_bound q q')=> [q''[?[?[->->]]]]. iDestruct 1 as "[??]".
+  case (Qp_lower_bound q q')=> [q''[?[?[->->]]]]. iDestruct 1 as "[??]".
   iDestruct 1 as "[??]". iExists q''. iFrame. iDestruct 1 as "[$$]".
 Qed.
 

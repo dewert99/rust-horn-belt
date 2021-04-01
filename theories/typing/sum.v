@@ -242,7 +242,7 @@ Section sum.
     { apply difference_mono_l.
       trans (shr_locsE (l +ₗ 1) (max_hlist_with (λ _, ty_size) tyl)).
       { apply shr_locsE_subseteq. lia. } { set_solver+. } }
-    move: (Qp_lower_bound q q')=> [q''[?[?[->->]]]].
+    case (Qp_lower_bound q q')=> [q''[?[?[->->]]]].
     iExists q'', (#i :: vl ++ vl').
     rewrite heap_mapsto_vec_cons heap_mapsto_vec_app shift_loc_assoc
       -Nat.add_1_l Nat2Z.inj_add.
