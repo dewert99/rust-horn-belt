@@ -295,7 +295,7 @@ Section sum.
     eqtypel E L tyl tyl' fl gl →
     eqtype E L (xsum_map fl) (xsum_map gl) (sum tyl) (sum tyl').
   Proof.
-    move=> /HForallZip_zip [? /HForallZip_flip ?]. by split; apply sum_subtype.
+    move=> /HForallZip_zip[? /HForallZip_flip ?]. by split; apply sum_subtype.
   Qed.
 
 End sum.

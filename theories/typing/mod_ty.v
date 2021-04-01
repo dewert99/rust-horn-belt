@@ -63,17 +63,19 @@ Section mod_ty.
 
 End mod_ty.
 
+Notation "<{ f }>" := (mod_ty f) (format "<{ f }>"): lrust_type_scope.
+
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance mod_ty_type_ne {A B} (f: A → B) : TypeNonExpansive (mod_ty f).
+  Global Instance mod_ty_type_ne {A B} (f: A → B) : TypeNonExpansive <{f}>%T.
   Proof. split; [|done|move=> */=; by do 3 f_equiv|move=> */=; by do 3 f_equiv].
     apply (type_lft_morphism_add _ static [] [])=> ?.
     - rewrite left_id. apply lft_equiv_refl.
     - by rewrite /elctx_interp /= left_id right_id.
   Qed.
 
-  Global Instance mod_ty_copy {A B} (f: A → B) ty : Copy ty → Copy (mod_ty f ty).
+  Global Instance mod_ty_copy {A B} (f: A → B) ty : Copy ty → Copy (<{f}> ty).
   Proof.
     move=> [? ShrAcc]. split; [by apply _|]. move=> */=. iIntros "LFT".
     iDestruct 1 as (vπ ->) "Shr". iIntros "Na Tok".
@@ -81,40 +83,40 @@ Section typing.
     iModIntro. iExists q, vl. iFrame "Mt Close". iNext. iExists vπ. by iSplit.
   Qed.
 
-  Global Instance mod_ty_send {A B} (f: A → B) ty : Send ty → Send (mod_ty f ty).
+  Global Instance mod_ty_send {A B} (f: A → B) ty : Send ty → Send (<{f}> ty).
   Proof. move=> ??*/=. by do 3 f_equiv. Qed.
 
-  Global Instance mod_ty_sync {A B} (f: A → B) ty : Sync ty → Sync (mod_ty f ty).
+  Global Instance mod_ty_sync {A B} (f: A → B) ty : Sync ty → Sync (<{f}> ty).
   Proof. move=> ??*/=. by do 3 f_equiv. Qed.
 
-  Lemma mod_ty_subtype_in {A B} E L (f: A → B) ty : subtype E L f ty (mod_ty f ty).
+  Lemma mod_ty_subtype_in {A B} E L (f: A → B) ty : subtype E L f ty (<{f}> ty).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>" (vπ) "*?"; iExists vπ; by iSplit.
   Qed.
 
-  Lemma mod_ty_subtype_out {A B} E L (f: A → B) g ty :
-    g ∘ f = id → subtype E L g (mod_ty f ty) ty.
+  Lemma mod_ty_subtype_out {A B} E L f g `{@SemiIso A B f g} ty :
+    subtype E L g (<{f}> ty) ty.
   Proof.
-    move=> Eq. iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
-    iSplit; iIntros "!>*/="; iDestruct 1 as (vπ'->) "?"; by rewrite compose_assoc Eq.
+    iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
+    iSplit; iIntros "!>*/="; iDestruct 1 as (?->) "?"; by rewrite compose_assoc semi_iso.
   Qed.
 
-  Lemma mod_ty_eqtype_inout {A B} E L (f: A → B) g ty :
-    g ∘ f = id → eqtype E L f g ty (mod_ty f ty).
-  Proof. move=> ?. by split; [apply mod_ty_subtype_in|apply mod_ty_subtype_out]. Qed.
+  Lemma mod_ty_eqtype_inout {A B} E L f g `{@SemiIso A B f g} ty :
+    eqtype E L f g ty (<{f}> ty).
+  Proof. by split; [apply mod_ty_subtype_in|apply mod_ty_subtype_out]. Qed.
 
-  Lemma mod_ty_subtype {A B A' B'} E L h (f: A → B) (f': A' → B') g ty ty' :
-    g ∘ f = id → subtype E L h ty ty' →
-    subtype E L (f' ∘ h ∘ g) (mod_ty f ty) (mod_ty f' ty').
+  Lemma mod_ty_subtype {A B A' B'} E L h f (f': A' → B') g `{@SemiIso A B f g} ty ty' :
+    subtype E L h ty ty' → subtype E L (f' ∘ h ∘ g) (<{f}> ty) (<{f'}> ty').
   Proof.
     move=> ??. eapply subtype_trans; [by apply mod_ty_subtype_out|].
     eapply subtype_trans; by [|apply mod_ty_subtype_in].
   Qed.
 
-  Lemma mod_ty_eqtype {A B A' B'} E L h h' (f: A → B) (f': A' → B') g g' ty ty' :
-    g ∘ f = id → g' ∘ f' = id → eqtype E L h h' ty ty' →
-    eqtype E L (f' ∘ h ∘ g) (f ∘ h' ∘ g') (mod_ty f ty) (mod_ty f' ty').
-  Proof. move=> ??[??]. split; by apply mod_ty_subtype. Qed.
+  Lemma mod_ty_eqtype {A B A' B'} E L h h' f f' g g'
+    `{@SemiIso A B f g} `{@SemiIso A' B' f' g'} ty ty' :
+    eqtype E L h h' ty ty' →
+    eqtype E L (f' ∘ h ∘ g) (f ∘ h' ∘ g') (<{f}> ty) (<{f'}> ty').
+  Proof. move=> [??]. split; by apply mod_ty_subtype. Qed.
 
 End typing.

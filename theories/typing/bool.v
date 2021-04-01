@@ -6,18 +6,18 @@ Set Default Proof Using "Type".
 Section bool.
   Context `{!typeG Σ}.
 
-  Program Definition bool: type bool := {|
-    pt_size := 1;  pt_own (b: bool) _ vl := ⌜vl = [ #b]⌝;
-  |}%I.
+  Program Definition r_bool: type bool :=
+    {| pt_size := 1;  pt_own (b: bool) _ vl := ⌜vl = [ #b]⌝; |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
-  Global Instance bool_send: Send bool. Proof. done. Qed.
 End bool.
 
-(*
 Section typing.
   Context `{!typeG Σ}.
 
+  Global Instance bool_send: Send r_bool. Proof. done. Qed.
+
+(*
   Lemma type_bool_instr (b : Datatypes.bool) : typed_val #b bool.
   Proof.
     iIntros (E L tid) "_ _ _ $ $ _". iMod persistent_time_receipt_0 as "#H0".
@@ -43,5 +43,6 @@ Section typing.
     - iApply ("He2" with "LFT TIME HE Htl HL HC HT").
     - iApply ("He1" with "LFT TIME HE Htl HL HC HT").
   Qed.
-End typing.
 *)
+
+End typing.

@@ -267,7 +267,7 @@ Lemma proph_tok_combine ξs ζs q q' :
   q:+[ξs] -∗ q':+[ζs] -∗
     ∃q'', q'':+[ξs ++ ζs] ∗ (q'':+[ξs ++ ζs] -∗ q:+[ξs] ∗ q':+[ζs]).
 Proof.
-  move: (Qp_lower_bound q q')=> [q''[?[?[-> ->]]]]. iDestruct 1 as "[??]".
+  move: (Qp_lower_bound q q')=> [q''[?[?[->->]]]]. iDestruct 1 as "[??]".
   iDestruct 1 as "[??]". iExists q''. iFrame. iDestruct 1 as "[$$]".
 Qed.
 
@@ -316,7 +316,7 @@ Proof.
   move: ValBoth=> /auth_both_valid_discrete [Inc _].
   move/(discrete_fun_included_spec_1 _ _ Ap) in Inc.
   rewrite /line discrete_fun_lookup_singleton /= in Inc.
-  move: Eqv. move: Inc=> /singleton_included_l [? [-> Inc]]. move=> Eqv.
+  move: Eqv. move: Inc=> /singleton_included_l [?[-> Inc]]. move=> Eqv.
   apply (inj Some) in Eqv. move: Inc. rewrite Eqv.
   by move=> /Some_csum_included [|[[?[?[_[?]]]]|[?[?[?]]]]].
 Qed.
@@ -408,7 +408,7 @@ Proof.
   rewrite Eqv. constructor.
   apply (lookup_valid_Some _ i it) in Val; [|done]. move: Val.
   move: Inc=> /csum_included [->|[[?[?[?]]]|[?[?[Eq[-> Inc]]]]]]; [done|done|].
-  move=> Val. move: Inc. move: Val=> /Cinr_valid/to_agree_uninj [? <-].
+  move=> Val. move: Inc. move: Val=> /Cinr_valid/to_agree_uninj [?<-].
   inversion Eq. by move/to_agree_included <-.
 Qed.
 

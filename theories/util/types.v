@@ -22,6 +22,8 @@ Infix "^++" := tapp (at level 60, right associativity).
 Fixpoint tnth B As (i: nat) := match As with
   ^[] => B | A ^:: As' => match i with 0 => A | S j => tnth B As' j end end.
 
+Notation tnthe := (tnth Empty_set).
+
 (** * Heterogeneous List *)
 
 Inductive hlist (F: Type → Type) : Types → Type :=
@@ -119,20 +121,19 @@ Inductive nil_unit := nil_tt: nil_unit.
 Record cons_prod A B := cons_pair { phead: A; ptail: B }.
 Arguments cons_pair {_ _} _ _. Arguments phead {_ _} _. Arguments ptail {_ _} _.
 
-Notation ":1" := nil_unit (at level 1) : type_scope.
+Notation ":1" := nil_unit : type_scope.
 Infix ":*" := cons_prod (at level 60, right associativity) : type_scope.
 Notation "-[ ]" := nil_tt (at level 1, format "-[ ]").
 Infix "-::" := cons_pair (at level 60, right associativity).
 Notation "-[ a ; .. ; z ]" := (a -:: .. (z -:: -[]) ..)
   (at level 1, format "-[ a ;  .. ;  z ]").
 
-Definition pair_to_cons_pair {A B} (xy: _ A B) := xy.1 -:: xy.2.
-Definition cons_pair_to_pair {A B} (xy: _ A B) := (xy.(phead), xy.(ptail)).
-Definition cons_pair_map {A B A' B'} (f: A → A') (g: B → B') xy :=
-  f xy.(phead) -:: g xy.(ptail).
+Definition pair_to_cons_pair {A B} '((x, y)) : _ A B := x -:: y.
+Definition cons_pair_to_pair {A B} '(x -:: y) : _ A B := (x, y).
+Global Instance pair_cons_pair_iso {A B} : Iso (@pair_to_cons_pair A B) cons_pair_to_pair.
+Proof. split; extensionality xy; by case xy. Qed.
 
-Lemma pair_via_cons_pair {A B} : @cons_pair_to_pair A B ∘ pair_to_cons_pair = id.
-Proof. extensionality xy. by case xy. Qed.
+Definition cons_pair_map {A B A' B'} (f: A → A') (g: B → B') '(x -:: y) := f x -:: g y.
 Lemma cons_pair_map_via_pair_map {A B A' B'} (f: A → A') (g: B → B') :
   cons_pair_map f g = pair_to_cons_pair ∘ pair_map f g ∘ cons_pair_to_pair.
 Proof. extensionality xy. by case xy. Qed.
@@ -156,7 +157,7 @@ Fixpoint plist2 (F: Type → Type → Type) As Bs : Type :=
 Fixpoint p2flip {F As Bs} : plist2 F As Bs → plist2 (flip F) Bs As :=
   match As, Bs with ^[], ^[] => id
   | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), x -:: p2flip xl'
-  | _, _ => λ xl, match xl with end end.
+  | _, _ => absurd end.
 
 Lemma p2flip_invol {F As Bs} (zl: _ F As Bs) : p2flip (p2flip zl) = zl.
 Proof.
@@ -168,12 +169,12 @@ Fixpoint p2zip {F G As Bs} :
   plist2 F As Bs → plist2 G As Bs → plist2 (λ A B, F A B * G A B)%type As Bs :=
   match As, Bs with ^[], ^[] => λ _ _, -[]
   | _ ^:: _, _ ^:: _ => λ '(x -:: xl') '(y -:: yl'), (x, y) -:: p2zip xl' yl'
-  | _, _ => λ xl _, match xl with end end.
+  | _, _ => absurd end.
 
 Fixpoint pp2map {F G As Bs} (f: ∀A B, F A B → G A B) : plist2 F As Bs → plist2 G As Bs :=
   match As, Bs with ^[], ^[] => id
   | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), f _ _ x -:: pp2map f xl'
-  | _, _ => λ xl, match xl with end end.
+  | _, _ => absurd end.
 Infix "-2<$>-" := pp2map (at level 61, left associativity).
 
 Lemma p2zip_fst {F G As Bs} (xl: _ F As Bs) (yl: _ G _ _) :
@@ -193,7 +194,7 @@ Fixpoint p2nth {F As Bs C D} (y: F C D) :
   plist2 F As Bs → ∀i, F (tnth C As i) (tnth D Bs i) :=
   match As, Bs with ^[], ^[] => λ _ _, y
   | _ ^:: _, _ ^:: _ => λ '(x -:: xl') i, match i with 0 => x | S j => p2nth y xl' j end
-  | _, _ => λ xl _, match xl with end end.
+  | _, _ => absurd end.
 
 Fixpoint p2ids {As} : plist2 (→) As As :=
   match As with ^[] => -[] | _ ^:: _ => id -:: p2ids end.
@@ -203,8 +204,8 @@ Proof. move: i. elim As; [done|]=> ???. by case. Qed.
 
 Fixpoint xprod_map {As Bs} : plist2 (→) As Bs → xprod As → xprod Bs :=
   match As, Bs with ^[], ^[] => λ _, id
-  | _ ^:: _, _ ^:: _ => λ '(f -:: fl'), cons_pair_map f (xprod_map fl')
-  | _, _ => λ fl _, match fl with end end.
+  | _ ^:: _, _ ^:: _ => λ '(f -:: fl') '(x -:: xl'), f x -:: xprod_map fl' xl'
+  | _, _ => absurd end.
 
 Lemma xprod_map_id {As} : xprod_map (@p2ids As) = id.
 Proof. elim As; [done|]=>/= ??->. extensionality xy. by case xy. Qed.
@@ -245,7 +246,7 @@ Qed.
 
 (** * Sum *)
 
-Inductive xsum As : Type := xinj (i: nat) : tnth Empty_set As i → xsum As.
+Inductive xsum As : Type := xinj (i: nat) : tnthe As i → xsum As.
 Arguments xinj {_} _ _.
 
 Global Instance xinj_inj {As} i : Inj (=) (=) (@xinj As i).

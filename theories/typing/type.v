@@ -62,11 +62,9 @@ Record type `{!typeG Σ} A := {
       q':+[ξs] ∗ (q':+[ξs] ={E}=∗ ty_shr (vπ,d) κ tid l ∗ q.[κ']);
 }.
 Existing Instance ty_shr_persistent.
-
 Instance: Params (@ty_size) 3 := {}.  Instance: Params (@ty_lfts) 3 := {}.
 Instance: Params (@ty_E) 3 := {}.
 Instance: Params (@ty_own) 3 := {}.  Instance: Params (@ty_shr) 3 := {}.
-
 Arguments ty_size {_ _ _} _ / : simpl nomatch.
 Arguments ty_lfts {_ _ _} _ / : simpl nomatch.
 Arguments ty_E {_ _ _} _ / : simpl nomatch.
@@ -74,6 +72,7 @@ Arguments ty_own {_ _ _} _ _ _ _ / : simpl nomatch.
 Arguments ty_shr {_ _ _} _ _ _ _ _ / : simpl nomatch.
 
 Notation ty_lft ty := (lft_intersect_list ty.(ty_lfts)).
+
 Notation typel := (hlist type).
 
 Lemma ty_own_mt_depth_mono `{!typeG Σ} {A} (ty: _ A) d d' vπ tid l :
@@ -825,13 +824,13 @@ Section subtyping.
     iSplit; iIntros "!>*"; rewrite Eqv; iIntros "$".
   Qed.
 
-  Lemma eqtype_unfold {A B} E L (f: A → B) g ty ty' : g ∘ f = id → f ∘ g = id →
+  Lemma eqtype_unfold {A B} E L f g `{@Iso A B f g} ty ty' :
     eqtype E L f g ty ty' ↔
     ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
       ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ (ty.(ty_lft) ≡ₗ ty'.(ty_lft)) ∗
       (□ ∀vπ d tid vl, ty.(ty_own) (vπ,d) tid vl ↔ ty'.(ty_own) (f∘vπ,d) tid vl) ∗
       (□ ∀vπ d κ tid l, ty.(ty_shr) (vπ,d) κ tid l ↔ ty'.(ty_shr) (f∘vπ,d) κ tid l)).
-  Proof. move=> Eq_gf Eq_fg. split.
+  Proof. split.
     - iIntros ([Sub Sub'] ?) "L". iDestruct (Sub with "L") as "#Sub".
       iDestruct (Sub' with "L") as "#Sub'". iIntros "!> #E".
       iDestruct ("Sub" with "E") as "[$[$[InOwn InShr]]]".
@@ -839,13 +838,13 @@ Section subtyping.
       iSplit; iIntros "!>*"; iSplit; iIntros "Res";
       [by iApply "InOwn"| |by iApply "InShr"|];
       [iDestruct ("InOwn'" with "Res") as "?"|iDestruct ("InShr'" with "Res") as "?"];
-      by rewrite compose_assoc Eq_gf.
+      by rewrite compose_assoc semi_iso.
     - move=> Eqt. split; iIntros (?) "L";
       iDestruct (Eqt with "L") as "#Eqt"; iIntros "!> #E";
       iDestruct ("Eqt" with "E") as (?) "[[??][EqOwn EqShr]]";
       do 2 (iSplit; [done|]); iSplit; iIntros "!>* X";
       [by iApply "EqOwn"|by iApply "EqShr"| |]; [iApply "EqOwn"|iApply "EqShr"];
-      by rewrite compose_assoc Eq_fg.
+      by rewrite compose_assoc semi_iso.
   Qed.
 
   Lemma eqtype_id_unfold {A} E L (ty ty': _ A) :
@@ -855,7 +854,7 @@ Section subtyping.
       (□ ∀vπd tid vl, ty.(ty_own) vπd tid vl ↔ ty'.(ty_own) vπd tid vl) ∗
       (□ ∀vπd κ tid l, ty.(ty_shr) vπd κ tid l ↔ ty'.(ty_shr) vπd κ tid l)).
   Proof.
-    rewrite eqtype_unfold; [|done|done]. apply forall_proper=> *.
+    rewrite eqtype_unfold. apply forall_proper=> *.
     do 7 f_equiv; (iSplit; [by iIntros "?" ([??])|by iIntros "?" (??)]).
   Qed.
 
