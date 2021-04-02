@@ -431,8 +431,27 @@ Qed.
 
 End type_lft_morphism.
 
+Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
+  type_non_expansive_type_lft_morphism:> TypeLftMorphism T;
+  type_non_expansive_ty_size ty ty' :
+    ty.(ty_size) = ty'.(ty_size) → (T ty).(ty_size) = (T ty').(ty_size);
+  type_non_expansive_ty_own n ty ty' :
+    ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
+    elctx_interp (ty.(ty_E)) ≡ elctx_interp (ty'.(ty_E)) →
+    (∀vπd tid vl, ty.(ty_own) vπd tid vl ≡{n}≡ ty'.(ty_own) vπd tid vl) →
+    (∀vπd κ tid l, ty.(ty_shr) vπd κ tid l ≡{S n}≡ ty'.(ty_shr) vπd κ tid l) →
+    (∀vπd tid vl, (T ty).(ty_own) vπd tid vl ≡{n}≡ (T ty').(ty_own) vπd tid vl);
+  type_non_expansive_ty_shr n ty ty' :
+    ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
+    elctx_interp (ty.(ty_E)) ≡ elctx_interp (ty'.(ty_E)) →
+    (∀vπd tid vl,
+      dist_later n (ty.(ty_own) vπd tid vl) (ty'.(ty_own) vπd tid vl)) →
+    (∀vπd κ tid l, ty.(ty_shr) vπd κ tid l ≡{n}≡ ty'.(ty_shr) vπd κ tid l) →
+    (∀vπd κ tid l, (T ty).(ty_shr) vπd κ tid l ≡{n}≡ (T ty').(ty_shr) vπd κ tid l);
+}.
+
 Class TypeContractive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
-  type_contractive_type_lft_morphism : TypeLftMorphism T;
+  type_contractive_type_lft_morphism:> TypeLftMorphism T;
   type_contractive_ty_size ty ty' : (T ty).(ty_size) = (T ty').(ty_size);
   type_contractive_ty_own n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
@@ -449,27 +468,11 @@ Class TypeContractive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
     (∀vπd κ tid l, (T ty).(ty_shr) vπd κ tid l ≡{n}≡ (T ty').(ty_shr) vπd κ tid l);
 }.
 
-Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
-  type_non_expansive_type_lft_morphism :> TypeLftMorphism T;
-  type_non_expansive_ty_size ty ty' :
-    ty.(ty_size) = ty'.(ty_size) → (T ty).(ty_size) = (T ty').(ty_size);
-  type_non_expansive_ty_own n ty ty' :
-    ty.(ty_size) = ty'.(ty_size) →
-    (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
-    elctx_interp (ty.(ty_E)) ≡ elctx_interp (ty'.(ty_E)) →
-    (∀vπd tid vl, ty.(ty_own) vπd tid vl ≡{n}≡ ty'.(ty_own) vπd tid vl) →
-    (∀vπd κ tid l, ty.(ty_shr) vπd κ tid l ≡{S n}≡ ty'.(ty_shr) vπd κ tid l) →
-    (∀vπd tid vl, (T ty).(ty_own) vπd tid vl ≡{n}≡ (T ty').(ty_own) vπd tid vl);
+Class ListTypeNonExpansive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
+  type_list_non_expansive: ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeNonExpansive) Tl.
 
-  type_non_expansive_ty_shr n ty ty' :
-    ty.(ty_size) = ty'.(ty_size) →
-    (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
-    elctx_interp (ty.(ty_E)) ≡ elctx_interp (ty'.(ty_E)) →
-    (∀vπd tid vl,
-      dist_later n (ty.(ty_own) vπd tid vl) (ty'.(ty_own) vπd tid vl)) →
-    (∀vπd κ tid l, ty.(ty_shr) vπd κ tid l ≡{n}≡ ty'.(ty_shr) vπd κ tid l) →
-    (∀vπd κ tid l, (T ty).(ty_shr) vπd κ tid l ≡{n}≡ (T ty').(ty_shr) vπd κ tid l);
-}.
+Class ListTypeContractive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
+  type_list_contractive: ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeContractive) Tl.
 
 Section type_contractive.
   Context `{!typeG Σ}.
@@ -483,7 +486,7 @@ Section type_contractive.
       move=> *. destruct n as [|[|]]=>//. simpl in *. by apply dist_S.
   Qed.
 
-  Lemma type_ne_ne_compose {A B C} (T: _ B → _ C) (T': _ A → _ B) :
+  Global Instance type_ne_ne_compose {A B C} (T: _ B → _ C) (T': _ A → _ B) :
     TypeNonExpansive T → TypeNonExpansive T' → TypeNonExpansive (T ∘ T').
   Proof.
     move=> HT HT'. split; [by apply _|move=> *; by apply HT, HT'| |];
@@ -493,7 +496,7 @@ Section type_contractive.
     move=> *. destruct n=>//. by apply HT'.
   Qed.
 
-  Lemma type_contractive_compose_right {A B C} (T: _ B → _ C) (T': _ A → _ B) :
+  Global Instance type_contractive_compose_right {A B C} (T: _ B → _ C) (T': _ A → _ B) :
     TypeContractive T → TypeNonExpansive T' → TypeContractive (T ∘ T').
   Proof.
     move=> HT HT'. split; [by apply _|move=> *; by apply HT| |];
@@ -503,7 +506,7 @@ Section type_contractive.
     move=> *; destruct n as [|[|]]=>//; by apply HT'.
   Qed.
 
-  Lemma type_contractive_compose_left {A B C} (T: _ B → _ C) (T': _ A → _) :
+  Global Instance type_contractive_compose_left {A B C} (T: _ B → _ C) (T': _ A → _) :
     TypeNonExpansive T → TypeContractive T' → TypeContractive (T ∘ T').
   Proof.
     move=> HT HT'. split; [by apply _|move=> *; by apply HT, HT'| |];
@@ -522,6 +525,19 @@ Section type_contractive.
     - rewrite left_id. apply lft_equiv_refl.
     - by rewrite /elctx_interp /= left_id right_id.
   Qed.
+
+  Global Instance type_list_non_expansive_nil {A} : ListTypeNonExpansive (λ _: _ A, +[]).
+  Proof. exists +[]. split; by [|constructor]. Qed.
+  Global Instance type_list_contractive_nil {A} : ListTypeContractive (λ _: _ A, +[]).
+  Proof. exists +[]. split; by [|constructor]. Qed.
+  Global Instance type_list_non_expansive_cons {A B Bs} (T: _ A → _ B) (T': _ → _ Bs) :
+    TypeNonExpansive T → ListTypeNonExpansive T' →
+    ListTypeNonExpansive (λ ty, T ty +:: T' ty).
+  Proof. move=> ? [Tl[->?]]. exists (T +:: Tl). split; by [|constructor]. Qed.
+  Global Instance type_list_contractive_cons {A B Bs} (T: _ A → _ B) (T': _ → _ Bs) :
+    TypeContractive T → ListTypeContractive T' →
+    ListTypeContractive (λ ty, T ty +:: T' ty).
+  Proof. move=> ? [Tl[->?]]. exists (T +:: Tl). split; by [|constructor]. Qed.
 
 End type_contractive.
 
@@ -569,7 +585,7 @@ Class Sync `{!typeG Σ} {A} (ty: type A) :=
     ty.(ty_shr) vπd κ tid l -∗ ty.(ty_shr) vπd κ tid' l.
 Instance: Params (@Sync) 3 := {}.
 
-Class ListSync `{!typeG Σ} {As} (tyl: typel As) := list_sync : HForall (λ _, Sync) tyl.
+Class ListSync `{!typeG Σ} {As} (tyl: typel As) := list_sync: HForall (λ _, Sync) tyl.
 Instance: Params (@ListSync) 3 := {}.
 Global Instance list_sync_nil `{!typeG Σ} : ListSync +[].
 Proof. constructor. Qed.
@@ -590,13 +606,12 @@ Section type.
     - rewrite -Nat.add_1_l Nat2Z.inj_add IH shift_loc_assoc. set_solver+.
   Qed.
 
-  Lemma shr_locsE_disj l n m :
-    shr_locsE l n ## shr_locsE (l +ₗ n) m.
+  Lemma shr_locsE_disj l n m : shr_locsE l n ## shr_locsE (l +ₗ n) m.
   Proof.
     move: l. elim: n; [set_solver+|]=> n IHn l /=.
     rewrite -Nat.add_1_l Nat2Z.inj_add. apply disjoint_union_l.
     split; [|rewrite -shift_loc_assoc; by exact: IHn].
-    clear IHn. move: n. elim: m; [set_solver+|]=> ? IHm n.
+    clear IHn. move: n. elim m; [set_solver+|]=> ? IHm n.
     rewrite/= shift_loc_assoc. apply disjoint_union_r. split.
     - apply ndot_ne_disjoint. case l=> * [=]. lia.
     - rewrite -Z.add_assoc. move: (IHm (n + 1)). by rewrite Nat2Z.inj_add.
@@ -604,7 +619,7 @@ Section type.
 
   Lemma shr_locsE_shrN l n : shr_locsE l n ⊆ ↑shrN.
   Proof.
-    move: l. elim: n; [set_solver+|]=>/= *. apply union_least; [solve_ndisj|done].
+    move: l. elim n; [set_solver+|]=>/= *. apply union_least; [solve_ndisj|done].
   Qed.
 
   Lemma shr_locsE_subseteq l n m : n ≤ m → shr_locsE l n ⊆ shr_locsE l m.

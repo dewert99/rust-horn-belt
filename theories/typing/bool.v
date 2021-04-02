@@ -3,11 +3,13 @@ From lrust.typing Require Export type.
 (* From lrust.typing Require Import programs. *)
 Set Default Proof Using "Type".
 
+Implicit Type b: bool.
+
 Section bool.
   Context `{!typeG Σ}.
 
-  Program Definition r_bool: type bool :=
-    {| pt_size := 1;  pt_own (b: bool) _ vl := ⌜vl = [ #b]⌝; |}%I.
+  Program Definition bool_ty: type bool :=
+    {| pt_size := 1;  pt_own b _ vl := ⌜vl = [ #b]⌝; |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
 End bool.
@@ -15,7 +17,7 @@ End bool.
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance bool_send: Send r_bool. Proof. done. Qed.
+  Global Instance bool_send: Send bool_ty. Proof. done. Qed.
 
 (*
   Lemma type_bool_instr (b : Datatypes.bool) : typed_val #b bool.

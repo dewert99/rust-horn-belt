@@ -10,7 +10,7 @@ Set Default Proof Using "Type".
 Section product.
   Context `{!typeG Σ}.
 
-  Definition r_unit: type () := uninit 0.
+  Definition unit_ty: type () := uninit 0.
 
   Lemma split_prod_mt {A B} (vπd: _ A) (vπd': _ B) tid ty ty' q l :
     (l ↦∗{q}: λ vl, ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
@@ -29,7 +29,7 @@ Section product.
       iFrame "Mt Mt'". iExists wl, wl'. by iFrame.
   Qed.
 
-  Program Definition r_prod {A B} (ty: type A) (ty': type B) : type (A * B) := {|
+  Program Definition prod_ty {A B} (ty: type A) (ty': type B) : type (A * B) := {|
     ty_size := ty.(ty_size) + ty'.(ty_size);
     ty_lfts := ty.(ty_lfts) ++ ty'.(ty_lfts);  ty_E := ty.(ty_E) ++ ty'.(ty_E);
     ty_own vπd tid vl := ∃ wl wl', ⌜vl = wl ++ wl'⌝ ∗
@@ -98,30 +98,30 @@ Section product.
     iMod ("Close" with "PTok") as "[$$]". by iMod ("Close'" with "PTok'") as "[$$]".
   Qed.
 
-  Global Instance prod_ne {A B} : NonExpansive2 (@r_prod A B).
+  Global Instance prod_ne {A B} : NonExpansive2 (@prod_ty A B).
   Proof. solve_ne_type. Qed.
 
-  Definition r_nil_unit: type :1 := <{const -[] }> r_unit.
+  Definition nil_unit_ty: type :1 := <{const -[] }> unit_ty.
 
-  Definition r_cons_prod {A B} (ty: type A) (ty': type B)
-    : type (A :* B) := <{prod_to_cons_prod}> (r_prod ty ty').
+  Definition cons_prod_ty {A B} (ty: type A) (ty': type B)
+    : type (A :* B) := <{prod_to_cons_prod}> (prod_ty ty ty').
 
-  Global Instance cons_prod_ne {A B} : NonExpansive2 (@r_cons_prod A B).
-  Proof. move=> ???????. rewrite /r_cons_prod. by do 2 f_equiv. Qed.
+  Global Instance cons_prod_ty_ne {A B} : NonExpansive2 (@cons_prod_ty A B).
+  Proof. move=> ???????. rewrite /cons_prod_ty. by do 2 f_equiv. Qed.
 
-  Fixpoint r_xprod {As} (tyl: typel As) : type (xprod As) :=
-    match tyl with +[] => r_nil_unit | ty +:: tyl' => r_cons_prod ty (r_xprod tyl') end.
+  Fixpoint xprod_ty {As} (tyl: typel As) : type (xprod As) :=
+    match tyl with +[] => nil_unit_ty | ty +:: tyl' => cons_prod_ty ty (xprod_ty tyl') end.
 
-  Global Instance product_ne {As} : NonExpansive (@r_xprod As).
+  Global Instance product_ne {As} : NonExpansive (@xprod_ty As).
   Proof. move=> ???. elim; [done|]=> */=. by f_equiv. Qed.
 
 End product.
 
-Notation "()" := (r_unit) : lrust_type_scope.
-Notation "ty * ty'" := (r_prod ty%T ty'%T) : lrust_type_scope.
-Notation ":1" := r_nil_unit : lrust_type_scope.
-Notation "ty :* ty'" := (r_cons_prod ty%T ty'%T) : lrust_type_scope.
-Notation Π := (r_xprod).
+Notation "()" := (unit_ty) : lrust_type_scope.
+Notation "ty * ty'" := (prod_ty ty%T ty'%T) : lrust_type_scope.
+Notation ":1" := nil_unit_ty : lrust_type_scope.
+Notation "ty :* ty'" := (cons_prod_ty ty%T ty'%T) : lrust_type_scope.
+Notation Π := (xprod_ty).
 
 Section typing.
   Context `{!typeG Σ}.
@@ -184,16 +184,16 @@ Section typing.
     { done. } move=> ??. apply type_contractive_compose_left; apply _.
   Qed.
 
-  Global Instance product_type_ne {A Bs} (Tl: _ (λ _, type A → _) Bs) :
-    HForall (λ _, TypeNonExpansive) Tl → TypeNonExpansive (Π ∘ (Tl +$.))%T.
+  Global Instance xprod_type_ne {A Bs} (T: _ A → _ Bs) :
+    ListTypeNonExpansive T → TypeNonExpansive (Π ∘ T)%T.
   Proof.
-    move=> All. dependent induction All.
+    move=> [Tl[->All]]. clear T. dependent induction All.
     { rewrite /happly /hmap /compose. apply _. } by apply cons_prod_type_ne.
   Qed.
-  Global Instance product_type_cont {A Bs} (Tl: _ (λ _, type A → _) Bs) :
-    HForall (λ _, TypeContractive) Tl → TypeContractive (Π ∘ (Tl +$.))%T.
+  Global Instance xprod_type_contractive {A Bs} (T: _ A → _ Bs) :
+    ListTypeContractive T → TypeContractive (Π ∘ T)%T.
   Proof.
-    move=> All. dependent induction All.
+    move=> [Tl[->All]]. clear T. dependent induction All.
     { rewrite /happly /hmap /compose. apply _. } by apply cons_prod_type_contractive.
   Qed.
 
@@ -278,7 +278,7 @@ Section typing.
     move=> /HForallZip_zip[? /HForallZip_flip ?]. by split; apply xprod_subtype.
   Qed.
 
-  Lemma r_prod_assoc {A B C} E L (ty1: _ A) (ty2: _ B) (ty3: _ C) :
+  Lemma prod_ty_assoc {A B C} E L (ty1: _ A) (ty2: _ B) (ty3: _ C) :
     eqtype E L prod_assoc prod_assoc' (ty1 * (ty2 * ty3)) ((ty1 * ty2) * ty3).
   Proof.
     have Eq: ∀vπ: proph_asn → (A * (B * C)),
@@ -298,7 +298,7 @@ Section typing.
     - rewrite -assoc shift_loc_assoc_nat. by iApply (bi.iff_refl True%I).
   Qed.
 
-  Lemma r_prod_left_id {A} E L (ty: _ A) :
+  Lemma prod_ty_left_id {A} E L (ty: _ A) :
     eqtype E L prod_left_id prod_left_id' (() * ty) (ty).
   Proof.
     apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=". iSplit; [done|].
@@ -311,7 +311,7 @@ Section typing.
     - rewrite left_id shift_loc_0. by iApply (bi.iff_refl True%I).
   Qed.
 
-  Lemma r_prod_right_id {A} E L (ty: _ A) :
+  Lemma prod_ty_right_id {A} E L (ty: _ A) :
     eqtype E L prod_right_id prod_right_id' (ty * ()) (ty).
   Proof.
     apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=".
@@ -332,7 +332,7 @@ Section typing.
     - have [->->]: @psep id ^[] Bs = prod_map (const -[]) id ∘ prod_left_id' ∧
         curry (@papp id ^[] Bs) = prod_left_id ∘ prod_map (const ()) id.
       { split; extensionality x; by [case x=> [[]?]|]. }
-      eapply eqtype_trans; [apply eqtype_symm; apply r_prod_left_id|].
+      eapply eqtype_trans; [apply eqtype_symm; apply prod_ty_left_id|].
       apply prod_eqtype; [|done].
       apply mod_ty_inout, functional_extensionality. by move=> [].
     - have [->->]: @psep id (A ^:: As') Bs = prod_map prod_to_cons_prod id ∘
@@ -343,7 +343,7 @@ Section typing.
         by case (psep xl). }
       eapply eqtype_trans. { apply mod_ty_outin, _. } eapply eqtype_trans.
       { apply prod_eqtype; [done|apply Eq]. } eapply eqtype_trans.
-      { apply r_prod_assoc. } apply prod_eqtype; [apply mod_ty_inout, _|done].
+      { apply prod_ty_assoc. } apply prod_eqtype; [apply mod_ty_inout, _|done].
   Qed.
 
   Lemma uninit_plus_prod E L m n :
@@ -375,6 +375,6 @@ Section typing.
 
 End typing.
 
-Arguments r_xprod : simpl never.
+Arguments xprod_ty : simpl never.
 Global Hint Resolve prod_subtype prod_eqtype xprod_outlives_E_elctx_sat
   : lrust_typing.

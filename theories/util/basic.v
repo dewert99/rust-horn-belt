@@ -16,6 +16,11 @@ Proof.
   split; [done|]. split; [|done]=>/=. by f_equal.
 Qed.
 
+(** * Utility for Empty_set *)
+
+Global Instance Empty_set_empty: Empty Type := Empty_set.
+Definition absurd {A} (x: ∅) : A := match x with end.
+
 (** * Utility for Point-Free Style *)
 
 Class SemiIso {A B} (f: A → B) (g: B → A) := semi_iso: g ∘ f = id.
@@ -51,5 +56,3 @@ Definition prod_right_id {A} '((x, ())) : A := x.
 Definition prod_right_id' {A} (x: A) := (x, ()).
 Global Instance prod_right_id_iso {A} : Iso (@prod_right_id A) prod_right_id'.
 Proof. split; extensionality x; by [case x=> [?[]]|]. Qed.
-
-Definition absurd {A} (x: Empty_set) : A := match x with end.

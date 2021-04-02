@@ -3,11 +3,13 @@ From lrust.typing Require Export type.
 (* From lrust.typing Require Import bool programs. *)
 Set Default Proof Using "Type".
 
+Implicit Type z: Z.
+
 Section int.
   Context `{!typeG Σ}.
 
   Program Definition int: type Z := {|
-    pt_size := 1;  pt_own (n: Z) _ vl := ⌜vl = [ #n]⌝;
+    pt_size := 1;  pt_own z _ vl := ⌜vl = [ #z]⌝;
   |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
