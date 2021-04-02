@@ -21,12 +21,14 @@ Section sum.
 
   Implicit Type (i: nat) (vl: list val).
 
+  Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
+
   Definition is_pad {As} i (tyl: typel As) vl : iProp Σ :=
-    ⌜((hnthe tyl i).(ty_size) + length vl)%nat = max_hlist_with (λ _, ty_size) tyl⌝.
+    ⌜((hnthe tyl i).(ty_size) + length vl)%nat = max_ty_size tyl⌝.
 
   Lemma split_sum_mt {As} (tyl: typel As) vπ d l tid q :
     (l ↦∗{q}: λ vl, ∃i vπ' vl' vl'', ⌜vπ = xinj i ∘ vπ'⌝ ∗
-      ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_hlist_with (λ _, ty_size) tyl)⌝ ∗
+      ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_ty_size tyl)⌝ ∗
       (hnthe tyl i).(ty_own) (vπ',d) tid vl')%I ⊣⊢
     ∃i vπ', ⌜vπ = xinj i ∘ vπ'⌝ ∗
       (l ↦{q} #i ∗ (l +ₗ S (hnthe tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
@@ -59,10 +61,10 @@ Section sum.
   Qed.
 
   Program Definition sum {As} (tyl: typel As) := {|
-    ty_size := S (max_hlist_with (λ _, ty_size) tyl);
+    ty_size := S (max_ty_size tyl);
     ty_lfts := tyl_lfts tyl;  ty_E := tyl_E tyl;
     ty_own vπd tid vl := ∃i vπ' vl' vl'', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
-      ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_hlist_with (λ _, ty_size) tyl)⌝ ∗
+      ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_ty_size tyl)⌝ ∗
       (hnthe tyl i).(ty_own) (vπ',vπd.2) tid vl';
     ty_shr vπd κ tid l := ∃i vπ', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
       &frac{κ} (λ q, l ↦{q} #i ∗
@@ -116,15 +118,14 @@ Section sum.
 
   Global Instance sum_ne {As} : NonExpansive (@sum As).
   Proof.
-    move=> n tyl tyl' Eqv.
-    have EqSize: max_hlist_with (λ _, ty_size) tyl = max_hlist_with (λ _, ty_size) tyl'.
+    move=> n tyl tyl' Eqv. have EqMsz: max_ty_size tyl = max_ty_size tyl'.
     { elim: Eqv=> /=[|>Eqv ? ->]; [done|]. f_equiv. apply Eqv. }
     split=>/=.
-    - by rewrite EqSize.
+    - by rewrite EqMsz.
     - elim: Eqv=> /=[|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
     - elim: Eqv=> /=[|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
-    - move=> *. rewrite EqSize. do 12 f_equiv. by apply @hnth_ne.
-    - move=> *. rewrite /is_pad EqSize.
+    - move=> *. rewrite EqMsz. do 12 f_equiv. by apply @hnth_ne.
+    - move=> *. rewrite /is_pad EqMsz.
       repeat ((by apply @hnth_ne) || eapply ty_size_ne || f_equiv).
   Qed.
 
@@ -165,12 +166,12 @@ Section sum.
       + by rewrite !elctx_interp_app HE HE'.
   Qed.
 
-  Global Instance sum_type_ne {B As} (T: _ B → _ As) :
-    TypeListNonExpansive T → TypeNonExpansive (sum ∘ T).
+  Global Instance sum_type_ne {A Bs} (Tl: _ (λ _, type A → _) Bs) :
+    HForall (λ _, TypeNonExpansive) Tl → TypeNonExpansive (sum ∘ (Tl +$.)).
   Proof.
-    move=> [Tl[->All]]. set msz := λ ty, max_hlist_with (λ _, ty_size) (Tl +$ ty).
-    have EqMsz: ∀ty ty', ty_size ty = ty_size ty' → msz ty = msz ty'.
-    { rewrite /msz=> *. elim: All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
+    move=> All. have EqMsz: ∀ty ty',
+      ty_size ty = ty_size ty' → max_ty_size (Tl +$ ty) = max_ty_size (Tl +$ ty').
+    { move=> *. elim: All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
     split=>/=.
     - apply sum_lft_morphism. eapply HForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
@@ -181,12 +182,11 @@ Section sum.
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
   (* TODO : get rid of this duplication *)
-  Global Instance sum_type_contractive {B As} (T: _ B → _ As) :
-    TypeListContractive T → TypeContractive (sum ∘ T).
+  Global Instance sum_type_contractive {A Bs} (Tl: _ (λ _, type A → _) Bs) :
+    HForall (λ _, TypeContractive) Tl → TypeContractive (sum ∘ (Tl +$.)).
   Proof.
-    move=> [Tl[->All]]. set msz := λ ty, max_hlist_with (λ _, ty_size) (Tl +$ ty).
-    have EqMsz: ∀ty ty', msz ty = msz ty'.
-    { rewrite /msz=> *. elim: All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
+    move=> All. have EqMsz: ∀ty ty', max_ty_size (Tl +$ ty) = max_ty_size (Tl +$ ty').
+    { move=> *. elim: All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
     split=>/=.
     - apply sum_lft_morphism. eapply HForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
@@ -210,7 +210,7 @@ Section sum.
     { rewrite <-SubF, <-union_subseteq_r. apply shr_locsE_subseteq. lia. }
     iDestruct (na_own_acc with "Na") as "[$ Close'']".
     { apply difference_mono_l.
-      trans (shr_locsE (l +ₗ 1) (max_hlist_with (λ _, ty_size) tyl)).
+      trans (shr_locsE (l +ₗ 1) (max_ty_size tyl)).
       { apply shr_locsE_subseteq. lia. } { set_solver+. } }
     case (Qp_lower_bound q q')=> [q''[?[?[->->]]]].
     iExists q'', (#i :: vl ++ vl').
@@ -235,8 +235,8 @@ Section sum.
     subtypel E L tyl tyl' fl → subtype E L (xsum_map fl) (sum tyl) (sum tyl').
   Proof.
     move=> Subs. iIntros (?) "L".
-    iAssert (□ (lft_contexts.elctx_interp E -∗ ⌜max_hlist_with (λ _, ty_size) tyl =
-      max_hlist_with (λ _, ty_size) tyl'⌝))%I as "#Size".
+    iAssert (□ (lft_contexts.elctx_interp E -∗ ⌜max_ty_size tyl =
+      max_ty_size tyl'⌝))%I as "#Size".
     { iInduction Subs as [|?????????? Sub Subs] "IH"; [by iIntros "!>_"|].
       iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
       iIntros "!> E /=". iDestruct ("Sub" with "E") as (->) "#_".

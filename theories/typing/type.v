@@ -151,8 +151,8 @@ Arguments st_own {_ _ _} _ _ _ _ / : simpl nomatch.
 Program Definition ty_of_st `{!typeG Σ} {A} (st: simple_type A) : type A := {|
   ty_size := st.(st_size);  ty_lfts := st.(st_lfts);  ty_E := st.(st_E);
   ty_own := st.(st_own);
-  ty_shr vπd κ tid l := (∃vl, &frac{κ} (λ q, l ↦∗{q} vl) ∗ ▷ st.(st_own) vπd tid vl)%I;
-|}.
+  ty_shr vπd κ tid l := ∃vl, &frac{κ} (λ q, l ↦∗{q} vl) ∗ ▷ st.(st_own) vπd tid vl;
+|}%I.
 Next Obligation. move=> >. apply st_size_eq. Qed.
 Next Obligation. move=> >. by apply st_own_depth_mono. Qed.
 Next Obligation.
@@ -196,15 +196,14 @@ Arguments pt_own {_ _ _} _ _ _ _ / : simpl nomatch.
 
 Program Definition st_of_pt `{!typeG Σ} {A} (pt: plain_type A) : simple_type A := {|
   st_size := pt.(pt_size);  st_lfts := [];  st_E := [];
-  st_own vπd tid vl := (∃v, ⌜vπd.1 = const v⌝ ∗ pt.(pt_own) v tid vl)%I;
-|}.
+  st_own vπd tid vl := ∃v, ⌜vπd.1 = const v⌝ ∗ pt.(pt_own) v tid vl;
+|}%I.
 Next Obligation. move=> >. iDestruct 1 as (? _) "?". by iApply pt_size_eq. Qed.
 Next Obligation. done. Qed.
 Next Obligation.
   move=> * /=. iIntros "_ _". iDestruct 1 as (?->) "?". iIntros "Ptok !>".
   iApply step_fupdN_intro; [done|]. iIntros "!>!>". iExists [], 1%Qp.
-  do 2 (iSplit; [done|]). iIntros "_ !>".
-  iFrame "Ptok". iExists v. by iSplit.
+  do 2 (iSplit; [done|]). iIntros "_ !>". iFrame "Ptok". iExists v. by iSplit.
 Qed.
 
 Coercion st_of_pt: plain_type >-> simple_type.
@@ -384,8 +383,7 @@ Context `{!typeG Σ}.
 Global Instance type_lft_morphism_compose {A B C} (T: _ B → _ C) (U: _ A → _ B) :
   TypeLftMorphism T → TypeLftMorphism U → TypeLftMorphism (T ∘ U).
 Proof.
-  destruct 1 as [αT βst ET HTα HTE|αT ET HTα HTE],
-           1 as [αU βsU EU HUα HUE|αU EU HUα HUE].
+  case=> [αT βst ET HTα HTE|αT ET HTα HTE]; case=> [αU βsU EU HUα HUE|αU EU HUα HUE].
   - apply (type_lft_morphism_add _ (αT ⊓ αU) (βst ++ βsU)
                                  (ET ++ EU ++ ((λ β, β ⊑ₑ αU) <$> βst)))=>ty.
     + iApply lft_equiv_trans. iApply HTα. rewrite -assoc.
@@ -414,7 +412,7 @@ Lemma type_lft_morphism_lft_equiv_proper {A B} (T: _ A → _ B)
   {HT: TypeLftMorphism T} ty ty' :
   ty.(ty_lft) ≡ₗ ty'.(ty_lft) -∗ (T ty).(ty_lft) ≡ₗ (T ty').(ty_lft).
 Proof.
-  iIntros "#?". destruct HT as [α βs E Hα HE|α E Hα HE].
+  iIntros "#?". case HT=> [α βs E Hα HE|α E Hα HE].
   - iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
     iApply lft_equiv_trans; [iApply Hα|].
     iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|done].
@@ -473,14 +471,6 @@ Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
     (∀vπd κ tid l, (T ty).(ty_shr) vπd κ tid l ≡{n}≡ (T ty').(ty_shr) vπd κ tid l);
 }.
 
-Class TypeListNonExpansive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
-  type_list_non_expansive:
-    ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeNonExpansive) Tl.
-
-Class TypeListContractive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
-  type_list_contractive:
-    ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeContractive) Tl.
-
 Section type_contractive.
   Context `{!typeG Σ}.
 
@@ -532,19 +522,6 @@ Section type_contractive.
     - rewrite left_id. apply lft_equiv_refl.
     - by rewrite /elctx_interp /= left_id right_id.
   Qed.
-
-  Global Instance type_list_non_expansive_nil {A} : TypeListNonExpansive (λ _: _ A, +[]).
-  Proof. exists +[]. split; by [|constructor]. Qed.
-  Global Instance type_list_contractive_nil {A} : TypeListContractive (λ _: _ A, +[]).
-  Proof. exists +[]. split; by [|constructor]. Qed.
-  Global Instance type_list_non_expansive_cons {A B Bs} (T: _ A → _ B) (T': _ → _ Bs) :
-    TypeNonExpansive T → TypeListNonExpansive T' →
-    TypeListNonExpansive (λ ty, T ty +:: T' ty).
-  Proof. move=> ? [Tl [->?]]. exists (T +:: Tl). split; by [|constructor]. Qed.
-  Global Instance type_list_contractive_cons {A B Bs} (T: _ A → _ B) (T': _ → _ Bs) :
-    TypeContractive T → TypeListContractive T' →
-    TypeListContractive (λ ty, T ty +:: T' ty).
-  Proof. move=> ? [Tl [->?]]. exists (T +:: Tl). split; by [|constructor]. Qed.
 
 End type_contractive.
 
@@ -667,7 +644,7 @@ Section type.
 
   Global Instance simple_type_sync {A} (st: simple_type A) : Send st → Sync st.
   Proof.
-    move=> Send >. iDestruct 1 as (vl) "[Bor Own]". iExists vl. iFrame "Bor".
+    move=> Send >. iDestruct 1 as (vl) "[Bor ?]". iExists vl. iFrame "Bor".
     iNext. by iApply Send.
   Qed.
 
@@ -755,7 +732,7 @@ Section subtyping.
 
   Lemma subtypel_llctx_nth {C As Bs} E L (ty: _ C) (tyl: _ As) (tyl': _ Bs) fl qL :
     subtypel E L tyl tyl' fl → llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ∀i, type_incl (p2nth id fl i) (hnth ty tyl i) (hnth ty tyl' i))%I.
+      ∀i, type_incl (p2nth id fl i) (hnth ty tyl i) (hnth ty tyl' i)).
   Proof.
     elim=> /=[|>Sub _ IH]. { iIntros "_!>_" (?). iApply type_incl_refl. } iIntros "L".
     iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
@@ -765,7 +742,7 @@ Section subtyping.
 
   Lemma subtypel_llctx_bigsep {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl qL :
     subtypel E L tyl tyl' fl → llctx_interp L qL -∗ □ (elctx_interp E -∗
-      [∗ hlist] ty; ty';- f ∈ tyl; tyl';- fl, type_incl f ty ty')%I.
+      [∗ hlist] ty; ty';- f ∈ tyl; tyl';- fl, type_incl f ty ty').
   Proof.
     elim=> /=[|>Sub _ IH]; [by iIntros "_!>_"|]. iIntros "L".
     iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".

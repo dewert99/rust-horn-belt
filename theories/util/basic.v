@@ -6,7 +6,25 @@ From stdpp Require Import prelude.
 Lemma succ_le m n : S m ≤ n → ∃n', n = S n' ∧ m ≤ n'.
 Proof. move: n=> [|n'] => Le; [by inversion Le|exists n'; lia]. Qed.
 
+(** * Utility for Lists *)
+
+Lemma list_sep_length {A} (xl: list A) m n :
+  length xl = m + n → ∃yl zl, xl = yl ++ zl ∧ length yl = m ∧ length zl = n.
+Proof.
+  move: xl. elim m; [by exists [], xl|]=> ? IH [|x xl]; [done|]=> [=Eq].
+  case (IH xl Eq)=> [yl[zl[->[??]]]]. exists (x :: yl), zl.
+  split; [done|]. split; [|done]=>/=. by f_equal.
+Qed.
+
 (** * Utility for Point-Free Style *)
+
+Class SemiIso {A B} (f: A → B) (g: B → A) := semi_iso: g ∘ f = id.
+Class Iso {A B} (f: A → B) (g: B → A) := iso: g ∘ f = id ∧ f ∘ g = id.
+
+Global Instance Iso_SemiIso `{@Iso A B f g} : SemiIso f g. Proof. apply iso. Qed.
+Global Instance Iso_SemiIso' `{@Iso A B f g} : SemiIso g f. Proof. apply iso. Qed.
+Global Instance Iso_id {A} : Iso (@id A) id. Proof. done. Qed.
+Global Instance Iso_flip `{@Iso A B f g} : Iso g f | 100. Proof. split; apply iso. Qed.
 
 Lemma compose_assoc {A B C D} (f: A → B) (g: B → C) (h: C → D) :
   h ∘ (g ∘ f) = (h ∘ g) ∘ f.
@@ -18,13 +36,6 @@ Infix "⊛" := s_comb (left associativity, at level 50).
 Lemma surjective_pairing_fun {A B C} (f: A → B * C) :
   f = (pair ∘ (fst ∘ f) ⊛ (snd ∘ f)).
 Proof. extensionality x. by rewrite /s_comb /compose -surjective_pairing. Qed.
-
-Class SemiIso {A B} (f: A → B) (g: B → A) := semi_iso: g ∘ f = id.
-Class Iso {A B} (f: A → B) (g: B → A) := iso: g ∘ f = id ∧ f ∘ g = id.
-Global Instance Iso_Split `{@Iso A B f g} : SemiIso f g. Proof. apply iso. Qed.
-Global Instance Iso_Split' `{@Iso A B f g} : SemiIso g f. Proof. apply iso. Qed.
-Global Instance Iso_id {A} : Iso (@id A) id. Proof. done. Qed.
-Global Instance Iso_flip `{@Iso A B f g} : Iso g f | 100. Proof. split; apply iso. Qed.
 
 Definition prod_assoc {A B C} '((x, (y, z))) : (A * B) * C := ((x, y), z).
 Definition prod_assoc' {A B C} '(((x, y), z)) : A * (B * C) := (x, (y, z)).

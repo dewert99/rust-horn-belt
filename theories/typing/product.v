@@ -127,8 +127,7 @@ Section typing.
   Context `{!typeG Σ}.
 
   Global Instance prod_lft_morphism {A B C} (T: _ A → _ B) (T': _ → _ C):
-    TypeLftMorphism T → TypeLftMorphism T' →
-    TypeLftMorphism (λ ty, T ty * T' ty)%T.
+    TypeLftMorphism T → TypeLftMorphism T' → TypeLftMorphism (λ ty, T ty * T' ty)%T.
   Proof.
     case=> [α βs E Hα HE|α E Hα HE]; case=> [α' βs' E' Hα' HE'|α' E' Hα' HE'].
     - apply (type_lft_morphism_add _ (α ⊓ α') (βs ++ βs') (E ++ E'))=> ty.
@@ -175,30 +174,26 @@ Section typing.
   Global Instance cons_prod_type_ne {A B C} (T: _ A → _ B) (T': _ → _ C) :
     TypeNonExpansive T → TypeNonExpansive T' → TypeNonExpansive (λ ty, T ty :* T' ty)%T.
   Proof.
-    have ->: ((λ ty, T ty :* T' ty) =
-      <{prod_to_cons_prod}> ∘ λ ty, T ty * T' ty)%T by done.
-    move=> ??. apply type_ne_ne_compose; apply _.
+    have ->: ((λ ty, T ty :* T' ty) = <{prod_to_cons_prod}> ∘ λ ty, T ty * T' ty)%T.
+    { done. } move=> ??. apply type_ne_ne_compose; apply _.
   Qed.
   Global Instance cons_prod_type_contractive {A B C} (T: _ A → _ B) (T': _ → _ C) :
     TypeContractive T → TypeContractive T' → TypeContractive (λ ty, T ty :* T' ty)%T.
   Proof.
-    have ->: ((λ ty, T ty :* T' ty) =
-      <{prod_to_cons_prod}> ∘ λ ty, T ty * T' ty)%T by done.
-    move=> ??. apply type_contractive_compose_left; apply _.
+    have ->: ((λ ty, T ty :* T' ty) = <{prod_to_cons_prod}> ∘ λ ty, T ty * T' ty)%T.
+    { done. } move=> ??. apply type_contractive_compose_left; apply _.
   Qed.
 
-  Lemma const_type_non_expansive {A B} (ty: _ B) : TypeNonExpansive (λ _: _ A, ty).
-  Proof. apply _. Qed.
-  Global Instance product_type_ne {A Bs} (T: _ A → _ Bs) :
-    TypeListNonExpansive T → TypeNonExpansive (Π ∘ T)%T.
+  Global Instance product_type_ne {A Bs} (Tl: _ (λ _, type A → _) Bs) :
+    HForall (λ _, TypeNonExpansive) Tl → TypeNonExpansive (Π ∘ (Tl +$.))%T.
   Proof.
-    move=> [?[->All]]. clear T. dependent induction All.
+    move=> All. dependent induction All.
     { rewrite /happly /hmap /compose. apply _. } by apply cons_prod_type_ne.
   Qed.
-  Global Instance product_type_ne_cont {A Bs} (T: _ A → _ Bs) :
-    TypeListContractive T → TypeContractive (Π ∘ T)%T.
+  Global Instance product_type_cont {A Bs} (Tl: _ (λ _, type A → _) Bs) :
+    HForall (λ _, TypeContractive) Tl → TypeContractive (Π ∘ (Tl +$.))%T.
   Proof.
-    move=> [?[->All]]. clear T. dependent induction All.
+    move=> All. dependent induction All.
     { rewrite /happly /hmap /compose. apply _. } by apply cons_prod_type_contractive.
   Qed.
 
@@ -293,14 +288,13 @@ Section typing.
     { move=> vπ. split; [|split]; extensionality xyz=>/=; by case (vπ xyz)=> [?[??]]. }
     apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=". iSplit; [iPureIntro; lia|].
     iSplit; [rewrite (assoc (++)); by iApply lft_equiv_refl|].
-    iSplit; iIntros "!>" (vπ) "*"; move: (Eq vπ)=> [->[->->]].
-    - iSplit.
-      + iDestruct 1 as (wl1 wl23 ->) "[Own1 Own23]".
-        iDestruct "Own23" as (wl2 wl3 ->) "[Own2 Own3]". iExists (wl1 ++ wl2), wl3.
-        iSplit; [by rewrite assoc|]. iFrame "Own3". iExists wl1, wl2. by iFrame.
-      + iDestruct 1 as (wl12 wl3 ->) "[Own12 Own3]".
-        iDestruct "Own12" as (wl1 wl2 ->) "[Own1 Own2]". iExists wl1, (wl2 ++ wl3).
-        iSplit; [by rewrite assoc|]. iFrame "Own1". iExists wl2, wl3. by iFrame.
+    iSplit; iIntros "!>" (vπ) "*"; move: (Eq vπ)=> [->[->->]]; [iSplit|].
+    - iDestruct 1 as (wl1 wl23 ->) "[Own1 Own23]".
+      iDestruct "Own23" as (wl2 wl3 ->) "[Own2 Own3]". iExists (wl1 ++ wl2), wl3.
+      iSplit; [by rewrite assoc|]. iFrame "Own3". iExists wl1, wl2. by iFrame.
+    - iDestruct 1 as (wl12 wl3 ->) "[Own12 Own3]".
+      iDestruct "Own12" as (wl1 wl2 ->) "[Own1 Own2]". iExists wl1, (wl2 ++ wl3).
+      iSplit; [by rewrite assoc|]. iFrame "Own1". iExists wl2, wl3. by iFrame.
     - rewrite -assoc shift_loc_assoc_nat. by iApply (bi.iff_refl True%I).
   Qed.
 

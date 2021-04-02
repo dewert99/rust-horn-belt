@@ -77,12 +77,4 @@ Section uninit.
   Global Instance uninit_send n : Send (uninit n). Proof. done. Qed.
   Global Instance uninit_sync n : Sync (uninit n). Proof. done. Qed.
 
-  Lemma list_sep_length {A} (xl: list A) m n :
-    length xl = m + n → ∃yl zl, xl = yl ++ zl ∧ length yl = m ∧ length zl = n.
-  Proof.
-    move: xl. elim m; [by exists [], xl|]=> ? IH [|x xl]; [done|]=> [=Eq].
-    case (IH xl Eq)=> [yl[zl[->[??]]]]. exists (x :: yl), zl.
-    split; [done|]. split; [|done]=>/=. by f_equal.
-  Qed.
-
 End uninit.
