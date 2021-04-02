@@ -1,3 +1,4 @@
+Require Import FunctionalExtensionality Equality.
 From iris.proofmode Require Import tactics.
 From iris.algebra Require Import list.
 From iris.bi Require Import fractional.
@@ -60,14 +61,14 @@ Section sum.
   Program Definition sum {As} (tyl: typel As) := {|
     ty_size := S (max_hlist_with (λ _, ty_size) tyl);
     ty_lfts := tyl_lfts tyl;  ty_E := tyl_E tyl;
-    ty_own vπd tid vl := (∃i vπ' vl' vl'', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
+    ty_own vπd tid vl := ∃i vπ' vl' vl'', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
       ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_hlist_with (λ _, ty_size) tyl)⌝ ∗
-      (hnthe tyl i).(ty_own) (vπ',vπd.2) tid vl')%I;
-    ty_shr vπd κ tid l := (∃i vπ', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
+      (hnthe tyl i).(ty_own) (vπ',vπd.2) tid vl';
+    ty_shr vπd κ tid l := ∃i vπ', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
       &frac{κ} (λ q, l ↦{q} #i ∗
         (l +ₗ S (hnthe tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
-      (hnthe tyl i).(ty_shr) (vπ',vπd.2) κ tid (l +ₗ 1))%I
-  |}.
+      (hnthe tyl i).(ty_shr) (vπ',vπd.2) κ tid (l +ₗ 1)
+  |}%I.
   Next Obligation. move=> *. by iDestruct 1 as (???????) "?". Qed.
   Next Obligation.
     move=> */=. iDestruct 1 as (i vπ' vl' vl'' ->->->) "?".
@@ -127,105 +128,74 @@ Section sum.
       repeat ((by apply @hnth_ne) || eapply ty_size_ne || f_equiv).
   Qed.
 
-(*
-  Lemma product_lft_morphism Tl:
-    Forall TypeLftMorphism Tl →
-    TypeLftMorphism (λ ty, sum ((λ T, T ty) <$> Tl)).
+  Lemma sum_lft_morphism {B As} (Tl: _ As) :
+    HForall (λ _, TypeLftMorphism) Tl → TypeLftMorphism (λ (ty: _ B), sum (Tl +$ ty)).
   Proof.
-    intros HTl.
-    assert (let s ty := sum ((λ T, T ty) <$> Tl) in
-        (∃ α βs E, (∀ ty, ⊢ ty_lft (s ty) ≡ₗ α ⊓ ty_lft ty) ∧
-            (∀ ty, elctx_interp (s ty).(ty_E) ⊣⊢
-                   elctx_interp E ∗ elctx_interp ty.(ty_E) ∗
-                   [∗ list] β ∈ βs, β ⊑ ty_lft ty)) ∨
-        (∃ α E, (∀ ty, ⊢ ty_lft (s ty) ≡ₗ α) ∧
-                (∀ ty, elctx_interp (s ty).(ty_E) ⊣⊢ elctx_interp E)))
-      as [(?&?&?&?&?)|(?&?&?&?)]; [|by eleft|by eright].
-    simpl. induction HTl as [|T Tl HT HTl [(α & βs & E & Hα & HE)|(α & E & Hα & HE)]]=>/=.
-    - right. exists static, []. split=>_ //. iApply lft_equiv_refl.
-    - setoid_rewrite lft_intersect_list_app.
-      destruct HT as [α' βs' E' Hα' HE'|α' E' Hα' HE'].
-      + left. exists (α' ⊓ α), (βs' ++ βs), (E' ++ E). split.
-        * intros ty. iApply lft_equiv_trans.
-          { iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα]. }
-          rewrite -!assoc (comm (⊓) (ty_lft ty) (α ⊓ _)) -!assoc.
-          repeat iApply lft_intersect_equiv_proper; try iApply lft_equiv_refl.
-          iApply lft_intersect_equiv_idemp.
-        * intros ty.
-          rewrite /tyl_E /= !elctx_interp_app HE' HE big_sepL_app -!assoc.
-          iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
-      + left. exists (α' ⊓ α), βs, (E' ++ E). split.
-        * intros ty. rewrite -assoc.
-          iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
-        * intros ty.
-          by rewrite /tyl_E /= !elctx_interp_app HE' HE -!assoc.
-    - setoid_rewrite lft_intersect_list_app.
-      destruct HT as [α' βs' E' Hα' HE'|α' E' Hα' HE'].
-      + left. exists (α' ⊓ α), βs', (E' ++ E). split.
-        * intros ty. rewrite -!assoc (comm (⊓) α (ty_lft ty)) !assoc.
-          iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
-        * intros ty. rewrite /tyl_E /= !elctx_interp_app HE' HE -!assoc.
-          iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
-      + right. exists (α' ⊓ α), (E' ++ E). split.
-        * intros. iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
-        * intros. by rewrite /tyl_E /= !elctx_interp_app HE HE'.
+    move=> All. set s := λ ty, sum (Tl +$ ty).
+    have [[?[?[?[??]]]]|[?[?[??]]]]:
+      (∃α βs E, (∀ty, ⊢ ty_lft (s ty) ≡ₗ α ⊓ ty_lft ty) ∧
+        (∀ty, elctx_interp (s ty).(ty_E) ⊣⊢
+          elctx_interp E ∗ elctx_interp ty.(ty_E) ∗ [∗ list] β ∈ βs, β ⊑ ty_lft ty)) ∨
+      (∃α E, (∀ty, ⊢ ty_lft (s ty) ≡ₗ α) ∧
+        (∀ty, elctx_interp (s ty).(ty_E) ⊣⊢ elctx_interp E));
+    [|by eleft|by eright].
+    dependent induction All=>/=.
+    { right. exists static, []. split=> ?; by [|apply lft_equiv_refl]. }
+    setoid_rewrite lft_intersect_list_app.
+    case IHAll=> [[α[βs[E[Hα HE]]]]|[α[E[Hα HE]]]];
+    case H=> [α' βs' E' Hα' HE'|α' E' Hα' HE'].
+    - left. exists (α' ⊓ α), (βs' ++ βs), (E' ++ E). split=> ?.
+      + iApply lft_equiv_trans.
+        { iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα]. }
+        rewrite -!assoc (comm (⊓) _ (α ⊓ _)) -!assoc.
+        repeat iApply lft_intersect_equiv_proper; try iApply lft_equiv_refl.
+        iApply lft_intersect_equiv_idemp.
+      + rewrite !elctx_interp_app HE' HE big_sepL_app -!assoc.
+        iSplit; iIntros "#H"; repeat iDestruct "H" as "[?H]"; iFrame "#".
+    - left. exists (α' ⊓ α), βs, (E' ++ E). split=> ?.
+      + rewrite -assoc. iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
+      + by rewrite !elctx_interp_app HE' HE -!assoc.
+    - left. exists (α' ⊓ α), βs', (E' ++ E). split=> ?.
+      + rewrite -!assoc (comm (⊓) α _) !assoc.
+        iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
+      + rewrite /= !elctx_interp_app HE' HE -!assoc.
+        iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
+    - right. exists (α' ⊓ α), (E' ++ E). split=> ?.
+      + iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
+      + by rewrite !elctx_interp_app HE HE'.
   Qed.
 
-  Global Instance sum_type_ne Tl:
-    TypeListNonExpansive Tl → TypeNonExpansive (sum ∘ Tl).
+  Global Instance sum_type_ne {B As} (T: _ B → _ As) :
+    TypeListNonExpansive T → TypeNonExpansive (sum ∘ T).
   Proof.
-    intros (Tl' & HTlTl' & HTl').
-    eapply type_ne_ext; last first.
-    { intros ty. by rewrite /= HTlTl'. }
-    clear Tl HTlTl'.
-    assert (Hsz0 : ∀ ty1 ty2, ty_size ty1 = ty_size ty2 →
-      max_list_with ty_size ((λ T, T ty1) <$> Tl') =
-      max_list_with ty_size ((λ T, T ty2) <$> Tl')).
-    { intros ty1 ty2 Hsz.
-      induction HTl' as [|T Tl' HT HTl' IH]=>//=. rewrite IH. f_equal. by apply HT. }
-    split.
-    - apply product_lft_morphism. eapply Forall_impl; [done|]. apply _.
-    - intros. simpl. f_equiv. auto.
-    - move=> n ty1 ty2 Hsz Hl HE Ho Hs depth tid vl /=. f_equiv=>i. do 6 f_equiv.
-      + do 3 f_equiv. by apply Hsz0.
-      + rewrite !nth_lookup !list_lookup_fmap.
-        rewrite ->Forall_lookup in HTl'. specialize (HTl' i).
-        destruct (Tl' !! i)=>//=. by apply HTl'.
-    - move=> n ty1 ty2 Hsz Hl HE Ho Hs κ tid l /=. f_equiv=>i.
-      rewrite /is_pad !nth_lookup !list_lookup_fmap.
-      rewrite ->Forall_lookup in HTl'. specialize (HTl' i).
-      destruct (Tl' !! i); [|by rewrite !right_absorb]. simpl.
-      repeat ((by apply HTl') || (by apply Hsz0) || f_equiv).
+    move=> [Tl[->All]]. set msz := λ ty, max_hlist_with (λ _, ty_size) (Tl +$ ty).
+    have EqMsz: ∀ty ty', ty_size ty = ty_size ty' → msz ty = msz ty'.
+    { rewrite /msz=> *. elim: All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
+    split=>/=.
+    - apply sum_lft_morphism. eapply HForall_impl; [|done]. by move=> >[].
+    - move=> *. f_equiv. by apply EqMsz.
+    - move=> *. f_equiv=> i. apply (HForall_nth _ (const emp0) _ i) in All; [|apply _].
+      rewrite !hnth_apply. do 9 f_equiv; [|by apply All]. do 3 f_equiv. by apply EqMsz.
+    - move=> *. f_equiv=> i. apply (HForall_nth _ (const emp0) _ i) in All; [|apply _].
+      rewrite /is_pad !hnth_apply. do 4 f_equiv; [|by apply All].
+      do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
-
   (* TODO : get rid of this duplication *)
-  Global Instance sum_type_ne_cont Tl:
-    TypeListContractive Tl → TypeContractive (sum ∘ Tl).
+  Global Instance sum_type_contractive {B As} (T: _ B → _ As) :
+    TypeListContractive T → TypeContractive (sum ∘ T).
   Proof.
-    intros (Tl' & HTlTl' & HTl').
-    eapply type_contractive_ext; last first.
-    { intros ty. by rewrite /= HTlTl'. }
-    clear Tl HTlTl'.
-    assert (Hsz0 : ∀ ty1 ty2,
-      max_list_with ty_size ((λ T, T ty1) <$> Tl') =
-      max_list_with ty_size ((λ T, T ty2) <$> Tl')).
-    { intros ty1 ty2.
-      induction HTl' as [|T Tl' HT HTl' IH]=>//=. rewrite IH. f_equal. by apply HT. }
-    split.
-    - apply product_lft_morphism. eapply Forall_impl; [done|]. apply _.
-    - intros. simpl. f_equiv. auto.
-    - move=> n ty1 ty2 Hsz Hl HE Ho Hs depth tid vl /=. f_equiv=>i. do 6 f_equiv.
-      + do 3 f_equiv. by apply Hsz0.
-      + rewrite !nth_lookup !list_lookup_fmap.
-        rewrite ->Forall_lookup in HTl'. specialize (HTl' i).
-        destruct (Tl' !! i)=>//=. by apply HTl'.
-    - move=> n ty1 ty2 Hsz Hl HE Ho Hs κ tid l /=. f_equiv=>i.
-      rewrite /is_pad !nth_lookup !list_lookup_fmap.
-      rewrite ->Forall_lookup in HTl'. specialize (HTl' i).
-      destruct (Tl' !! i); [|by rewrite !right_absorb]. simpl.
-      repeat ((by apply HTl') || (by apply Hsz0) || f_equiv).
+    move=> [Tl[->All]]. set msz := λ ty, max_hlist_with (λ _, ty_size) (Tl +$ ty).
+    have EqMsz: ∀ty ty', msz ty = msz ty'.
+    { rewrite /msz=> *. elim: All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
+    split=>/=.
+    - apply sum_lft_morphism. eapply HForall_impl; [|done]. by move=> >[].
+    - move=> *. f_equiv. by apply EqMsz.
+    - move=> *. f_equiv=> i. apply (HForall_nth _ (const emp0) _ i) in All; [|apply _].
+      rewrite !hnth_apply. do 9 f_equiv; [|by apply All]. do 3 f_equiv. by apply EqMsz.
+    - move=> *. f_equiv=> i. apply (HForall_nth _ (const emp0) _ i) in All; [|apply _].
+      rewrite /is_pad !hnth_apply. do 4 f_equiv; [|by apply All].
+      do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
-*)
 
   Global Instance sum_copy {As} (tyl: _ As) : ListCopy tyl → Copy (sum tyl).
   Proof.

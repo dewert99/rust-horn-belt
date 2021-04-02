@@ -41,16 +41,15 @@ Notation "+[ x ; .. ; z ]@{ F }" := (x +:: .. (z +:: +[]@{F}) ..)
 Fixpoint happ {F As Bs} (xl: hlist F As) (yl: hlist F Bs)
   : hlist F (As ^++ Bs) :=
   match xl with +[] => yl | x +:: xl' => x +:: happ xl' yl end.
-Infix "+++" := happ (at level 60, right associativity).
 Infix "h++" := happ (at level 60, right associativity).
 
-Fixpoint hmap {F B As} (f: ∀A, F A → B) (xl: hlist F As) : list B :=
-  match xl with +[] => [] | x +:: xl' => f _ x :: hmap f xl' end.
+Fixpoint hmap {F G As} (f: ∀A, F A → G A) (xl: hlist F As) : hlist G As :=
+  match xl with +[] => +[] | x +:: xl' => f _ x +:: hmap f xl' end.
 Infix "+<$>" := hmap (at level 61, left associativity).
 
-Fixpoint hhmap {F G As} (f: ∀A, F A → G A) (xl: hlist F As) : hlist G As :=
-  match xl with +[] => +[] | x +:: xl' => f _ x +:: hhmap f xl' end.
-Infix "+<$>+" := hhmap (at level 61, left associativity).
+Fixpoint hcmap {F B As} (f: ∀A, F A → B) (xl: hlist F As) : list B :=
+  match xl with +[] => [] | x +:: xl' => f _ x :: hcmap f xl' end.
+Infix "+c<$>" := hcmap (at level 61, left associativity).
 
 Fixpoint hnth {F B As} (y: F B) (xl: hlist F As) (i: nat) : F (tnth B As i) :=
   match xl with +[] => y | x +:: xl' =>
@@ -59,10 +58,23 @@ Fixpoint hnth {F B As} (y: F B) (xl: hlist F As) (i: nat) : F (tnth B As i) :=
 Fixpoint max_hlist_with {F As} (f: ∀A, F A → nat) (xl: hlist F As) : nat :=
   match xl with +[] => 0 | x +:: xl' => f _ x `max` max_hlist_with f xl' end.
 
+Definition happly {F B As} (fl: hlist (λ A, B → F A) As) (x: B) : hlist F As :=
+  (λ _ (f: _ → _), f x) +<$> fl.
+Infix "+$" := happly (at level 61, left associativity).
+Notation "( fl +$.)" := (happly fl) (only parsing).
+
+Lemma hnth_apply {F C B As} (fl: _ As) (y: F B) (x: C) i :
+  hnth y (fl +$ x) i = hnth (const y) fl i x.
+Proof. move: i. elim fl; [done|]=> > IH [|i]; [done|]. by rewrite /= IH. Qed.
+
 Inductive HForall {F} (Φ: ∀A, F A → Prop) : ∀{As}, hlist F As → Prop :=
 | HForall_nil: HForall Φ +[]
 | HForall_cons {A As} (x: _ A) (xl: _ As) :
     Φ _ x → HForall Φ xl → HForall Φ (x +:: xl).
+
+Lemma HForall_impl {F As} (Φ Ψ: ∀A, F A → Prop) (xl: _ As) :
+  (∀A x, Φ A x → Ψ _ x) → HForall Φ xl → HForall Ψ xl.
+Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
 
 Lemma HForall_nth {F B As} (Φ: ∀A, F A → Prop) (y: _ B) (xl: _ As) i :
   Φ _ y → HForall Φ xl → Φ _ (hnth y xl i).
@@ -167,11 +179,11 @@ Fixpoint plist2 (F: Type → Type → Type) As Bs : Type :=
   match As, Bs with ^[], ^[] => :1 |
     A ^:: As', B ^:: Bs' => F A B :* plist2 F As' Bs' | _, _ => Empty_set end.
 
-Fixpoint pp2map {F G As Bs} (f: ∀A B, F A B → G A B) : plist2 F As Bs → plist2 G As Bs :=
+Fixpoint p2map {F G As Bs} (f: ∀A B, F A B → G A B) : plist2 F As Bs → plist2 G As Bs :=
   match As, Bs with ^[], ^[] => id
-  | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), f _ _ x -:: pp2map f xl'
+  | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), f _ _ x -:: p2map f xl'
   | _, _ => absurd end.
-Infix "-2<$>-" := pp2map (at level 61, left associativity).
+Infix "-2<$>" := p2map (at level 61, left associativity).
 
 Fixpoint p2nth {F As Bs C D} (y: F C D) :
   plist2 F As Bs → ∀i, F (tnth C As i) (tnth D Bs i) :=
@@ -197,13 +209,13 @@ Fixpoint p2zip {F G As Bs} :
   | _, _ => absurd end.
 
 Lemma p2zip_fst {F G As Bs} (xl: _ F As Bs) (yl: _ G _ _) :
-  (λ _ _, fst) -2<$>- p2zip xl yl = xl.
+  (λ _ _, fst) -2<$> p2zip xl yl = xl.
 Proof.
   dependent induction As; dependent induction Bs; case xl; case yl; try done.
   move=>/= *. by f_equal.
 Qed.
 Lemma p2zip_snd {F G As Bs} (xl: _ F As Bs) (yl: _ G _ _) :
-  (λ _ _, snd) -2<$>- p2zip xl yl = yl.
+  (λ _ _, snd) -2<$> p2zip xl yl = yl.
 Proof.
   dependent induction As; dependent induction Bs; case xl; case yl; try done.
   move=>/= *. by f_equal.
@@ -233,7 +245,7 @@ Inductive HForallZip {F G H} (Φ: ∀A B, F A → G B → H A B → Prop)
 Lemma HForallZip_impl {F G H H' As Bs} (Φ Ψ: ∀A B, _ → _ → _ → Prop)
   (f: ∀A B, H A B → H' _ _) (xl: _ F As) (yl: _ G Bs) zl :
   (∀A B x y z, Φ A B x y z → Ψ _ _ x y (f _ _ z)) →
-  HForallZip Φ xl yl zl → HForallZip Ψ xl yl (f -2<$>- zl).
+  HForallZip Φ xl yl zl → HForallZip Ψ xl yl (f -2<$> zl).
 Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
 
 Lemma HForallZip_flip {F G H As Bs}

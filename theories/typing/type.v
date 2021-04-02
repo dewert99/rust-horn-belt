@@ -107,10 +107,10 @@ Proof.
       [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
 Qed.
 
-Notation tyl_lfts tyl := (concat ((λ _, ty_lfts) +<$> tyl)).
+Notation tyl_lfts tyl := (concat ((λ _, ty_lfts) +c<$> tyl)).
 Notation tyl_lft tyl := (lft_intersect_list (tyl_lfts tyl)).
-Notation tyl_E tyl := (concat ((λ _, ty_E) +<$> tyl)).
-Notation tyl_outlives_E tyl κ := (concat ((λ _ ty, ty_outlives_E ty κ) +<$> tyl)).
+Notation tyl_E tyl := (concat ((λ _, ty_E) +c<$> tyl)).
+Notation tyl_outlives_E tyl κ := (concat ((λ _ ty, ty_outlives_E ty κ) +c<$> tyl)).
 
 Lemma tyl_outlives_E_elctx_sat `{!typeG Σ} {As} E L (tyl: typel As) α β :
   tyl_outlives_E tyl β ⊆+ E → lctx_lft_incl E L α β →
@@ -244,6 +244,7 @@ Section ofe.
   Qed.
   Canonical Structure typeO A : ofe := Ofe (type A) type_ofe_mixin.
 
+  Global Instance typel_equiv {As} : Equiv (typel As) := @hlist_equiv type _ _.
   Global Instance typel_dist {As} : Dist (typel As) := @hlist_dist typeO _.
 
   Global Instance ty_size_ne {A} n : Proper (dist n ==> (=)) (@ty_size _ _ A).
@@ -430,10 +431,6 @@ Proof.
   rewrite !HE EqvE. do 5 f_equiv. by apply lft_incl_equiv_proper_r.
 Qed.
 
-Lemma type_lft_morphism_ext {A B} (T U: _ A → _ B) :
-  TypeLftMorphism T → (∀ty, T ty = U ty) → TypeLftMorphism U.
-Proof. by intros [] HTU; [eleft|eright]; intros; rewrite -HTU. Qed.
-
 End type_lft_morphism.
 
 Class TypeContractive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
@@ -477,116 +474,77 @@ Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
 }.
 
 Class TypeListNonExpansive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
-  type_list_non_expansive: ∃Tl,
-    (∀ty, T ty = (λ B (T': type A → type B), T' ty) +<$>+ Tl) ∧
-    HForall (λ _, TypeNonExpansive) Tl.
+  type_list_non_expansive:
+    ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeNonExpansive) Tl.
 
 Class TypeListContractive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
-  type_list_contractive: ∃Tl,
-    (∀ty, T ty = (λ B (T': type A → type B), T' ty) +<$>+ Tl) ∧
-    HForall (λ _, TypeContractive) Tl.
+  type_list_contractive:
+    ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeContractive) Tl.
 
 Section type_contractive.
   Context `{!typeG Σ}.
 
-  Lemma type_ne_ext {A B} (T U: _ A → _ B) :
-    TypeNonExpansive T → (∀ty, T ty = U ty) → TypeNonExpansive U.
-  Proof.
-    by intros [] HTU; split; intros; rewrite -?HTU;
-    eauto using type_lft_morphism_ext.
-  Qed.
-
-  Lemma type_contractive_ext {A B} (T U: _ A → _ B) :
-    TypeContractive T → (∀ty, T ty = U ty) → TypeContractive U.
-  Proof.
-    by intros [] HTU; split; intros; rewrite -?HTU;
-    eauto using type_lft_morphism_ext.
-  Qed.
-
   Global Instance type_contractive_type_ne {A B} (T: _ A → _ B) :
     TypeContractive T → TypeNonExpansive T.
   Proof.
-    intros HT. split.
-    - apply HT.
-    - intros. apply HT.
-    - intros. apply HT; eauto using dist_dist_later, dist_S.
-    - intros [|[|n]] ????? Hown **; apply HT; eauto using dist_dist_later.
-      intros. apply dist_S, Hown.
+    move=> HT. split; [by apply HT|move=> *; by apply HT| |].
+    - move=> *. apply HT; auto using dist_dist_later, dist_S.
+    - move=> n *. apply HT; auto using dist_dist_later.
+      move=> *. destruct n as [|[|]]=>//. simpl in *. by apply dist_S.
   Qed.
 
   Lemma type_ne_ne_compose {A B C} (T: _ B → _ C) (T': _ A → _ B) :
     TypeNonExpansive T → TypeNonExpansive T' → TypeNonExpansive (T ∘ T').
   Proof.
-    intros HT HT'. split; intros.
-    - apply _.
-    - by apply HT, HT'.
-    - apply HT; try by apply HT'.
-      + by iApply type_lft_morphism_lft_equiv_proper.
-      + apply type_lft_morphism_elctx_interp_proper=>//. apply _.
-    - apply HT; try by destruct n=>//; apply HT'.
-      + by iApply type_lft_morphism_lft_equiv_proper.
-      + apply type_lft_morphism_elctx_interp_proper=>//. apply _.
+    move=> HT HT'. split; [by apply _|move=> *; by apply HT, HT'| |];
+    (move=> n *; apply HT; (try by apply HT');
+      first (by iApply type_lft_morphism_lft_equiv_proper);
+      first (apply type_lft_morphism_elctx_interp_proper=>//; apply _)).
+    move=> *. destruct n=>//. by apply HT'.
   Qed.
 
   Lemma type_contractive_compose_right {A B C} (T: _ B → _ C) (T': _ A → _ B) :
     TypeContractive T → TypeNonExpansive T' → TypeContractive (T ∘ T').
   Proof.
-    intros HT HT'. split; intros.
-    - apply _.
-    - apply HT.
-    - apply HT; try by destruct n=>//; apply HT'.
-      + by iApply type_lft_morphism_lft_equiv_proper.
-      + apply type_lft_morphism_elctx_interp_proper=>//. apply _.
-    - apply HT; try by destruct n as [|[|n]]=>//; apply HT'.
-      + by iApply type_lft_morphism_lft_equiv_proper.
-      + apply type_lft_morphism_elctx_interp_proper=>//. apply _.
+    move=> HT HT'. split; [by apply _|move=> *; by apply HT| |];
+    (move=> n *; apply HT; (try by apply HT');
+      first (by iApply type_lft_morphism_lft_equiv_proper);
+      first (apply type_lft_morphism_elctx_interp_proper=>//; apply _));
+    move=> *; destruct n as [|[|]]=>//; by apply HT'.
   Qed.
 
-  Lemma type_contractive_compose_left {A B C} (T: _ B → _ C) (T': _ A → _ B) :
+  Lemma type_contractive_compose_left {A B C} (T: _ B → _ C) (T': _ A → _) :
     TypeNonExpansive T → TypeContractive T' → TypeContractive (T ∘ T').
   Proof.
-    intros HT HT'. split; intros.
-    - apply _.
-    - apply HT, HT'.
-    - apply HT; try by apply HT'.
-      + by iApply type_lft_morphism_lft_equiv_proper.
-      + apply type_lft_morphism_elctx_interp_proper=>//. apply _.
-    - apply HT; try by destruct n=>//; apply HT'.
-      + by iApply type_lft_morphism_lft_equiv_proper.
-      + apply type_lft_morphism_elctx_interp_proper=>//. apply _.
+    move=> HT HT'. split; [by apply _|move=> *; by apply HT, HT'| |];
+    (move=> n *; apply HT; (try by apply HT');
+      first (by iApply type_lft_morphism_lft_equiv_proper);
+      first (apply type_lft_morphism_elctx_interp_proper=>//; apply _));
+    move=> *; destruct n=>//; by apply HT'.
   Qed.
 
-  Global Instance const_type_contractive {A B} (ty: _ B) : TypeContractive (λ _: _ A, ty).
-  Proof. split; intros=>//. eright=>_. iApply lft_equiv_refl. done. Qed.
+  Global Instance const_type_contractive {A B} (ty: _ A) : TypeContractive (λ _: _ B, ty).
+  Proof. split; move=>// *. eright=> _; by [iApply lft_equiv_refl|]. Qed.
 
   Global Instance id_type_non_expansive {A} : TypeNonExpansive (id: _ A → _ A).
   Proof.
-    split; intros=>//. apply (type_lft_morphism_add _ static [] []).
-    - intros. rewrite left_id. apply lft_equiv_refl.
-    - intros. by rewrite /elctx_interp /= left_id right_id.
+    split=>// *. apply (type_lft_morphism_add _ static [] [])=>/= ?.
+    - rewrite left_id. apply lft_equiv_refl.
+    - by rewrite /elctx_interp /= left_id right_id.
   Qed.
 
   Global Instance type_list_non_expansive_nil {A} : TypeListNonExpansive (λ _: _ A, +[]).
   Proof. exists +[]. split; by [|constructor]. Qed.
-
   Global Instance type_list_contractive_nil {A} : TypeListContractive (λ _: _ A, +[]).
   Proof. exists +[]. split; by [|constructor]. Qed.
-
-  Global Instance type_list_non_expansive_cons {A B Bs} (T: _ A → _ B) (Tl: _ A → _ Bs) :
-    TypeNonExpansive T → TypeListNonExpansive Tl →
-    TypeListNonExpansive (λ ty, T ty +:: Tl ty).
-  Proof.
-    move=> ? [Tl' [Eq ?]]. exists (T +:: Tl'). split; [|by constructor] => ?.
-    by rewrite Eq.
-  Qed.
-
-  Global Instance type_list_contractive_cons {A B Bs} (T: _ A → _ B) (Tl: _ A → _ Bs) :
-    TypeContractive T → TypeListContractive Tl →
-    TypeListContractive (λ ty, T ty +:: Tl ty).
-  Proof.
-    move=> ? [Tl' [Eq ?]]. exists (T +:: Tl'). split; [|by constructor] => ?.
-    by rewrite Eq.
-  Qed.
+  Global Instance type_list_non_expansive_cons {A B Bs} (T: _ A → _ B) (T': _ → _ Bs) :
+    TypeNonExpansive T → TypeListNonExpansive T' →
+    TypeListNonExpansive (λ ty, T ty +:: T' ty).
+  Proof. move=> ? [Tl [->?]]. exists (T +:: Tl). split; by [|constructor]. Qed.
+  Global Instance type_list_contractive_cons {A B Bs} (T: _ A → _ B) (T': _ → _ Bs) :
+    TypeContractive T → TypeListContractive T' →
+    TypeListContractive (λ ty, T ty +:: T' ty).
+  Proof. move=> ? [Tl [->?]]. exists (T +:: Tl). split; by [|constructor]. Qed.
 
 End type_contractive.
 
@@ -693,10 +651,10 @@ Section type.
   Global Program Instance simple_type_copy {A} (st: simple_type A) : Copy st.
   Next Obligation.
     move=> *. iIntros "#LFT #Shr Tok LTok". iDestruct "Shr" as (?) "[Bor Own]".
-    iDestruct (na_own_acc with "Tok") as "[$ PreTok]"; [solve_ndisj|].
+    iDestruct (na_own_acc with "Tok") as "[$ ToTok]"; [solve_ndisj|].
     iMod (frac_bor_acc with "LFT Bor LTok") as (?) "[>Mt Close]"; [solve_ndisj|].
     iModIntro. iExists _, _. iFrame "Mt Own". iIntros "Tok".
-    iDestruct ("PreTok" with "Tok") as "$". iIntros "?". by iApply "Close".
+    iDestruct ("ToTok" with "Tok") as "$". iIntros "?". by iApply "Close".
   Qed.
 
   (** Lemmas on Send and Sync *)

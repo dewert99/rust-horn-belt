@@ -1,7 +1,6 @@
 Require Import FunctionalExtensionality Equality.
 From iris.proofmode Require Import tactics.
 From lrust.util Require Import types.
-From lrust.typing Require Import product.
 From lrust.typing Require Export type.
 Set Default Proof Using "Type".
 
@@ -39,9 +38,9 @@ Section uninit.
     move=>/= *. iIntros "#LFT #In Bor Tok".
     iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
     iMod (bor_sep with "LFT Bor") as "[Bor Bor']"; [done|].
-    iMod (bor_persistent with "LFT Bor' Tok") as "[>%Eq Tok]"; [done|].
-    iApply step_fupdN_intro; [done|]. iIntros "!>!>".
-    iMod (upd_uninit_shr with "LFT Bor") as "$"; done.
+    iMod (bor_persistent with "LFT Bor' Tok") as "[>% ?]"; [done|].
+    iApply step_fupdN_intro; [done|].
+    by iMod (upd_uninit_shr with "LFT Bor") as "$".
   Qed.
   Next Obligation.
     iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>".
@@ -84,22 +83,6 @@ Section uninit.
     move: xl. elim m; [by exists [], xl|]=> ? IH [|x xl]; [done|]=> [=Eq].
     case (IH xl Eq)=> [yl[zl[->[??]]]]. exists (x :: yl), zl.
     split; [done|]. split; [|done]=>/=. by f_equal.
-  Qed.
-
-  Lemma uninit_plus_prod E L m n :
-    eqtype E L (const ((), ())) (const ()) (uninit (m + n)) (uninit m * uninit n).
-  Proof.
-    apply eqtype_unfold. { split; extensionality x; by [case x=> [[][]]|case x]. }
-    iIntros (?) "_!>_ /=". iSplit; [done|]. iSplit; [by iApply lft_equiv_refl|].
-    iSplit; iIntros "!> *".
-    - iSplit.
-      + iIntros (Eq). move: Eq=> /list_sep_length[wl[wl'[->[??]]]]. by iExists wl, wl'.
-      + iDestruct 1 as (??->?) "%". rewrite app_length. iPureIntro. by f_equal.
-    - iInduction m as [|m] "IH" forall (l)=>/=.
-      { rewrite left_id shift_loc_0. by iApply (bi.iff_refl True%I). }
-      rewrite -Nat.add_1_l -shift_loc_assoc_nat. iSplit.
-      + iDestruct 1 as "[$?]". by iApply "IH".
-      + iDestruct 1 as "[[$?]?]". iApply "IH". iFrame.
   Qed.
 
 End uninit.

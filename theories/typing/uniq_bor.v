@@ -56,9 +56,9 @@ Section uniq_bor.
     iMod (bor_combine with "LFT BorVo BorPc") as "Bor"; [done|].
     iMod (bor_acc_cons with "LFT Bor Tok") as "[[Vo Pc] Close]"; [done|].
     iMod (uniq_strip_later with "Vo Pc") as (<-) "[Vo Pc]".
-    iDestruct (uniq_proph_tok with "Vo Pc") as "[Vo [PTok PrePc]]".
-    iMod ("Close" with "[Vo PrePc] PTok") as "[BorPTok Tok]".
-    { iIntros "!> >PTok !>!>". iFrame "Vo". by iApply "PrePc". }
+    iDestruct (uniq_proph_tok with "Vo Pc") as "[Vo [PTok ToPc]]".
+    iMod ("Close" with "[Vo ToPc] PTok") as "[BorPTok Tok]".
+    { iIntros "!> >PTok !>!>". iFrame "Vo". by iApply "ToPc". }
     iMod (ty_share with "LFT [] BorOwn Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
     iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Upd").
@@ -71,24 +71,24 @@ Section uniq_bor.
   Next Obligation.
     move=> */=. iIntros "#LFT #?". iDestruct 1 as (d l ξ Le->Eq) "[Vo Bor]".
     move: Le=> /succ_le [?[->Le]]/=. iDestruct 1 as "[Tok Tok']".
-    iMod (lft_incl_acc with "[] Tok") as (?) "[Tok PreTok]"; first done.
+    iMod (lft_incl_acc with "[] Tok") as (?) "[Tok ToTok]"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     iMod (bor_acc with "LFT Bor Tok") as "[Big Close']"; [done|]. iIntros "!>!>!>".
     iDestruct "Big" as (?) "[Own [#Time Pc]]". iDestruct "Own" as (vl) "[Mt Own]".
     iDestruct (uniq_agree with "Vo Pc") as "#<-".
-    iDestruct (uniq_proph_tok with "Vo Pc") as "[Vo [PTok' PrePc]]".
+    iDestruct (uniq_proph_tok with "Vo Pc") as "[Vo [PTok' ToPc]]".
     iMod (ty_own_proph with "LFT [] Own Tok'") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
     iApply step_fupdN_nmono; [apply Le|]. iApply (step_fupdN_wand with "Upd").
     iMod 1 as (ξs ??) "[PTok Close]". iModIntro. rewrite proph_tok_singleton.
-    iDestruct (proph_tok_combine with "PTok PTok'") as (q) "[PTok PrePToks]".
+    iDestruct (proph_tok_combine with "PTok PTok'") as (q) "[PTok ToPToks]".
     iExists (ξs ++ [ξ: proph_var]), q. iSplit.
     { iPureIntro. apply proph_dep_pair; [done|]. rewrite Eq. apply proph_dep_one. }
-    iFrame "PTok". iIntros "PTok". iDestruct ("PrePToks" with "PTok") as "[PTok PTok']".
-    iMod ("Close" with "PTok") as "[Own $]". iDestruct ("PrePc" with "PTok'") as "Pc".
+    iFrame "PTok". iIntros "PTok". iDestruct ("ToPToks" with "PTok") as "[PTok PTok']".
+    iMod ("Close" with "PTok") as "[Own $]". iDestruct ("ToPc" with "PTok'") as "Pc".
     iMod ("Close'" with "[Mt Own Pc]") as "[? Tok]".
     { iModIntro. iExists _. iFrame "Pc Time". iExists vl. iFrame. }
-    iMod ("PreTok" with "Tok") as "$". iModIntro. iExists d, l, ξ.
+    iMod ("ToTok" with "Tok") as "$". iModIntro. iExists d, l, ξ.
     iSplit; [iPureIntro; lia|]. do 2 (iSplit; [done|]). iFrame.
   Qed.
   Next Obligation.
@@ -97,14 +97,14 @@ Section uniq_bor.
     iDestruct (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
     iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξs q' ?) "[PTok Close]".
-    iMod (lft_incl_acc with "In Tok'") as (?) "[Tok PreTok]"; [done|].
+    iMod (lft_incl_acc with "In Tok'") as (?) "[Tok ToTok]"; [done|].
     iMod (frac_bor_acc with "LFT Bor Tok") as (?) "[>PTok' Close']"; [done|].
     rewrite proph_tok_singleton.
-    iDestruct (proph_tok_combine with "PTok PTok'") as (q) "[PTok PrePToks]". iModIntro.
+    iDestruct (proph_tok_combine with "PTok PTok'") as (q) "[PTok ToPToks]". iModIntro.
     iExists (ξs ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_pair|].
-    iFrame "PTok". iIntros "PTok". iDestruct ("PrePToks" with "PTok") as "[PTok PTok']".
+    iFrame "PTok". iIntros "PTok". iDestruct ("ToPToks" with "PTok") as "[PTok PTok']".
     iMod ("Close" with "PTok") as "[?$]". iMod ("Close'" with "PTok'") as "Tok".
-    iMod ("PreTok" with "Tok") as "$". iModIntro. iExists d, l, ξ.
+    iMod ("ToTok" with "Tok") as "$". iModIntro. iExists d, l, ξ.
     by do 4 (iSplit; [done|]).
   Qed.
 
