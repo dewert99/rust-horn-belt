@@ -1,16 +1,13 @@
 Require Import FunctionalExtensionality Equality.
 From iris.proofmode Require Import tactics.
-From iris.algebra Require Import list.
-From iris.bi Require Import fractional.
 From lrust.util Require Import types.
 From lrust.typing Require Export (** lft_contexts *) type.
 Set Default Proof Using "Type".
 
-
 Implicit Type (i: nat) (vl: list val).
 Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
 
-Section empty_ty.
+Section sum_ty.
   Context `{!typeG Σ}.
 
   (* We define the actual empty type as being the empty sum, so that it is
@@ -19,16 +16,9 @@ Section empty_ty.
   Program Definition empty_ty `{!typeG Σ} : type ∅ :=
     {| pt_size := 1;  pt_own _ _ _ := False; |}%I.
   Next Obligation. by iIntros. Qed.
-  Global Instance empty_send: Send empty_ty. Proof. done. Qed.
-
   Global Instance empty_ty_empty: Empty (type ∅) := empty_ty.
 
-End empty_ty.
-
-Notation hnthe := (hnth empty_ty).
-
-Section sum_ty.
-  Context `{!typeG Σ}.
+  Global Instance empty_send: Send ∅. Proof. done. Qed.
 
   Definition is_pad {As} i (tyl: typel As) vl : iProp Σ :=
     ⌜((hnthe tyl i).(ty_size) + length vl)%nat = max_ty_size tyl⌝.

@@ -55,6 +55,8 @@ Fixpoint hnth {F B As} (y: F B) (xl: hlist F As) (i: nat) : F (tnth B As i) :=
   match xl with +[] => y | x +:: xl' =>
     match i with 0 => x | S j => hnth y xl' j end end.
 
+Notation hnthe := (hnth ∅).
+
 Fixpoint max_hlist_with {F As} (f: ∀A, F A → nat) (xl: hlist F As) : nat :=
   match xl with +[] => 0 | x +:: xl' => f _ x `max` max_hlist_with f xl' end.
 
@@ -138,6 +140,7 @@ Notation ":1" := nil_unit : type_scope.
 Infix ":*" := cons_prod (at level 60, right associativity) : type_scope.
 Notation "-[ ]" := nil_tt (at level 1, format "-[ ]").
 Infix "-::" := cons_pair (at level 60, right associativity).
+Notation "(-::)" := cons_pair (only parsing).
 Notation "-[ a ; .. ; z ]" := (a -:: .. (z -:: -[]) ..)
   (at level 1, format "-[ a ;  .. ;  z ]").
 
@@ -169,7 +172,7 @@ Proof.
   elim As=> /=[|?? [Eq Eq']]; split; extensionality x; [by case x=> [[]?]|done| |];
   [case x=> [[? xl]yl]|case x=> [? xl]]=>/=.
   - move: Eq. by move/equal_f/(.$ (xl, yl))=>/= ->.
-  - move: Eq'. move/equal_f/(.$ xl)=>/=. by case: (psep xl)=> [??]=>/= ->.
+  - move: Eq'. move/equal_f/(.$ xl)=>/=. by case (psep xl)=> [??]=>/= ->.
 Qed.
 
 Fixpoint hlist_to_plist {F As} (xl: hlist F As) : plist F As :=
@@ -234,6 +237,24 @@ Fixpoint xprod_map {As Bs} : plist2 (→) As Bs → xprod As → xprod Bs :=
 
 Lemma xprod_map_id {As} : xprod_map (@p2ids As) = id.
 Proof. elim As; [done|]=>/= ??->. extensionality xy. by case xy. Qed.
+
+Fixpoint pvec A n : Type := match n with 0 => :1 | S m => A :* pvec A m end.
+
+Fixpoint pvapp {A m n} (xl: pvec A m) (yl: pvec A n) : pvec A (m + n) :=
+  match m, xl with 0, -[] => yl | S _, x -:: xl' => x -:: pvapp xl' yl end.
+Infix "-v++" := papp (at level 60, right associativity).
+
+Fixpoint pvsep {A m n} (xl: pvec A (m + n)) : pvec A m * pvec A n :=
+  match m, xl with 0, _ => (-[], xl) |
+    S _, x -:: xl' => let (yl, zl) := pvsep xl' in (x -:: yl, zl) end.
+
+Global Instance pvapp_pvsep_iso {A m n} : Iso (curry (@pvapp A m n)) pvsep.
+Proof.
+  elim m=> /=[|?[Eq Eq']]; split; extensionality x; [by case x=> [[]?]|done| |];
+  [case x=> [[? xl]yl]|case x=> [? xl]]=>/=.
+  - move: Eq. by move/equal_f/(.$ (xl, yl))=>/= ->.
+  - move: Eq'. move/equal_f/(.$ xl)=>/=. by case (pvsep xl)=> [??]=>/= ->.
+Qed.
 
 Inductive HForallZip {F G H} (Φ: ∀A B, F A → G B → H A B → Prop)
   : ∀{As Bs}, hlist F As → hlist G Bs → plist2 H As Bs → Prop :=

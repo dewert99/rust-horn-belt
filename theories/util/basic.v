@@ -26,10 +26,15 @@ Definition absurd {A} (x: ∅) : A := match x with end.
 Class SemiIso {A B} (f: A → B) (g: B → A) := semi_iso: g ∘ f = id.
 Class Iso {A B} (f: A → B) (g: B → A) := iso: g ∘ f = id ∧ f ∘ g = id.
 
-Global Instance Iso_SemiIso `{@Iso A B f g} : SemiIso f g. Proof. apply iso. Qed.
-Global Instance Iso_SemiIso' `{@Iso A B f g} : SemiIso g f. Proof. apply iso. Qed.
-Global Instance Iso_id {A} : Iso (@id A) id. Proof. done. Qed.
-Global Instance Iso_flip `{@Iso A B f g} : Iso g f | 100. Proof. split; apply iso. Qed.
+Global Instance iso_semi_iso `{@Iso A B f g} : SemiIso f g. Proof. apply iso. Qed.
+Global Instance iso_semi_iso' `{@Iso A B f g} : SemiIso g f. Proof. apply iso. Qed.
+Global Instance iso_id {A} : Iso (@id A) id. Proof. done. Qed.
+Global Instance iso_flip `{@Iso A B f g} : Iso g f | 100. Proof. split; apply iso. Qed.
+Global Instance semi_iso_inj `{@SemiIso A B f g} : Inj (=) (=) f | 100.
+Proof.
+  move=> x y Eq. have [<-<-]: (g ∘ f) x = x ∧ (g ∘ f) y = y.
+  { by rewrite semi_iso. } by rewrite /= Eq.
+Qed.
 
 Lemma compose_assoc {A B C D} (f: A → B) (g: B → C) (h: C → D) :
   h ∘ (g ∘ f) = (h ∘ g) ∘ f.
