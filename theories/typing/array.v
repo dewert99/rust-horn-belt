@@ -8,22 +8,21 @@ Set Default Proof Using "Type".
 Section array.
   Context `{!typeG Σ}.
 
-  Fixpoint array {A} n (ty: type A) : type (pvec A n) :=
-    match n with 0 => <{const -[] }> unit_ty |
-      S m => <{curry (-::)}> (ty * array m ty) end.
-
-  Global Instance array_ne {A} n : NonExpansive (@array A n).
-  Proof. elim n=>/=; [apply _|]. by move=> ?????->. Qed.
-
-  Global Instance array_type_ne {A} n : TypeNonExpansive (@array A n).
-  Proof. elim n=>/=; apply _. Qed.
+  Definition array {A} n (ty: type A) : type (pvec A n) := Π (hrepeat ty n).
 
   Global Instance array_copy {A} n (ty: _ A) : Copy ty → Copy (array n ty).
-  Proof. move=> ?. elim n=>/=; apply _. Qed.
+  Proof. elim n; apply _. Qed.
   Global Instance array_send {A} n (ty: _ A) : Send ty → Send (array n ty).
-  Proof. move=> ?. elim n=>/=; apply _. Qed.
+  Proof. elim n; apply _. Qed.
   Global Instance array_sync {A} n (ty: _ A) : Sync ty → Sync (array n ty).
-  Proof. move=> ?. elim n=>/=; apply _. Qed.
+  Proof. elim n; apply _. Qed.
+
+  Lemma array_subtype {A B} E L n (f: A → B) ty ty' :
+    subtype E L f ty ty' → subtype E L (f -v<$>.) (array n ty) (array n ty').
+  Proof. move=> ?. elim: n; [done|]=>/= ??. by apply cons_prod_subtype. Qed.
+  Lemma array_eqtype {A B} E L n (f: A → B) g ty ty' :
+    eqtype E L f g ty ty' → eqtype E L (f -v<$>.) (g -v<$>.) (array n ty) (array n ty').
+  Proof. move=> [??]. split; by apply array_subtype. Qed.
 
   Lemma array_plus_prod {A} E L m n (ty: _ A) :
     eqtype E L pvsep (curry pvapp) (array (m + n) ty) (array m ty * array n ty).

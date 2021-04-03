@@ -2,7 +2,7 @@ Require Import FunctionalExtensionality Equality.
 From iris.proofmode Require Import tactics.
 From iris.algebra Require Import list numbers.
 From lrust.util Require Import basic update types.
-From lrust.typing Require Import lft_contexts uninit mod_ty.
+From lrust.typing Require Import lft_contexts mod_ty.
 From lrust.typing Require Export type.
 
 Set Default Proof Using "Type".
@@ -10,7 +10,31 @@ Set Default Proof Using "Type".
 Section product.
   Context `{!typeG Σ}.
 
-  Definition unit_ty: type () := uninit 0.
+  Program Definition unit_ty : type unit := {|
+    ty_size := 0;  ty_lfts := [];  ty_E := [];
+    ty_own _ _ vl := ⌜vl = []⌝;  ty_shr _ _ _ _ := True;
+  |}%I.
+  Next Obligation. iIntros. by subst. Qed. Next Obligation. by iIntros. Qed.
+  Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
+  Next Obligation. iIntros. iApply step_fupdN_intro; [done|]. by iFrame. Qed.
+  Next Obligation.
+    iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>".
+    iExists [], 1%Qp. iSplit; [|simpl; by iFrame]. iPureIntro. apply proph_dep_unit.
+  Qed.
+  Next Obligation.
+    iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>!>!>".
+    iExists [], 1%Qp. iSplit; [|simpl; by iFrame]. iPureIntro. apply proph_dep_unit.
+  Qed.
+
+  Global Instance unit_ty_copy : Copy unit_ty.
+  Proof.
+    split; [apply _|]=> *. iIntros "_ _ Na $ !> /=". iExists 1%Qp, [].
+    rewrite heap_mapsto_vec_nil.
+    iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
+    do 2 (iSplit; [done|]). iIntros "Na". by iDestruct ("ToNa" with "Na") as "$".
+  Qed.
+  Global Instance unit_ty_send : Send unit_ty. Proof. done. Qed.
+  Global Instance unit_ty_sync : Sync unit_ty. Proof. done. Qed.
 
   Lemma split_prod_mt {A B} (vπd: _ A) (vπd': _ B) tid ty ty' q l :
     (l ↦∗{q}: λ vl, ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
@@ -267,8 +291,7 @@ Section typing.
   Lemma xprod_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
     subtypel E L tyl tyl' fl → subtype E L (xprod_map fl) (Π tyl) (Π tyl').
   Proof.
-    move=> Subs. dependent induction Subs; [by apply subtype_refl|].
-    by apply cons_prod_subtype.
+    move=> Subs. dependent induction Subs; [done|by apply cons_prod_subtype].
   Qed.
 
   Lemma xprod_eqtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl gl :
@@ -306,7 +329,7 @@ Section typing.
     have Eq: ∀vπ: proph_asn → (() * A), prod_left_id ∘ vπ = snd ∘ vπ.
     { move=> vπ. extensionality π. simpl. by case (vπ π)=> [[]?]. }
     iSplit; iIntros "!> *"; rewrite Eq; [iSplit|].
-    - setoid_rewrite length_zero_iff_nil. by iDestruct 1 as (?? ->->) "Own /=".
+    - by iDestruct 1 as (?? ->->) "Own /=".
     - iIntros "Own". iExists [], _. by iFrame "Own".
     - rewrite left_id shift_loc_0. by iApply (bi.iff_refl True%I).
   Qed.
@@ -319,7 +342,7 @@ Section typing.
     have Eq: ∀vπ: proph_asn → (A * ()), prod_right_id ∘ vπ = fst ∘ vπ.
     { move=> vπ. extensionality π. simpl. by case (vπ π)=> [?[]]. }
     iSplit; iIntros "!> *"; rewrite Eq; [iSplit|].
-    - setoid_rewrite length_zero_iff_nil. iDestruct 1 as (?? ->) "[Own->]".
+    - iDestruct 1 as (?? ->) "[Own->]".
       by rewrite right_id.
     - iIntros "Own". iExists _, []. iFrame "Own". by rewrite right_id.
     - rewrite right_id. by iApply (bi.iff_refl True%I).
@@ -344,22 +367,6 @@ Section typing.
       eapply eqtype_trans. { apply mod_ty_outin, _. } eapply eqtype_trans.
       { apply prod_eqtype; [done|apply Eq]. } eapply eqtype_trans.
       { apply prod_ty_assoc. } apply prod_eqtype; [apply mod_ty_inout, _|done].
-  Qed.
-
-  Lemma uninit_plus_prod E L m n :
-    eqtype E L (const ((), ())) (const ()) (uninit (m + n)) (uninit m * uninit n).
-  Proof.
-    apply eqtype_unfold. { split; extensionality x; by [case x=> [[][]]|case x]. }
-    iIntros (?) "_!>_ /=". iSplit; [done|]. iSplit; [by iApply lft_equiv_refl|].
-    iSplit; iIntros "!> *".
-    - iSplit.
-      + iIntros (Eq). move: Eq=> /list_sep_length[wl[wl'[->[??]]]]. by iExists wl, wl'.
-      + iDestruct 1 as (??->?) "%". rewrite app_length. iPureIntro. by f_equal.
-    - iInduction m as [|m] "IH" forall (l)=>/=.
-      { rewrite left_id shift_loc_0. by iApply (bi.iff_refl True%I). }
-      rewrite -Nat.add_1_l -shift_loc_assoc_nat. iSplit.
-      + iDestruct 1 as "[$?]". by iApply "IH".
-      + iDestruct 1 as "[[$?]?]". iApply "IH". iFrame.
   Qed.
 
   Lemma prod_outlives_E {A B} (ty: _ A) (ty': _ B) κ :

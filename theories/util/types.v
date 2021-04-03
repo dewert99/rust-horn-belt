@@ -24,6 +24,8 @@ Fixpoint tnth B As (i: nat) := match As with
 
 Notation tnthe := (tnth ∅).
 
+Fixpoint trepeat A n : Types := match n with 0 => ^[] | S m => A ^:: trepeat A m end.
+
 (** * Heterogeneous List *)
 
 Inductive hlist (F: Type → Type) : Types → Type :=
@@ -56,6 +58,9 @@ Fixpoint hnth {F B As} (y: F B) (xl: hlist F As) (i: nat) : F (tnth B As i) :=
     match i with 0 => x | S j => hnth y xl' j end end.
 
 Notation hnthe := (hnth ∅).
+
+Fixpoint hrepeat {F A} (x: F A) n : hlist F (trepeat A n) :=
+  match n with 0 => +[] | S m => x +:: hrepeat x m end.
 
 Fixpoint max_hlist_with {F As} (f: ∀A, F A → nat) (xl: hlist F As) : nat :=
   match xl with +[] => 0 | x +:: xl' => f _ x `max` max_hlist_with f xl' end.
@@ -159,6 +164,10 @@ Fixpoint plist (F: Type → Type) As : Type :=
 
 Notation xprod := (plist id).
 
+Fixpoint pmap {F G As} (f: ∀A, F A → G A) : plist F As → plist G As :=
+  match As with ^[] => id | _ ^:: _ => λ '(x -:: xl'), f _ x -:: pmap f xl' end.
+Infix "-<$>" := pmap (at level 61, left associativity).
+
 Fixpoint papp {F As Bs} (xl: plist F As) (yl: plist F Bs) : plist F (As ^++ Bs) :=
   match As, xl with ^[], -[] => yl | _ ^:: _, x -:: xl' => x -:: papp xl' yl end.
 Infix "-++" := papp (at level 60, right associativity).
@@ -174,6 +183,9 @@ Proof.
   - move: Eq. by move/equal_f/(.$ (xl, yl))=>/= ->.
   - move: Eq'. move/equal_f/(.$ xl)=>/=. by case (psep xl)=> [??]=>/= ->.
 Qed.
+
+Fixpoint prepeat {F A} (x: F A) n : plist F (trepeat A n) :=
+  match n with 0 => -[] | S m => x -:: prepeat x m end.
 
 Fixpoint hlist_to_plist {F As} (xl: hlist F As) : plist F As :=
   match xl with +[] => -[] | x +:: xl' => x -:: hlist_to_plist xl' end.
@@ -238,10 +250,15 @@ Fixpoint xprod_map {As Bs} : plist2 (→) As Bs → xprod As → xprod Bs :=
 Lemma xprod_map_id {As} : xprod_map (@p2ids As) = id.
 Proof. elim As; [done|]=>/= ??->. extensionality xy. by case xy. Qed.
 
-Fixpoint pvec A n : Type := match n with 0 => :1 | S m => A :* pvec A m end.
+Definition pvec A n : Type := xprod (trepeat A n).
+
+Fixpoint pvmap {A B n} (f: A → B) : pvec A n → pvec B n :=
+  match n with 0 => id | S _ => λ '(x -:: xl'), f x -:: pvmap f xl' end.
+Infix "-v<$>" := pvmap (at level 61, left associativity).
+Notation "( f -v<$>.)" := (pvmap f) (only parsing).
 
 Fixpoint pvapp {A m n} (xl: pvec A m) (yl: pvec A n) : pvec A (m + n) :=
-  match m, xl with 0, -[] => yl | S _, x -:: xl' => x -:: pvapp xl' yl end.
+  match m, xl with 0, _ => yl | S _, x -:: xl' => x -:: pvapp xl' yl end.
 Infix "-v++" := papp (at level 60, right associativity).
 
 Fixpoint pvsep {A m n} (xl: pvec A (m + n)) : pvec A m * pvec A n :=
@@ -358,7 +375,7 @@ Notation "[∗ hlist] x ∈ xl , P" := (big_sepHL (λ _ x, P) xl)
 
 Fixpoint big_sepHLZip {Σ F G H As Bs} (Φ: ∀A B, F A → G B → H A B → iProp Σ)
   (xl: hlist F As) (yl: hlist G Bs) (zl: plist2 H As Bs) : iProp Σ :=
-  match xl, yl, zl with +[], +[], -[] => True |
+  match xl, yl, zl with +[], +[], _ => True |
     x +:: xl', y +:: yl', z -:: zl' => Φ _ _ x y z ∗ big_sepHLZip Φ xl' yl' zl' |
     _, _, _ => False end.
 Notation "[∗ hlist] x ; y ;- z ∈ xl ; yl ;- zl , P" :=
