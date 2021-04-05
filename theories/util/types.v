@@ -138,6 +138,9 @@ Proof. split; apply _. Qed.
 (** * List-like Product *)
 
 Inductive nil_unit := nil_tt: nil_unit.
+Program Global Instance nil_unit_unique: Unique nil_unit := {|unique := nil_tt|}.
+Next Obligation. by case. Qed.
+
 Record cons_prod A B := cons_pair { phead: A; ptail: B }.
 Arguments cons_pair {_ _} _ _. Arguments phead {_ _} _. Arguments ptail {_ _} _.
 
@@ -152,12 +155,12 @@ Notation "-[ a ; .. ; z ]" := (a -:: .. (z -:: -[]) ..)
 Definition prod_to_cons_prod {A B} '((x, y)) : _ A B := x -:: y.
 Definition cons_prod_to_prod {A B} '(x -:: y) : _ A B := (x, y).
 Global Instance prod_cons_prod_iso {A B} : Iso (@prod_to_cons_prod A B) cons_prod_to_prod.
-Proof. split; extensionality xy; by case xy. Qed.
+Proof. split; fun_ext; by case. Qed.
 
 Definition cons_prod_map {A B A' B'} (f: A → A') (g: B → B') '(x -:: y) := f x -:: g y.
 Lemma cons_prod_map_via_prod_map {A B A' B'} (f: A → A') (g: B → B') :
   cons_prod_map f g = prod_to_cons_prod ∘ prod_map f g ∘ cons_prod_to_prod.
-Proof. extensionality xy. by case xy. Qed.
+Proof. fun_ext; by case. Qed.
 
 Fixpoint plist (F: Type → Type) As : Type :=
   match As with ^[] => :1 | A ^:: As' => F A :* plist F As' end.
@@ -178,8 +181,8 @@ Fixpoint psep {F As Bs} (xl: plist F (As ^++ Bs)) : plist F As * plist F Bs :=
 
 Global Instance papp_psep_iso {F As Bs} : Iso (curry (@papp F As Bs)) psep.
 Proof.
-  elim As=> /=[|?? [Eq Eq']]; split; extensionality x; [by case x=> [[]?]|done| |];
-  [case x=> [[? xl]yl]|case x=> [? xl]]=>/=.
+  elim As=> /=[|?? [Eq Eq']]; split; fun_ext;
+  [by case=> [[]?]|done|case=> [[? xl]yl]|case=> [? xl]].
   - move: Eq. by move/equal_f/(.$ (xl, yl))=>/= ->.
   - move: Eq'. move/equal_f/(.$ xl)=>/=. by case (psep xl)=> [??]=>/= ->.
 Qed.
@@ -189,6 +192,16 @@ Fixpoint prepeat {F A} (x: F A) n : plist F (trepeat A n) :=
 
 Fixpoint hlist_to_plist {F As} (xl: hlist F As) : plist F As :=
   match xl with +[] => -[] | x +:: xl' => x -:: hlist_to_plist xl' end.
+
+Fixpoint plist_to_hlist {F As} (xl: plist F As) : hlist F As :=
+  match As, xl with ^[], _ => +[] | _ ^:: _, x -:: xl' => x +:: plist_to_hlist xl' end.
+
+Global Instance hlist_plist_iso {F As} : Iso (@hlist_to_plist F As) plist_to_hlist.
+Proof. split.
+  - fun_ext=> xl. by elim xl; [done|]=>/= > ->.
+  - elim As; [fun_ext; by case|]=> ?? IH. fun_ext. case=>/= x xl. f_equal.
+    have {2}->: xl = id xl. { done. } by rewrite -IH.
+Qed.
 
 Fixpoint plist2 (F: Type → Type → Type) As Bs : Type :=
   match As, Bs with ^[], ^[] => :1 |
@@ -248,7 +261,7 @@ Fixpoint xprod_map {As Bs} : plist2 (→) As Bs → xprod As → xprod Bs :=
   | _, _ => absurd end.
 
 Lemma xprod_map_id {As} : xprod_map (@p2ids As) = id.
-Proof. elim As; [done|]=>/= ??->. extensionality xy. by case xy. Qed.
+Proof. elim As; [done|]=>/= ??->. fun_ext. by case. Qed.
 
 Definition pvec A n : Type := xprod (trepeat A n).
 
@@ -267,10 +280,16 @@ Fixpoint pvsep {A m n} (xl: pvec A (m + n)) : pvec A m * pvec A n :=
 
 Global Instance pvapp_pvsep_iso {A m n} : Iso (curry (@pvapp A m n)) pvsep.
 Proof.
-  elim m=> /=[|?[Eq Eq']]; split; extensionality x; [by case x=> [[]?]|done| |];
-  [case x=> [[? xl]yl]|case x=> [? xl]]=>/=.
+  elim m=> /=[|?[Eq Eq']]; split; fun_ext;
+  [by case=> [[]?]|done|case=> [[? xl]yl]|case=> [? xl]].
   - move: Eq. by move/equal_f/(.$ (xl, yl))=>/= ->.
   - move: Eq'. move/equal_f/(.$ xl)=>/=. by case (pvsep xl)=> [??]=>/= ->.
+Qed.
+
+Program Global Instance pvec_unique `{Unique A} n
+  : Unique (pvec A n) := {| unique := prepeat unique n |}.
+Next Obligation.
+  move=> ?? n. elim n; [by case|]=> ? IH [x xl]. by rewrite (eq_unique x) (IH xl).
 Qed.
 
 Inductive HForallZip {F G H} (Φ: ∀A B, F A → G B → H A B → Prop)
@@ -319,7 +338,7 @@ Definition xsum_map {As Bs} (fl: plist2 (→) As Bs) (xl: xsum As) : xsum Bs :=
   let: xinj i x := xl in xinj i (p2nth id fl i x).
 
 Lemma xsum_map_id {As} : xsum_map (@p2ids As) = id.
-Proof. extensionality x. case x=>/= *. by rewrite p2ids_nth. Qed.
+Proof. fun_ext. case=>/= *. by rewrite p2ids_nth. Qed.
 
 (** * Setoid *)
 

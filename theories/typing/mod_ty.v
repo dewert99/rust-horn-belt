@@ -89,6 +89,19 @@ Section typing.
   Global Instance mod_ty_sync {A B} (f: A → B) ty : Sync ty → Sync (<{f}> ty).
   Proof. move=> ??*/=. by do 3 f_equiv. Qed.
 
+  Lemma mod_ty_own {A B} g f `{@Iso A B f g} ty vπ d tid vl :
+    (<{f}> ty).(ty_own) (vπ, d) tid vl ⊣⊢ ty.(ty_own) (g ∘ vπ, d) tid vl.
+  Proof. simpl. iSplit.
+    - iDestruct 1 as (?->) "?". by rewrite compose_assoc semi_iso.
+    - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
+  Qed.
+  Lemma mod_ty_shr {A B} g f `{@Iso A B f g} ty vπ d κ tid l :
+    (<{f}> ty).(ty_shr) (vπ, d) κ tid l ⊣⊢ ty.(ty_shr) (g ∘ vπ, d) κ tid l.
+  Proof. simpl. iSplit.
+    - iDestruct 1 as (?->) "?". by rewrite compose_assoc semi_iso.
+    - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
+  Qed.
+
   Lemma mod_ty_in {A B} E L (f: A → B) ty : subtype E L f ty (<{f}> ty).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].

@@ -83,8 +83,8 @@ Proof.
   move=> Dep. split; move=> ?? /Dep Eq; apply (inj2 f) in Eq; by inversion Eq.
 Qed.
 
-Lemma proph_dep_unit (vπ: _ → unit) : vπ ./ [].
-Proof. suff ->: vπ = const (); [done|]. extensionality π. by case (vπ π). Qed.
+Lemma proph_dep_unique `{Unique A} (vπ: _ → A) : vπ ./ [].
+Proof. by rewrite (eq_unique vπ). Qed.
 
 Lemma proph_dep_pair {A B} (vπ: _ → A * B) ξs ζs :
   fst ∘ vπ ./ ξs → snd ∘ vπ ./ ζs → vπ ./ ξs ++ ζs.

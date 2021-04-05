@@ -10,7 +10,7 @@ Set Default Proof Using "Type".
 Section product.
   Context `{!typeG Σ}.
 
-  Program Definition unit_ty : type unit := {|
+  Program Definition unit_ty: type unit := {|
     ty_size := 0;  ty_lfts := [];  ty_E := [];
     ty_own _ _ vl := ⌜vl = []⌝;  ty_shr _ _ _ _ := True;
   |}%I.
@@ -18,23 +18,23 @@ Section product.
   Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
   Next Obligation. iIntros. iApply step_fupdN_intro; [done|]. by iFrame. Qed.
   Next Obligation.
-    iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>".
-    iExists [], 1%Qp. iSplit; [|simpl; by iFrame]. iPureIntro. apply proph_dep_unit.
+    iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>". iExists [], 1%Qp.
+    iSplit; [|simpl; by iFrame]. iPureIntro. apply proph_dep_unique.
   Qed.
   Next Obligation.
-    iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>!>!>".
-    iExists [], 1%Qp. iSplit; [|simpl; by iFrame]. iPureIntro. apply proph_dep_unit.
+    iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>!>!>". iExists [], 1%Qp.
+    iSplit; [|simpl; by iFrame]. iPureIntro. apply proph_dep_unique.
   Qed.
 
-  Global Instance unit_ty_copy : Copy unit_ty.
+  Global Instance unit_ty_copy: Copy unit_ty.
   Proof.
     split; [apply _|]=> *. iIntros "_ _ Na $ !> /=". iExists 1%Qp, [].
     rewrite heap_mapsto_vec_nil.
     iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
     do 2 (iSplit; [done|]). iIntros "Na". by iDestruct ("ToNa" with "Na") as "$".
   Qed.
-  Global Instance unit_ty_send : Send unit_ty. Proof. done. Qed.
-  Global Instance unit_ty_sync : Sync unit_ty. Proof. done. Qed.
+  Global Instance unit_ty_send: Send unit_ty. Proof. done. Qed.
+  Global Instance unit_ty_sync: Sync unit_ty. Proof. done. Qed.
 
   Lemma split_prod_mt {A B} (vπd: _ A) (vπd': _ B) tid ty ty' q l :
     (l ↦∗{q}: λ vl, ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
@@ -125,7 +125,7 @@ Section product.
   Global Instance prod_ne {A B} : NonExpansive2 (@prod_ty A B).
   Proof. solve_ne_type. Qed.
 
-  Definition nil_unit_ty: type :1 := <{const -[] }> unit_ty.
+  Definition nil_unit_ty: type :1 := <{unique}> unit_ty.
 
   Definition cons_prod_ty {A B} (ty: type A) (ty': type B)
     : type (A :* B) := <{prod_to_cons_prod}> (prod_ty ty ty').
@@ -308,7 +308,7 @@ Section typing.
       fst ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ vπ ∧
       snd ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ (snd ∘ vπ) ∧
       snd ∘ (prod_assoc ∘ vπ) = snd ∘ (snd ∘ vπ).
-    { move=> vπ. split; [|split]; extensionality xyz=>/=; by case (vπ xyz)=> [?[??]]. }
+    { move=> vπ. split; [|split]; fun_ext=>/= xyz; by case (vπ xyz)=> [?[??]]. }
     apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=". iSplit; [iPureIntro; lia|].
     iSplit; [rewrite (assoc (++)); by iApply lft_equiv_refl|].
     iSplit; iIntros "!>" (vπ) "*"; move: (Eq vπ)=> [->[->->]]; [iSplit|].
@@ -327,7 +327,7 @@ Section typing.
     apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=". iSplit; [done|].
     iSplit; [by iApply lft_equiv_refl|].
     have Eq: ∀vπ: proph_asn → (() * A), prod_left_id ∘ vπ = snd ∘ vπ.
-    { move=> vπ. extensionality π. simpl. by case (vπ π)=> [[]?]. }
+    { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [[]?]. }
     iSplit; iIntros "!> *"; rewrite Eq; [iSplit|].
     - by iDestruct 1 as (?? ->->) "Own /=".
     - iIntros "Own". iExists [], _. by iFrame "Own".
@@ -340,7 +340,7 @@ Section typing.
     apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=".
     rewrite !right_id. iSplit; [done|]. iSplit; [by iApply lft_equiv_refl|].
     have Eq: ∀vπ: proph_asn → (A * ()), prod_right_id ∘ vπ = fst ∘ vπ.
-    { move=> vπ. extensionality π. simpl. by case (vπ π)=> [?[]]. }
+    { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [?[]]. }
     iSplit; iIntros "!> *"; rewrite Eq; [iSplit|].
     - iDestruct 1 as (?? ->) "[Own->]".
       by rewrite right_id.
@@ -352,18 +352,16 @@ Section typing.
     eqtype E L psep (curry papp) (Π (tyl h++ tyl')) (Π tyl * Π tyl').
   Proof.
     elim: tyl=> [|A As' ty tyl Eq].
-    - have [->->]: @psep id ^[] Bs = prod_map (const -[]) id ∘ prod_left_id' ∧
-        curry (@papp id ^[] Bs) = prod_left_id ∘ prod_map (const ()) id.
-      { split; extensionality x; by [case x=> [[]?]|]. }
+    - have [->->]: @psep id ^[] Bs = prod_map unique id ∘ prod_left_id' ∧
+        curry (@papp id ^[] Bs) = prod_left_id ∘ prod_map unique id.
+      { split; fun_ext; by [case=> [[]?]|]. }
       eapply eqtype_trans; [apply eqtype_symm; apply prod_ty_left_id|].
-      apply prod_eqtype; [|done].
-      apply mod_ty_inout, functional_extensionality. by move=> [].
+      apply prod_eqtype; [|done]. apply mod_ty_inout, _.
     - have [->->]: @psep id (A ^:: As') Bs = prod_map prod_to_cons_prod id ∘
           prod_assoc ∘ prod_map id psep ∘ cons_prod_to_prod ∧
         curry (@papp id (A ^:: As') Bs) = prod_to_cons_prod ∘
           (prod_map id (curry papp) ∘ (prod_assoc' ∘ prod_map cons_prod_to_prod id)).
-      { split; extensionality x; [|by case x=> [[??]?]]. case x=> [? xl]/=.
-        by case (psep xl). }
+      { split; fun_ext; [|by case=> [[??]?]]. move=> [? xl]/=. by case (psep xl). }
       eapply eqtype_trans. { apply mod_ty_outin, _. } eapply eqtype_trans.
       { apply prod_eqtype; [done|apply Eq]. } eapply eqtype_trans.
       { apply prod_ty_assoc. } apply prod_eqtype; [apply mod_ty_inout, _|done].
