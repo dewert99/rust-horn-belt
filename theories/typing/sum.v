@@ -31,27 +31,24 @@ Section sum_ty.
       (l ↦{q} #i ∗ (l +ₗ S (hnthe tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
       (l +ₗ 1) ↦∗{q}: (hnthe tyl i).(ty_own) (vπ',d) tid.
   Proof. iSplit.
-    - iDestruct 1 as (vl) "[Mt Own]".
-      iDestruct "Own" as (i vπ' vl' vl'' ->->[=]) "Own". iExists i, vπ'.
-      iSplit; [done|]. iDestruct (ty_size_eq with "Own") as "%Eq'".
+    - iIntros "(%& Mt & Own)". iDestruct "Own" as (i vπ' vl' vl'' ->->[=]) "Own".
+      iExists i, vπ'. iSplit; [done|]. iDestruct (ty_size_eq with "Own") as "%Eq'".
       iDestruct (heap_mapsto_vec_cons with "Mt") as "[$ Mt]".
       iDestruct (heap_mapsto_vec_app with "Mt") as "[Mt Mt']".
-      iSplitL "Mt'".
-      + iExists vl''. rewrite (shift_loc_assoc_nat _ 1) Eq'. iFrame. iPureIntro.
-        by rewrite -Eq' -app_length.
-      + iExists vl'. by iFrame.
-    - iDestruct 1 as (i vπ' ->) "[[Mt Mt'']Own]".
-      iDestruct "Own" as (vl') "[Mt' Own]". iDestruct "Mt''" as (vl'') "[Mt'' %]".
+      iSplitL "Mt'"; [|iExists vl'; by iFrame]. iExists vl''.
+      rewrite (shift_loc_assoc_nat _ 1) Eq'. iFrame "Mt'". iPureIntro.
+      by rewrite -Eq' -app_length.
+    - iDestruct 1 as (i vπ' ->) "[[Mt (%vl''&Mt''&%)](%vl'&Mt'&Own)]".
       iDestruct (ty_size_eq with "Own") as "%Eq". iExists (#i :: vl' ++ vl'').
       rewrite heap_mapsto_vec_cons heap_mapsto_vec_app (shift_loc_assoc_nat _ 1) Eq.
       iFrame "Mt Mt' Mt''". iExists i, vπ', vl', vl''. do 2 (iSplit; [done|]).
-      iFrame "Own". iPureIntro. simpl. f_equal. by rewrite app_length Eq.
+      iFrame "Own". iPureIntro. rewrite/= app_length Eq. by f_equal.
   Qed.
 
   Local Lemma ty_lfts_incl {As} (tyl: typel As) i :
     ⊢ tyl_lft tyl ⊑ ty_lft (hnthe tyl i).
   Proof.
-    elim: tyl i=> /=[|?? ty tyl IH] [|?];
+    elim: tyl i=>/= [|?? ty tyl IH] [|?];
       [by iApply lft_incl_refl|by iApply lft_incl_refl| |];
       rewrite lft_intersect_list_app; [by iApply lft_intersect_incl_l|].
     iApply lft_incl_trans; by [iApply lft_intersect_incl_r|iApply IH].
@@ -86,7 +83,7 @@ Section sum_ty.
     move=> */=. iIntros "#LFT #? Bor Tok". rewrite split_sum_mt.
     iMod (bor_exists with "LFT Bor") as (i) "Bor"; [done|].
     iMod (bor_exists_tok with "LFT Bor Tok") as (vπ') "[Bor Tok]"; [done|].
-    iMod (bor_sep_persistent with "LFT Bor Tok") as "[>->[Bor Tok]]"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor Tok") as "(>-> & Bor & Tok)"; [done|].
     iMod (bor_sep with "LFT Bor") as "[Mt Bor]"; [done|].
     iMod (ty_share with "LFT [] Bor Tok") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply ty_lfts_incl]. }
@@ -104,8 +101,8 @@ Section sum_ty.
     iModIntro. iExists i, vπ', vl', vl''. by do 3 (iSplit; [done|]).
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT #In #?". iDestruct 1 as (i vπ' ->) "[Bor Shr]".
-    iIntros "Tok". iMod (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; first done.
+    move=> */=. iIntros "#LFT #In #? (%i & %vπ' &->& Bor & Shr) Tok".
+    iMod (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply ty_lfts_incl]. } iIntros "!>!>".
     iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q' ?) "[PTok Close]".
     iModIntro. iExists ξs, q'. iSplit. { iPureIntro. by apply proph_dep_constr. }
@@ -116,11 +113,11 @@ Section sum_ty.
   Global Instance sum_ty_ne {As} : NonExpansive (@sum_ty As).
   Proof.
     move=> n tyl tyl' Eqv. have EqMsz: max_ty_size tyl = max_ty_size tyl'.
-    { elim: Eqv=> /=[|>Eqv ? ->]; [done|]. f_equiv. apply Eqv. }
+    { elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv. }
     split=>/=.
     - by rewrite EqMsz.
-    - elim: Eqv=> /=[|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
-    - elim: Eqv=> /=[|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
+    - elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
+    - elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
     - move=> *. rewrite EqMsz. do 12 f_equiv. by apply @hnth_ne.
     - move=> *. rewrite /is_pad EqMsz.
       repeat ((by apply @hnth_ne) || eapply ty_size_ne || f_equiv).
@@ -203,12 +200,11 @@ Section sum_ty.
     iMod (frac_bor_acc with "LFT Bor Tok") as (q) "[>[Idx Pad] Close]";
     [solve_ndisj|]. iDestruct "Pad" as (vl') "[Pad %]".
     iMod (copy_shr_acc with "LFT Shr Na Tok'") as
-      (q' vl) "[Na[Mt[#Own Close']]]"; first done.
+      (q' vl) "(Na & Mt & #Own & Close')"; first done.
     { rewrite <-SubF, <-union_subseteq_r. apply shr_locsE_subseteq. lia. }
     iDestruct (na_own_acc with "Na") as "[$ Close'']".
-    { apply difference_mono_l.
-      trans (shr_locsE (l +ₗ 1) (max_ty_size tyl)).
-      { apply shr_locsE_subseteq. lia. } { set_solver+. } }
+    { apply difference_mono_l. trans (shr_locsE (l +ₗ 1) (max_ty_size tyl));
+      [apply shr_locsE_subseteq; lia|set_solver+]. }
     case (Qp_lower_bound q q')=> [q''[?[?[->->]]]].
     iExists q'', (#i :: vl ++ vl').
     rewrite heap_mapsto_vec_cons heap_mapsto_vec_app shift_loc_assoc
@@ -218,7 +214,7 @@ Section sum_ty.
     iDestruct "Pad" as "[$ Pad]". iSplitR.
     { iIntros "!>!>". iExists i, vπd, vl, vl'. do 2 (iSplit; [done|]).
       iFrame "Own". rewrite /= app_length Eq. iPureIntro. by f_equal. }
-    iIntros "!> Na [Idx'[Mt' Pad']]". iDestruct ("Close''" with "Na") as "Na".
+    iIntros "!> Na (Idx' & Mt' & Pad')". iDestruct ("Close''" with "Na") as "Na".
     iMod ("Close'" with "Na [$Mt $Mt']") as "[$$]". iApply "Close".
     iFrame "Idx Idx'". iExists vl'. by iFrame.
   Qed.

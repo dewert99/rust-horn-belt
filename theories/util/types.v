@@ -86,7 +86,7 @@ Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
 Lemma HForall_nth {F B As} (Φ: ∀A, F A → Prop) (y: _ B) (xl: _ As) i :
   Φ _ y → HForall Φ xl → Φ _ (hnth y xl i).
 Proof.
-  move=> ? All. move: i. elim All=> /=[|> ???]; by [|case].
+  move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
 Qed.
 
 Inductive HForall2 {F G} (Φ: ∀A, F A → G A → Prop)
@@ -113,7 +113,7 @@ Qed.
 Lemma HForall2_nth {F G B As} (Φ: ∀A, F A → G A → Prop) (x y: _ B) (xl yl: _ As) i :
   Φ _ x y → HForall2 Φ xl yl → Φ _ (hnth x xl i) (hnth y yl i).
 Proof.
-  move=> ? All. move: i. elim All=> /=[|> ???]; by [|case].
+  move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
 Qed.
 
 Global Instance HForall2_reflexive {F As} (R: ∀A, F A → F A → Prop) :
@@ -181,7 +181,7 @@ Fixpoint psep {F As Bs} (xl: plist F (As ^++ Bs)) : plist F As * plist F Bs :=
 
 Global Instance papp_psep_iso {F As Bs} : Iso (curry (@papp F As Bs)) psep.
 Proof.
-  elim As=> /=[|?? [Eq Eq']]; split; fun_ext;
+  elim As=>/= [|?? [Eq Eq']]; split; fun_ext;
   [by case=> [[]?]|done|case=> [[? xl]yl]|case=> [? xl]].
   - move: Eq. by move/equal_f/(.$ (xl, yl))=>/= ->.
   - move: Eq'. move/equal_f/(.$ xl)=>/=. by case (psep xl)=> [??]=>/= ->.
@@ -274,7 +274,7 @@ Fixpoint pvsep {A m n} (xl: pvec A (m + n)) : pvec A m * pvec A n :=
 
 Global Instance pvapp_pvsep_iso {A m n} : Iso (curry (@pvapp A m n)) pvsep.
 Proof.
-  elim m=> /=[|?[Eq Eq']]; split; fun_ext;
+  elim m=>/= [|?[Eq Eq']]; split; fun_ext;
   [by case=> [[]?]|done|case=> [[? xl]yl]|case=> [? xl]].
   - move: Eq. by move/equal_f/(.$ (xl, yl))=>/= ->.
   - move: Eq'. move/equal_f/(.$ xl)=>/=. by case (pvsep xl)=> [??]=>/= ->.
@@ -327,7 +327,7 @@ Lemma HForallZip_nth {F G H C D As Bs} (Φ: ∀A B, F A → G B → H A B → Pr
   (x: _ C) (y: _ D) z (xl: _ As) (yl: _ Bs) zl i :
   Φ _ _ x y z → HForallZip Φ xl yl zl → Φ _ _ (hnth x xl i) (hnth y yl i) (p2nth z zl i).
 Proof.
-  move=> ? All. move: i. elim All=> /=[|> ???]; by [|case].
+  move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
 Qed.
 
 (** * Sum *)

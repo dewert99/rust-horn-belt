@@ -10,7 +10,7 @@ Section uninit.
 
   Program Definition uninit1: type unit :=
     {| pt_size := 1;  pt_own _ _ vl := ⌜∃v, vl = [v]⌝; |}%I.
-  Next Obligation. move=> *. by iDestruct 1 as (?) "->". Qed.
+  Next Obligation. by iIntros "* [%->]". Qed.
 
   Global Instance uninit1_send: Send uninit1. Proof. done. Qed.
 
@@ -22,7 +22,7 @@ Section uninit.
     - by rewrite mod_ty_own length_zero_iff_nil.
     - rewrite mod_ty_own -/hrepeat -/xprod_ty. iSplit.
       + iDestruct 1 as (??->[?[_[?->]]]) "H /=". rewrite IH. by iDestruct "H" as %->.
-      + case vl=> /=[|v vl']; iIntros ([=]). iExists [v], vl'. rewrite IH.
+      + case vl=>/= [|v vl']; iIntros ([=]). iExists [v], vl'. rewrite IH.
         iPureIntro. split; [done|]. split; [|done]. exists (). split; by [|exists v].
   Qed.
 

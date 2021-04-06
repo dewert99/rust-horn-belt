@@ -78,7 +78,7 @@ Notation typel := (hlist type).
 Lemma ty_own_mt_depth_mono `{!typeG Σ} {A} (ty: _ A) d d' vπ tid l :
   d ≤ d' → l ↦∗: ty.(ty_own) (vπ,d) tid -∗ l ↦∗: ty.(ty_own) (vπ,d') tid.
 Proof.
-  iIntros (Le). iDestruct 1 as (vl) "[Mt ?]". iExists vl. iFrame "Mt".
+  iIntros (Le) "[%vl[Mt ?]]". iExists vl. iFrame "Mt".
   iApply ty_own_depth_mono; by [apply Le|].
 Qed.
 
@@ -100,9 +100,9 @@ Lemma elctx_interp_ty_outlives_E `{!typeG Σ} {A} (ty: _ A) α :
   elctx_interp (ty_outlives_E ty α) ⊣⊢ α ⊑ ty.(ty_lft).
 Proof.
   rewrite /ty_outlives_E /elctx_interp /elctx_elt_interp big_sepL_fmap /=.
-  elim ty.(ty_lfts)=> /=[|κ l ->].
+  elim ty.(ty_lfts)=>/= [|κ l ->].
   { iSplit; iIntros "_"; [|done]. iApply lft_incl_static. } iSplit.
-  - iDestruct 1 as "#[??]". by iApply lft_incl_glb.
+  - iIntros "#[??]". by iApply lft_incl_glb.
   - iIntros "#Incl". iSplit; (iApply lft_incl_trans; [iApply "Incl"|]);
       [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
 Qed.
@@ -156,12 +156,12 @@ Program Definition ty_of_st `{!typeG Σ} {A} (st: simple_type A) : type A := {|
 Next Obligation. move=> >. apply st_size_eq. Qed.
 Next Obligation. move=> >. by apply st_own_depth_mono. Qed.
 Next Obligation.
-  move=> > Le. iDestruct 1 as (vl) "[Bor ?]". iExists vl. iFrame "Bor".
+  move=> > Le. iIntros "[%vl[Bor ?]]". iExists vl. iFrame "Bor".
   iApply st_own_depth_mono; by [apply Le|].
 Qed.
 Next Obligation.
-  move=> >. iIntros "Incl". iDestruct 1 as (vl) "[? Own]". iExists vl.
-  iFrame "Own". by iApply (frac_bor_shorten with "Incl").
+  move=> >. iIntros "Incl [%vl[? Own]]". iExists vl. iFrame "Own".
+  by iApply (frac_bor_shorten with "Incl").
 Qed.
 Next Obligation.
   move=> *. iIntros "#LFT ? Bor Tok".
@@ -173,7 +173,7 @@ Next Obligation.
 Qed.
 Next Obligation. move=> >. apply st_own_proph. Qed.
 Next Obligation.
-  move=> *. iIntros "#LFT _ Incl". iDestruct 1 as (vl) "[? Own]". iIntros "Tok !>!>".
+  move=> *. iIntros "#LFT _ Incl [%vl[? Own]]". iIntros "Tok !>!>".
   iMod (st_own_proph with "LFT Incl Own Tok") as "Upd"; [done|].
   iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q' ?) "[Ptoks Upd]".
   iModIntro. iExists ξs, q'. iSplit; [done|]. iFrame "Ptoks". iIntros "Tok".
@@ -198,12 +198,12 @@ Program Definition st_of_pt `{!typeG Σ} {A} (pt: plain_type A) : simple_type A 
   st_size := pt.(pt_size);  st_lfts := [];  st_E := [];
   st_own vπd tid vl := ∃v, ⌜vπd.1 = const v⌝ ∗ pt.(pt_own) v tid vl;
 |}%I.
-Next Obligation. move=> >. iDestruct 1 as (? _) "?". by iApply pt_size_eq. Qed.
+Next Obligation. move=> >. iIntros "[%[_?]]". by iApply pt_size_eq. Qed.
 Next Obligation. done. Qed.
 Next Obligation.
-  move=> * /=. iIntros "_ _". iDestruct 1 as (?->) "?". iIntros "Ptok !>".
+  move=> * /=. iIntros "_ _[%[->?]]". iIntros "Ptok !>".
   iApply step_fupdN_intro; [done|]. iIntros "!>!>". iExists [], 1%Qp.
-  do 2 (iSplit; [done|]). iIntros "_ !>". iFrame "Ptok". iExists v. by iSplit.
+  do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Ptok". iExists v. by iSplit.
 Qed.
 
 Coercion st_of_pt: plain_type >-> simple_type.
@@ -642,7 +642,7 @@ Section type.
 
   Global Program Instance simple_type_copy {A} (st: simple_type A) : Copy st.
   Next Obligation.
-    move=> *. iIntros "#LFT #Shr Na Tok". iDestruct "Shr" as (vl) "[Bor Own]".
+    move=> *. iIntros "#LFT #[%vl[Bor Own]] Na Tok".
     iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
     iMod (frac_bor_acc with "LFT Bor Tok") as (q) "[>Mt Close]"; [solve_ndisj|].
     iModIntro. iExists q, vl. iFrame "Mt Own". iIntros "Na".
@@ -659,16 +659,16 @@ Section type.
 
   Global Instance simple_type_sync {A} (st: simple_type A) : Send st → Sync st.
   Proof.
-    move=> Send >. iDestruct 1 as (vl) "[Bor ?]". iExists vl. iFrame "Bor".
+    move=> Send >. iIntros "[%vl[Bor?]]". iExists vl. iFrame "Bor".
     iNext. by iApply Send.
   Qed.
 
   Lemma send_change_tid' {A} (ty: _ A) vπd tid tid' vl :
-    Send ty → ty.(ty_own) vπd tid vl ≡ ty.(ty_own) vπd tid' vl.
+    Send ty → ty.(ty_own) vπd tid vl ⊣⊢ ty.(ty_own) vπd tid' vl.
   Proof. move=> ?. apply: anti_symm; apply send_change_tid. Qed.
 
   Lemma sync_change_tid' {A} (ty: _ A) vπd κ tid tid' l :
-    Sync ty → ty.(ty_shr) vπd κ tid l ≡ ty.(ty_shr) vπd κ tid' l.
+    Sync ty → ty.(ty_shr) vπd κ tid l ⊣⊢ ty.(ty_shr) vπd κ tid' l.
   Proof. move=> ?. apply: anti_symm; apply sync_change_tid. Qed.
 
 End type.
@@ -751,7 +751,7 @@ Section subtyping.
     subtypel E L tyl tyl' fl → llctx_interp L qL -∗ □ (elctx_interp E -∗
       ∀i, type_incl (p2nth id fl i) (hnth ty tyl i) (hnth ty tyl' i)).
   Proof.
-    elim=> /=[|>Sub _ IH]. { iIntros "_!>_" (?). iApply type_incl_refl. } iIntros "L".
+    elim=>/= [|>Sub _ IH]. { iIntros "_!>_" (?). iApply type_incl_refl. } iIntros "L".
     iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
     iIntros "!> #E" (i). iDestruct ("Sub" with "E") as "Sub'".
     iDestruct ("IH" with "E") as "IH'". by case i=> [|j].
@@ -761,7 +761,7 @@ Section subtyping.
     subtypel E L tyl tyl' fl → llctx_interp L qL -∗ □ (elctx_interp E -∗
       [∗ hlist] ty; ty';- f ∈ tyl; tyl';- fl, type_incl f ty ty').
   Proof.
-    elim=> /=[|>Sub _ IH]; [by iIntros "_!>_"|]. iIntros "L".
+    elim=>/= [|>Sub _ IH]; [by iIntros "_!>_"|]. iIntros "L".
     iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
     iIntros "!> #E". iDestruct ("Sub" with "E") as "$". iDestruct ("IH" with "E") as "$".
   Qed.
@@ -843,7 +843,7 @@ Section subtyping.
     type_incl f st st'.
   Proof.
     move=> ?. iIntros "#InLft #InOwn". do 2 (iSplit; [done|]).
-    iSplit; iIntros "!>*"; [by iApply "InOwn"|]. iDestruct 1 as (vl) "[Bor Own]".
+    iSplit; iIntros "!>*"; [by iApply "InOwn"|]. iIntros "[%vl[Bor Own]]".
     iExists vl. iFrame "Bor". by iApply "InOwn".
   Qed.
 
@@ -866,8 +866,8 @@ Section subtyping.
     type_incl f pt pt'.
   Proof.
     move=> ?. iIntros "#InLft #InOwn". do 2 (iSplit; [done|]). iSplit; iIntros "!>*/=".
-    - iDestruct 1 as (v->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
-    - iDestruct 1 as (vl) "[Bor Own]". iExists vl. iFrame "Bor". iNext.
+    - iIntros "[%v[->?]]". iExists (f v). iSplit; [done|]. by iApply "InOwn".
+    - iIntros "[%vl[Bor Own]]". iExists vl. iFrame "Bor". iNext.
       iDestruct "Own" as (v->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
   Qed.
 
@@ -890,10 +890,10 @@ Section type_util.
   Lemma heap_mapsto_ty_own {A} l (ty: _ A) vπd tid :
     l ↦∗: ty.(ty_own) vπd tid ⊣⊢
     ∃vl: vec val ty.(ty_size), l ↦∗ vl ∗ ty.(ty_own) vπd tid vl.
-  Proof. iSplit.
-    - iDestruct 1 as (vl) "[Mt Own]". iDestruct (ty_size_eq with "Own") as %<-.
-      iExists (list_to_vec vl). rewrite vec_to_list_to_vec. iFrame.
-    - iDestruct 1 as (vl) "[Mt Own]". iExists vl. iFrame.
+  Proof.
+    iSplit; iIntros "[%vl[? Own]]"; [|iExists vl; by iFrame].
+    iDestruct (ty_size_eq with "Own") as %<-. iExists (list_to_vec vl).
+    rewrite vec_to_list_to_vec. iFrame.
   Qed.
 End type_util.
 

@@ -12,14 +12,15 @@ Ltac fun_ext := apply functional_extensionality.
 
 Class SemiIso {A B} (f: A → B) (g: B → A) := semi_iso: g ∘ f = id.
 
-Class Iso {A B} (f: A → B) (g: B → A) := { iso:> SemiIso f g; iso':> SemiIso g f }.
+Class Iso {A B} (f: A → B) (g: B → A) :=
+  { iso_semi_iso:> SemiIso f g; iso_semi_iso':> SemiIso g f }.
 
 Global Instance iso_id {A} : Iso (@id A) id. Proof. done. Qed.
 
 Global Instance semi_iso_inj `{@SemiIso A B f g} : Inj (=) (=) f | 100.
 Proof.
-  move=> x y Eq. have [<-<-]: (g ∘ f) x = x ∧ (g ∘ f) y = y.
-  { by rewrite semi_iso. } by rewrite /= Eq.
+  move=> x y Eq. have [<-<-]: (g ∘ f) x = x ∧ (g ∘ f) y = y by rewrite semi_iso.
+  by rewrite /= Eq.
 Qed.
 
 Lemma compose_assoc {A B C D} (f: A → B) g (h: C → D) : h ∘ (g ∘ f) = (h ∘ g) ∘ f.

@@ -7,23 +7,19 @@ Set Default Proof Using "Type".
 Section own.
   Context `{!typeG Σ}.
 
-  Definition freeable_sz (n : nat) (sz : nat) (l : loc) : iProp Σ :=
-    match sz, n return _ with
-    | 0%nat, _ => True
-    | _, 0%nat => False
-    | sz, n => †{pos_to_Qp (Pos.of_nat sz) / pos_to_Qp (Pos.of_nat n)}l…sz
-    end%I.
-  Arguments freeable_sz : simpl never.
+  Definition freeable_sz (n sz: nat) (l: loc) : iProp Σ :=
+    match sz, n with 0, _ => True | _, 0 => False |
+      sz, n => †{pos_to_Qp (Pos.of_nat sz) / pos_to_Qp (Pos.of_nat n)}l…sz end.
+  Arguments freeable_sz: simpl never.
 
   Global Instance freeable_sz_timeless n sz l : Timeless (freeable_sz n sz l).
-  Proof. destruct sz, n; apply _. Qed.
+  Proof. case sz, n; apply _. Qed.
 
   Lemma freeable_sz_full n l : freeable_sz n n l ⊣⊢ †{1}l…n ∨ ⌜Z.of_nat n = 0⌝.
   Proof.
-    destruct n as [|n].
-    - iSplit; iIntros "H /="; auto.
-    - assert (Z.of_nat (S n) = 0 ↔ False) as -> by done. rewrite right_id.
-      by rewrite /freeable_sz Qp_div_diag.
+    case n=> [|n']. { iSplit; iIntros; by [iRight|]. }
+    have ->: Z.of_nat (S n') = 0 ↔ False by done.
+    by rewrite right_id /freeable_sz Qp_div_diag.
   Qed.
 
   Lemma freeable_sz_full_S n l : freeable_sz (S n) (S n) l ⊣⊢ †{1}l…(S n).
@@ -31,12 +27,12 @@ Section own.
 
   Lemma freeable_sz_split n sz1 sz2 l :
     freeable_sz n sz1 l ∗ freeable_sz n sz2 (l +ₗ sz1) ⊣⊢
-                freeable_sz n (sz1 + sz2) l.
+    freeable_sz n (sz1 + sz2) l.
   Proof.
-    destruct sz1; [|destruct sz2;[|rewrite /freeable_sz plus_Sn_m; destruct n]].
+    case sz1; [|case sz2;[|rewrite /freeable_sz; case n]]; move=>/= *.
     - by rewrite left_id shift_loc_0.
     - by rewrite right_id Nat.add_0_r.
-    - iSplit. by iIntros "[[]?]". by iIntros "[]".
+    - iSplit; by [iIntros "[??]"|iIntros].
     - rewrite heap_freeable_op_eq. f_equiv.
       by rewrite -Qp_div_add_distr pos_to_Qp_add -Nat2Pos.inj_add.
   Qed.
@@ -44,9 +40,8 @@ Section own.
   (* Make sure 'simpl' doesn't unfold. *)
   Global Opaque freeable_sz.
 
-  Program Definition own_ptr {A} (n : nat) (ty : type A) :=
-    {| ty_size := 1;
-       ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
+  Program Definition own_ptr {A} (n: nat) (ty: type A) :=
+    {| ty_size := 1;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
        ty_own vπd tid vl :=
          match vπd, vl return _ with
          | (vπ, S d), [ #(LitLoc l) ] =>
@@ -58,29 +53,27 @@ Section own.
             problems. *)
            ▷ (l ↦∗: ty.(ty_own) (vπ,d) tid ∗ freeable_sz n ty.(ty_size) l)
          | _, _ => False
-         end%I;
+         end;
          ty_shr vπd κ tid l :=
           match vπd return _ with
           | (vπ, S d) =>
             (∃ l':loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) (vπ,d) κ tid l')%I
           | _ => False
-          end%I
-    |}.
-  Next Obligation. iIntros (A q ty [? [|depth]] κ tid l); typeclasses eauto. Qed.
-  Next Obligation. by iIntros (A q ty [? [|depth]] tid [|[[]|][]]) "H". Qed.
+          end
+    |}%I.
+  Next Obligation. iIntros (A q ty [? [|?]] κ tid l); apply _. Qed.
+  Next Obligation. by iIntros (A q ty [? [|?]] tid [|[[]|][]]) "?". Qed.
   Next Obligation.
-    intros A n ty [|depth1] [|depth2] asn tid vl Hdepth12;
+    intros A n ty [|?] [|?] asn tid vl Hdepth12;
       [iIntros "[]"|iIntros "[]"|lia|].
     do 6 f_equiv. apply ty_own_mt_depth_mono. lia.
   Qed.
-
   Next Obligation.
     iIntros (A n ty [|d1] [|d2] asn tid1 tid2 l Hdepth12);
       [iIntros "[]"|iIntros "[]"|lia|].
     do 4 f_equiv. iIntros "Hintros".
     by iApply (ty_shr_depth_mono _ _ d1); [lia|].
   Qed.
-
   Next Obligation.
     iIntros (A q ty κ κ' [? [|n]] tid l) "/= #LFT"; [iIntros "[]"|].
     iDestruct 1 as (l') "[? ?]".
@@ -88,12 +81,11 @@ Section own.
     - by iApply frac_bor_shorten.
     - by iApply ty_shr_lft_mono.
   Qed.
-
   Next Obligation.
-    iIntros (A n ty N asn vπd κ l tid ??) "/= #LFT #Hout Hshr Htok".
+    iIntros (A n ty N ? d κ l tid ??) "/= #LFT #Hout Hshr Htok".
     iMod (bor_exists with "LFT Hshr") as (vl) "Hb"; first solve_ndisj.
     iMod (bor_sep with "LFT Hb") as "[Hb1 Hb2]"; first solve_ndisj.
-    destruct vπd as [|deoth], vl as [|[[|l'|]|][]];
+    destruct d as [|d], vl as [|[[|l'|]|][]];
       try (iMod (bor_persistent with "LFT Hb2 Htok") as "[>[]_]"; solve_ndisj).
     rewrite heap_mapsto_vec_singleton bi.later_sep.
     iMod (bor_sep with "LFT Hb2") as "[Hb2 _]"; first solve_ndisj.
@@ -104,9 +96,8 @@ Section own.
     iApply (step_fupdN_wand with "Hb2"). iIntros ">[Hb2 $]".
     iExists (l'); by iFrame.
   Qed.
-
   Next Obligation.
-    iIntros (A n ty N asn [|d] tid [|[[]|][]] κ ??) "#LFT #Hout"; try iIntros "[]".
+    iIntros (A n ty N ? [|d] tid [|[[]|][]] κ ??) "#LFT #Hout"; try iIntros "[]".
     iIntros "Hown Htok".
     iModIntro. iModIntro. iNext.
     iDestruct "Hown" as "[Hown Hfrz]".
@@ -119,9 +110,8 @@ Section own.
     iMod ("Hb" with "Hq") as "[Hb ?]"; iFrame.
     iExists vl; by iFrame.
   Qed.
-
   Next Obligation.
-    iIntros (A q ty N asn [|d] κ tid l κ' ??) "/= #LFT #Hout #Hshrt"; try iIntros "[]";
+    iIntros (A q ty N ? [|d] κ tid l κ' ??) "/= #LFT #Hout #Hshrt"; try iIntros "[]";
     iDestruct 1 as (l') "[Hfrac Hshr]";iIntros "Htok".
     iModIntro; iNext.
     iDestruct ((ty_shr_proph A _ N) with "LFT Hout Hshrt Hshr Htok") as "> Hb2"; [done|].
@@ -141,7 +131,7 @@ Section own.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /= /elctx_interp /= left_id right_id.
     - done.
-    - move=> ??? Hsz ?? Ho ? [? [|depth]]? [|[[|l|]|] []] //=.
+    - move=> ??? Hsz ?? Ho ? [? [|?]]? [|[[|l|]|] []] //=.
       rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
     - move=> ??????? Hs [? [|?]] ??? /=;  repeat (apply Hs || f_contractive || f_equiv).
   Qed.
@@ -150,7 +140,7 @@ Section own.
 
   Global Instance own_send A n ty : Send ty → Send (@own_ptr A n ty).
   Proof.
-    iIntros (Hsend tid1 tid2 [? [|depth]] [|[[| |]|][]]) "H"; try done.
+    iIntros (Hsend tid1 tid2 [? [|?]] [|[[| |]|][]]) "H"; try done.
     iDestruct "H" as "[Hm $]". iNext. iApply (heap_mapsto_pred_wand with "Hm").
     iIntros (vl) "?". by iApply Hsend.
   Qed.
@@ -161,16 +151,16 @@ Section own.
     iExists _. iFrame "Hm". by iApply Hsync.
   Qed.
 
-  Lemma own_type_incl {A B} n m (f: A → B) ty1 ty2 :
-    ▷ ⌜n = m⌝ -∗ type_incl f ty1 ty2 -∗ type_incl f (own_ptr n ty1) (own_ptr m ty2).
+  Lemma own_type_incl {A B} n (f: A → B) ty1 ty2 :
+    type_incl f ty1 ty2 -∗ type_incl f (own_ptr n ty1) (own_ptr n ty2).
   Proof.
-    iIntros "#Heq #(Hsz & Hout & Ho & Hs)".
+    iIntros "#(Hsz & Hout & Ho & Hs)".
     iSplit; first done. iSplit; [done|iSplit; iModIntro].
-    - iIntros (? [|depth]?[|[[| |]|][]]) "H"; try done. simpl.
+    - iIntros (? [|?]?[|[[| |]|][]]) "H"; try done. simpl.
       iDestruct "H" as "[Hmt H†]". iNext. iDestruct ("Hsz") as %<-.
-      iDestruct "Heq" as %->. iFrame. iApply (heap_mapsto_pred_wand with "Hmt").
+      iFrame. iApply (heap_mapsto_pred_wand with "Hmt").
       iApply "Ho".
-    - iIntros (?[|depth] ???) "H"; first done. iDestruct "H" as (l') "[Hfb #Hshr]".
+    - iIntros (?[|?] ???) "H"; first done. iDestruct "H" as (l') "[Hfb #Hshr]".
       iExists l'. iFrame. iApply ("Hs" with "Hshr").
   Qed.
 
@@ -199,7 +189,7 @@ Section box.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /= /elctx_interp /= left_id right_id.
     - done.
-    - move=> ??? Hsz ?? Ho ? [? [|depth]] ? [|[[|l|]|] []] //=.
+    - move=> ??? Hsz ?? Ho ? [? [|?]] ? [|[[|l|]|] []] //=.
       rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
     - move=> ??????? Hs [? [|?]] ??? /=; repeat (apply Hs || f_contractive || f_equiv).
   Qed.
@@ -209,7 +199,7 @@ Section box.
   Lemma box_type_incl {A B} (f: A → B) ty ty':
     type_incl f ty ty' -∗ type_incl f (box ty) (box ty').
   Proof.
-    iIntros "#Incl". iApply own_type_incl; [|done]. by iDestruct "Incl" as "[??]".
+    iIntros "[%Eq ?]". rewrite /box Eq. iApply own_type_incl. by iSplit.
   Qed.
 
   Lemma box_subtype {A B} E L (f: A → B) ty ty' :
@@ -228,18 +218,18 @@ End box.
 Section util.
   Context `{!typeG Σ}.
 
-  Lemma ownptr_own A n (ty : type A) tid vπd v :
-    (own_ptr n ty).(ty_own) vπd tid [v] ⊣⊢
+  Lemma ownptr_own A n (ty: _ A) tid vπ d v :
+    (own_ptr n ty).(ty_own) (vπ,d) tid [v] ⊣⊢
        ∃ (l : loc) (vl : vec val ty.(ty_size)),
-         ⌜vπd.2 > 0⌝%nat ∗ ⌜v = #l⌝ ∗ ▷ l ↦∗ vl ∗
-         ▷ ty.(ty_own) (vπd.1, (pred vπd.2)) tid vl ∗ ▷ freeable_sz n ty.(ty_size) l.
+         ⌜d > 0⌝%nat ∗ ⌜v = #l⌝ ∗ ▷ l ↦∗ vl ∗
+         ▷ ty.(ty_own) (vπ, pred d) tid vl ∗ ▷ freeable_sz n ty.(ty_size) l.
   Proof.
     iSplit.
-    - iIntros "Hown". destruct vπd as [? [|depth]], v as [[|l|]|]; try done.
+    - iIntros "Hown". destruct d as [|?], v as [[|l|]|]; try done.
       iExists l. iDestruct "Hown" as "[Hown $]". rewrite heap_mapsto_ty_own.
       iDestruct "Hown" as (vl) "[??]". simpl. eauto with iFrame lia.
-    - iIntros "Hown". iDestruct "Hown" as (l vl) "(% & -> & ? & ? & ?)".
-      destruct vπd as [? [|depth]]; simpl in *; try lia. iFrame. iExists _. iFrame.
+    - iIntros "(%&%&%&->&?&?&?)".
+      destruct d as [|?]; simpl in *; try lia. iFrame. iExists _. iFrame.
   Qed.
   (*
   Lemma ownptr_uninit_own n m tid depth v :
