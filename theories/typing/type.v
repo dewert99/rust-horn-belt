@@ -480,10 +480,10 @@ Section type_contractive.
   Global Instance type_contractive_type_ne {A B} (T: _ A → _ B) :
     TypeContractive T → TypeNonExpansive T.
   Proof.
-    move=> HT. split; [by apply HT|move=> *; by apply HT| |].
-    - move=> *. apply HT; auto using dist_dist_later, dist_S.
-    - move=> n *. apply HT; auto using dist_dist_later.
-      move=> *. destruct n as [|[|]]=>//. simpl in *. by apply dist_S.
+    move=> HT. split; [by apply _|move=> *; by apply HT| |].
+    - move=> *. apply HT=>// *; by [apply dist_dist_later|apply dist_S].
+    - move=> n *. apply HT=>// *; [|by apply dist_dist_later].
+      case n as [|[|]]=>//. simpl in *. by apply dist_S.
   Qed.
 
   Global Instance type_ne_ne_compose {A B C} (T: _ B → _ C) (T': _ A → _ B) :
@@ -493,7 +493,7 @@ Section type_contractive.
     (move=> n *; apply HT; (try by apply HT');
       first (by iApply type_lft_morphism_lft_equiv_proper);
       first (apply type_lft_morphism_elctx_interp_proper=>//; apply _)).
-    move=> *. destruct n=>//. by apply HT'.
+    move=> *. case n as [|]=>//. by apply HT'.
   Qed.
 
   Global Instance type_contractive_compose_right {A B C} (T: _ B → _ C) (T': _ A → _ B) :
@@ -503,7 +503,7 @@ Section type_contractive.
     (move=> n *; apply HT; (try by apply HT');
       first (by iApply type_lft_morphism_lft_equiv_proper);
       first (apply type_lft_morphism_elctx_interp_proper=>//; apply _));
-    move=> *; destruct n as [|[|]]=>//; by apply HT'.
+    move=> *; case n as [|[|]]=>//; by apply HT'.
   Qed.
 
   Global Instance type_contractive_compose_left {A B C} (T: _ B → _ C) (T': _ A → _) :
@@ -513,7 +513,7 @@ Section type_contractive.
     (move=> n *; apply HT; (try by apply HT');
       first (by iApply type_lft_morphism_lft_equiv_proper);
       first (apply type_lft_morphism_elctx_interp_proper=>//; apply _));
-    move=> *; destruct n=>//; by apply HT'.
+    move=> *; case n as [|]=>//; by apply HT'.
   Qed.
 
   Global Instance const_type_contractive {A B} (ty: _ A) : TypeContractive (λ _: _ B, ty).
@@ -642,10 +642,10 @@ Section type.
 
   Global Program Instance simple_type_copy {A} (st: simple_type A) : Copy st.
   Next Obligation.
-    move=> *. iIntros "#LFT #Shr Na Tok". iDestruct "Shr" as (?) "[Bor Own]".
+    move=> *. iIntros "#LFT #Shr Na Tok". iDestruct "Shr" as (vl) "[Bor Own]".
     iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
-    iMod (frac_bor_acc with "LFT Bor Tok") as (?) "[>Mt Close]"; [solve_ndisj|].
-    iModIntro. iExists _, _. iFrame "Mt Own". iIntros "Na".
+    iMod (frac_bor_acc with "LFT Bor Tok") as (q) "[>Mt Close]"; [solve_ndisj|].
+    iModIntro. iExists q, vl. iFrame "Mt Own". iIntros "Na".
     iDestruct ("ToNa" with "Na") as "$". iIntros "?". by iApply "Close".
   Qed.
 
@@ -706,7 +706,9 @@ Section subtyping.
     Persistent (type_incl f ty ty') := _.
 
   Lemma type_incl_refl {A} (ty: _ A) : ⊢ type_incl id ty ty.
-  Proof. iSplit; [done|]. iSplit; [by iApply lft_incl_refl|]. iSplit; auto. Qed.
+  Proof.
+    iSplit; [done|]. iSplit; [by iApply lft_incl_refl|]. iSplit; iModIntro; by iIntros.
+  Qed.
 
   Lemma type_incl_trans {A B C} (f: A → B) (g: B → C) ty ty' ty'' :
     type_incl f ty ty' -∗ type_incl g ty' ty'' -∗ type_incl (g ∘ f) ty ty''.

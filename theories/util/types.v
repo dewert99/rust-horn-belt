@@ -1,7 +1,6 @@
 Require Import Equality FunctionalExtensionality.
 From stdpp Require Import prelude.
 From iris.algebra Require Import monoid ofe.
-From iris.base_logic Require Import iprop.
 From iris.proofmode Require Import tactics.
 From lrust.util Require Import basic.
 
@@ -391,18 +390,39 @@ End lemmas.
 
 (** * Iris *)
 
-Fixpoint big_sepHL {Σ F As} (Φ: ∀A, F A → iProp Σ) (xl: hlist F As) : iProp Σ :=
-  match xl with +[] => True | x +:: xl' => Φ _ x ∗ big_sepHL Φ xl' end.
-Notation "[∗ hlist] x ∈ xl , P" := (big_sepHL (λ _ x, P) xl)
+Section def.
+Context {PROP: bi}.
+
+Fixpoint big_sepHL {F As} (Φ: ∀A, F A → PROP) (xl: hlist F As) : PROP :=
+  match xl with +[] => True | x +:: xl' => Φ _ x ∗ big_sepHL Φ xl' end%I.
+
+Fixpoint big_sepHLZip {F G H As Bs} (Φ: ∀A B, F A → G B → H A B → PROP)
+  (xl: hlist F As) (yl: hlist G Bs) (zl: plist2 H As Bs) : PROP:=
+  match xl, yl, zl with +[], +[], _ => True
+  | x +:: xl', y +:: yl', z -:: zl' => Φ _ _ x y z ∗ big_sepHLZip Φ xl' yl' zl'
+  | _, _, _ => False end%I.
+
+End def.
+
+Notation "[∗ hlist] x ∈ xl , P" := (big_sepHL (λ _ x, P%I) xl)
   (at level 200, xl at level 10, x at level 1, right associativity,
     format "[∗  hlist]  x  ∈  xl ,  P") : bi_scope.
 
-Fixpoint big_sepHLZip {Σ F G H As Bs} (Φ: ∀A B, F A → G B → H A B → iProp Σ)
-  (xl: hlist F As) (yl: hlist G Bs) (zl: plist2 H As Bs) : iProp Σ :=
-  match xl, yl, zl with +[], +[], _ => True |
-    x +:: xl', y +:: yl', z -:: zl' => Φ _ _ x y z ∗ big_sepHLZip Φ xl' yl' zl' |
-    _, _, _ => False end.
 Notation "[∗ hlist] x ; y ;- z ∈ xl ; yl ;- zl , P" :=
-  (big_sepHLZip (λ _ _ x y z, P) xl yl zl)
+  (big_sepHLZip (λ _ _ x y z, P%I) xl yl zl)
   (at level 200, xl, yl, zl at level 10, x, y, z at level 1, right associativity,
     format "[∗  hlist]  x ;  y ;-  z  ∈  xl ;  yl ;-  zl ,  P") : bi_scope.
+
+Section lemmas.
+Context `{BiAffine PROP}.
+
+Lemma big_sepHL_singleton {F B} (Φ: ∀A, F A → PROP) (y: F B) :
+  ([∗ hlist] x ∈ +[y]@{F}, Φ _ x) ⊣⊢ Φ _ y.
+Proof. by rewrite /= right_id. Qed.
+
+Lemma big_sepHL_app {F As Bs} (Φ: ∀A, F A → PROP) (l: hlist F As) (l': hlist F Bs) :
+  ([∗ hlist] x ∈ l h++ l', Φ _ x) ⊣⊢
+  ([∗ hlist] x ∈ l, Φ _ x) ∗ ([∗ hlist] x ∈ l', Φ _ x).
+Proof. elim l; [by rewrite left_id|]=>/= > ->. by rewrite assoc. Qed.
+
+End lemmas.
