@@ -12,11 +12,6 @@ Section bool.
     {| pt_size := 1;  pt_own b _ vl := ⌜vl = [ #b]⌝; |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
-End bool.
-
-Section typing.
-  Context `{!typeG Σ}.
-
   Global Instance bool_send: Send bool_ty. Proof. done. Qed.
 
 (*
@@ -47,4 +42,4 @@ Section typing.
   Qed.
 *)
 
-End typing.
+End bool.

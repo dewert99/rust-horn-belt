@@ -431,7 +431,7 @@ Qed.
 
 End type_lft_morphism.
 
-Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
+Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A → type B) : Prop := {
   type_non_expansive_type_lft_morphism:> TypeLftMorphism T;
   type_non_expansive_ty_size ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (T ty).(ty_size) = (T ty').(ty_size);
@@ -450,7 +450,7 @@ Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
     (∀vπd κ tid l, (T ty).(ty_shr) vπd κ tid l ≡{n}≡ (T ty').(ty_shr) vπd κ tid l);
 }.
 
-Class TypeContractive `{!typeG Σ} {A B} (T: type A -> type B) : Prop := {
+Class TypeContractive `{!typeG Σ} {A B} (T: type A → type B) : Prop := {
   type_contractive_type_lft_morphism:> TypeLftMorphism T;
   type_contractive_ty_size ty ty' : (T ty).(ty_size) = (T ty').(ty_size);
   type_contractive_ty_own n ty ty' :
@@ -642,11 +642,11 @@ Section type.
 
   Global Program Instance simple_type_copy {A} (st: simple_type A) : Copy st.
   Next Obligation.
-    move=> *. iIntros "#LFT #Shr Tok LTok". iDestruct "Shr" as (?) "[Bor Own]".
-    iDestruct (na_own_acc with "Tok") as "[$ ToTok]"; [solve_ndisj|].
-    iMod (frac_bor_acc with "LFT Bor LTok") as (?) "[>Mt Close]"; [solve_ndisj|].
-    iModIntro. iExists _, _. iFrame "Mt Own". iIntros "Tok".
-    iDestruct ("ToTok" with "Tok") as "$". iIntros "?". by iApply "Close".
+    move=> *. iIntros "#LFT #Shr Na Tok". iDestruct "Shr" as (?) "[Bor Own]".
+    iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
+    iMod (frac_bor_acc with "LFT Bor Tok") as (?) "[>Mt Close]"; [solve_ndisj|].
+    iModIntro. iExists _, _. iFrame "Mt Own". iIntros "Na".
+    iDestruct ("ToNa" with "Na") as "$". iIntros "?". by iApply "Close".
   Qed.
 
   (** Lemmas on Send and Sync *)
@@ -864,9 +864,9 @@ Section subtyping.
     type_incl f pt pt'.
   Proof.
     move=> ?. iIntros "#InLft #InOwn". do 2 (iSplit; [done|]). iSplit; iIntros "!>*/=".
-    - iDestruct 1 as (v ->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
+    - iDestruct 1 as (v->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
     - iDestruct 1 as (vl) "[Bor Own]". iExists vl. iFrame "Bor". iNext.
-      iDestruct "Own" as (v ->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
+      iDestruct "Own" as (v->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
   Qed.
 
   Lemma subtype_plain_type {A B} E L (f: A → B) pt pt' :

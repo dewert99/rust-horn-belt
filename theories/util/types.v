@@ -1,4 +1,5 @@
 Require Import Equality FunctionalExtensionality.
+From stdpp Require Import prelude.
 From iris.algebra Require Import monoid ofe.
 From iris.base_logic Require Import iprop.
 From iris.proofmode Require Import tactics.
@@ -86,7 +87,7 @@ Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
 Lemma HForall_nth {F B As} (Φ: ∀A, F A → Prop) (y: _ B) (xl: _ As) i :
   Φ _ y → HForall Φ xl → Φ _ (hnth y xl i).
 Proof.
-  move=> ? All. move: i. elim All=> /=[|> ???]; by [move=> ?|case=> [|?]].
+  move=> ? All. move: i. elim All=> /=[|> ???]; by [|case].
 Qed.
 
 Inductive HForall2 {F G} (Φ: ∀A, F A → G A → Prop)
@@ -113,7 +114,7 @@ Qed.
 Lemma HForall2_nth {F G B As} (Φ: ∀A, F A → G A → Prop) (x y: _ B) (xl yl: _ As) i :
   Φ _ x y → HForall2 Φ xl yl → Φ _ (hnth x xl i) (hnth y yl i).
 Proof.
-  move=> ? All. move: i. elim All=> /=[|> ???]; by [move=> ?|case=> [|?]].
+  move=> ? All. move: i. elim All=> /=[|> ???]; by [|case].
 Qed.
 
 Global Instance HForall2_reflexive {F As} (R: ∀A, F A → F A → Prop) :
@@ -192,15 +193,12 @@ Fixpoint prepeat {F A} (x: F A) n : plist F (trepeat A n) :=
 
 Fixpoint hlist_to_plist {F As} (xl: hlist F As) : plist F As :=
   match xl with +[] => -[] | x +:: xl' => x -:: hlist_to_plist xl' end.
-
 Fixpoint plist_to_hlist {F As} (xl: plist F As) : hlist F As :=
   match As, xl with ^[], _ => +[] | _ ^:: _, x -:: xl' => x +:: plist_to_hlist xl' end.
-
 Global Instance hlist_plist_iso {F As} : Iso (@hlist_to_plist F As) plist_to_hlist.
 Proof. split.
-  - fun_ext=> xl. by elim xl; [done|]=>/= > ->.
-  - elim As; [fun_ext; by case|]=> ?? IH. fun_ext. case=>/= x xl. f_equal.
-    have {2}->: xl = id xl. { done. } by rewrite -IH.
+  - fun_ext. by elim; [done|]=>/= > ->.
+  - fun_ext. elim As; [by case|]=>/= ?? IH [??] /=. by rewrite IH.
 Qed.
 
 Fixpoint plist2 (F: Type → Type → Type) As Bs : Type :=
@@ -226,8 +224,7 @@ Fixpoint p2flip {F As Bs} : plist2 F As Bs → plist2 (flip F) Bs As :=
 
 Lemma p2flip_invol {F As Bs} (zl: _ F As Bs) : p2flip (p2flip zl) = zl.
 Proof.
-  dependent induction As; dependent induction Bs; simpl in *; try done.
-  case zl=> [??]. by f_equal.
+  dependent induction As; dependent induction Bs=>//. case zl=>/= *. by f_equal.
 Qed.
 
 Fixpoint p2zip {F G As Bs} :
@@ -239,14 +236,12 @@ Fixpoint p2zip {F G As Bs} :
 Lemma p2zip_fst {F G As Bs} (xl: _ F As Bs) (yl: _ G _ _) :
   (λ _ _, fst) -2<$> p2zip xl yl = xl.
 Proof.
-  dependent induction As; dependent induction Bs; case xl; case yl; try done.
-  move=>/= *. by f_equal.
+  dependent induction As; dependent induction Bs; case xl, yl=>//= *. by f_equal.
 Qed.
 Lemma p2zip_snd {F G As Bs} (xl: _ F As Bs) (yl: _ G _ _) :
   (λ _ _, snd) -2<$> p2zip xl yl = yl.
 Proof.
-  dependent induction As; dependent induction Bs; case xl; case yl; try done.
-  move=>/= *. by f_equal.
+  dependent induction As; dependent induction Bs; case xl, yl=>//= *. by f_equal.
 Qed.
 
 Fixpoint p2ids {As} : plist2 (→) As As :=
@@ -292,6 +287,16 @@ Next Obligation.
   move=> ?? n. elim n; [by case|]=> ? IH [x xl]. by rewrite (eq_unique x) (IH xl).
 Qed.
 
+Fixpoint vec_to_pvec {A n} (xl: vec A n) : pvec A n :=
+  match xl with [#] => -[] | x ::: xl' => x -:: vec_to_pvec xl' end.
+Fixpoint pvec_to_vec {A n} (xl: pvec A n) : vec A n :=
+  match n, xl with 0, _ => [#] | S _, x -:: xl' => x ::: pvec_to_vec xl' end.
+Global Instance vec_pvec_iso {A n} : Iso (@vec_to_pvec A n) pvec_to_vec.
+Proof. split.
+  - fun_ext. by elim; [done|]=>/= > ->.
+  - fun_ext. elim n; [by case|]=>/= > IH [??] /=. by rewrite IH.
+Qed.
+
 Inductive HForallZip {F G H} (Φ: ∀A B, F A → G B → H A B → Prop)
   : ∀{As Bs}, hlist F As → hlist G Bs → plist2 H As Bs → Prop :=
 | HForallZip_nil: HForallZip Φ +[] +[] -[]
@@ -323,7 +328,7 @@ Lemma HForallZip_nth {F G H C D As Bs} (Φ: ∀A B, F A → G B → H A B → Pr
   (x: _ C) (y: _ D) z (xl: _ As) (yl: _ Bs) zl i :
   Φ _ _ x y z → HForallZip Φ xl yl zl → Φ _ _ (hnth x xl i) (hnth y yl i) (p2nth z zl i).
 Proof.
-  move=> ? All. move: i. elim All=> /=[|> ???]; by [move=> ?|case=> [|?]].
+  move=> ? All. move: i. elim All=> /=[|> ???]; by [|case].
 Qed.
 
 (** * Sum *)

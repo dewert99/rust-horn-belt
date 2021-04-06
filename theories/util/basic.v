@@ -3,18 +3,8 @@ From stdpp Require Import prelude.
 
 (** * Utility for Natural Numbers *)
 
-Lemma succ_le m n : S m ≤ n → ∃n', n = S n' ∧ m ≤ n'.
-Proof. move: n=> [|n]=> Le; [|exists n]; lia. Qed.
-
-(** * Utility for Lists *)
-
-Lemma list_sep_length {A} (xl: list A) m n :
-  length xl = m + n → ∃yl zl, xl = yl ++ zl ∧ length yl = m ∧ length zl = n.
-Proof.
-  move: xl. elim m; [by exists [], xl|]=> ? IH [|x xl]; [done|]=> [=Eq].
-  case (IH xl Eq)=> [yl[zl[->[??]]]]. exists (x :: yl), zl.
-  split; [done|]. split; [|done]=>/=. by f_equal.
-Qed.
+Lemma succ_le m n : S m ≤ n ↔ ∃n', n = S n' ∧ m ≤ n'.
+Proof. split; [|case; lia]. move: n=> [|n']; [|exists n']; lia. Qed.
 
 (** * Utility for Point-Free Style *)
 
@@ -38,7 +28,7 @@ Proof. done. Qed.
 Definition s_comb {A B C} (f: A → B → C) (g: A → B) x := (f x) (g x).
 Infix "⊛" := s_comb (left associativity, at level 50).
 
-Lemma surjective_pairing_fun {A B C} (f: A → B * C) : f = (pair ∘ (fst ∘ f) ⊛ (snd ∘ f)).
+Lemma surjective_pairing_fun {A B C} (f: A → B * C) : f = pair ∘ (fst ∘ f) ⊛ (snd ∘ f).
 Proof. fun_ext=> ?. by rewrite /s_comb /compose -surjective_pairing. Qed.
 
 Definition prod_assoc {A B C} '((x, (y, z))) : (A * B) * C := ((x, y), z).
@@ -61,11 +51,11 @@ Proof. split; fun_ext; by [case=> [?[]]|]. Qed.
 Class Unique A := { unique: A; eq_unique: ∀x: A, x = unique }.
 
 Program Global Instance unit_unique: Unique () := {| unique := () |}.
-Next Obligation. by move=> []. Qed.
+Next Obligation. by case. Qed.
 
 Program Global Instance prod_unique `{Unique A, Unique B}
   : Unique (A * B) := {| unique := (unique, unique) |}.
-Next Obligation. move=> ????. case=> [??]; f_equal; apply eq_unique. Qed.
+Next Obligation. move=> ????. case=> *; f_equal; apply eq_unique. Qed.
 
 Program Global Instance fun_unique {B} `{Unique A}
   : Unique (B → A) := {| unique := const unique |}.

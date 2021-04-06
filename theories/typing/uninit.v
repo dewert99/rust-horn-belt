@@ -1,8 +1,8 @@
 Require Import FunctionalExtensionality Equality.
 From iris.proofmode Require Import tactics.
 From lrust.util Require Import basic types.
-From lrust.typing Require Import mod_ty array product.
 From lrust.typing Require Export type.
+From lrust.typing Require Import mod_ty array product.
 Set Default Proof Using "Type".
 
 Section uninit.
@@ -11,6 +11,7 @@ Section uninit.
   Program Definition uninit1: type unit :=
     {| pt_size := 1;  pt_own _ _ vl := ⌜∃v, vl = [v]⌝; |}%I.
   Next Obligation. move=> *. by iDestruct 1 as (?) "->". Qed.
+
   Global Instance uninit1_send: Send uninit1. Proof. done. Qed.
 
   Definition uninit n : type unit := <{unique}> (array n uninit1).

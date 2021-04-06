@@ -2,8 +2,8 @@ Require Import FunctionalExtensionality Equality.
 From iris.proofmode Require Import tactics.
 From iris.algebra Require Import list numbers.
 From lrust.util Require Import basic update types.
-From lrust.typing Require Import lft_contexts mod_ty.
 From lrust.typing Require Export type.
+From lrust.typing Require Import lft_contexts mod_ty.
 
 Set Default Proof Using "Type".
 

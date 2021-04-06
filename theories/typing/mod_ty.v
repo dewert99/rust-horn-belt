@@ -69,7 +69,8 @@ Section typing.
   Context `{!typeG Σ}.
 
   Global Instance mod_ty_type_ne {A B} (f: A → B) : TypeNonExpansive <{f}>%T.
-  Proof. split; [|done|move=> */=; by do 3 f_equiv|move=> */=; by do 3 f_equiv].
+  Proof.
+    split=>/= *; [|done|by do 3 f_equiv|by do 3 f_equiv].
     apply (type_lft_morphism_add _ static [] [])=> ?.
     - rewrite left_id. apply lft_equiv_refl.
     - by rewrite /elctx_interp /= left_id right_id.
@@ -91,13 +92,13 @@ Section typing.
 
   Lemma mod_ty_own {A B} g f `{@Iso A B f g} ty vπ d tid vl :
     (<{f}> ty).(ty_own) (vπ, d) tid vl ⊣⊢ ty.(ty_own) (g ∘ vπ, d) tid vl.
-  Proof. simpl. iSplit.
+  Proof. iSplit=>/=.
     - iDestruct 1 as (?->) "?". by rewrite compose_assoc semi_iso.
     - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
   Qed.
   Lemma mod_ty_shr {A B} g f `{@Iso A B f g} ty vπ d κ tid l :
     (<{f}> ty).(ty_shr) (vπ, d) κ tid l ⊣⊢ ty.(ty_shr) (g ∘ vπ, d) κ tid l.
-  Proof. simpl. iSplit.
+  Proof. iSplit=>/=.
     - iDestruct 1 as (?->) "?". by rewrite compose_assoc semi_iso.
     - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
   Qed.

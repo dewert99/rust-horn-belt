@@ -1,6 +1,6 @@
 From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
-(* From lrust.typing Require Import bool programs. *)
+From lrust.typing Require Import bool (* programs *).
 Set Default Proof Using "Type".
 
 Implicit Type z: Z.
@@ -8,18 +8,19 @@ Implicit Type z: Z.
 Section int.
   Context `{!typeG Σ}.
 
-  Program Definition int: type Z := {|
-    pt_size := 1;  pt_own z _ vl := ⌜vl = [ #z]⌝;
-  |}%I.
+  Program Definition int: type Z :=
+    {| pt_size := 1;  pt_own z _ vl := ⌜vl = [ #z]⌝; |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
   Global Instance int_send: Send int. Proof. done. Qed.
-End int.
+
+  Lemma bool_ty_to_int E L : subtype E L Z_of_bool bool_ty int.
+  Proof.
+    apply subtype_plain_type. iIntros (?) "_!>_/=". iSplit; [done|].
+    iSplit; [iApply lft_incl_refl|]. by iIntros.
+  Qed.
 
 (*
-Section typing.
-  Context `{!typeG Σ}.
-
   Lemma type_int_instr (z : Z) : typed_val #z int.
   Proof.
     iIntros (E L tid) "_ _ _ $ $ _". iMod persistent_time_receipt_0 as "#H0".
@@ -79,5 +80,5 @@ Section typing.
     (∀ (v : val), typed_body E L C ((v ◁ bool) :: T') (subst' x v e)) -∗
     typed_body E L C T (let: x := p1 ≤ p2 in e).
   Proof. iIntros. iApply type_let; [apply type_le_instr|solve_typing|done]. Qed.
-End typing.
 *)
+End int.
