@@ -1,6 +1,6 @@
 From iris.algebra Require Import numbers list.
 From iris.base_logic Require Export na_invariants.
-From lrust.util Require Import basic types.
+From lrust.util Require Export basic update types.
 From lrust.prophecy Require Export prophecy.
 From lrust.lifetime Require Export frac_borrow.
 From lrust.lang Require Export proofmode notation.
@@ -881,6 +881,8 @@ Section subtyping.
 
 End subtyping.
 
+(** * Utility *)
+
 Section type_util.
   Context `{!typeG Σ}.
 
@@ -893,7 +895,47 @@ Section type_util.
     rewrite vec_to_list_to_vec. iFrame.
   Qed.
 
+  Definition by_succ (d: nat) (Φ: nat → iProp Σ) : iProp Σ :=
+    match d with S d' => Φ d' | _ => False end.
+  Lemma by_succ_ex d Φ : by_succ d Φ ⊣⊢ ∃d', ⌜d = S d'⌝ ∗ Φ d'.
+  Proof.
+    iSplit; [|by iIntros "[%[->$]]"]. iIntros. case d; [done|]=> d'.
+    iExists d'. by iFrame.
+  Qed.
+  Global Instance by_succ_proper :
+    Proper ((=) ==> pointwise_relation _ (⊣⊢) ==> (⊣⊢)) by_succ.
+  Proof. move=> ??->?? Eq. rewrite !by_succ_ex. by setoid_rewrite Eq. Qed.
+  Global Instance by_succ_ne n :
+    Proper ((=) ==> pointwise_relation _ (dist n) ==> (dist n)) by_succ.
+  Proof. move=> ??->?? Eq. rewrite !by_succ_ex. by setoid_rewrite Eq. Qed.
+  Global Instance by_succ_persistent d Φ :
+    (∀d', Persistent (Φ d')) → Persistent (by_succ d Φ).
+  Proof. case d; apply _. Qed.
+
+  Definition by_just_loc (vl: list val) (Φ: loc → iProp Σ) : iProp Σ :=
+    match vl with [ #(LitLoc l)] => Φ l | _ => False end.
+  Lemma by_just_loc_ex vl Φ : by_just_loc vl Φ ⊣⊢ ∃l: loc, ⌜vl = [ #l]⌝ ∗ Φ l.
+  Proof.
+    iSplit; [|by iIntros "[%[->$]]"]. iIntros. case vl=> [|[[|l|?]|?][|??]]//.
+    iExists l. by iFrame.
+  Qed.
+  Global Instance by_just_loc_proper :
+    Proper ((=) ==> pointwise_relation _ (⊣⊢) ==> (⊣⊢)) by_just_loc.
+  Proof. move=> ??->?? Eq. rewrite !by_just_loc_ex. by setoid_rewrite Eq. Qed.
+  Global Instance by_just_loc_ne n :
+    Proper ((=) ==> pointwise_relation _ (dist n) ==> (dist n)) by_just_loc.
+  Proof. move=> ??->?? Eq. rewrite !by_just_loc_ex. by setoid_rewrite Eq. Qed.
+  Global Instance by_just_loc_persistent vl Φ :
+    (∀l, Persistent (Φ l)) → Persistent (by_just_loc vl Φ).
+  Proof. rewrite by_just_loc_ex. apply _. Qed.
+
 End type_util.
+
+Notation "[S d' := d ] P" := (by_succ d (λ d', P)) (at level 200,
+  right associativity, format "[S  d'  :=  d ]  P") : bi_scope.
+
+Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
+  right associativity, format "[loc[ l ]  :=  vl ]  P") : bi_scope.
 
 Global Hint Resolve ty_outlives_E_elctx_sat tyl_outlives_E_elctx_sat : lrust_typing.
 Global Hint Resolve subtype_refl eqtype_refl : lrust_typing.

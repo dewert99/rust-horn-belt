@@ -1,9 +1,4 @@
-From iris.algebra.lib Require Export excl_auth.
-From iris.proofmode Require Import tactics.
-From lrust.util Require Import basic update.
-From lrust.lang Require Import heap.
 From lrust.typing Require Export type.
-From lrust.typing Require Import uniq_cmra.
 (* From lrust.typing Require Import lft_contexts type_context programs. *)
 Set Default Proof Using "Type".
 

@@ -1,4 +1,3 @@
-From iris.proofmode Require Import tactics.
 From lrust.lang.lib Require Import memcpy.
 From lrust.typing Require Export type.
 (* From lrust.typing Require Import uninit type_context programs. *)
@@ -57,7 +56,6 @@ Section own.
       | _ => False
       end
   |}%I.
-  Next Obligation. move=> ????[|?]???; apply _. Qed.
   Next Obligation. by iIntros (???? [|?] ? [|[[]|][]]) "?". Qed.
   Next Obligation.
     move=> ??? [|?] [|?] ????; [iIntros "[]"|iIntros "[]"|lia|].
