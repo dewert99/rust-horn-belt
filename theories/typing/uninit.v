@@ -16,9 +16,9 @@ Section uninit.
 
   Definition uninit n : type unit := <{unique}> (array n uninit1).
 
-  Lemma uninit_own n vπd tid vl : (uninit n).(ty_own) vπd tid vl ⊣⊢ ⌜length vl = n⌝.
+  Lemma uninit_own n vπ d tid vl : (uninit n).(ty_own) vπ d tid vl ⊣⊢ ⌜length vl = n⌝.
   Proof.
-    move: vπd=> [??]. rewrite mod_ty_own. move: vl. elim: n=> [|n IH] vl.
+    rewrite mod_ty_own. move: vl. elim: n=> [|n IH] vl.
     - by rewrite mod_ty_own length_zero_iff_nil.
     - rewrite mod_ty_own -/hrepeat -/xprod_ty. iSplit.
       + iDestruct 1 as (??->[?[_[?->]]]) "H /=". rewrite IH. by iDestruct "H" as %->.
@@ -28,7 +28,7 @@ Section uninit.
 
   Lemma uninit_0_unit: uninit 0 ≡ unit_ty.
   Proof.
-    split=>//; move=> [??]*; [rewrite !mod_ty_own|rewrite !mod_ty_shr];
+    split=>// *; [rewrite !mod_ty_own|rewrite !mod_ty_shr];
     by rewrite compose_assoc semi_iso.
   Qed.
 

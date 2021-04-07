@@ -8,8 +8,6 @@ From lrust.lang.lib Require Export new_delete.
 
 Open Scope Z_scope.
 
-Definition pval_depth A : Type := (proph_asn → A) * nat.
-
 Create HintDb lrust_typing.
 Create HintDb lrust_typing_merge.
 

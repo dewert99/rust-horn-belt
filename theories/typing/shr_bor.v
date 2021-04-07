@@ -8,8 +8,8 @@ Section shr_bor.
 
   Program Definition shr_bor {A} (κ: lft) (ty: type A) : type A := {|
     st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
-    st_own vπd tid vl := ∃d (l: loc),
-      ⌜vπd.2 = S d⌝ ∗ ⌜vl = [ #l]⌝ ∗ ty.(ty_shr) (vπd.1,d) κ tid l;
+    st_own vπ d tid vl := ∃d' (l: loc),
+      ⌜d = S d'⌝ ∗ ⌜vl = [ #l]⌝ ∗ ty.(ty_shr) vπ d' κ tid l;
   |}%I.
   Next Obligation. move=> *. by iDestruct 1 as (???->) "_". Qed.
   Next Obligation.
@@ -17,7 +17,7 @@ Section shr_bor.
     iExists d', l. do 2 (iSplit; [done|]). iApply ty_shr_depth_mono; [|done]. lia.
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT #?". iDestruct 1 as (??->->) "Shr". iIntros "Tok !>".
+    move=> */=. iIntros "#LFT #? (%d & %l &->&->& Shr) Tok !>".
     iDestruct (ty_shr_proph with "LFT [] [] Shr Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }

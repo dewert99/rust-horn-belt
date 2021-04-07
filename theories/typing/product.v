@@ -12,7 +12,7 @@ Section product.
 
   Program Definition unit_ty: type unit := {|
     ty_size := 0;  ty_lfts := [];  ty_E := [];
-    ty_own _ _ vl := ⌜vl = []⌝;  ty_shr _ _ _ _ := True;
+    ty_own _ _ _ vl := ⌜vl = []⌝;  ty_shr _ _ _ _ _ := True;
   |}%I.
   Next Obligation. iIntros. by subst. Qed. Next Obligation. by iIntros. Qed.
   Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
@@ -36,11 +36,11 @@ Section product.
   Global Instance unit_ty_send: Send unit_ty. Proof. done. Qed.
   Global Instance unit_ty_sync: Sync unit_ty. Proof. done. Qed.
 
-  Lemma split_prod_mt {A B} (vπd: _ A) (vπd': _ B) tid ty ty' q l :
+  Lemma split_prod_mt {A B} (vπ: _ → A) d (vπ': _ → B) d' tid ty ty' q l :
     (l ↦∗{q}: λ vl, ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
-      ty.(ty_own) vπd tid wl ∗ ty'.(ty_own) vπd' tid wl')%I ⊣⊢
-    l ↦∗{q}: ty.(ty_own) vπd tid ∗
-      (l +ₗ ty.(ty_size)) ↦∗{q}: ty'.(ty_own) vπd' tid.
+      ty.(ty_own) vπ d tid wl ∗ ty'.(ty_own) vπ' d' tid wl')%I ⊣⊢
+    l ↦∗{q}: ty.(ty_own) vπ d tid ∗
+      (l +ₗ ty.(ty_size)) ↦∗{q}: ty'.(ty_own) vπ' d' tid.
   Proof.
     iSplit.
     - iIntros "(%& Mt &%&%&->& Own & Own')". rewrite heap_mapsto_vec_app.
@@ -54,10 +54,10 @@ Section product.
   Program Definition prod_ty {A B} (ty: type A) (ty': type B) : type (A * B) := {|
     ty_size := ty.(ty_size) + ty'.(ty_size);
     ty_lfts := ty.(ty_lfts) ++ ty'.(ty_lfts);  ty_E := ty.(ty_E) ++ ty'.(ty_E);
-    ty_own vπd tid vl := ∃ wl wl', ⌜vl = wl ++ wl'⌝ ∗
-      ty.(ty_own) (fst ∘ vπd.1, vπd.2) tid wl ∗ ty'.(ty_own) (snd ∘ vπd.1, vπd.2) tid wl';
-    ty_shr vπd κ tid l := ty.(ty_shr) (fst ∘ vπd.1, vπd.2) κ tid l ∗
-      ty'.(ty_shr) (snd ∘ vπd.1, vπd.2) κ tid (l +ₗ ty.(ty_size))
+    ty_own vπ d tid vl := ∃ wl wl', ⌜vl = wl ++ wl'⌝ ∗
+      ty.(ty_own) (fst ∘ vπ) d tid wl ∗ ty'.(ty_own) (snd ∘ vπ) d tid wl';
+    ty_shr vπ d κ tid l := ty.(ty_shr) (fst ∘ vπ) d κ tid l ∗
+      ty'.(ty_shr) (snd ∘ vπ) d κ tid (l +ₗ ty.(ty_size))
   |}%I.
   Next Obligation.
     iIntros "* (%&%&->& H)". rewrite app_length !ty_size_eq. by iDestruct "H" as "[->->]".

@@ -3,20 +3,19 @@ From iris.proofmode Require Import tactics.
 From iris.base_logic Require Import invariants.
 From lrust.util Require Import discrete_fun.
 From lrust.prophecy Require Import prophecy.
-From lrust.typing Require Import base.
 
 Implicit Type (Ap: ptType) (q: Qp).
 
 (** * Camera for Unique Borrowing *)
 
-Local Definition uniq_itemR Ap := frac_agreeR (leibnizO (pval_depth Ap)).
+Local Definition uniq_itemR Ap := frac_agreeR (leibnizO ((proph_asn → Ap) * nat)).
 Local Definition uniq_gmapUR Ap := gmapUR positive (uniq_itemR Ap).
 Local Definition uniq_smryUR := discrete_funUR uniq_gmapUR.
 Definition uniqUR := authUR uniq_smryUR.
 
 Implicit Type S: uniq_smryUR.
 
-Local Definition item {Ap} q (vπd: pval_depth Ap) : uniq_itemR Ap :=
+Local Definition item {Ap} q (vπd: (proph_asn → Ap) * nat) : uniq_itemR Ap :=
   @to_frac_agree (leibnizO _) q vπd.
 Local Definition line ξ q vπd : uniq_smryUR :=
   .{[ξ.(pv_ty) := {[ξ.(pv_id) := item q vπd]}]}.

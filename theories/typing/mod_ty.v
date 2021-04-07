@@ -7,8 +7,8 @@ Section mod_ty.
   Context `{!typeG Σ}.
 
   Local Lemma mod_ty_mt {A B} (f: A → B) ty vπ' d tid l q :
-    (l ↦∗{q}: λ vl, ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ ty.(ty_own) (vπ,d) tid vl)%I ⊣⊢
-    ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ l ↦∗{q}: ty.(ty_own) (vπ,d) tid.
+    (l ↦∗{q}: λ vl, ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ ty.(ty_own) vπ d tid vl)%I ⊣⊢
+    ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ l ↦∗{q}: ty.(ty_own) vπ d tid.
   Proof. iSplit.
     - iIntros "[%vl[?[%vπ[->Own]]]]". iExists vπ. iSplit; [done|]. iExists vl. iFrame.
     - iIntros "[%vπ[->[%vl[Mt Own]]]]". iExists vl. iFrame "Mt". iExists vπ.
@@ -17,8 +17,8 @@ Section mod_ty.
 
   Program Definition mod_ty {A B} (f: A → B) (ty: type A) : type B := {|
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
-    ty_own vπd tid vl := ∃vπ, ⌜vπd.1 = f ∘ vπ⌝ ∗ ty.(ty_own) (vπ,vπd.2) tid vl;
-    ty_shr vπd κ tid l := ∃vπ, ⌜vπd.1 = f ∘ vπ⌝ ∗ ty.(ty_shr) (vπ,vπd.2) κ tid l;
+    ty_own vπ d tid vl := ∃vπ', ⌜vπ = f ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl;
+    ty_shr vπ d κ tid l := ∃vπ', ⌜vπ = f ∘ vπ'⌝ ∗ ty.(ty_shr) vπ' d κ tid l;
   |}%I.
   Next Obligation. move=> *. iIntros "[%[%?]]". by iApply ty_size_eq. Qed.
   Next Obligation.
@@ -89,20 +89,20 @@ Section typing.
   Proof. move=> ??*/=. by do 3 f_equiv. Qed.
 
   Lemma mod_ty_own {A B} g f `{@Iso A B f g} ty vπ d tid vl :
-    (<{f}> ty).(ty_own) (vπ, d) tid vl ⊣⊢ ty.(ty_own) (g ∘ vπ, d) tid vl.
+    (<{f}> ty).(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) (g ∘ vπ) d tid vl.
   Proof. iSplit=>/=.
     - iIntros "[%[->?]]". by rewrite compose_assoc semi_iso.
     - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
   Qed.
   Lemma mod_ty_shr {A B} g f `{@Iso A B f g} ty vπ d κ tid l :
-    (<{f}> ty).(ty_shr) (vπ, d) κ tid l ⊣⊢ ty.(ty_shr) (g ∘ vπ, d) κ tid l.
+    (<{f}> ty).(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) (g ∘ vπ) d κ tid l.
   Proof. iSplit=>/=.
     - iIntros "[%[->?]]". by rewrite compose_assoc semi_iso.
     - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
   Qed.
 
   Lemma mod_ty_id {A} (ty: _ A) : <{id}>%T ty ≡ ty.
-  Proof. split; move=>// [??]*; by [rewrite mod_ty_own|rewrite mod_ty_shr]. Qed.
+  Proof. split; move=>// *; by [rewrite mod_ty_own|rewrite mod_ty_shr]. Qed.
 
   Lemma mod_ty_compose {A B C} (f: A → B) (g: _ → C) ty :
     (<{g}> (<{f}> ty) ≡ <{g ∘ f}> ty)%T.

@@ -26,10 +26,10 @@ Section sum_ty.
   Lemma split_sum_mt {As} (tyl: typel As) vπ d l tid q :
     (l ↦∗{q}: λ vl, ∃i vπ' vl' vl'', ⌜vπ = xinj i ∘ vπ'⌝ ∗
       ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_ty_size tyl)⌝ ∗
-      (hnthe tyl i).(ty_own) (vπ',d) tid vl')%I ⊣⊢
+      (hnthe tyl i).(ty_own) vπ' d tid vl')%I ⊣⊢
     ∃i vπ', ⌜vπ = xinj i ∘ vπ'⌝ ∗
       (l ↦{q} #i ∗ (l +ₗ S (hnthe tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
-      (l +ₗ 1) ↦∗{q}: (hnthe tyl i).(ty_own) (vπ',d) tid.
+      (l +ₗ 1) ↦∗{q}: (hnthe tyl i).(ty_own) vπ' d tid.
   Proof. iSplit.
     - iIntros "(%& Mt & Own)". iDestruct "Own" as (i vπ' vl' vl'' ->->[=]) "Own".
       iExists i, vπ'. iSplit; [done|]. iDestruct (ty_size_eq with "Own") as "%Eq'".
@@ -57,13 +57,13 @@ Section sum_ty.
   Program Definition sum_ty {As} (tyl: typel As) : type (xsum As) := {|
     ty_size := S (max_ty_size tyl);
     ty_lfts := tyl_lfts tyl;  ty_E := tyl_E tyl;
-    ty_own vπd tid vl := ∃i vπ' vl' vl'', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
+    ty_own vπ d tid vl := ∃i vπ' vl' vl'', ⌜vπ = xinj i ∘ vπ'⌝ ∗
       ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_ty_size tyl)⌝ ∗
-      (hnthe tyl i).(ty_own) (vπ',vπd.2) tid vl';
-    ty_shr vπd κ tid l := ∃i vπ', ⌜vπd.1 = xinj i ∘ vπ'⌝ ∗
+      (hnthe tyl i).(ty_own) vπ' d tid vl';
+    ty_shr vπ d κ tid l := ∃i vπ', ⌜vπ = xinj i ∘ vπ'⌝ ∗
       &frac{κ} (λ q, l ↦{q} #i ∗
         (l +ₗ S (hnthe tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
-      (hnthe tyl i).(ty_shr) (vπ',vπd.2) κ tid (l +ₗ 1)
+      (hnthe tyl i).(ty_shr) vπ' d κ tid (l +ₗ 1)
   |}%I.
   Next Obligation. move=> *. by iDestruct 1 as (???????) "?". Qed.
   Next Obligation.
@@ -119,8 +119,9 @@ Section sum_ty.
     - elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
     - elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
     - move=> *. rewrite EqMsz. do 12 f_equiv. by apply @hnth_ne.
-    - move=> *. rewrite /is_pad EqMsz.
-      repeat ((by apply @hnth_ne) || eapply ty_size_ne || f_equiv).
+    - move=> *. f_equiv=> i. rewrite /is_pad EqMsz.
+      have Eqv': hnthe tyl i ≡{n}≡ hnthe tyl' i by apply @hnth_ne.
+      repeat (eapply ty_size_ne || f_equiv)=>//. by rewrite Eqv'.
   Qed.
 
   Lemma sum_lft_morphism {B As} (Tl: _ As) :
@@ -195,8 +196,8 @@ Section sum_ty.
   Proof.
     move=> ?. have Copy: ∀i, Copy (hnthe tyl i).
     { move=> *. apply (HForall_nth (λ A, @Copy _ _ A)); by [apply _|]. }
-    split; [apply _|]. move=>/= ????? l ?? SubF. iIntros "#LFT".
-    iDestruct 1 as (i vπd ->) "[Bor Shr]". iIntros "Na [Tok Tok']".
+    split; [apply _|]. move=>/= ?????? l ?? SubF. iIntros "#LFT".
+    iDestruct 1 as (i d ->) "[Bor Shr]". iIntros "Na [Tok Tok']".
     iMod (frac_bor_acc with "LFT Bor Tok") as (q) "[>[Idx Pad] Close]";
     [solve_ndisj|]. iDestruct "Pad" as (vl') "[Pad %]".
     iMod (copy_shr_acc with "LFT Shr Na Tok'") as
@@ -212,7 +213,7 @@ Section sum_ty.
     iDestruct "Idx" as "[$ Idx]". iDestruct "Mt" as "[$ Mt]".
     iDestruct (ty_size_eq with "Own") as ">%Eq". rewrite Eq.
     iDestruct "Pad" as "[$ Pad]". iSplitR.
-    { iIntros "!>!>". iExists i, vπd, vl, vl'. do 2 (iSplit; [done|]).
+    { iIntros "!>!>". iExists i, d, vl, vl'. do 2 (iSplit; [done|]).
       iFrame "Own". rewrite /= app_length Eq. iPureIntro. by f_equal. }
     iIntros "!> Na (Idx' & Mt' & Pad')". iDestruct ("Close''" with "Na") as "Na".
     iMod ("Close'" with "Na [$Mt $Mt']") as "[$$]". iApply "Close".

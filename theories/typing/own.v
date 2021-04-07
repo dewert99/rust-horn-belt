@@ -42,27 +42,27 @@ Section own.
 
   Program Definition own_ptr {A} (n: nat) (ty: type A) :=
     {| ty_size := 1;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
-       ty_own vπd tid vl :=
-         match vπd, vl return _ with
-         | (vπ, S d), [ #(LitLoc l) ] =>
+       ty_own vπ d tid vl :=
+         match d, vl return _ with
+         | S d, [ #(LitLoc l) ] =>
          (* We put a later in front of the †{q}, because we cannot use
             [ty_size_eq] on [ty] at step index 0, which would in turn
             prevent us to prove [subtype_own].
 
             Since this assertion is timeless, this should not cause
             problems. *)
-           ▷ (l ↦∗: ty.(ty_own) (vπ,d) tid ∗ freeable_sz n ty.(ty_size) l)
+           ▷ (l ↦∗: ty.(ty_own) vπ d tid ∗ freeable_sz n ty.(ty_size) l)
          | _, _ => False
          end;
-         ty_shr vπd κ tid l :=
-          match vπd return _ with
-          | (vπ, S d) =>
-            (∃ l':loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) (vπ,d) κ tid l')%I
+         ty_shr vπ d κ tid l :=
+          match d return _ with
+          | S d =>
+            (∃ l':loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) vπ d κ tid l')
           | _ => False
           end
     |}%I.
-  Next Obligation. iIntros (A q ty [? [|?]] κ tid l); apply _. Qed.
-  Next Obligation. by iIntros (A q ty [? [|?]] tid [|[[]|][]]) "?". Qed.
+  Next Obligation. iIntros (A q ty ? [|?] κ tid l); apply _. Qed.
+  Next Obligation. by iIntros (A q ty ? [|?] tid [|[[]|][]]) "?". Qed.
   Next Obligation.
     intros A n ty [|?] [|?] asn tid vl Hdepth12;
       [iIntros "[]"|iIntros "[]"|lia|].
@@ -75,7 +75,7 @@ Section own.
     by iApply (ty_shr_depth_mono _ _ d1); [lia|].
   Qed.
   Next Obligation.
-    iIntros (A q ty κ κ' [? [|n]] tid l) "/= #LFT"; [iIntros "[]"|].
+    iIntros (A q ty κ κ' ? [|n] tid l) "/= #LFT"; [iIntros "[]"|].
     iDestruct 1 as (l') "[? ?]".
     iExists (l'); iSplit.
     - by iApply frac_bor_shorten.
@@ -131,23 +131,23 @@ Section own.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /= /elctx_interp /= left_id right_id.
     - done.
-    - move=> ??? Hsz ?? Ho ? [? [|?]]? [|[[|l|]|] []] //=.
+    - move=> ??? Hsz ?? Ho ? ? [|?]? [|[[|l|]|] []] //=.
       rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
-    - move=> ??????? Hs [? [|?]] ??? /=;  repeat (apply Hs || f_contractive || f_equiv).
+    - move=> ??????? Hs ? [|?] ??? /=;  repeat (apply Hs || f_contractive || f_equiv).
   Qed.
   Global Instance own_ne A n : NonExpansive (@own_ptr A n).
   Proof. solve_ne_type. Qed.
 
   Global Instance own_send A n ty : Send ty → Send (@own_ptr A n ty).
   Proof.
-    iIntros (Hsend tid1 tid2 [? [|?]] [|[[| |]|][]]) "H"; try done.
+    iIntros (Hsend tid1 tid2 ? [|?] [|[[| |]|][]]) "H"; try done.
     iDestruct "H" as "[Hm $]". iNext. iApply (heap_mapsto_pred_wand with "Hm").
     iIntros (vl) "?". by iApply Hsend.
   Qed.
 
   Global Instance own_sync A n ty : Sync ty → Sync (@own_ptr A n ty).
   Proof.
-    iIntros (Hsync tid1 tid2 [? [|?]] κ  l) "H"; first done. iDestruct "H" as (l') "[Hm #Hshr]".
+    iIntros (Hsync tid1 tid2 ? [|?] κ  l) "H"; first done. iDestruct "H" as (l') "[Hm #Hshr]".
     iExists _. iFrame "Hm". by iApply Hsync.
   Qed.
 
@@ -189,9 +189,9 @@ Section box.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /= /elctx_interp /= left_id right_id.
     - done.
-    - move=> ??? Hsz ?? Ho ? [? [|?]] ? [|[[|l|]|] []] //=.
+    - move=> ??? Hsz ?? Ho ? ? [|?] ? [|[[|l|]|] []] //=.
       rewrite Hsz. repeat (apply Ho || f_contractive || f_equiv).
-    - move=> ??????? Hs [? [|?]] ??? /=; repeat (apply Hs || f_contractive || f_equiv).
+    - move=> ??????? Hs ? [|?] ??? /=; repeat (apply Hs || f_contractive || f_equiv).
   Qed.
   Global Instance box_ne A : NonExpansive (@box A).
   Proof. solve_ne_type. Qed.
@@ -219,10 +219,10 @@ Section util.
   Context `{!typeG Σ}.
 
   Lemma ownptr_own A n (ty: _ A) tid vπ d v :
-    (own_ptr n ty).(ty_own) (vπ,d) tid [v] ⊣⊢
+    (own_ptr n ty).(ty_own) vπ d tid [v] ⊣⊢
        ∃ (l : loc) (vl : vec val ty.(ty_size)),
          ⌜d > 0⌝%nat ∗ ⌜v = #l⌝ ∗ ▷ l ↦∗ vl ∗
-         ▷ ty.(ty_own) (vπ, pred d) tid vl ∗ ▷ freeable_sz n ty.(ty_size) l.
+         ▷ ty.(ty_own) vπ (pred d) tid vl ∗ ▷ freeable_sz n ty.(ty_size) l.
   Proof.
     iSplit.
     - iIntros "Hown". destruct d as [|?], v as [[|l|]|]; try done.
