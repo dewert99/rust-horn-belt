@@ -593,7 +593,7 @@ Global Instance list_sync_cons `{!typeG Σ} {A As} (ty: _ A) (tyl: _ As) :
   Sync ty → ListSync tyl → ListSync (ty +:: tyl).
 Proof. by constructor. Qed.
 
-Section type.
+Section traits.
   Context `{!typeG Σ}.
 
   (** Lemmas on Copy *)
@@ -660,7 +660,7 @@ Section type.
   Global Instance simple_type_sync {A} (st: simple_type A) : Send st → Sync st.
   Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
 
-End type.
+End traits.
 
 (** * Subtyping *)
 

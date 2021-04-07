@@ -1,382 +1,352 @@
-From lrust.lang Require Import proofmode.
-From lrust.typing Require Export lft_contexts type bool.
-Set Default Proof Using "Type".
+From lrust.typing Require Export type.
 Import uPred.
+Set Default Proof Using "Type".
 
-Module fixpoint_defs.
+Module fix_defs.
+
+Section base.
+  Context `{!typeG Σ}.
+
+  Program Definition base {A} : type A := {| pt_size := 0; pt_own _ _ _ := False |}%I.
+  Next Obligation. by iIntros. Qed.
+
+  Global Instance base_send {A} : Send (@base A). Proof. done. Qed.
+
+  Lemma base_subtype {A B} E L (f: A → B) : subtype E L f base base.
+  Proof.
+    apply subtype_plain_type. iIntros (?) "_!>_/=". iSplit; [done|].
+    iSplit; [iApply lft_incl_refl|by iIntros].
+  Qed.
+  Lemma base_eqtype {A B} E L (f: A → B) g : eqtype E L f g base base.
+  Proof. split; apply base_subtype. Qed.
+
+End base.
+
 Section S.
-  Context `{!typeG Σ} (T : type → type) {HT: TypeContractive T}.
+  Context `{!typeG Σ} {A: Type} (T: type A → type A) {HT: TypeContractive T}.
 
-  Definition Tn n := Nat.iter (S n) T bool.
+  Definition Tn n := Nat.iter (S n) T base.
 
   Lemma Tn_ty_lft_const n n' : ⊢ (Tn n).(ty_lft) ≡ₗ (Tn n').(ty_lft).
   Proof using HT.
-    assert (∀ n, ⊢ (Tn n).(ty_lft) ≡ₗ (T bool).(ty_lft)) as H.
-    { clear -HT=>n. destruct type_contractive_type_lft_morphism as [α βs E Hα HE|α E Hα HE].
-      - induction n as [|n IH]; simpl in *.
-        + iApply lft_equiv_refl.
-        + unfold Tn. simpl.
-          iApply lft_equiv_trans; [iApply type_lft_morphism_lft_equiv_proper; iApply IH|].
-          iApply lft_equiv_trans; [iApply Hα|].
-          iApply lft_equiv_trans.
-          { iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|iApply Hα]. }
-          iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
-          rewrite assoc. iApply lft_intersect_equiv_proper; [|iApply lft_equiv_refl].
-          iApply lft_intersect_equiv_idemp.
-      - iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_sym. iApply Hα. }
-    iApply lft_equiv_trans; [|iApply lft_equiv_sym]; iApply H.
+    have H: ∀n, ⊢ (Tn n).(ty_lft) ≡ₗ (Tn 0).(ty_lft); last first.
+    { iApply lft_equiv_trans; [|iApply lft_equiv_sym]; iApply H. } clear n n'=> n.
+    case type_contractive_type_lft_morphism=> [> Hα ?|> Hα ?]; last first.
+    { iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_sym. iApply Hα. }
+    elim: n=> [|n IH]; [apply lft_equiv_refl|]. rewrite /Tn /=.
+    iApply lft_equiv_trans; [iApply type_lft_morphism_lft_equiv_proper; iApply IH|].
+    iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_trans.
+    { iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|iApply Hα]. }
+    iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
+    rewrite assoc. iApply lft_intersect_equiv_proper; [|iApply lft_equiv_refl].
+    iApply lft_intersect_equiv_idemp.
   Qed.
 
   Lemma Tn_ty_E_const n n' :
     elctx_interp (Tn (S n)).(ty_E) ≡ elctx_interp (Tn (S n')).(ty_E).
   Proof using HT.
-    assert (H0 : ∀ n, elctx_interp (Tn (S n)).(ty_E) ≡ elctx_interp (Tn 1).(ty_E));
-      last by rewrite !H0.
-    clear n n'. unfold Tn. intro n.
-    destruct type_contractive_type_lft_morphism as [α βs E Hα HE|α E Hα HE].
-    - induction n as [|n IH]=>//. simpl in *.
-      rewrite (HE (Tn (S n))) IH !HE !assoc -!persistent_sep_dup -!assoc.
-      iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
-      iApply (big_sepL_impl with "H"). iIntros "!> * _". iIntros "#?".
-      iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const (S n) 0) as "[_ $]".
-    - by rewrite !HE.
+    have H: ∀n, elctx_interp (Tn (S n)).(ty_E) ≡ elctx_interp (Tn 1).(ty_E); last first.
+    { by rewrite H. } clear n n'=> n.
+    case type_contractive_type_lft_morphism=> [> Hα HE|> ? HE]; last by rewrite !HE.
+    elim: n; [done|]=> n IH.
+    rewrite (HE (Tn (S n))) IH !HE !assoc -!persistent_sep_dup -!assoc.
+    iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
+    iApply (big_sepL_impl with "H"). iIntros "!> * _". iIntros "#?".
+    iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const (S n) 0) as "[_ $]".
   Qed.
 
-  Lemma Tn_cauchy n i :
-    (n ≤ i)%nat →
-    (∀ depth tid vl, dist_later n ((Tn (2 + i)).(ty_own) depth tid vl)
-                                  ((Tn (2 + n)).(ty_own) depth tid vl)) ∧
-    (∀ κ tid l, (Tn (2 + i)).(ty_shr) κ tid l ≡{n}≡ (Tn (2 + n)).(ty_shr) κ tid l).
+  Lemma Tn_cauchy n i : n ≤ i →
+    (∀vπ d tid vl, dist_later n
+      ((Tn (2 + i)).(ty_own) vπ d tid vl) ((Tn (2 + n)).(ty_own) vπ d tid vl)) ∧
+    (∀vπ d κ tid l,
+      (Tn (2 + i)).(ty_shr) vπ d κ tid l ≡{n}≡ (Tn (2 + n)).(ty_shr) vπ d κ tid l).
   Proof using HT.
-    revert i. unfold Tn. induction n as [|n IH]=>i Hni /=.
-    - split=>//. apply HT=>//.
-      + apply type_contractive_ty_size.
-      + apply (Tn_ty_lft_const (S i) 1).
-      + apply (Tn_ty_E_const i 0).
-    - destruct i; [lia|]. destruct (IH i) as [Hown Hshr]; [lia|].
-      split; apply HT=>//;
-       (apply type_contractive_ty_size || apply (Tn_ty_lft_const (2 + i) (2 + n)) ||
-        apply (Tn_ty_E_const (S i) (S n))).
+    move: i. elim: n=> /=[|n IH]=> i ?.
+    - split; [done|]. apply HT=>//; [apply type_contractive_ty_size|
+        apply (Tn_ty_lft_const (S i) 1)|apply (Tn_ty_E_const i 0)].
+    - case i as [|]; [lia|]. case (IH i) as [??]; [lia|].
+      split; (apply HT=>//; [apply type_contractive_ty_size|
+        apply (Tn_ty_lft_const (2 + i) (2 + n))|apply (Tn_ty_E_const (S i) (S n))]).
   Qed.
   Program Definition own_shr_chain :=
     {| chain_car n := ((Tn (3 + n)).(ty_own), (Tn (3 + n)).(ty_shr)) :
-               prodO (nat -d> thread_id -d> list val -d> iPropO Σ)
-                     (lft -d> thread_id -d> loc -d> iPropO Σ) |}.
+        prodO ((proph_asn → A) -d> nat -d> thread_id -d> list val -d> iPropO Σ)
+          ((proph_asn → A) -d> nat -d> lft -d> thread_id -d> loc -d> iPropO Σ) |}.
   Next Obligation.
-    intros n i Hni. split=>/=.
-    - intros ???. apply (Tn_cauchy (S _)). lia.
-    - intros ???. apply dist_S, Tn_cauchy. lia.
+    move=> n i Hni. split=>/=.
+    - move=> >. apply (Tn_cauchy (S _)). lia.
+    - move=> >. apply dist_S, Tn_cauchy. lia.
   Qed.
 
-  Program Definition Tn' n :=
-    {| ty_size := (T bool).(ty_size);
-       ty_lfts := (T bool).(ty_lfts); ty_E := (Tn 1).(ty_E);
-       ty_own := (Tn n).(ty_own); ty_shr := (Tn n).(ty_shr) |}.
+  Program Definition Tn' n : type A := {|
+    ty_size := (Tn 0).(ty_size);  ty_lfts := (Tn 0).(ty_lfts);  ty_E := (Tn 1).(ty_E);
+    ty_own := (Tn n).(ty_own);  ty_shr := (Tn n).(ty_shr)
+  |}.
   Next Obligation.
-    intros. rewrite ty_size_eq /Tn /=. iIntros "-> !%".
-    apply type_contractive_ty_size.
+    move=> *. rewrite ty_size_eq /Tn. iIntros "->!%/=". apply type_contractive_ty_size.
   Qed.
-  Next Obligation. intros. by apply ty_own_depth_mono. Qed.
+  Next Obligation. move=> >. apply ty_own_depth_mono. Qed.
+  Next Obligation. move=> >. apply ty_shr_depth_mono. Qed.
+  Next Obligation. move=> >. apply ty_shr_lft_mono. Qed.
   Next Obligation.
-    iIntros (????????) " #LFT #Hκ /=". iApply (ty_share with "LFT")=>//.
+    move=> n *. iIntros "#LFT #?". iApply (ty_share with "LFT"); [done|].
     iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const n 0) as "[_ $]".
   Qed.
-  Next Obligation. intros n. apply ty_shr_mono. Qed.
-
-  Program Definition type_fixpoint : type :=
-    {| ty_size := (T bool).(ty_size);
-       ty_lfts := (T bool).(ty_lfts); ty_E := (Tn 1).(ty_E);
-       ty_own := (compl own_shr_chain).1; ty_shr := (compl own_shr_chain).2 |}.
   Next Obligation.
-    intros. apply @limit_preserving, _.
-    apply limit_preserving_Persistent=>??? EQ. apply EQ.
+    move=> n *. iIntros "#LFT #?". iApply (ty_own_proph with "LFT"); [done|].
+    iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const n 0) as "[_ $]".
   Qed.
   Next Obligation.
-    intros. apply @limit_preserving.
-    - apply limit_preserving_entails; [|solve_proper]. intros ??? EQ. apply EQ.
-    - intros n. apply (Tn' _).(ty_size_eq).
-  Qed.
-  Next Obligation.
-    intros. apply @limit_preserving.
-    - apply limit_preserving_entails=>??? EQ; apply EQ.
-    - intros n. by apply ty_own_depth_mono.
-  Qed.
-  Next Obligation.
-    intros. apply @limit_preserving.
-    - apply limit_preserving_entails; [solve_proper|].
-      intros ??? EQ. do 4 f_equiv; [do 2 f_equiv; apply EQ|].
-      induction depth as [|depth IH]; simpl; [|by rewrite IH].
-      do 2 f_equiv; apply EQ.
-    - intros n. by apply (Tn' _).(ty_share).
-  Qed.
-  Next Obligation.
-    intros. apply @limit_preserving.
-    - apply limit_preserving_entails; [solve_proper|].
-      intros ??? EQ. repeat (apply EQ || f_equiv).
-    - intros n. apply ty_shr_mono.
+    move=> n *. iIntros "#LFT #? #?". iApply (ty_shr_proph with "LFT"); [done|done|].
+    iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const n 0) as "[_ $]".
   Qed.
 
-  Lemma type_fixpoint_Tn'_dist n :
-    type_fixpoint ≡{n}≡ Tn' (3 + n).
-  Proof. split=>//; intros; apply conv_compl. Qed.
+  Program Definition fix_ty: type A := {|
+    ty_size := (Tn 0).(ty_size);  ty_lfts := (Tn 0).(ty_lfts);  ty_E := (Tn 1).(ty_E);
+    ty_own := (compl own_shr_chain).1;  ty_shr := (compl own_shr_chain).2
+  |}.
+  Next Obligation.
+    move=> *. apply @limit_preserving, _.
+    apply limit_preserving_Persistent=> ??? Eq. apply Eq.
+  Qed.
+  Next Obligation.
+    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_size_eq _ (Tn' _))].
+    apply limit_preserving_entails; [|done]. move=> ??? Eq. apply Eq.
+  Qed.
+  Next Obligation.
+    move=> *. apply @limit_preserving; [|move=> ?; by apply ty_own_depth_mono].
+    apply limit_preserving_entails=> ??? Eq; apply Eq.
+  Qed.
+  Next Obligation.
+    move=> *. apply @limit_preserving; [|move=> ?; by apply ty_shr_depth_mono].
+    apply limit_preserving_entails=> ??? Eq; apply Eq.
+  Qed.
+  Next Obligation.
+    move=> *. apply @limit_preserving; [|move=> ?; by apply ty_shr_lft_mono].
+    apply limit_preserving_entails; [done|]=> ??? Eq. f_equiv; apply Eq.
+  Qed.
+  Next Obligation.
+    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_share _ (Tn' _))].
+    apply limit_preserving_entails; [done|]=> ??? Eq. do 6 f_equiv; [|f_equiv]; apply Eq.
+  Qed.
+  Next Obligation.
+    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_own_proph _ (Tn' _))].
+    apply limit_preserving_entails; [done|]=> ??? Eq.
+    do 2 f_equiv; [|do 13 f_equiv]; apply Eq.
+  Qed.
+  Next Obligation.
+    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_shr_proph _ (Tn' _))].
+    apply limit_preserving_entails; [done|]=> ??? Eq.
+    do 3 f_equiv; [|do 15 f_equiv]; apply Eq.
+  Qed.
+
+  Lemma fix_ty_Tn'_dist n : fix_ty ≡{n}≡ Tn' (3 + n).
+  Proof. split=>// *; apply conv_compl. Qed.
+
 End S.
-End fixpoint_defs.
 
-Notation type_fixpoint := fixpoint_defs.type_fixpoint.
+End fix_defs.
 
-Lemma fixpoint_unfold_eqtype `{!typeG Σ} (T : type → type) {HT: TypeContractive T} E L :
-  eqtype E L (type_fixpoint T) (T (type_fixpoint T)).
+Import fix_defs.
+Global Notation fix_ty := fix_ty.
+
+Lemma fix_unfold_eqtype `{!typeG Σ} {A} (T: _ → _ A) {HT: TypeContractive T} E L :
+  eqtype E L id id (fix_ty T) (T (fix_ty T)).
 Proof.
-  intros. apply eqtype_unfold=>qL.
-  assert (Ho : ∀ n depth tid vl,
-     (T $ fixpoint_defs.Tn T (3 + n)).(ty_own) depth tid vl ≡
-     (T $ fixpoint_defs.Tn' T (3 + n)).(ty_own) depth tid vl).
-  { intros. apply equiv_dist=>n'. apply HT=>//.
-    - apply HT.
-    - apply (fixpoint_defs.Tn_ty_lft_const T (3 + n) 0).
-    - apply (fixpoint_defs.Tn_ty_E_const T (2 + n) 0). }
-  assert (Hs : ∀ n κ tid l, (T $ fixpoint_defs.Tn T (2 + n)).(ty_shr) κ tid l ≡
-                            (T $ fixpoint_defs.Tn' T (2 + n)).(ty_shr) κ tid l).
-  { intros. apply equiv_dist=>n'. apply HT=>//.
-    - apply HT.
-    - apply (fixpoint_defs.Tn_ty_lft_const T (2 + n) 0).
-    - apply (fixpoint_defs.Tn_ty_E_const T (1 + n) 0).
-    - destruct n' as [|[|n']]=>//. }
-  assert (Ho' :
-    ∀ depth tid vl,
-      (type_fixpoint T).(ty_own) depth tid vl ≡ (T (type_fixpoint T)).(ty_own) depth tid vl).
-  { intros. apply equiv_dist=>n. etrans; [apply dist_S, conv_compl|].
-    rewrite /= (Ho n). symmetry. apply HT=>//.
-    - iApply lft_equiv_refl.
-    - intros. destruct n as [|n]=>//=.
-      destruct (fixpoint_defs.type_fixpoint_Tn'_dist T (S n)) as [_ _ _ HTn' _].
-      apply dist_S, HTn'.
-    - intros. destruct (fixpoint_defs.type_fixpoint_Tn'_dist T n) as [_ _ _ _ HTn'].
-      apply HTn'. }
-  assert (Hs' :
-    ∀ κ tid l, (type_fixpoint T).(ty_shr) κ tid l ≡ (T (type_fixpoint T)).(ty_shr) κ tid l).
-  { intros. apply equiv_dist=>n. etrans; [apply conv_compl|].
-    rewrite /= (Hs n). symmetry. apply HT=>//.
-    - iApply lft_equiv_refl.
-    - intros. destruct n as [|[|n]]=>//=.
-      destruct (fixpoint_defs.type_fixpoint_Tn'_dist T (S n)) as [_ _ _ HTn' _].
-      apply dist_S, HTn'.
-    - intros. destruct n as [|n]; [done|].
-      destruct (fixpoint_defs.type_fixpoint_Tn'_dist T n) as [_ _ _ _ HTn']. apply HTn'. }
-  iIntros "_ !> _"; iSplit; [|iSplit; [|iSplit; iIntros "!> *"]].
-  - iPureIntro. apply HT.
-  - destruct type_contractive_type_lft_morphism as [α βs E' Hα HE'|α E' Hα HE'].
-    + iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα]. simpl.
+  have EqOwn: ∀n vπ d tid vl, (T $ Tn T (3 + n)).(ty_own) vπ d tid vl ≡
+    (T $ Tn' T (3 + n)).(ty_own) vπ d tid vl.
+  { move=> n *. apply equiv_dist=> ?. apply HT=>//; [apply HT|
+      apply (Tn_ty_lft_const T (3 + n) 0)|apply (Tn_ty_E_const T (2 + n) 0)]. }
+  have EqShr: ∀n vπ d κ tid l, (T $ Tn T (2 + n)).(ty_shr) vπ d κ tid l ≡
+    (T $ Tn' T (2 + n)).(ty_shr) vπ d κ tid l.
+  { move=> n *. apply equiv_dist=> n'. apply HT=>//; [apply HT|
+      apply (Tn_ty_lft_const T (2 + n) 0)|apply (Tn_ty_E_const T (1 + n) 0)|
+      by case n'=> [|[|?]]]. }
+  have EqOwn': ∀vπ d tid vl, (fix_ty T).(ty_own) vπ d tid vl ≡
+    (T (fix_ty T)).(ty_own) vπ d tid vl.
+  { move=> *. apply equiv_dist=> n. etrans; [apply dist_S, conv_compl|].
+    rewrite/= (EqOwn n). symmetry. apply HT=>// *; [apply lft_equiv_refl| |].
+    - move: n=> [|n]; [done|].
+      case (fix_ty_Tn'_dist T (S n))=> [_ _ _ Eq _]. apply dist_S, Eq.
+    - case (fix_ty_Tn'_dist T n)=> [_ _ _ _ Eq]. apply Eq. }
+  have EqShr': ∀vπ d κ tid l, (fix_ty T).(ty_shr) vπ d κ tid l ≡
+    (T (fix_ty T)).(ty_shr) vπ d κ tid l.
+  { move=> *. apply equiv_dist=> n. etrans; [apply conv_compl|].
+    rewrite/= (EqShr n). symmetry. apply HT=>// *; [apply lft_equiv_refl| |].
+    - move: n=> [|[|n]]; [done|done|].
+      case (fix_ty_Tn'_dist T (S n))=> [_ _ _ Eq _]. apply dist_S, Eq.
+    - move: n=> [|n]; [done|].
+      case (fix_ty_Tn'_dist T n)=> [_ _ _ _ Eq]. apply Eq. }
+  apply eqtype_id_unfold. iIntros (?) "_!>_". iSplit; [iPureIntro; by apply HT|].
+  iSplit; [|iSplit; iIntros "!> *"].
+  - case type_contractive_type_lft_morphism=> [α βs E' Hα HE'|α E' Hα HE'].
+    + iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
       iApply lft_equiv_trans; [iApply Hα|].
-      iApply lft_equiv_trans; [|
-        iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|
-                                            iApply lft_equiv_sym; iApply Hα]].
+      iApply lft_equiv_trans; [|iApply lft_intersect_equiv_proper;
+        [iApply lft_equiv_refl|iApply lft_equiv_sym; iApply Hα]].
       rewrite assoc. iApply lft_intersect_equiv_proper; [|iApply lft_equiv_refl].
       iApply lft_equiv_sym. iApply lft_intersect_equiv_idemp.
     + iApply lft_equiv_trans; [iApply Hα|iApply lft_equiv_sym; iApply Hα].
-  - rewrite Ho'. by iApply (bi.iff_refl True%I).
-  - rewrite Hs'. by iApply (bi.iff_refl True%I).
+  - rewrite EqOwn'. by iApply (bi.iff_refl True%I).
+  - rewrite EqShr'. by iApply (bi.iff_refl True%I).
 Qed.
 
-Lemma type_fixpoint_ne `{!typeG Σ} (T1 T2 : type → type)
-    `{!TypeContractive T1, !NonExpansive T1, !TypeContractive T2} n :
-  (∀ t, T1 t ≡{n}≡ T2 t) → type_fixpoint T1 ≡{n}≡ type_fixpoint T2.
-Proof.
-  intros EQ.
-  assert (EQ' : compl (fixpoint_defs.own_shr_chain T1) ≡{n}≡
-                compl (fixpoint_defs.own_shr_chain T2)).
-  { assert (EQ' : fixpoint_defs.Tn T1 (3 + n) ≡{n}≡ fixpoint_defs.Tn T2 (3 + n)).
-    { unfold fixpoint_defs.Tn.
-      induction (S (3 + n))%nat as [|k IH]=>//. rewrite !Nat_iter_S IH EQ //. }
-    etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl]. simpl.
-    by split; repeat intro; simpl; f_equiv. }
-  unfold type_fixpoint. split; simpl.
-  - apply EQ.
-  - apply EQ.
-  - by rewrite /fixpoint_defs.Tn /= (EQ bool) EQ.
-  - apply EQ'.
-  - apply EQ'.
+Lemma fix_ty_ne `{!typeG Σ} {A} (T T': _ → _ A)
+  `{!TypeContractive T, !NonExpansive T, !TypeContractive T'} n :
+  (∀ty, T ty ≡{n}≡ T' ty) → fix_ty T ≡{n}≡ fix_ty T'.
+Proof. move=> Eq.
+  have Eq': compl (own_shr_chain T) ≡{n}≡ compl (own_shr_chain T').
+  { have Eq'': Tn T (3 + n) ≡{n}≡ Tn T' (3 + n).
+    { rewrite /Tn. elim (S (3 + n)); [done|]=> ? IH. by rewrite !Nat_iter_S IH Eq. }
+    etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
+    split; repeat move=> ? /=; apply Eq''. }
+  split=>/=; (try apply Eq); try apply Eq'. by rewrite /Tn /= (Eq base) Eq.
 Qed.
 
-Lemma type_fixpoint_type_ne `{!typeG Σ} (T : type → type → type)
-      `{!(∀ ty, TypeContractive (T ty))}
-  : (∀ `{!TypeNonExpansive U}, TypeNonExpansive (λ ty, T ty (U ty))) →
-    TypeNonExpansive (λ ty, type_fixpoint (T ty)).
+Lemma fix_type_ne `{!typeG Σ} {A B} (T : _ A → _ → _ B)
+  `{!(∀ty, TypeContractive (T ty))} :
+  (∀`{!TypeNonExpansive U}, TypeNonExpansive (λ ty, T ty (U ty))) →
+    TypeNonExpansive (λ ty, fix_ty (T ty)).
 Proof.
-  intros HT.
-  assert (Hne : ∀ n, TypeNonExpansive (λ ty, fixpoint_defs.Tn (T ty) n)).
-  { intros n. induction n as [|n IH]; [apply HT, _|apply HT, IH]. }
-  split; simpl.
-  - destruct (type_non_expansive_type_lft_morphism (T:=λ ty, T ty (T ty bool)))
-    as [α βs E Hα HE|α E Hα HE].
-    + eapply (type_lft_morphism_add _ α βs E), HE.
-      intros. iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
-      iApply (fixpoint_defs.Tn_ty_lft_const _ 1 0).
-    + eapply (type_lft_morphism_const _ α E), HE.
-      intros. iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
-      iApply (fixpoint_defs.Tn_ty_lft_const _ 1 0).
+  move=> HT. have Hne: ∀n, TypeNonExpansive (λ ty, Tn (T ty) n).
+  { elim=> [|? IH]; [apply HT, _|apply HT, IH]. } split=>/=.
+  - case (type_non_expansive_type_lft_morphism (T := λ ty, Tn (T ty) 1))=>
+    [α βs E Hα HE|α E Hα HE].
+    + eapply (type_lft_morphism_add _ α βs E), HE=> ?.
+      iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
+      iApply (Tn_ty_lft_const _ 1 0).
+    + eapply (type_lft_morphism_const _ α E), HE=> ?.
+      iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
+      iApply (Tn_ty_lft_const _ 1 0).
   - apply HT, _.
-  - intros. etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
-    by apply Hne.
-  - intros. etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
-    by apply Hne.
+  - move=> *. etrans; [apply conv_compl|].
+    etrans; [|symmetry; apply conv_compl]. by apply Hne.
+  - move=> *. etrans; [apply conv_compl|].
+    etrans; [|symmetry; apply conv_compl]. by apply Hne.
 Qed.
 
-Lemma type_fixpoint_contracive `{!typeG Σ} (T : type → type → type)
-      `{!(∀ ty, TypeContractive (T ty))}
-  : (∀ `{!TypeContractive U}, TypeContractive (λ ty, T ty (U ty))) →
-    TypeContractive (λ ty, type_fixpoint (T ty)).
+Lemma fix_type_contracive `{!typeG Σ} {A B} (T : _ A → _ → _ B)
+  `{!(∀ty, TypeContractive (T ty))} :
+  (∀`{!TypeContractive U}, TypeContractive (λ ty, T ty (U ty))) →
+    TypeContractive (λ ty, fix_ty (T ty)).
 Proof.
-  intros HT.
-  assert (Hne : ∀ n, TypeContractive (λ ty, fixpoint_defs.Tn (T ty) n)).
-  { intros n. induction n as [|n IH]; [apply HT, _|apply HT, IH]. }
-  split; simpl.
-  - destruct (type_non_expansive_type_lft_morphism (T:=λ ty, T ty (T ty bool)))
-    as [α βs E Hα HE|α E Hα HE].
-    + eapply (type_lft_morphism_add _ α βs E), HE.
-      intros. iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
-      iApply (fixpoint_defs.Tn_ty_lft_const (T ty) 1 0).
-    + eapply (type_lft_morphism_const _ α E), HE.
-      intros. iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
-      iApply (fixpoint_defs.Tn_ty_lft_const (T ty) 1 0).
+  move=> HT. have Hne: ∀n, TypeContractive (λ ty, Tn (T ty) n).
+  { elim=> [|? IH]; [apply HT, _|apply HT, IH]. } split=>/=.
+  - case (type_non_expansive_type_lft_morphism (T := λ ty, Tn (T ty) 1))=>
+    [α βs E Hα HE|α E Hα HE].
+    + eapply (type_lft_morphism_add _ α βs E), HE=> ?.
+      iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
+      iApply (Tn_ty_lft_const _ 1 0).
+    + eapply (type_lft_morphism_const _ α E), HE=> ?.
+      iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
+      iApply (Tn_ty_lft_const _ 1 0).
   - apply HT, _.
-  - intros. etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
-    by apply Hne.
-  - intros. etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
-    by apply Hne.
+  - move=> *. etrans; [apply conv_compl|].
+    etrans; [|symmetry; apply conv_compl]. by apply Hne.
+  - move=> *. etrans; [apply conv_compl|].
+    etrans; [|symmetry; apply conv_compl]. by apply Hne.
 Qed.
 
-Section fixpoint.
+Section traits.
   Context `{!typeG Σ}.
-  Context (T : type → type) {HT: TypeContractive T}.
+  Context {A} (T: type A → type A) {HT: TypeContractive T}.
 
-  Global Instance fixpoint_copy :
-    (∀ `(!Copy ty), Copy (T ty)) → Copy (type_fixpoint T).
+  Global Instance fix_copy :
+    (∀`(!Copy ty), Copy (T ty)) → Copy (fix_ty T).
   Proof.
-    intros ?. assert (∀ n, Copy (fixpoint_defs.Tn T n)); [by induction n; apply _|].
-    split; rewrite /type_fixpoint /=.
-    - intros depth tid vl. eapply @limit_preserving; [|simpl; apply _].
-      apply limit_preserving_Persistent=>??? EQ. apply EQ.
-    - pattern (compl (fixpoint_defs.own_shr_chain T)). eapply @limit_preserving.
-      { repeat apply limit_preserving_forall=>?.
-        apply limit_preserving_entails; [solve_proper|]=>??? EQ.
-        repeat f_equiv; apply EQ. }
-      intros n.
-      rewrite (_ : (T bool).(ty_size) = (fixpoint_defs.Tn T (3 + n)).(ty_size)); last first.
-      { rewrite /fixpoint_defs.Tn /=. apply type_contractive_ty_size. }
-      simpl. apply copy_shr_acc.
+    move=> ?. have ?: ∀n, Copy (Tn T n) by elim; apply _.
+    split; rewrite /fix_ty /=.
+    - move=> >. eapply @limit_preserving; [|apply _].
+      apply limit_preserving_Persistent=> ??? Eq. apply Eq.
+    - move=> > ?. eapply @limit_preserving.
+      { apply limit_preserving_forall=> ?.
+        apply limit_preserving_entails; [done|]=> ??? Eq.
+        f_equiv; [|do 11 f_equiv]; apply Eq. }
+      move=> n. have ->: (Tn T 0).(ty_size) = (Tn T (3 + n)).(ty_size).
+      { rewrite /Tn /=. apply type_contractive_ty_size. } by apply copy_shr_acc.
   Qed.
 
-  Global Instance fixpoint_send :
-    (∀ `(!Send ty), Send (T ty)) → Send (type_fixpoint T).
-  Proof.
-    intros ?. assert (∀ n, Send (fixpoint_defs.Tn T n)); [by induction n; apply _|].
-    rewrite /type_fixpoint => depth tid1 tid2 vl /=. eapply @limit_preserving.
-    - apply limit_preserving_entails=>??? EQ; apply EQ.
-    - intros n. simpl. apply send_change_tid.
+  Global Instance fix_send :
+    (∀`(!Send ty), Send (T ty)) → Send (fix_ty T).
+  Proof. move=> ?.
+    have ?: ∀n, Send (Tn T n) by elim; apply _. rewrite /fix_ty=> > /=.
+    eapply @limit_preserving; [|move=> ?; apply send_change_tid].
+    apply limit_preserving_equiv=> ??? Eq; apply Eq.
   Qed.
 
-  Global Instance fixpoint_sync :
-    (∀ `(!Sync ty), Sync (T ty)) → Sync (type_fixpoint T).
-  Proof.
-    intros ?. assert (∀ n, Sync (fixpoint_defs.Tn T n)); [by induction n; apply _|].
-    rewrite /type_fixpoint => κ tid1 tid2 vl /=. eapply @limit_preserving.
-    - apply limit_preserving_entails=>??? EQ; apply EQ.
-    - intros n. simpl. apply sync_change_tid.
+  Global Instance fix_sync :
+    (∀`(!Sync ty), Sync (T ty)) → Sync (fix_ty T).
+  Proof. move=> ?.
+    have ?: ∀n, Sync (Tn T n) by elim; apply _. rewrite /fix_ty=> > /=.
+    eapply @limit_preserving; [|move=> ?; apply sync_change_tid].
+    apply limit_preserving_equiv=> ??? Eq; apply Eq.
   Qed.
-End fixpoint.
+
+End traits.
 
 Section subtyping.
-  Context `{!typeG Σ} (E : elctx) (L : llctx).
+  Context `{!typeG Σ}.
 
-  (* TODO : is there a way to declare these as a [Proper] instances ? *)
-  Lemma fixpoint_mono T1 `{!TypeContractive T1} T2 `{!TypeContractive T2} :
-    (∀ ty1 ty2, subtype E L ty1 ty2 → subtype E L (T1 ty1) (T2 ty2)) →
-    subtype E L (type_fixpoint T1) (type_fixpoint T2).
+  Local Lemma wand_forall P (Φ: nat → iProp Σ) : (∀n, P -∗ Φ n) ⊢ (P -∗ ∀n, Φ n).
+  Proof. iIntros "To P %". iApply ("To" with "P"). Qed.
+  Local Lemma entails_equiv (P Q: iProp Σ) : (P ⊣⊢ P ∧ Q) ↔ (P ⊢ Q).
   Proof.
-    intros H12 qL.
-    assert (Hwand_forall : ∀ P (Φ : nat → iProp Σ), (∀ n, P -∗ Φ n) ⊢ (P -∗ ∀ n, Φ n)).
-    { iIntros (P Φ) "H HP %". iApply ("H" with "HP"). }
-    assert (Hsub : llctx_interp L qL
-      -∗ □ (elctx_interp E -∗
-         ∀ n, type_incl (Nat.iter (S n) T1 bool) (Nat.iter (S n) T2 bool))).
-    { rewrite intuitionistically_into_persistently -Hwand_forall
-              persistently_forall. apply forall_intro=>n.
-      rewrite -intuitionistically_into_persistently.
-      revert qL. apply H12. induction n as [|n IH]=>//. by apply H12. }
-    rewrite Hsub /type_incl -!persistent_and_sep /=. f_equiv. f_equiv.
-    (* FIXME : change the definition of limit_preserving so that it
-       applies even if the limti is not computed with compl. *)
-    assert (Hentails_equiv : ∀ P Q : iProp Σ, (P ⊣⊢ P ∧ Q) ↔ (P ⊢ Q)).
-    { intros P Q; split; [by iIntros (->) "[_ $]"|].
-      intros HPQ. iSplit; [|by iIntros "[$ _]"]. iIntros "H". iSplit; [done|].
-      by iApply HPQ. }
-    apply and_intro; [|apply and_intro; [|apply and_intro]].
-    - iIntros "H". iDestruct ("H" $! 0%nat) as "($ & _ & _ & _)".
-    - iIntros "H". iDestruct ("H" $! 0%nat) as "(_ & $ & _ & _)".
-    - apply Hentails_equiv, equiv_dist=>n. setoid_rewrite conv_compl; simpl.
-      apply equiv_dist, Hentails_equiv. iIntros "H".
-      iDestruct ("H" $! _) as "(_ & _ & $ & _)".
-    - apply Hentails_equiv, equiv_dist=>n. setoid_rewrite conv_compl; simpl.
-      apply equiv_dist, Hentails_equiv. iIntros "H".
-      iDestruct ("H" $! _) as "(_ & _ & _ & $)".
+    split; [by iIntros (->) "[_ $]"|]=> To. iSplit; [|by iIntros "[$ _]"].
+    iIntros "?". iSplit; [done|]. by iApply To.
   Qed.
 
-  Lemma fixpoint_proper T1 `{!TypeContractive T1} T2 `{!TypeContractive T2} :
-    (∀ ty1 ty2, eqtype E L ty1 ty2 → eqtype E L (T1 ty1) (T2 ty2)) →
-    eqtype E L (type_fixpoint T1) (type_fixpoint T2).
-  Proof.
-    intros H12. apply eqtype_unfold=>qL.
-    assert (Hwand_forall : ∀ P (Φ : nat → iProp Σ), (∀ n, P -∗ Φ n) ⊢ (P -∗ ∀ n, Φ n)).
-    { iIntros (P Φ) "H HP %". iApply ("H" with "HP"). }
-    assert (Hsub : llctx_interp L qL
-      -∗ □ (elctx_interp E -∗ ∀ n,
-            let ty1 := (fixpoint_defs.Tn T1 n) in
-            let ty2 := (fixpoint_defs.Tn T2 n) in
-            ⌜ty_size ty1 = ty_size ty2⌝ ∗ ty_lft ty1 ≡ₗ ty_lft ty2
-            ∗ □ (∀ depth tid vl, ty1.(ty_own) depth tid vl ↔ ty2.(ty_own) depth tid vl)
-            ∗ □ (∀ κ tid l, ty1.(ty_shr) κ tid l ↔ ty2.(ty_shr) κ tid l))).
-    { rewrite intuitionistically_into_persistently -Hwand_forall
-              persistently_forall. apply forall_intro=>n.
-      rewrite -intuitionistically_into_persistently.
-      revert qL. rewrite -eqtype_unfold. by induction n as [|n IH]; apply H12. }
-    rewrite Hsub /type_incl -!persistent_and_sep /=. f_equiv. f_equiv.
+  Lemma fix_subtype {A B} (f: A → B)
+    T `{!TypeContractive T} T' `{!TypeContractive T'} E L :
+    (∀ty ty', subtype E L f ty ty' → subtype E L f (T ty) (T' ty')) →
+    subtype E L f (fix_ty T) (fix_ty T').
+  Proof. move=> Loop qL.
+    have Incl: llctx_interp L qL -∗ □ (elctx_interp E -∗
+      ∀n, type_incl f (Tn T n) (Tn T' n)).
+    { rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
+      apply forall_intro=> n. rewrite -intuitionistically_into_persistently.
+      move: qL. apply Loop. elim n=> [|??]; [apply base_subtype|by apply Loop]. }
+    rewrite Incl /type_incl -!persistent_and_sep /=. do 2 f_equiv.
     (* FIXME : change the definition of limit_preserving so that it
        applies even if the limti is not computed with compl. *)
-    assert (Hentails_equiv : ∀ P Q : iProp Σ, (P ⊣⊢ P ∧ Q) ↔ (P ⊢ Q)).
-    { intros P Q; split; [by iIntros (->) "[_ $]"|].
-      intros HPQ. iSplit; [|by iIntros "[$ _]"]. iIntros "H". iSplit; [done|].
-      by iApply HPQ. }
     apply and_intro; [|apply and_intro; [|apply and_intro]].
-    - iIntros "H". iDestruct ("H" $! 0%nat) as "($ & _ & _ & _)".
-    - iIntros "H". iDestruct ("H" $! 0%nat) as "(_ & $ & _ & _)".
-    - apply Hentails_equiv, equiv_dist=>n. setoid_rewrite conv_compl; simpl.
-      apply equiv_dist, Hentails_equiv. iIntros "H".
-      iDestruct ("H" $! _) as "(_ & _ & $ & _)".
-    - apply Hentails_equiv, equiv_dist=>n. setoid_rewrite conv_compl; simpl.
-      apply equiv_dist, Hentails_equiv. iIntros "H".
-      iDestruct ("H" $! _) as "(_ & _ & _ & $)".
+    - iIntros "H". iDestruct ("H" $! 0) as "($&_)".
+    - iIntros "H". iDestruct ("H" $! 0) as "(_&$&_)".
+    - apply entails_equiv, equiv_dist=> ?. setoid_rewrite conv_compl=>/=.
+      apply equiv_dist, entails_equiv. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
+    - apply entails_equiv, equiv_dist=> ?. setoid_rewrite conv_compl=>/=.
+      apply equiv_dist, entails_equiv. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
   Qed.
 
-  Lemma fixpoint_unfold_subtype_l ty T `{!TypeContractive T} :
-    subtype E L ty (T (type_fixpoint T)) → subtype E L ty (type_fixpoint T).
-  Proof. intros. by rewrite fixpoint_unfold_eqtype. Qed.
-  Lemma fixpoint_unfold_subtype_r ty T `{!TypeContractive T} :
-    subtype E L (T (type_fixpoint T)) ty → subtype E L (type_fixpoint T) ty.
-  Proof. intros. by rewrite fixpoint_unfold_eqtype. Qed.
-  Lemma fixpoint_unfold_eqtype_l ty T `{!TypeContractive T} :
-    eqtype E L ty (T (type_fixpoint T)) → eqtype E L ty (type_fixpoint T).
-  Proof. intros. by rewrite fixpoint_unfold_eqtype. Qed.
-  Lemma fixpoint_unfold_eqtype_r ty T `{!TypeContractive T} :
-    eqtype E L (T (type_fixpoint T)) ty → eqtype E L (type_fixpoint T) ty.
-  Proof. intros. by rewrite fixpoint_unfold_eqtype. Qed.
+  Lemma fix_eqtype_subtype {A B} (f: A → B) g
+    T `{!TypeContractive T} T' `{!TypeContractive T'} E L :
+    (∀ty ty', eqtype E L f g ty ty' → eqtype E L f g (T ty) (T' ty')) →
+    subtype E L f (fix_ty T) (fix_ty T').
+  Proof. move=> Loop qL.
+    have Incl: llctx_interp L qL -∗ □ (elctx_interp E -∗
+      ∀n, type_incl f (Tn T n) (Tn T' n)).
+    { rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
+      apply forall_intro=> n. rewrite -intuitionistically_into_persistently.
+      move: qL. apply Loop. elim n=> [|??]; [apply base_eqtype|by apply Loop]. }
+    rewrite Incl /type_incl -!persistent_and_sep /=. do 2 f_equiv.
+    apply and_intro; [|apply and_intro; [|apply and_intro]].
+    - iIntros "H". iDestruct ("H" $! 0) as "($&_)".
+    - iIntros "H". iDestruct ("H" $! 0) as "(_&$&_)".
+    - apply entails_equiv, equiv_dist=> ?. setoid_rewrite conv_compl=>/=.
+      apply equiv_dist, entails_equiv. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
+    - apply entails_equiv, equiv_dist=> ?. setoid_rewrite conv_compl=>/=.
+      apply equiv_dist, entails_equiv. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
+  Qed.
+
+  Lemma fix_eqtype {A B} (f: A → B) g
+    T `{!TypeContractive T} T' `{!TypeContractive T'} E L :
+    (∀ty ty', eqtype E L f g ty ty' → eqtype E L f g (T ty) (T' ty')) →
+    eqtype E L f g (fix_ty T) (fix_ty T').
+  Proof. move=> Loop.
+    have ?: ∀ty' ty, eqtype E L g f ty' ty → eqtype E L g f (T' ty') (T ty).
+    { move=> ??[??]. split; apply Loop; by split. }
+    split; by eapply fix_eqtype_subtype.
+  Qed.
+
 End subtyping.
 
-Global Hint Resolve fixpoint_mono fixpoint_proper : lrust_typing.
-
-(* These hints can loop if [fixpoint_mono] and [fixpoint_proper] have
-   not been tried before, so we give them a high cost *)
-Global Hint Resolve fixpoint_unfold_subtype_l|100 : lrust_typing.
-Global Hint Resolve fixpoint_unfold_subtype_r|100 : lrust_typing.
-Global Hint Resolve fixpoint_unfold_eqtype_l|100 : lrust_typing.
-Global Hint Resolve fixpoint_unfold_eqtype_r|100 : lrust_typing.
+Global Hint Resolve fix_subtype fix_eqtype : lrust_typing.

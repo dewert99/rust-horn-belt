@@ -4,7 +4,6 @@ From iris.proofmode Require Import tactics.
 From lrust.lang Require Import races adequacy proofmode notation.
 From lrust.lifetime Require Import lifetime frac_borrow.
 From lrust.typing Require Import typing.
-
 Set Default Proof Using "Type".
 
 Class typePreG Σ := PreTypeG {

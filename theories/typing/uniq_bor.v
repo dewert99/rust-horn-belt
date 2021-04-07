@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-(* From lrust.typing Require Import lft_contexts type_context programs. *)
+(* From lrust.typing Require Import type_context programs. *)
 Set Default Proof Using "Type".
 
 Section uniq_bor.

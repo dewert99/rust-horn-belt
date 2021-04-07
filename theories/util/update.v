@@ -10,6 +10,10 @@ Implicit Type P Q: PROP.
 
 Global Instance step_fupdN_proper E n : Proper ((⊣⊢) ==> (⊣⊢)) (λ P, |={E}▷=>^n P)%I.
 Proof. by elim n; [apply _|]=>/= *??->. Qed.
+Global Instance step_fupdN_ne E n m : Proper (dist m ==> dist m) (λ P, |={E}▷=>^n P)%I.
+Proof. by elim n; [apply _|]=>/= *??->. Qed.
+Global Instance step_fupdN_mono E n : Proper ((⊢) ==> (⊢)) (λ P, |={E}▷=>^n P)%I.
+Proof. by elim n; [apply _|]=>/= *??->. Qed.
 
 Lemma step_fupdN_nmono E m n P : m ≤ n → (|={E}▷=>^m P) -∗ (|={E}▷=>^n P).
 Proof.

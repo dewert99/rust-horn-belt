@@ -60,7 +60,7 @@ theories/typing/uniq_bor.v
 # theories/typing/programs.v
 # theories/typing/borrow.v
 # theories/typing/cont.v
-# theories/typing/fixpoint.v
+theories/typing/fixpoint.v
 # theories/typing/type_sum.v
 # theories/typing/typing.v
 # theories/typing/soundness.v

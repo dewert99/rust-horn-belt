@@ -1,8 +1,7 @@
 Require Import FunctionalExtensionality Equality.
-From lrust.typing Require Export (** lft_contexts *) type.
+From lrust.typing Require Export type.
 Set Default Proof Using "Type".
 
-Implicit Type (i: nat) (vl: list val).
 Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
 
 Section sum_ty.
@@ -18,10 +17,10 @@ Section sum_ty.
 
   Global Instance empty_send: Send ∅. Proof. done. Qed.
 
-  Definition is_pad {As} i (tyl: typel As) vl : iProp Σ :=
+  Definition is_pad {As} i (tyl: _ As) (vl: list val) : iProp Σ :=
     ⌜((hnthe tyl i).(ty_size) + length vl)%nat = max_ty_size tyl⌝.
 
-  Lemma split_sum_mt {As} (tyl: typel As) vπ d l tid q :
+  Lemma split_sum_mt {As} (tyl: _ As) vπ d l tid q :
     (l ↦∗{q}: λ vl, ∃i vπ' vl' vl'', ⌜vπ = xinj i ∘ vπ'⌝ ∗
       ⌜vl = #i :: vl' ++ vl''⌝ ∗ ⌜length vl = S (max_ty_size tyl)⌝ ∗
       (hnthe tyl i).(ty_own) vπ' d tid vl')%I ⊣⊢

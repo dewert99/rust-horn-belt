@@ -1,7 +1,6 @@
 Require Import FunctionalExtensionality Equality.
 From lrust.typing Require Export type.
-From lrust.typing Require Import lft_contexts mod_ty.
-
+From lrust.typing Require Import mod_ty.
 Set Default Proof Using "Type".
 
 Section product.
@@ -51,7 +50,7 @@ Section product.
   Program Definition prod_ty {A B} (ty: type A) (ty': type B) : type (A * B) := {|
     ty_size := ty.(ty_size) + ty'.(ty_size);
     ty_lfts := ty.(ty_lfts) ++ ty'.(ty_lfts);  ty_E := ty.(ty_E) ++ ty'.(ty_E);
-    ty_own vπ d tid vl := ∃ wl wl', ⌜vl = wl ++ wl'⌝ ∗
+    ty_own vπ d tid vl := ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
       ty.(ty_own) (fst ∘ vπ) d tid wl ∗ ty'.(ty_own) (snd ∘ vπ) d tid wl';
     ty_shr vπ d κ tid l := ty.(ty_shr) (fst ∘ vπ) d κ tid l ∗
       ty'.(ty_shr) (snd ∘ vπ) d κ tid (l +ₗ ty.(ty_size))
@@ -115,7 +114,7 @@ Section product.
     iMod ("Close" with "PTok") as "[$$]". by iMod ("Close'" with "PTok'") as "[$$]".
   Qed.
 
-  Global Instance prod_ne {A B} : NonExpansive2 (@prod_ty A B).
+  Global Instance prod_ty_ne {A B} : NonExpansive2 (@prod_ty A B).
   Proof. solve_ne_type. Qed.
 
   Definition nil_unit_ty: type :1 := <{unique}> unit_ty.
