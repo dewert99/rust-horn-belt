@@ -892,6 +892,7 @@ Section type_util.
     iDestruct (ty_size_eq with "Own") as %<-. iExists (list_to_vec vl).
     rewrite vec_to_list_to_vec. iFrame.
   Qed.
+
 End type_util.
 
 Global Hint Resolve ty_outlives_E_elctx_sat tyl_outlives_E_elctx_sat : lrust_typing.

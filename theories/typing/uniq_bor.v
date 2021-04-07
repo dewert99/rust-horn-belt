@@ -21,8 +21,8 @@ Section uniq_bor.
   |}%I.
   Next Obligation. move=> *. by iDestruct 1 as (????->) "?". Qed.
   Next Obligation.
-    move=> *. iDestruct 1 as (d l ξ ?->?) "[??]".
-    iExists d, l, ξ. iSplit; [iPureIntro; lia|]. do 2 (iSplit; [done|]). iFrame.
+    move=> *. iDestruct 1 as (d l ξ ?->?) "[??]". iExists d, l, ξ.
+    iSplit; [iPureIntro; lia|]. do 2 (iSplit; [done|]). iFrame.
   Qed.
   Next Obligation.
     move=> ????[|d']*; iDestruct 1 as (d l ξ ->?) "(Bor & Bor' &?)"; [lia|].
@@ -43,15 +43,14 @@ Section uniq_bor.
     iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
     iMod (bor_exists with "LFT Bor") as (ξ) "Bor"; [done|].
     iMod (bor_sep_persistent with "LFT Bor Tok") as "(>%Le & Bor & Tok)"; [done|].
+    move: Le=> /succ_le [d[->Le]].
     do 2 (iMod (bor_sep_persistent with "LFT Bor Tok") as "(>-> & Bor & Tok)"; [done|]).
     iMod (bor_sep with "LFT Bor") as "[BorVo Bor]"; [done|].
-    iMod (bor_unnest with "LFT Bor") as "Bor"; [done|].
-    move: Le=> /succ_le [d[->Le]]. iIntros "!>!>!>".
+    iMod (bor_unnest with "LFT Bor") as "Bor"; [done|]. iIntros "!>!>!>".
     iMod (bor_shorten with "[] Bor") as "Bor".
     { iApply lft_incl_glb; [|iApply lft_incl_refl].
       iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
-    iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
-    iMod (bor_exists with "LFT Bor") as (d') "Bor"; [done|].
+    do 2 (iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|]).
     iMod (bor_sep with "LFT Bor") as "[BorOwn Bor]"; [done|].
     iMod (bor_sep with "LFT Bor") as "[_ BorPc]"; [done|].
     iMod (bor_combine with "LFT BorVo BorPc") as "Bor"; [done|].
