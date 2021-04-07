@@ -13,12 +13,12 @@ Section shr_bor.
     move=> ????[|?]*/=; [by iIntros|]. rewrite by_just_loc_ex. by iIntros "[%[->?]]".
   Qed.
   Next Obligation.
-    move=> ???[|d][|d']*/=; (try by iIntros); [lia|]. rewrite !by_just_loc_ex.
+    move=> ???[|?][|?]*; (try by iIntros); [lia|]. rewrite/= !by_just_loc_ex.
     do 3 f_equiv. apply ty_shr_depth_mono. lia.
   Qed.
   Next Obligation.
     move=> ?????[|?]*/=; [by iIntros|]. rewrite {1}by_just_loc_ex.
-    iIntros "#LFT #? (%l &->& Shr) Tok !> /=".
+    iIntros "#LFT #? (%&->& Shr) Tok !>/=".
     iDestruct (ty_shr_proph with "LFT [] [] Shr Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
@@ -44,11 +44,11 @@ Section typing.
         /= left_id right_id.
     - done.
     - move=>/= > ???? EqShr *. by setoid_rewrite EqShr.
-    - move=>/= > ???? EqShr *. repeat (f_contractive || f_equiv). apply EqShr.
+    - move=>/= *. do 8 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
   Global Instance shr_send {A} κ (ty: _ A) : Sync ty → Send (&shr{κ} ty).
-  Proof. move=> /sync_change_tid' Eq ?*/=. by setoid_rewrite Eq at 1. Qed.
+  Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
 
   Lemma shr_type_incl {A B} κ κ' (f: A → B) ty ty' :
     κ' ⊑ κ -∗ type_incl f ty ty' -∗ type_incl f (&shr{κ} ty) (&shr{κ'} ty').

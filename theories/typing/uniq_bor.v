@@ -7,26 +7,22 @@ Section uniq_bor.
 
   Program Definition uniq_bor {A} (κ: lft) (ty: type A) : type (A * A) := {|
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
-    ty_own vπ d tid vl := ∃d' (l: loc) (ξ: proph_var' A), ⌜S d' ≤ d⌝ ∗ ⌜vl = [ #l]⌝ ∗
-      ⌜snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ, d') ∗
+    ty_own vπ d tid vl := [loc[l] := vl] ∃d' (ξ: proph_var' A),
+      ⌜S d' ≤ d⌝ ∗ ⌜snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ, d') ∗
       &{κ} (∃vπ' d', l ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖ S d' ∗ .PC[ξ] (vπ', d'));
-    ty_shr vπ d κ' tid l := ∃d' (l': loc) ξ, ⌜d = S d'⌝ ∗ ⌜snd ∘ vπ ./ [ξ]⌝ ∗
+    ty_shr vπ d κ' tid l := [S d' := d] ∃(l': loc) ξ, ⌜snd ∘ vπ ./ [ξ]⌝ ∗
       &frac{κ'}(λ q', l ↦{q'} #l') ∗ &frac{κ'} (λ q, q:[ξ]) ∗
       ▷ ty.(ty_shr) (fst ∘ vπ) d' κ' tid l';
   |}%I.
-  Next Obligation. move=> *. by iDestruct 1 as (????->) "?". Qed.
+  Next Obligation. move=>/= *. rewrite by_just_loc_ex. by iIntros "[%[->?]]". Qed.
+  Next Obligation. move=>/= *. by do 9 f_equiv. Qed.
   Next Obligation.
-    move=> *. iDestruct 1 as (d l ξ ?->?) "[??]". iExists d, l, ξ.
-    iSplit; [iPureIntro; lia|]. do 2 (iSplit; [done|]). iFrame.
+    move=> ???[|?][|?]*/=; (try by iIntros); [lia|]. do 8 f_equiv.
+    apply ty_shr_depth_mono. lia.
   Qed.
   Next Obligation.
-    move=> ????[|d']*; iDestruct 1 as (d l ξ ->?) "(Bor & Bor' &?)"; [lia|].
-    iExists d', l, ξ. do 2 (iSplit; [done|]). iFrame "Bor Bor'".
-    iApply ty_shr_depth_mono; [|done]. lia.
-  Qed.
-  Next Obligation.
-    move=> *. iIntros "#In". iDestruct 1 as (d l ξ ->?) "(?&?&?)". iExists d, l, ξ.
-    do 2 (iSplit; [done|]). do 2 (iSplit; [by iApply frac_bor_shorten|]).
+    move=> ??????[|?]*; [by iIntros|]. iIntros "#In (%l & %ξ &%&?&?&?)".
+    iExists l, ξ. iSplit; [done|]. do 2 (iSplit; [by iApply frac_bor_shorten|]).
     by iApply ty_shr_lft_mono.
   Qed.
   Next Obligation.
@@ -34,12 +30,13 @@ Section uniq_bor.
     have ?: Inhabited A := populate ((vπ inhabitant).1).
     iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
     iMod (bor_sep with "LFT Bor") as "[BorMt Bor]"; [done|].
+    rewrite by_just_loc_ex. iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor Tok") as "(>->& Bor & Tok)"; [done|].
     iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
-    iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
     iMod (bor_exists with "LFT Bor") as (ξ) "Bor"; [done|].
     iMod (bor_sep_persistent with "LFT Bor Tok") as "(>%Le & Bor & Tok)"; [done|].
-    move: Le=> /succ_le [d[->Le]].
-    do 2 (iMod (bor_sep_persistent with "LFT Bor Tok") as "(>-> & Bor & Tok)"; [done|]).
+    move: Le=> /succ_le [d[->Le]]/=.
+    iMod (bor_sep_persistent with "LFT Bor Tok") as "(>-> & Bor & Tok)"; [done|].
     iMod (bor_sep with "LFT Bor") as "[BorVo Bor]"; [done|].
     iMod (bor_unnest with "LFT Bor") as "Bor"; [done|]. iIntros "!>!>!>".
     iMod (bor_shorten with "[] Bor") as "Bor".
@@ -60,14 +57,14 @@ Section uniq_bor.
     rewrite heap_mapsto_vec_singleton.
     iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT BorMt") as "BorMt"; [done|].
     iMod (bor_fracture (λ q, q:[_])%I with "LFT BorPTok") as "BorPTok"; [done|].
-    iIntros "!> >[?$] !>". iExists d, l, ξ. iFrame "BorMt BorPTok". iSplit; [done|].
-    iSplit; [iPureIntro; apply proph_dep_one|]. iApply ty_shr_depth_mono; [|done]. lia.
+    iIntros "!> >[?$] !>". iExists l, ξ. iFrame "BorMt BorPTok".
+    iSplit; [iPureIntro; apply proph_dep_one|]. iApply ty_shr_depth_mono; by [|lia].
   Qed.
   Next Obligation.
-    move=> ???? vπ *. iIntros "#LFT #?". iDestruct 1 as (d l ξ Le->Eq) "[Vo Bor]".
-    move: Le=> /succ_le [?[->Le]]. iIntros "[Tok Tok']".
-    iMod (lft_incl_acc with "[] Tok") as (?) "[Tok ToTok]"; first done.
-    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
+    move=> ???? vπ *. iIntros "#LFT #?". setoid_rewrite by_just_loc_ex at 1.
+    iDestruct 1 as (?->d ξ Le Eq) "[Vo Bor]". move: Le=> /succ_le [?[->Le]].
+    iIntros "[Tok Tok']". iMod (lft_incl_acc with "[] Tok") as (?) "[Tok ToTok]";
+    first done. { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     iMod (bor_acc with "LFT Bor Tok") as "[Big Close']"; [done|]. iIntros "!>!>!>".
     iDestruct "Big" as (??) "((%vl & Mt & Own) & #Time & Pc)".
     iDestruct (uniq_agree with "Vo Pc") as %[=<-<-].
@@ -83,12 +80,12 @@ Section uniq_bor.
     iMod ("Close" with "PTok") as "[Own $]". iDestruct ("ToPc" with "PTok'") as "Pc".
     iMod ("Close'" with "[Mt Own Pc]") as "[? Tok]".
     { iModIntro. iExists (fst ∘ vπ), d. iFrame "Pc Time". iExists vl. iFrame. }
-    iMod ("ToTok" with "Tok") as "$". iModIntro. iExists d, l, ξ.
-    iSplit; [iPureIntro; lia|]. do 2 (iSplit; [done|]). iFrame.
+    iMod ("ToTok" with "Tok") as "$". iModIntro. iExists d, ξ.
+    iSplit; [iPureIntro; lia|]. iSplit; [done|]. iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #In #?".
-    iDestruct 1 as (d l ξ ->?) "(?& #Bor & Shr)". iIntros "[Tok Tok'] !>!>".
+    move=> ?????[|?]*; [by iIntros|].
+    iIntros "#LFT #In #? (%l & %ξ &%& ? & #Bor & Shr) [Tok Tok'] !>!>".
     iDestruct (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
     iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξs q' ?) "[PTok Close]".
@@ -99,8 +96,7 @@ Section uniq_bor.
     iExists (ξs ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_pair|].
     iFrame "PTok". iIntros "PTok". iDestruct ("ToPToks" with "PTok") as "[PTok PTok']".
     iMod ("Close" with "PTok") as "[?$]". iMod ("Close'" with "PTok'") as "Tok".
-    iMod ("ToTok" with "Tok") as "$". iModIntro. iExists d, l, ξ.
-    by do 4 (iSplit; [done|]).
+    iMod ("ToTok" with "Tok") as "$". iModIntro. iExists l, ξ. by do 3 (iSplit; [done|]).
   Qed.
 
   Global Instance uniq_ne {A} κ : NonExpansive (@uniq_bor A κ).
@@ -119,18 +115,15 @@ Section typing.
       by rewrite elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp
         /= left_id right_id.
     - done.
-    - move=> */=. do 19 (f_contractive || f_equiv). by simpl in *.
-    - move=> */=. do 11 (f_contractive || f_equiv). by simpl in *.
+    - move=> */=. do 18 (f_contractive || f_equiv). by simpl in *.
+    - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
   Global Instance uniq_send {A} κ (ty: _ A) : Send ty → Send (&uniq{κ} ty).
-  Proof.
-    move=> Send ?*/=. do 10 f_equiv. iApply bor_iff. iApply bi.equiv_iff.
-    do 8 f_equiv. iSplit; iApply Send.
-  Qed.
+  Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
 
   Global Instance uniq_sync {A} κ (ty: _ A) : Sync ty → Sync (&uniq{κ} ty).
-  Proof. move=> ??*/=. by do 11 f_equiv. Qed.
+  Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
 
   Lemma uniq_subtype {A} E L κ κ' (ty ty': _ A) :
     lctx_lft_incl E L κ' κ → eqtype E L id id ty ty' →
@@ -140,14 +133,14 @@ Section typing.
     iDestruct (Eqt with "L") as "#Eqt". iDestruct (In with "L") as "#In". iIntros "!> #E".
     iSplit; [done|]. iDestruct ("Eqt" with "E") as (?) "[[??][#EqOwn #EqShr]]".
     iSpecialize ("In" with "E"). iSplit; [by iApply lft_intersect_mono|].
-    iSplit; iModIntro.
-    - iIntros "*". iDestruct 1 as (d' l' ξ ?->?) "[Vo Bor]". iExists d', l', ξ.
-      do 3 (iSplit; [done|]). iFrame "Vo". iApply (bor_shorten with "In").
+    iSplit; iModIntro=>/=.
+    - iIntros "*". rewrite by_just_loc_ex. iDestruct 1 as (l->d' ξ ??) "[Vo Bor]".
+      iExists d', ξ. do 2 (iSplit; [done|]). iFrame "Vo". iApply (bor_shorten with "In").
       iApply bor_iff; [|done]. iIntros "!>!>".
       iSplit; iDestruct 1 as (vπ' d'') "[(%vl & Mt & Own) Misc]"; iExists vπ', d'';
       iFrame "Misc"; iExists vl; iFrame "Mt"; by iApply "EqOwn".
-    - iIntros "*". iDestruct 1 as (d' l' ξ ??) "(?&?&?)". iExists d', l', ξ.
-      do 4 (iSplit; [done|]). by iApply "EqShr".
+    - iIntros (?[|?]???); [by iIntros|]. iDestruct 1 as (l' ξ ?) "(?&?&?)".
+      iExists l', ξ. do 3 (iSplit; [done|]). by iApply "EqShr".
   Qed.
   Lemma uniq_eqtype {A} E L κ κ' (ty ty': _ A) :
     lctx_lft_eq E L κ κ' → eqtype E L id id ty ty' →

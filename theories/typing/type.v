@@ -569,7 +569,7 @@ Proof. by constructor. Qed.
 
 Class Send `{!typeG Σ} {A} (ty: type A) :=
   send_change_tid tid tid' vπ d vl :
-    ty.(ty_own) vπ d tid vl -∗ ty.(ty_own) vπ d tid' vl.
+    ty.(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) vπ d tid' vl.
 Instance: Params (@Send) 3 := {}.
 
 Class ListSend `{!typeG Σ} {As} (tyl: typel As) := list_send: HForall (λ _, Send) tyl.
@@ -582,7 +582,7 @@ Proof. by constructor. Qed.
 
 Class Sync `{!typeG Σ} {A} (ty: type A) :=
   sync_change_tid tid tid' vπ d κ l :
-    ty.(ty_shr) vπ d κ tid l -∗ ty.(ty_shr) vπ d κ tid' l.
+    ty.(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) vπ d κ tid' l.
 Instance: Params (@Sync) 3 := {}.
 
 Class ListSync `{!typeG Σ} {As} (tyl: typel As) := list_sync: HForall (λ _, Sync) tyl.
@@ -658,18 +658,7 @@ Section type.
   Proof. move=> ?? [_ _ _ _ Eqv] ?. rewrite /Sync=> *. by rewrite -!Eqv. Qed.
 
   Global Instance simple_type_sync {A} (st: simple_type A) : Send st → Sync st.
-  Proof.
-    move=> Send >. iIntros "[%vl[Bor?]]". iExists vl. iFrame "Bor".
-    iNext. by iApply Send.
-  Qed.
-
-  Lemma send_change_tid' {A} (ty: _ A) vπ d tid tid' vl :
-    Send ty → ty.(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) vπ d tid' vl.
-  Proof. move=> ?. apply: anti_symm; apply send_change_tid. Qed.
-
-  Lemma sync_change_tid' {A} (ty: _ A) vπ d κ tid tid' l :
-    Sync ty → ty.(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) vπ d κ tid' l.
-  Proof. move=> ?. apply: anti_symm; apply sync_change_tid. Qed.
+  Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
 
 End type.
 
@@ -908,6 +897,9 @@ Section type_util.
   Global Instance by_succ_ne n :
     Proper ((=) ==> pointwise_relation _ (dist n) ==> (dist n)) by_succ.
   Proof. move=> ??->?? Eq. rewrite !by_succ_ex. by setoid_rewrite Eq. Qed.
+  Global Instance by_succ_mono :
+    Proper ((=) ==> pointwise_relation _ (⊢) ==> (⊢)) by_succ.
+  Proof. move=> ??->?? In. rewrite !by_succ_ex. by setoid_rewrite In. Qed.
   Global Instance by_succ_persistent d Φ :
     (∀d', Persistent (Φ d')) → Persistent (by_succ d Φ).
   Proof. case d; apply _. Qed.
@@ -925,6 +917,9 @@ Section type_util.
   Global Instance by_just_loc_ne n :
     Proper ((=) ==> pointwise_relation _ (dist n) ==> (dist n)) by_just_loc.
   Proof. move=> ??->?? Eq. rewrite !by_just_loc_ex. by setoid_rewrite Eq. Qed.
+  Global Instance by_just_loc_mono :
+    Proper ((=) ==> pointwise_relation _ (⊢) ==> (⊢)) by_just_loc.
+  Proof. move=> ??->?? In. rewrite !by_just_loc_ex. by setoid_rewrite In. Qed.
   Global Instance by_just_loc_persistent vl Φ :
     (∀l, Persistent (Φ l)) → Persistent (by_just_loc vl Φ).
   Proof. rewrite by_just_loc_ex. apply _. Qed.
