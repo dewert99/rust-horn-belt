@@ -65,7 +65,20 @@ Next Obligation. move=> *. fun_ext=>/= ?. apply eq_unique. Qed.
 Global Instance unique_iso `{Unique A, Unique B} : @Iso A B unique unique.
 Proof. split; fun_ext=>/= ?; symmetry; apply eq_unique. Qed.
 
-(** * Utility for Empty_set *)
+(** * Utility for voidness *)
 
 Global Instance Empty_set_empty: Empty Type := Empty_set.
-Definition absurd {A} (x: ∅) : A := match x with end.
+
+Class Void A := absurd: ∀{B}, A → B.
+
+Global Instance Empty_set_void: Void ∅. Proof. by move. Qed.
+
+Global Instance fun_void_void `{Inhabited A, Void B} : Void (A → B).
+Proof. move=> ? /(.$ inhabitant) ?. by apply absurd. Qed.
+
+Program Global Instance void_fun_unique {B} `{Void A}
+  : Unique (A → B) := {| unique := absurd |}.
+Next Obligation. move=> *. fun_ext=> ?. by apply absurd. Qed.
+
+Global Instance void_iso `{Void A, Void B} : Iso absurd absurd.
+Proof. split; fun_ext=> ?; by apply absurd. Qed.

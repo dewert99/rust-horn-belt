@@ -1,10 +1,11 @@
 Require Import FunctionalExtensionality Equality.
 From lrust.typing Require Export type.
+From lrust.typing Require Import mod_ty.
 Set Default Proof Using "Type".
 
 Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
 
-Section sum_ty.
+Section sum.
   Context `{!typeG Σ}.
 
   (* We define the actual empty type as being the empty sum, so that it is
@@ -42,7 +43,7 @@ Section sum_ty.
       iFrame "Own". iPureIntro. rewrite/= app_length Eq. by f_equal.
   Qed.
 
-  Local Lemma ty_lfts_incl {As} (tyl: typel As) i :
+  Local Lemma ty_lfts_nth_incl {As} (tyl: typel As) i :
     ⊢ tyl_lft tyl ⊑ ty_lft (hnthe tyl i).
   Proof.
     elim: tyl i=>/= [|?? ty tyl IH] [|?];
@@ -51,7 +52,7 @@ Section sum_ty.
     iApply lft_incl_trans; by [iApply lft_intersect_incl_r|iApply IH].
   Qed.
 
-  Program Definition sum_ty {As} (tyl: typel As) : type (xsum As) := {|
+  Program Definition xsum_ty {As} (tyl: typel As) : type (Σ! As) := {|
     ty_size := S (max_ty_size tyl);
     ty_lfts := tyl_lfts tyl;  ty_E := tyl_E tyl;
     ty_own vπ d tid vl := ∃i vπ' vl' vl'', ⌜vπ = xinj i ∘ vπ'⌝ ∗
@@ -83,7 +84,7 @@ Section sum_ty.
     iMod (bor_sep_persistent with "LFT Bor Tok") as "(>-> & Bor & Tok)"; [done|].
     iMod (bor_sep with "LFT Bor") as "[Mt Bor]"; [done|].
     iMod (ty_share with "LFT [] Bor Tok") as "Upd"; [done| |].
-    { iApply lft_incl_trans; by [|iApply ty_lfts_incl]. }
+    { iApply lft_incl_trans; by [|iApply ty_lfts_nth_incl]. }
     iApply (step_fupdN_wand with "Upd"). iIntros "!> >[Shr $]".
     iMod (bor_fracture (λ q, _ ↦{q} _ ∗ _ ↦∗{q}: _)%I with "LFT Mt") as "?"; [done|].
     iModIntro. iExists i, vπ'. iSplit; [done|]. iFrame.
@@ -91,7 +92,7 @@ Section sum_ty.
   Next Obligation.
     move=> */=. iIntros "#LFT #?". iDestruct 1 as (i vπ' vl' vl'' ->->->) "Own".
     iIntros "Tok". iMod (ty_own_proph with "LFT [] Own Tok") as "Upd"; first done.
-    { iApply lft_incl_trans; by [|iApply ty_lfts_incl]. } iModIntro.
+    { iApply lft_incl_trans; by [|iApply ty_lfts_nth_incl]. } iModIntro.
     iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q' ?) "[PTok Close]".
     iModIntro. iExists ξs, q'. iSplit. { iPureIntro. by apply proph_dep_constr. }
     iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[?$]".
@@ -100,14 +101,14 @@ Section sum_ty.
   Next Obligation.
     move=> */=. iIntros "#LFT #In #? (%i & %vπ' &->& Bor & Shr) Tok".
     iMod (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; first done.
-    { iApply lft_incl_trans; by [|iApply ty_lfts_incl]. } iIntros "!>!>".
+    { iApply lft_incl_trans; by [|iApply ty_lfts_nth_incl]. } iIntros "!>!>".
     iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q' ?) "[PTok Close]".
     iModIntro. iExists ξs, q'. iSplit. { iPureIntro. by apply proph_dep_constr. }
     iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[?$]".
     iModIntro. iExists i, vπ'. by do 2 (iSplit; [done|]).
   Qed.
 
-  Global Instance sum_ty_ne {As} : NonExpansive (@sum_ty As).
+  Global Instance xsum_ty_ne {As} : NonExpansive (@xsum_ty As).
   Proof.
     move=> n tyl tyl' Eqv. have EqMsz: max_ty_size tyl = max_ty_size tyl'.
     { elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv. }
@@ -121,10 +122,31 @@ Section sum_ty.
       repeat (eapply ty_size_ne || f_equiv)=>//. by rewrite Eqv'.
   Qed.
 
-  Lemma sum_lft_morphism {B As} (Tl: _ As) :
-    HForall (λ _, TypeLftMorphism) Tl → TypeLftMorphism (λ (ty: _ B), sum_ty (Tl +$ ty)).
+  Definition sum_ty {A B} (ty: _ A) (ty': _ B) : type (A + B) :=
+    <{xsum_to_sum}> (xsum_ty +[ty; ty']).
+
+  Global Instance sum_ty_ne {A B} : NonExpansive2 (@sum_ty A B).
   Proof.
-    move=> All. set s := λ ty, sum_ty (Tl +$ ty).
+    move=> ???????. rewrite /sum_ty. do 2 f_equiv. constructor; by [|constructor].
+  Qed.
+
+End sum.
+
+Notation "Σ!" := (xsum_ty) : lrust_type_scope.
+Notation "ty + ty'" := (sum_ty ty%T ty'%T) : lrust_type_scope.
+
+Section typing.
+  Context `{!typeG Σ}.
+
+  Lemma xsum_nil_empty: (Σ! +[] ≡ <{absurd}> ∅)%T.
+  Proof.
+    constructor=>//; by [rewrite ![ty_own _]eq_unique|rewrite ![ty_shr _]eq_unique].
+  Qed.
+
+  Lemma xsum_lft_morphism {B As} (Tl: _ As) :
+    HForall (λ _, TypeLftMorphism) Tl → TypeLftMorphism (λ (ty: _ B), Σ! (Tl +$ ty))%T.
+  Proof.
+    move=> All. set s := λ ty, Σ!%T (Tl +$ ty).
     have [[?[?[?[??]]]]|[?[?[??]]]]:
       (∃α βs E, (∀ty, ⊢ ty_lft (s ty) ≡ₗ α ⊓ ty_lft ty) ∧
         (∀ty, elctx_interp (s ty).(ty_E) ⊣⊢
@@ -157,14 +179,14 @@ Section sum_ty.
       + by rewrite !elctx_interp_app HE HE'.
   Qed.
 
-  Global Instance sum_type_ne {A Bs} (T: _ A → _ Bs) :
-    ListTypeNonExpansive T → TypeNonExpansive (sum_ty ∘ T).
+  Global Instance xsum_type_ne {A Bs} (T: _ A → _ Bs) :
+    ListTypeNonExpansive T → TypeNonExpansive (Σ! ∘ T)%T.
   Proof.
     move=> [Tl[->All]]. have EqMsz: ∀ty ty',
       ty_size ty = ty_size ty' → max_ty_size (Tl +$ ty) = max_ty_size (Tl +$ ty').
     { move=> *. elim All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
     split=>/=.
-    - apply sum_lft_morphism. eapply HForall_impl; [|done]. by move=> >[].
+    - apply xsum_lft_morphism. eapply HForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
     - move=> *. f_equiv=> i. apply (HForall_nth _ (const ∅) _ i) in All; [|apply _].
       rewrite !hnth_apply. do 9 f_equiv; [|by apply All]. do 3 f_equiv. by apply EqMsz.
@@ -173,14 +195,14 @@ Section sum_ty.
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
   (* TODO : get rid of this duplication *)
-  Global Instance sum_type_contractive {A Bs} (T: _ A → _ Bs) :
-    ListTypeContractive T → TypeContractive (sum_ty ∘ T).
+  Global Instance xsum_type_contractive {A Bs} (T: _ A → _ Bs) :
+    ListTypeContractive T → TypeContractive (Σ! ∘ T)%T.
   Proof.
     move=> [Tl[->All]].
     have EqMsz: ∀ty ty', max_ty_size (Tl +$ ty) = max_ty_size (Tl +$ ty').
     { move=> *. elim All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
     split=>/=.
-    - apply sum_lft_morphism. eapply HForall_impl; [|done]. by move=> >[].
+    - apply xsum_lft_morphism. eapply HForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
     - move=> *. f_equiv=> i. apply (HForall_nth _ (const ∅) _ i) in All; [|apply _].
       rewrite !hnth_apply. do 9 f_equiv; [|by apply All]. do 3 f_equiv. by apply EqMsz.
@@ -189,7 +211,7 @@ Section sum_ty.
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
 
-  Global Instance sum_copy {As} (tyl: _ As) : ListCopy tyl → Copy (sum_ty tyl).
+  Global Instance xsum_copy {As} (tyl: _ As) : ListCopy tyl → Copy (Σ! tyl).
   Proof.
     move=> ?. have Copy: ∀i, Copy (hnthe tyl i).
     { move=> *. apply (HForall_nth (λ A, @Copy _ _ A)); by [apply _|]. }
@@ -217,13 +239,13 @@ Section sum_ty.
     iFrame "Idx Idx'". iExists vl'. by iFrame.
   Qed.
 
-  Global Instance sum_send {As} (tyl: _ As) : ListSend tyl → Send (sum_ty tyl).
+  Global Instance xsum_send {As} (tyl: _ As) : ListSend tyl → Send (Σ! tyl).
   Proof. move=> Send ?*/=. do 11 f_equiv. by eapply HForall_nth in Send. Qed.
-  Global Instance sum_sync {As} (tyl: _ As) : ListSync tyl → Sync (sum_ty tyl).
+  Global Instance xsum_sync {As} (tyl: _ As) : ListSync tyl → Sync (Σ! tyl).
   Proof. move=> Sync ?*/=. do 6 f_equiv. by eapply HForall_nth in Sync. Qed.
 
-  Lemma sum_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
-    subtypel E L tyl tyl' fl → subtype E L (xsum_map fl) (sum_ty tyl) (sum_ty tyl').
+  Lemma xsum_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
+    subtypel E L tyl tyl' fl → subtype E L (xsum_map fl) (Σ! tyl) (Σ! tyl').
   Proof.
     move=> Subs. iIntros (?) "L".
     iAssert (□ (lft_contexts.elctx_interp E -∗ ⌜max_ty_size tyl =
@@ -252,18 +274,27 @@ Section sum_ty.
       do 2 (iSplit; [done|]). by iApply "InShr".
   Qed.
 
-  Lemma sum_eqtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl gl :
+  Lemma xsum_eqtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl gl :
     eqtypel E L tyl tyl' fl gl →
-    eqtype E L (xsum_map fl) (xsum_map gl) (sum_ty tyl) (sum_ty tyl').
+    eqtype E L (xsum_map fl) (xsum_map gl) (Σ! tyl) (Σ! tyl').
   Proof.
-    move=> /HForallZip_zip[? /HForallZip_flip ?]. by split; apply sum_subtype.
+    move=> /HForallZip_zip[? /HForallZip_flip ?]. by split; apply xsum_subtype.
   Qed.
 
-End sum_ty.
+  Lemma sum_subtype {A B A' B'} E L (f: A → A') (g: B → B') ty1 ty2 ty1' ty2' :
+    subtype E L f ty1 ty1' → subtype E L g ty2 ty2' →
+    subtype E L (sum_map f g) (ty1 + ty2) (ty1' + ty2').
+  Proof.
+    move=> ??. rewrite sum_map_via_xsum_map. eapply subtype_trans; [apply mod_ty_out, _|].
+    eapply subtype_trans; [|apply mod_ty_in].
+    apply xsum_subtype; constructor; [done|]; constructor; by [|constructor].
+  Qed.
 
-(* Σ is commonly used for the current functor. So it cannot be defined
-   as Π for products. We stick to the following form. *)
-Notation "Σ[ ty ; .. ; ty' ]" := (sum_ty (ty%T +:: ..(+[ty'%T])..))
-  (format "Σ[ ty ;  .. ;  ty' ]") : lrust_type_scope.
+  Lemma sum_eqtype {A B A' B'} E L (f: A → A') f' (g: B → B') g' ty1 ty2 ty1' ty2' :
+    eqtype E L f f' ty1 ty1' → eqtype E L g g' ty2 ty2' →
+    eqtype E L (sum_map f g) (sum_map f' g') (ty1 + ty2) (ty1' + ty2').
+  Proof. move=> [??][??]. split; by apply sum_subtype. Qed.
 
-Global Hint Resolve sum_subtype sum_eqtype : lrust_typing.
+End typing.
+
+Global Hint Resolve xsum_subtype xsum_eqtype sum_subtype sum_eqtype: lrust_typing.

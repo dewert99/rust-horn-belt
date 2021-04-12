@@ -166,6 +166,7 @@ Fixpoint plist (F: Type → Type) As : Type :=
   match As with ^[] => :1 | A ^:: As' => F A :* plist F As' end.
 
 Notation xprod := (plist id).
+Notation "Π!" := xprod : type_scope.
 
 Fixpoint pmap {F G As} (f: ∀A, F A → G A) : plist F As → plist G As :=
   match As with ^[] => id | _ ^:: _ => λ '(x -:: xl'), f _ x -:: pmap f xl' end.
@@ -249,7 +250,7 @@ Fixpoint p2ids {As} : plist2 (→) As As :=
 Lemma p2ids_nth {B As} i : p2nth (@id B) (@p2ids As) i = id.
 Proof. move: i. elim As; [done|]=> ???. by case. Qed.
 
-Fixpoint xprod_map {As Bs} : plist2 (→) As Bs → xprod As → xprod Bs :=
+Fixpoint xprod_map {As Bs} : plist2 (→) As Bs → Π! As → Π! Bs :=
   match As, Bs with ^[], ^[] => λ _, id
   | _ ^:: _, _ ^:: _ => λ '(f -:: fl') '(x -:: xl'), f x -:: xprod_map fl' xl'
   | _, _ => absurd end.
@@ -257,7 +258,7 @@ Fixpoint xprod_map {As Bs} : plist2 (→) As Bs → xprod As → xprod Bs :=
 Lemma xprod_map_id {As} : xprod_map (@p2ids As) = id.
 Proof. elim As; [done|]=>/= ??->. fun_ext. by case. Qed.
 
-Definition pvec A n : Type := xprod (trepeat A n).
+Definition pvec A n : Type := Π! (trepeat A n).
 
 Fixpoint pvmap {A B n} (f: A → B) : pvec A n → pvec B n :=
   match n with 0 => id | S _ => λ '(x -:: xl'), f x -:: pvmap f xl' end.
@@ -334,15 +335,29 @@ Qed.
 
 Inductive xsum As : Type := xinj (i: nat) : tnthe As i → xsum As.
 Arguments xinj {_} _ _.
+Notation "Σ!" := (xsum) : type_scope.
 
 Global Instance xinj_inj {As} i : Inj (=) (=) (@xinj As i).
 Proof. move=> ?? Eq. by dependent destruction Eq. Qed.
 
-Definition xsum_map {As Bs} (fl: plist2 (→) As Bs) (xl: xsum As) : xsum Bs :=
+Definition xsum_map {As Bs} (fl: plist2 (→) As Bs) (xl: Σ! As) : Σ! Bs :=
   let: xinj i x := xl in xinj i (p2nth id fl i x).
 
 Lemma xsum_map_id {As} : xsum_map (@p2ids As) = id.
 Proof. fun_ext. case=>/= *. by rewrite p2ids_nth. Qed.
+
+Global Instance xsum_nil_void : Void (Σ! ^[]). Proof. move=> ?. by case. Qed.
+
+Definition sum_to_xsum {A B} (s: A + B) : Σ! ^[A; B] := match s with
+  inl x => @xinj ^[A; B] 0 x | inr y => @xinj ^[A; B] 1 y end.
+Definition xsum_to_sum {A B} (s: Σ! ^[A; B]) : A + B := match s with
+  xinj 0 x => inl x | xinj 1 y => inr y | xinj (S (S _)) z => absurd z end.
+Global Instance sum_xsum_iso {A B} : Iso (@sum_to_xsum A B) xsum_to_sum.
+Proof. split; fun_ext; case; by [| |case=> [|[|]]]. Qed.
+
+Lemma sum_map_via_xsum_map {A B A' B'} (f: A → A') (g: B → B') :
+  sum_map f g = xsum_to_sum ∘ @xsum_map ^[A; B] ^[A'; B'] -[f; g] ∘ sum_to_xsum.
+Proof. fun_ext; by case. Qed.
 
 (** * Setoid *)
 

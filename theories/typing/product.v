@@ -125,7 +125,7 @@ Section product.
   Global Instance cons_prod_ty_ne {A B} : NonExpansive2 (@cons_prod_ty A B).
   Proof. move=> ???????. rewrite /cons_prod_ty. by do 2 f_equiv. Qed.
 
-  Fixpoint xprod_ty {As} (tyl: typel As) : type (xprod As) :=
+  Fixpoint xprod_ty {As} (tyl: typel As) : type (Π! As) :=
     match tyl with +[] => nil_unit_ty | ty +:: tyl' => cons_prod_ty ty (xprod_ty tyl') end.
 
   Global Instance product_ne {As} : NonExpansive (@xprod_ty As).
@@ -137,7 +137,7 @@ Notation "()" := (unit_ty) : lrust_type_scope.
 Notation "ty * ty'" := (prod_ty ty%T ty'%T) : lrust_type_scope.
 Notation ":1" := nil_unit_ty : lrust_type_scope.
 Notation "ty :* ty'" := (cons_prod_ty ty%T ty'%T) : lrust_type_scope.
-Notation Π := (xprod_ty).
+Notation "Π!" := (xprod_ty) : lrust_type_scope.
 
 Section typing.
   Context `{!typeG Σ}.
@@ -201,13 +201,13 @@ Section typing.
   Qed.
 
   Global Instance xprod_type_ne {A Bs} (T: _ A → _ Bs) :
-    ListTypeNonExpansive T → TypeNonExpansive (Π ∘ T)%T.
+    ListTypeNonExpansive T → TypeNonExpansive (Π! ∘ T)%T.
   Proof.
     move=> [Tl[->All]]. clear T. dependent induction All.
     { rewrite /happly /hmap /compose. apply _. } by apply cons_prod_type_ne.
   Qed.
   Global Instance xprod_type_contractive {A Bs} (T: _ A → _ Bs) :
-    ListTypeContractive T → TypeContractive (Π ∘ T)%T.
+    ListTypeContractive T → TypeContractive (Π! ∘ T)%T.
   Proof.
     move=> [Tl[->All]]. clear T. dependent induction All.
     { rewrite /happly /hmap /compose. apply _. } by apply cons_prod_type_contractive.
@@ -241,11 +241,11 @@ Section typing.
     Sync ty → Sync ty' → Sync (ty * ty').
   Proof. move=> Eq Eq' >/=. by rewrite Eq Eq'. Qed.
 
-  Global Instance xprod_copy {As} (tyl: _ As) : ListCopy tyl → Copy (Π tyl).
+  Global Instance xprod_copy {As} (tyl: _ As) : ListCopy tyl → Copy (Π! tyl).
   Proof. elim; apply _. Qed.
-  Global Instance xprod_send {As} (tyl: _ As) : ListSend tyl → Send (Π tyl).
+  Global Instance xprod_send {As} (tyl: _ As) : ListSend tyl → Send (Π! tyl).
   Proof. elim; apply _. Qed.
-  Global Instance xprod_sync {As} (tyl: _ As) : ListSync tyl → Sync (Π tyl).
+  Global Instance xprod_sync {As} (tyl: _ As) : ListSync tyl → Sync (Π! tyl).
   Proof. elim; apply _. Qed.
 
   Lemma prod_subtype {A B A' B'} E L (f: A → A') (g: B → B') ty1 ty2 ty1' ty2' :
@@ -278,14 +278,14 @@ Section typing.
   Qed.
 
   Lemma xprod_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
-    subtypel E L tyl tyl' fl → subtype E L (xprod_map fl) (Π tyl) (Π tyl').
+    subtypel E L tyl tyl' fl → subtype E L (xprod_map fl) (Π! tyl) (Π! tyl').
   Proof.
     move=> Subs. dependent induction Subs; [done|by apply cons_prod_subtype].
   Qed.
 
   Lemma xprod_eqtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl gl :
     eqtypel E L tyl tyl' fl gl →
-    eqtype E L (xprod_map fl) (xprod_map gl) (Π tyl) (Π tyl').
+    eqtype E L (xprod_map fl) (xprod_map gl) (Π! tyl) (Π! tyl').
   Proof.
     move=> /HForallZip_zip[? /HForallZip_flip ?]. by split; apply xprod_subtype.
   Qed.
@@ -334,7 +334,7 @@ Section typing.
   Qed.
 
   Lemma xprod_app_prod {As Bs} E L (tyl: _ As) (tyl': _ Bs) :
-    eqtype E L psep (curry papp) (Π (tyl h++ tyl')) (Π tyl * Π tyl').
+    eqtype E L psep (curry papp) (Π! (tyl h++ tyl')) (Π! tyl * Π! tyl').
   Proof.
     elim: tyl=> [|A As' ty tyl Eq].
     - have [->->]: @psep id ^[] Bs = prod_map unique id ∘ prod_left_id' ∧
@@ -357,7 +357,7 @@ Section typing.
   Proof. by rewrite /ty_outlives_E /= fmap_app. Qed.
 
   Lemma xprod_outlives_E_elctx_sat {As} E L (tyl: _ As) κ:
-    elctx_sat E L (tyl_outlives_E tyl κ) → elctx_sat E L (ty_outlives_E (Π tyl) κ).
+    elctx_sat E L (tyl_outlives_E tyl κ) → elctx_sat E L (ty_outlives_E (Π! tyl) κ).
   Proof.
     move=> ?. eapply eq_ind; [done|]. rewrite /ty_outlives_E /=.
     elim tyl=>/= [|> IH]; [done|]. by rewrite fmap_app -IH.

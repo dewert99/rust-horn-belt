@@ -6,7 +6,7 @@ Set Default Proof Using "Type".
 Section array.
   Context `{!typeG Σ}.
 
-  Definition array {A} n (ty: type A) : type (pvec A n) := Π (hrepeat ty n).
+  Definition array {A} n (ty: type A) : type (pvec A n) := Π! (hrepeat ty n).
 
   Global Instance array_copy {A} n (ty: _ A) : Copy ty → Copy (array n ty).
   Proof. elim n; apply _. Qed.
