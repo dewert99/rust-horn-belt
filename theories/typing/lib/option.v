@@ -1,17 +1,27 @@
 From iris.proofmode Require Import tactics.
-From lrust.typing Require Import typing lib.panic.
+From lrust.typing Require Export type.
+From lrust.typing Require Import mod_ty product sum (* typing lib.panic *).
 Set Default Proof Using "Type".
 
 Section option.
   Context `{!typeG Σ}.
 
-  Definition option (τ : type) := Σ[unit; τ]%T.
+  Definition option_ty {A} (ty: type A) : type (option A) :=
+    <{sum_to_option}> (unit_ty + ty).
 
-  (* We don't declare this as an instance, since Coq is able to infer
-     it automatically. *)
-  Lemma option_type_ne : TypeNonExpansive option.
-  Proof. apply _. Qed.
+  Lemma option_subtype {A B} E L (f: A → B) ty ty' :
+    subtype E L f ty ty' → subtype E L (option_map f) (option_ty ty) (option_ty ty').
+  Proof.
+    move=> ?. rewrite option_map_via_sum_map.
+    eapply subtype_trans; [apply mod_ty_out, _|].
+    eapply subtype_trans; [|apply mod_ty_in]. by apply sum_subtype.
+  Qed.
 
+  Lemma option_eqtype {A B} E L (f: A → B) g ty ty' : eqtype E L f g ty ty' →
+    eqtype E L (option_map f) (option_map g) (option_ty ty) (option_ty ty').
+  Proof. move=> [??]. split; by apply option_subtype. Qed.
+
+(*
   (* Variant indices. *)
   Definition none := 0%nat.
   Definition some := 1%nat.
@@ -97,4 +107,6 @@ Section option.
       iApply (type_delete (Π[uninit _;uninit _;uninit _])); [solve_typing..|].
       iApply type_jump; solve_typing.
   Qed.
+*)
+
 End option.

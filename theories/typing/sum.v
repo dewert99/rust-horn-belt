@@ -122,7 +122,7 @@ Section sum.
       repeat (eapply ty_size_ne || f_equiv)=>//. by rewrite Eqv'.
   Qed.
 
-  Definition sum_ty {A B} (ty: _ A) (ty': _ B) : type (A + B) :=
+  Definition sum_ty {A B} (ty: type A) (ty': type B) : type (A + B) :=
     <{xsum_to_sum}> (xsum_ty +[ty; ty']).
 
   Global Instance sum_ty_ne {A B} : NonExpansive2 (@sum_ty A B).

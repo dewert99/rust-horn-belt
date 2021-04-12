@@ -47,6 +47,28 @@ Definition prod_right_id' {A} (x: A) := (x, ()).
 Global Instance prod_right_id_iso {A} : Iso (@prod_right_id A) prod_right_id'.
 Proof. split; fun_ext; by [case=> [?[]]|]. Qed.
 
+Definition option_to_sum {A} (o: option A) : () + A :=
+  match o with None => inl () | Some x => inr x end.
+Definition sum_to_option {A} (s: () + A) : option A :=
+  match s with inl _ => None | inr x => Some x end.
+Global Instance option_sum_iso {A} : Iso (@option_to_sum A) sum_to_option.
+Proof. split; fun_ext; case=>//; by case. Qed.
+
+Lemma option_map_via_sum_map {A B} (f: A → B) :
+  option_map f = sum_to_option ∘ sum_map id f ∘ option_to_sum.
+Proof. fun_ext. by case. Qed.
+
+Definition list_to_option {A} (xl: list A) : option (A * list A) :=
+  match xl with [] => None | x :: xl' => Some (x, xl') end.
+Definition option_to_list {A} (o: option (A * list A)) : list A :=
+  match o with None => [] | Some (x, xl') => x :: xl' end.
+Global Instance list_option_iso {A} : Iso (@list_to_option A) option_to_list.
+Proof. split; fun_ext; case=>//; by case. Qed.
+
+Lemma map_via_option_map {A B} (f: A → B) :
+  map f = option_to_list ∘ option_map (prod_map f (map f)) ∘ list_to_option.
+Proof. fun_ext. by case. Qed.
+
 (* * Utility for Singleton Types *)
 
 Class Unique A := { unique: A; eq_unique: ∀x: A, x = unique }.
