@@ -280,7 +280,7 @@ Section typing.
   Lemma xprod_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
     subtypel E L tyl tyl' fl → subtype E L (xprod_map fl) (Π! tyl) (Π! tyl').
   Proof.
-    move=> Subs. dependent induction Subs; [done|by apply cons_prod_subtype].
+    move=> Subs. dependent induction Subs; by [|apply cons_prod_subtype].
   Qed.
 
   Lemma xprod_eqtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl gl :

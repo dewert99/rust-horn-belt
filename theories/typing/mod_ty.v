@@ -132,7 +132,7 @@ Section typing.
     eqtype E L g f (<{f}> ty) ty.
   Proof. by apply eqtype_symm, mod_ty_inout. Qed.
 
-  Lemma mod_ty_subtype {A B A' B'} E L h f (f': A' → B') g `{@SemiIso A B f g} ty ty' :
+  Lemma mod_ty_subtype {A B A' B'} E L h f (f': A' → B') g `{SemiIso A B f g} ty ty' :
     subtype E L h ty ty' → subtype E L (f' ∘ h ∘ g) (<{f}> ty) (<{f'}> ty').
   Proof.
     move=> ??. eapply subtype_trans; [by apply mod_ty_out|].
@@ -140,7 +140,7 @@ Section typing.
   Qed.
 
   Lemma mod_ty_eqtype {A B A' B'} E L h h' f f' g g'
-    `{@SemiIso A B f g} `{@SemiIso A' B' f' g'} ty ty' :
+    `{SemiIso A B f g} `{SemiIso A' B' f' g'} ty ty' :
     eqtype E L h h' ty ty' →
     eqtype E L (f' ∘ h ∘ g) (f ∘ h' ∘ g') (<{f}> ty) (<{f'}> ty').
   Proof. move=> [??]. split; by apply mod_ty_subtype. Qed.

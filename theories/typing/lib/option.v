@@ -12,9 +12,8 @@ Section option.
   Lemma option_subtype {A B} E L (f: A → B) ty ty' :
     subtype E L f ty ty' → subtype E L (option_map f) (option_ty ty) (option_ty ty').
   Proof.
-    move=> ?. rewrite option_map_via_sum_map.
-    eapply subtype_trans; [apply mod_ty_out, _|].
-    eapply subtype_trans; [|apply mod_ty_in]. by apply sum_subtype.
+    move=> ?. rewrite option_map_via_sum_map. apply mod_ty_subtype; [apply _|].
+    by apply sum_subtype.
   Qed.
 
   Lemma option_eqtype {A B} E L (f: A → B) g ty ty' : eqtype E L f g ty ty' →

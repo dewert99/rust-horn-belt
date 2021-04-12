@@ -285,9 +285,8 @@ Section typing.
     subtype E L f ty1 ty1' → subtype E L g ty2 ty2' →
     subtype E L (sum_map f g) (ty1 + ty2) (ty1' + ty2').
   Proof.
-    move=> ??. rewrite sum_map_via_xsum_map. eapply subtype_trans; [apply mod_ty_out, _|].
-    eapply subtype_trans; [|apply mod_ty_in].
-    apply xsum_subtype; constructor; [done|]; constructor; by [|constructor].
+    move=> ??. rewrite sum_map_via_xsum_map. apply mod_ty_subtype; [apply _|].
+    apply xsum_subtype. constructor; [done|]. constructor; [done|constructor].
   Qed.
 
   Lemma sum_eqtype {A B A' B'} E L (f: A → A') f' (g: B → B') g' ty1 ty2 ty1' ty2' :

@@ -95,7 +95,7 @@ Class Void A := absurd: ∀{B}, A → B.
 
 Global Instance Empty_set_void: Void ∅. Proof. by move. Qed.
 
-Global Instance fun_void_void `{Inhabited A, Void B} : Void (A → B).
+Global Instance fun_void `{Inhabited A, Void B} : Void (A → B).
 Proof. move=> ? /(.$ inhabitant) ?. by apply absurd. Qed.
 
 Program Global Instance void_fun_unique {B} `{Void A}
