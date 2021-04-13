@@ -14,7 +14,7 @@ Section uninit.
 
 End uninit.
 
-Notation "↯" := (uninit) : lrust_type_scope.
+Notation "↯" := uninit : lrust_type_scope.
 
 Section typing.
   Context `{!typeG Σ}.

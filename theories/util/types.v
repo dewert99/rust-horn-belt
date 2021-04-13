@@ -335,7 +335,7 @@ Qed.
 
 Inductive xsum As : Type := xinj (i: nat) : tnthe As i → xsum As.
 Arguments xinj {_} _ _.
-Notation "Σ!" := (xsum) : type_scope.
+Notation "Σ!" := xsum : type_scope.
 
 Global Instance xinj_inj {As} i : Inj (=) (=) (@xinj As i).
 Proof. move=> ?? Eq. by dependent destruction Eq. Qed.

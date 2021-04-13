@@ -98,9 +98,9 @@ Record proph_log_item :=
   ProphLogItem { pli_pv: proph_var; pli_val: proph_asn → pli_pv.(pv_ty) }.
 Local Notation ".{ ξ := vπ }" := (ProphLogItem ξ vπ)
   (at level 1, format ".{ ξ  :=  vπ }").
-Local Notation "pli .pv" := (pli.(pli_pv))
+Local Notation "pli .pv" := pli.(pli_pv)
   (at level 2, left associativity, format "pli .pv").
-Local Notation "pli .val" := (pli.(pli_val))
+Local Notation "pli .val" := pli.(pli_val)
   (at level 2, left associativity, format "pli .val").
 
 Local Definition proph_log := list proph_log_item.

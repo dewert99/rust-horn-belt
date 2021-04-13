@@ -1,5 +1,6 @@
 Require Import FunctionalExtensionality Equality.
 From lrust.typing Require Export type.
+Set Default Proof Using "Type".
 
 Section maybe_uninit.
   Context `{!typeG Σ}.
@@ -53,18 +54,18 @@ Section maybe_uninit.
     { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
       do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Tok". by iLeft. }
     iMod (ty_own_proph with "LFT In Own Tok") as "Upd"; [done|].
-    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%ξs & %q &%& PTok & Close) !>".
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%ξs&%q&%& PTok & Close) !>".
     iExists ξs, q. iSplit; [iPureIntro; by apply proph_dep_constr|].
     iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[?$]".
     iRight. iExists vπ. by iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "LFT In In' [->|(%vπ &->& Shr)] Tok".
+    move=> *. iIntros "LFT In In' [->|(%vπ&->& Shr)] Tok".
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
       do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Tok". by iLeft. }
     iMod (ty_shr_proph with "LFT In In' Shr Tok") as "Upd"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
-    iIntros ">(%ξs & %q &%& PTok & Close) !>". iExists ξs, q.
+    iIntros ">(%ξs&%q&%& PTok & Close) !>". iExists ξs, q.
     iSplit; [iPureIntro; by apply proph_dep_constr|]. iFrame "PTok". iIntros "PTok".
     iMod ("Close" with "PTok") as "[?$]". iRight. iExists vπ. by iFrame.
   Qed.
@@ -90,9 +91,9 @@ Section typing.
     move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Sub".
     iIntros "!> E". iDestruct ("Sub" with "E") as "(%&?& #InOwn & #InShr)".
     do 2 (iSplit; [done|]). iSplit; iIntros "!> * /=".
-    - iIntros "[[->->]|(%vπ' &->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
+    - iIntros "[[->->]|(%vπ'&->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
       iSplit; [done|]. by iApply "InOwn".
-    - iIntros "[->|(%vπ' &->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
+    - iIntros "[->|(%vπ'&->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
       iSplit; [done|]. by iApply "InShr".
   Qed.
   Lemma maybe_uninit_eqtype {A B} (f: A → B) g ty ty' E L :
@@ -101,14 +102,14 @@ Section typing.
 
   Lemma into_maybe_uninit {A} (ty: _ A) E L : subtype E L Some ty (? ty).
   Proof.
-    iIntros (?) "_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
+    iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!> * ? /="; iRight; iExists vπ; by iFrame.
   Qed.
 
   Lemma maybe_uninit_join {A} (ty: _ A) E L :
     subtype E L (option_join _) (? (? ty)) (? ty).
   Proof.
-    iIntros (?) "_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
+    iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!> * /=".
     - iIntros "[[->->]|(%&->&[[->->]|(%vπ''&->&?)])]"; [by iLeft|by iLeft|].
       iRight. iExists vπ''. by iFrame.

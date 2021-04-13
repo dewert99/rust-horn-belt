@@ -123,11 +123,11 @@ Section product.
 
 End product.
 
-Notation "()" := (unit_ty) : lrust_type_scope.
+Notation "()" := unit_ty : lrust_type_scope.
 Notation "ty * ty'" := (prod_ty ty%T ty'%T) : lrust_type_scope.
 Notation ":1" := nil_unit_ty : lrust_type_scope.
 Notation "ty :* ty'" := (cons_prod_ty ty%T ty'%T) : lrust_type_scope.
-Notation "Π!" := (xprod_ty) : lrust_type_scope.
+Notation "Π!" := xprod_ty : lrust_type_scope.
 
 Section typing.
   Context `{!typeG Σ}.
@@ -298,7 +298,7 @@ Section typing.
       snd ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ (snd ∘ vπ) ∧
       snd ∘ (prod_assoc ∘ vπ) = snd ∘ (snd ∘ vπ).
     { move=> vπ. split; [|split]; fun_ext=>/= xyz; by case (vπ xyz)=> [?[??]]. }
-    apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=". iSplit; [iPureIntro; lia|].
+    apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=". iSplit; [iPureIntro; lia|].
     iSplit; [rewrite (assoc (++)); by iApply lft_equiv_refl|].
     iSplit; iIntros "!>" (vπ) "*"; move: (Eq vπ)=> [->[->->]]; [iSplit|].
     - iIntros "(%wl1 & %&->&?& %wl2 & %wl3 &->&?& Own3)". iExists (wl1 ++ wl2), wl3.
@@ -311,7 +311,7 @@ Section typing.
   Lemma prod_ty_left_id {A} E L (ty: _ A) :
     eqtype E L prod_left_id prod_left_id' (() * ty) (ty).
   Proof.
-    apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=". iSplit; [done|].
+    apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=". iSplit; [done|].
     iSplit; [by iApply lft_equiv_refl|].
     have Eq: ∀vπ: proph_asn → (() * A), prod_left_id ∘ vπ = snd ∘ vπ.
     { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [[]?]. }
@@ -323,7 +323,7 @@ Section typing.
   Lemma prod_ty_right_id {A} E L (ty: _ A) :
     eqtype E L prod_right_id prod_right_id' (ty * ()) (ty).
   Proof.
-    apply eqtype_unfold; [apply _|]. iIntros (?) "_!>_/=".
+    apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=".
     rewrite !right_id. iSplit; [done|]. iSplit; [by iApply lft_equiv_refl|].
     have Eq: ∀vπ: proph_asn → (A * ()), prod_right_id ∘ vπ = fst ∘ vπ.
     { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [?[]]. }

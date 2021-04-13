@@ -15,7 +15,7 @@ Section int.
 
   Lemma bool_ty_to_int E L : subtype E L Z_of_bool bool_ty int.
   Proof.
-    apply subtype_plain_type. iIntros (?) "_!>_/=". iSplit; [done|].
+    apply subtype_plain_type. iIntros "*_!>_/=". iSplit; [done|].
     iSplit; [iApply lft_incl_refl|]. by iIntros.
   Qed.
 

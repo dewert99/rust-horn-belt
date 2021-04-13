@@ -14,7 +14,7 @@ Section base.
 
   Lemma base_subtype {A B} E L (f: A → B) : subtype E L f base base.
   Proof.
-    apply subtype_plain_type. iIntros (?) "_!>_/=". iSplit; [done|].
+    apply subtype_plain_type. iIntros "*_!>_/=". iSplit; [done|].
     iSplit; [iApply lft_incl_refl|by iIntros].
   Qed.
   Lemma base_eqtype {A B} E L (f: A → B) g : eqtype E L f g base base.
@@ -177,7 +177,7 @@ Proof.
       case (fix_ty_Tn'_dist T (S n))=> [_ _ _ Eq _]. apply dist_S, Eq.
     - move: n=> [|n]; [done|].
       case (fix_ty_Tn'_dist T n)=> [_ _ _ _ Eq]. apply Eq. }
-  apply eqtype_id_unfold. iIntros (?) "_!>_". iSplit; [iPureIntro; by apply HT|].
+  apply eqtype_id_unfold. iIntros "*_!>_". iSplit; [iPureIntro; by apply HT|].
   iSplit; [|iSplit; iIntros "!> *"].
   - case type_contractive_type_lft_morphism=> [α βs E' Hα HE'|α E' Hα HE'].
     + iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].

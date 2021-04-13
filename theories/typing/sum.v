@@ -132,7 +132,7 @@ Section sum.
 
 End sum.
 
-Notation "Σ!" := (xsum_ty) : lrust_type_scope.
+Notation "Σ!" := xsum_ty : lrust_type_scope.
 Notation "ty + ty'" := (sum_ty ty%T ty'%T) : lrust_type_scope.
 
 Section typing.
