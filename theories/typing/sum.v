@@ -247,7 +247,7 @@ Section typing.
   Lemma xsum_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
     subtypel E L tyl tyl' fl → subtype E L (xsum_map fl) (Σ! tyl) (Σ! tyl').
   Proof.
-    move=> Subs. iIntros (?) "L".
+    move=> Subs ?. iIntros "L".
     iAssert (□ (lft_contexts.elctx_interp E -∗ ⌜max_ty_size tyl =
       max_ty_size tyl'⌝))%I as "#Size".
     { iInduction Subs as [|?????????? Sub Subs] "IH"; [by iIntros "!>_"|].

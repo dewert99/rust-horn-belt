@@ -169,7 +169,7 @@ Next Obligation.
   iMod (bor_sep with "LFT Bor") as "[Bor Own]"; [done|].
   iMod (bor_persistent with "LFT Own Tok") as "[? Tok]"; [done|].
   iMod (bor_fracture (λ q, _ ↦∗{q} vl)%I with "LFT Bor") as "?"; [done|]. iModIntro.
-  iApply step_fupdN_intro; [done|]. iIntros "!>!>". iFrame "Tok". iExists vl. iFrame.
+  iApply step_fupdN_full_intro. iModIntro. iFrame "Tok". iExists vl. iFrame.
 Qed.
 Next Obligation. move=> >. apply st_own_proph. Qed.
 Next Obligation.
@@ -202,7 +202,7 @@ Next Obligation. move=> >. iIntros "[%[_?]]". by iApply pt_size_eq. Qed.
 Next Obligation. done. Qed.
 Next Obligation.
   move=> * /=. iIntros "_ _[%[->?]]". iIntros "Ptok !>".
-  iApply step_fupdN_intro; [done|]. iIntros "!>!>". iExists [], 1%Qp.
+  iApply step_fupdN_full_intro. iModIntro. iExists [], 1%Qp.
   do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Ptok". iExists v. by iSplit.
 Qed.
 
@@ -715,7 +715,7 @@ Section subtyping.
   Lemma subtype_trans {A B C} E L (f: A → B) (g: B → C) ty ty' ty'' :
     subtype E L f ty ty' → subtype E L g ty' ty'' → subtype E L (g ∘ f) ty ty''.
   Proof.
-    move=> Sub Sub'. iIntros (?) "L". iDestruct (Sub with "L") as "#Incl".
+    move=> Sub Sub' ?. iIntros "L". iDestruct (Sub with "L") as "#Incl".
     iDestruct (Sub' with "L") as "#Incl'". iIntros "!> #E".
     iApply type_incl_trans; by [iApply "Incl"|iApply "Incl'"].
   Qed.
@@ -723,7 +723,7 @@ Section subtyping.
   Lemma subtype_weaken {A B} E E' L L' (f: A → B) ty ty' :
     E ⊆+ E' → L ⊆+ L' → subtype E L f ty ty' → subtype E' L' f ty ty'.
   Proof.
-    move=> ?? Sub. iIntros (?) "L".
+    move=> ?? Sub ?. iIntros "L".
     iDestruct (Sub with "[L]") as "#Incl"; [by iApply big_sepL_submseteq|].
     iIntros "!> #E". iApply "Incl". by iApply big_sepL_submseteq.
   Qed.
@@ -839,7 +839,7 @@ Section subtyping.
       (∀vπ d tid vl, st.(st_own) vπ d tid vl -∗ st'.(st_own) (f ∘ vπ) d tid vl))) →
     subtype E L f st st'.
   Proof.
-    move=> Sub. iIntros (?) "L". iDestruct (Sub with "L") as "#Incl".
+    move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Incl".
     iIntros "!> #E". iDestruct ("Incl" with "E") as (?) "[??]".
     by iApply type_incl_simple_type.
   Qed.
@@ -863,7 +863,7 @@ Section subtyping.
       (∀v tid vl, pt.(pt_own) v tid vl -∗ pt'.(pt_own) (f v) tid vl))) →
     subtype E L f pt pt'.
   Proof.
-    move=> Sub. iIntros (?) "L". iDestruct (Sub with "L") as "#Sub".
+    move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Sub".
     iIntros "!> #E". iDestruct ("Sub" with "E") as (?) "[??]".
     by iApply type_incl_plain_type.
   Qed.

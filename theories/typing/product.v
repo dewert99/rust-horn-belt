@@ -14,23 +14,13 @@ Section product.
   Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
   Next Obligation. iIntros. iApply step_fupdN_intro; [done|]. by iFrame. Qed.
   Next Obligation.
-    iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>". iExists [], 1%Qp.
+    iIntros. iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
     iSplit; [|simpl; by iFrame]. iPureIntro. apply proph_dep_unique.
   Qed.
   Next Obligation.
-    iIntros. iApply step_fupdN_intro; [done|]. iIntros "!>!>!>!>!>". iExists [], 1%Qp.
+    iIntros. iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
     iSplit; [|simpl; by iFrame]. iPureIntro. apply proph_dep_unique.
   Qed.
-
-  Global Instance unit_ty_copy: Copy unit_ty.
-  Proof.
-    split; [apply _|]=> *. iIntros "_ _ Na $ !> /=". iExists 1%Qp, [].
-    rewrite heap_mapsto_vec_nil.
-    iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
-    do 2 (iSplit; [done|]). iIntros "Na". by iDestruct ("ToNa" with "Na") as "$".
-  Qed.
-  Global Instance unit_ty_send: Send unit_ty. Proof. done. Qed.
-  Global Instance unit_ty_sync: Sync unit_ty. Proof. done. Qed.
 
   Lemma split_prod_mt {A B} (vπ: _ → A) d (vπ': _ → B) d' tid ty ty' q l :
     (l ↦∗{q}: λ vl, ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
@@ -213,6 +203,16 @@ Section typing.
     { rewrite /happly /hmap /compose. apply _. } by apply cons_prod_type_contractive.
   Qed.
 
+  Global Instance unit_ty_copy: Copy ().
+  Proof.
+    split; [apply _|]=> *. iIntros "_ _ Na $ !> /=". iExists 1%Qp, [].
+    rewrite heap_mapsto_vec_nil.
+    iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
+    do 2 (iSplit; [done|]). iIntros "Na". by iDestruct ("ToNa" with "Na") as "$".
+  Qed.
+  Global Instance unit_ty_send: Send (). Proof. done. Qed.
+  Global Instance unit_ty_sync: Sync (). Proof. done. Qed.
+
   Global Instance prod_copy {A B} (ty: _ A) (ty': _ B) :
     Copy ty → Copy ty' → Copy (ty * ty').
   Proof.
@@ -252,7 +252,7 @@ Section typing.
     subtype E L f ty1 ty1' → subtype E L g ty2 ty2' →
     subtype E L (prod_map f g) (ty1 * ty2) (ty1' * ty2').
   Proof.
-    move=> Sub Sub'. iIntros (?) "L". iDestruct (Sub with "L") as "#Sub".
+    move=> Sub Sub' ?. iIntros "L". iDestruct (Sub with "L") as "#Sub".
     iDestruct (Sub' with "L") as "#Sub'". iIntros "!> #E".
     iDestruct ("Sub" with "E") as (Eq) "(#InLft & #InOwn & #InShr)".
     iDestruct ("Sub'" with "E") as (?) "(#InLft' & #InOwn' & #InShr')".
@@ -347,9 +347,9 @@ Section typing.
         curry (@papp id (A ^:: As') Bs) = prod_to_cons_prod ∘
           (prod_map id (curry papp) ∘ (prod_assoc' ∘ prod_map cons_prod_to_prod id)).
       { split; fun_ext; [|by case=> [[??]?]]. move=> [? xl]/=. by case (psep xl). }
-      eapply eqtype_trans. { apply mod_ty_outin, _. } eapply eqtype_trans.
-      { apply prod_eqtype; [done|apply Eq]. } eapply eqtype_trans.
-      { apply prod_ty_assoc. } apply prod_eqtype; [apply mod_ty_inout, _|done].
+      eapply eqtype_trans; [by apply mod_ty_outin, _|]. eapply eqtype_trans.
+      { apply prod_eqtype; [reflexivity|apply Eq]. } eapply eqtype_trans;
+      [by apply prod_ty_assoc|]. apply prod_eqtype; [apply mod_ty_inout, _|done].
   Qed.
 
   Lemma prod_outlives_E {A B} (ty: _ A) (ty': _ B) κ :

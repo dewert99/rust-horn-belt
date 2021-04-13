@@ -63,7 +63,7 @@ Section typing.
     lctx_lft_incl E L κ' κ → subtype E L f ty ty' →
     subtype E L f (&shr{κ} ty) (&shr{κ'} ty').
   Proof.
-    move=> Lft Ty. iIntros (?) "L". iDestruct (Lft with "L") as "#Lft".
+    move=> Lft Ty ?. iIntros "L". iDestruct (Lft with "L") as "#Lft".
     iDestruct (Ty with "L") as "#Ty". iIntros "!> #?".
     iApply shr_type_incl; by [iApply "Lft"|iApply "Ty"].
   Qed.

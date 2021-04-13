@@ -3,27 +3,29 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import product mod_ty.
 Set Default Proof Using "Type".
 
-Section array.
+Definition array `{!typeG Σ} {A} (ty: type A) n : type (pvec A n) := Π! (hrepeat ty n).
+
+Notation "[ ty ; n ]" := (array ty n) (format "[ ty ;  n ]") : lrust_type_scope.
+
+Section typing.
   Context `{!typeG Σ}.
 
-  Definition array {A} n (ty: type A) : type (pvec A n) := Π! (hrepeat ty n).
-
-  Global Instance array_copy {A} n (ty: _ A) : Copy ty → Copy (array n ty).
+  Global Instance array_copy {A} n (ty: _ A) : Copy ty → Copy [ty; n].
   Proof. elim n; apply _. Qed.
-  Global Instance array_send {A} n (ty: _ A) : Send ty → Send (array n ty).
+  Global Instance array_send {A} n (ty: _ A) : Send ty → Send [ty; n].
   Proof. elim n; apply _. Qed.
-  Global Instance array_sync {A} n (ty: _ A) : Sync ty → Sync (array n ty).
+  Global Instance array_sync {A} n (ty: _ A) : Sync ty → Sync [ty; n].
   Proof. elim n; apply _. Qed.
 
   Lemma array_subtype {A B} E L n (f: A → B) ty ty' :
-    subtype E L f ty ty' → subtype E L (f -v<$>.) (array n ty) (array n ty').
+    subtype E L f ty ty' → subtype E L (f -v<$>.) [ty; n] [ty'; n].
   Proof. move=> ?. elim: n; [done|]=>/= ??. by apply cons_prod_subtype. Qed.
   Lemma array_eqtype {A B} E L n (f: A → B) g ty ty' :
-    eqtype E L f g ty ty' → eqtype E L (f -v<$>.) (g -v<$>.) (array n ty) (array n ty').
+    eqtype E L f g ty ty' → eqtype E L (f -v<$>.) (g -v<$>.) [ty; n] [ty'; n].
   Proof. move=> [??]. split; by apply array_subtype. Qed.
 
   Lemma array_plus_prod {A} E L m n (ty: _ A) :
-    eqtype E L pvsep (curry pvapp) (array (m + n) ty) (array m ty * array n ty).
+    eqtype E L pvsep (curry pvapp) [ty; m + n] ([ty; m] * [ty; n]).
   Proof.
     elim: m=> [|m Eq].
     - have [->->]: @pvsep A 0 n = prod_map unique id ∘ prod_left_id' ∧
@@ -36,9 +38,9 @@ Section array.
         curry (@pvapp A (S m) n) = prod_to_cons_prod ∘
           (prod_map id (curry pvapp) ∘ (prod_assoc' ∘ prod_map cons_prod_to_prod id)).
       { split; fun_ext; [|by case=> [[??]?]]. move=> [? xl]/=. by case (pvsep xl). }
-      eapply eqtype_trans. { apply mod_ty_outin, _. } eapply eqtype_trans.
-      { apply prod_eqtype; [done|apply Eq]. } eapply eqtype_trans.
-      { apply prod_ty_assoc. } apply prod_eqtype; [apply mod_ty_inout, _|done].
+      eapply eqtype_trans; [by apply mod_ty_outin, _|]. eapply eqtype_trans.
+      { apply prod_eqtype; [reflexivity|apply Eq]. } eapply eqtype_trans;
+      [by apply prod_ty_assoc|]. apply prod_eqtype; [apply mod_ty_inout, _|done].
   Qed.
 
-End array.
+End typing.

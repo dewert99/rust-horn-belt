@@ -9,8 +9,8 @@ Section mod_ty.
     (l ↦∗{q}: λ vl, ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ ty.(ty_own) vπ d tid vl)%I ⊣⊢
     ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ l ↦∗{q}: ty.(ty_own) vπ d tid.
   Proof. iSplit.
-    - iIntros "[%vl[?[%vπ[->Own]]]]". iExists vπ. iSplit; [done|]. iExists vl. iFrame.
-    - iIntros "[%vπ[->[%vl[Mt Own]]]]". iExists vl. iFrame "Mt". iExists vπ.
+    - iIntros "(%vl &?& %vπ &->&?)". iExists vπ. iSplit; [done|]. iExists vl. iFrame.
+    - iIntros "(%vπ &->& %vl & Mt &?)". iExists vl. iFrame "Mt". iExists vπ.
       by iSplit; [done|].
   Qed.
 
@@ -107,7 +107,7 @@ Section typing.
     (<{g}> (<{f}> ty) ≡ <{g ∘ f}> ty)%T.
   Proof.
     split=>// *; (iSplit=>/=; [
-      iIntros "[%_[->[%vπ[->?]]]]"; iExists vπ; by iFrame|
+      iIntros "(%&->& %vπ &->&?)"; iExists vπ; by iFrame|
       iIntros "[%vπ[->?]]"; iExists (f ∘ vπ); (iSplit; [done|]); iExists vπ; by iFrame
     ]).
   Qed.

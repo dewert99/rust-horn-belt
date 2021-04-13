@@ -15,9 +15,12 @@ Proof. by elim n; [apply _|]=>/= *??->. Qed.
 Global Instance step_fupdN_mono E n : Proper ((⊢) ==> (⊢)) (λ P, |={E}▷=>^n P)%I.
 Proof. by elim n; [apply _|]=>/= *??->. Qed.
 
+Lemma step_fupdN_full_intro E n P : P ={E}▷=∗^n P.
+Proof. iIntros "?". by iApply step_fupdN_intro. Qed.
+
 Lemma step_fupdN_nmono E m n P : m ≤ n → (|={E}▷=>^m P) -∗ (|={E}▷=>^n P).
 Proof.
-  move: n. elim m=>/= [|?]; [iIntros; by iApply step_fupdN_intro|].
+  move: n. elim m=>/= [|?]; [iIntros; by iApply step_fupdN_full_intro|].
   move=> IH ? /succ_le [?[->Le]]/=. iIntros "?". by iApply IH.
 Qed.
 

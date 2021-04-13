@@ -127,7 +127,7 @@ Section own.
   Lemma own_subtype {A B} E L n (f: A → B) ty ty' :
     subtype E L f ty ty' → subtype E L f (own_ptr n ty) (own_ptr n ty').
   Proof.
-    move=> Sub. iIntros (?) "L". iDestruct (Sub with "L") as "#Incl".
+    move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Incl".
     iIntros "!> #E". iApply own_type_incl; by [|iApply "Incl"].
   Qed.
 
@@ -164,7 +164,7 @@ Section box.
   Lemma box_subtype {A B} E L (f: A → B) ty ty' :
     subtype E L f ty ty' → subtype E L f (box ty) (box ty').
   Proof.
-    move=> Sub. iIntros (?) "L". iDestruct (Sub with "L") as "#Incl".
+    move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Incl".
     iIntros "!> #?". iApply box_type_incl. by iApply "Incl".
   Qed.
 
