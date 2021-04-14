@@ -80,6 +80,12 @@ Notation "?" := maybe_uninit : lrust_type_scope.
 Section typing.
   Context `{!typeG Σ}.
 
+  Global Instance maybe_uninit_type_ne {A} : TypeNonExpansive (@maybe_uninit _ _ A).
+  Proof.
+    constructor; [by apply type_lft_morphism_id_like|done| |];
+    [move=>/= > ->*|move=>/= >*]; by do 4 f_equiv.
+  Qed.
+
   Global Instance maybe_uninit_send {A} (ty: _ A) : Send ty → Send (? ty).
   Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
   Global Instance maybe_uninit_sync {A} (ty: _ A) : Sync ty → Sync (? ty).

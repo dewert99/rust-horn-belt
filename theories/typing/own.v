@@ -98,9 +98,7 @@ Section own.
   Global Instance own_type_contractive A n : TypeContractive (@own_ptr A n).
   Proof.
     split.
-    - apply (type_lft_morphism_add _ static [] []) => ?.
-      + rewrite left_id. iApply lft_equiv_refl.
-      + by rewrite /= /elctx_interp /= left_id right_id.
+    - by apply type_lft_morphism_id_like.
     - done.
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= > *. do 6 (f_contractive || f_equiv). by simpl in *.
@@ -145,9 +143,7 @@ Section box.
   Global Instance box_type_contractive A : TypeContractive (@box A).
   Proof.
     split.
-    - apply (type_lft_morphism_add _ static [] []) => ?.
-      + rewrite left_id. iApply lft_equiv_refl.
-      + by rewrite /= /elctx_interp /= left_id right_id.
+    - by apply type_lft_morphism_id_like.
     - done.
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= *. do 6 (f_contractive || f_equiv). by simpl in *.

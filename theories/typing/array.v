@@ -3,13 +3,25 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import product mod_ty.
 Set Default Proof Using "Type".
 
-Definition array `{!typeG Σ} {A} (ty: type A) n : type (pvec A n) := Π! (hrepeat ty n).
+Section array.
+  Context `{!typeG Σ}.
 
-Notation "[ ty ; n ]" := (array ty n) (format "[ ty ;  n ]") : lrust_type_scope.
+  Definition array {A} n (ty: type A) : type (pvec A n) := Π! (hrepeat ty n).
+
+  Global Instance array_ne {A} n : NonExpansive (@array A n).
+  Proof.
+    elim n; [by constructor|]=> ? Eq' ??? Eq. apply (.$ Eq) in Eq'. solve_ne_type.
+  Qed.
+
+End array.
+
+Notation "[ ty ; n ]" := (array n ty) (format "[ ty ;  n ]") : lrust_type_scope.
 
 Section typing.
   Context `{!typeG Σ}.
 
+  Global Instance array_type_ne {A} n : TypeNonExpansive (@array _ _ A n).
+  Proof. elim n; apply _. Qed.
   Global Instance array_copy {A} n (ty: _ A) : Copy ty → Copy [ty; n].
   Proof. elim n; apply _. Qed.
   Global Instance array_send {A} n (ty: _ A) : Send ty → Send [ty; n].

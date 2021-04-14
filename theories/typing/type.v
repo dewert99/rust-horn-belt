@@ -380,6 +380,15 @@ Existing Class TypeLftMorphism.
 Section type_lft_morphism.
 Context `{!typeG Σ}.
 
+Lemma type_lft_morphism_id_like {A B} (T: _ A → _ B) :
+  (∀ty, (T ty).(ty_lfts) = ty.(ty_lfts)) → (∀ty, (T ty).(ty_E) = ty.(ty_E)) →
+  TypeLftMorphism T.
+Proof.
+  move=> EqLfts EqE. apply (type_lft_morphism_add _ static [] [])=> ?.
+  + rewrite left_id EqLfts. apply lft_equiv_refl.
+  + by rewrite /elctx_interp /= left_id right_id EqE.
+Qed.
+
 Global Instance type_lft_morphism_compose {A B C} (T: _ → _ C) (U: _ A → _ B) :
   TypeLftMorphism T → TypeLftMorphism U → TypeLftMorphism (T ∘ U).
 Proof.
@@ -520,11 +529,7 @@ Section type_contractive.
   Proof. split; move=>// *. eright=> _; by [iApply lft_equiv_refl|]. Qed.
 
   Global Instance id_type_non_expansive {A} : TypeNonExpansive (id: _ A → _ A).
-  Proof.
-    split=>// *. apply (type_lft_morphism_add _ static [] [])=>/= ?.
-    - rewrite left_id. apply lft_equiv_refl.
-    - by rewrite /elctx_interp /= left_id right_id.
-  Qed.
+  Proof. split=>//. by apply type_lft_morphism_id_like. Qed.
 
   Global Instance type_list_non_expansive_nil {A} : ListTypeNonExpansive (λ _: _ A, +[]).
   Proof. exists +[]. split; by [|constructor]. Qed.
