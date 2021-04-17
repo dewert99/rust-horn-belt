@@ -41,12 +41,9 @@ Section typing.
   Lemma uninit_plus_prod E L m n :
     eqtype E L unique unique (↯ (m + n)) (↯ m * ↯ n).
   Proof.
-    have [->->]:
-      @unique (() → ()*()) _ = prod_map unique unique ∘ (@pvsep () m n) ∘ unique ∧
-      @unique (()*() → ()) _ = unique ∘ (curry (@pvapp () m n) ∘ prod_map unique unique).
-    { split; fun_ext; by [case|case=>[[][]]]. }
-    eapply eqtype_trans. { apply mod_ty_outin, _. } eapply eqtype_trans.
-    { apply array_plus_prod. } apply prod_eqtype; apply mod_ty_inout, _.
+    eapply eqtype_eq. { eapply eqtype_trans; [apply mod_ty_outin, _|].
+    eapply eqtype_trans; [apply array_plus_prod|].
+    apply prod_eqtype; apply mod_ty_inout, _. } { done. } { done. }
   Qed.
 
 End typing.

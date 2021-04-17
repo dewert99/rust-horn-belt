@@ -54,20 +54,12 @@ Definition sum_to_option {A} (s: () + A) : option A :=
 Global Instance option_sum_iso {A} : Iso (@option_to_sum A) sum_to_option.
 Proof. split; fun_ext; case=>//; by case. Qed.
 
-Lemma option_map_via_sum_map {A B} (f: A → B) :
-  option_map f = sum_to_option ∘ sum_map id f ∘ option_to_sum.
-Proof. fun_ext. by case. Qed.
-
 Definition list_to_option {A} (xl: list A) : option (A * list A) :=
   match xl with [] => None | x :: xl' => Some (x, xl') end.
 Definition option_to_list {A} (o: option (A * list A)) : list A :=
   match o with None => [] | Some (x, xl') => x :: xl' end.
 Global Instance list_option_iso {A} : Iso (@list_to_option A) option_to_list.
 Proof. split; fun_ext; case=>//; by case. Qed.
-
-Lemma map_via_option_map {A B} (f: A → B) :
-  map f = option_to_list ∘ option_map (prod_map f (map f)) ∘ list_to_option.
-Proof. fun_ext. by case. Qed.
 
 (* * Utility for Singleton Types *)
 
@@ -114,11 +106,11 @@ Infix "<*>" := ap (at level 61, left associativity).
 (* Reader Monad  *)
 
 Global Instance reader_fmap R : FMap ((→) R) := λ _ _ f a r, f (a r).
-Global Instance reader_ap R : Ap ((→) R) := λ _ _ f a r, f r (a r). 
+Global Instance reader_ap R : Ap ((→) R) := λ _ _ f a r, f r (a r).
 Global Instance reader_mret R : MRet ((→) R) := λ _ a _, a.
 Global Instance reader_mbind R : MBind ((→) R) := λ _ _ f a r, f (a r) r.
 Global Instance reader_mjoin R : MJoin ((→) R) := λ _ j r, j r r.
 
 Lemma reader_fmap_ret R A B (f : A → B) (a : A) : f <$> (@mret ((→) R) _ _ a) = @mret ((→) R) _ _ (f a).
 by rewrite /mret /reader_mret /fmap /reader_fmap.
-Qed. 
+Qed.

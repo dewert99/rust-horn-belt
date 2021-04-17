@@ -688,87 +688,6 @@ Section subtyping.
 
   (** Subtyping *)
 
-  Global Instance type_incl_ne {A B} (f: A → B) : NonExpansive2 (type_incl f).
-  Proof.
-    rewrite /type_incl.
-    move=> ???[->->_ EqvOwn EqvShr]??[->->_ EqvOwn' EqvShr']. do 4 f_equiv.
-    - do 8 f_equiv. by rewrite EqvOwn EqvOwn'.
-    - do 10 f_equiv. by rewrite EqvShr EqvShr'.
-  Qed.
-
-  Global Instance type_incl_persistent {A B} (f: A → B) ty ty' :
-    Persistent (type_incl f ty ty') := _.
-
-  Lemma type_incl_refl {A} (ty: _ A) : ⊢ type_incl id ty ty.
-  Proof.
-    iSplit; [done|]. iSplit; [by iApply lft_incl_refl|]. iSplit; iModIntro; by iIntros.
-  Qed.
-
-  Lemma type_incl_trans {A B C} (f: A → B) (g: B → C) ty ty' ty'' :
-    type_incl f ty ty' -∗ type_incl g ty' ty'' -∗ type_incl (g ∘ f) ty ty''.
-  Proof.
-    iIntros "[%[#InLft[#InOwn #InShr]]] [%[#InLft'[#InOwn' #InShr']]]".
-    iSplit. { iPureIntro. by etrans. } iSplit; [|iSplit].
-    - iApply lft_incl_trans; [iApply "InLft'"|iApply "InLft"].
-    - iIntros "!>*?". iApply "InOwn'". by iApply "InOwn".
-    - iIntros "!>*?". iApply "InShr'". by iApply "InShr".
-  Qed.
-
-  Global Instance subtype_refl {E L A} : Reflexive (subtype E L (@id A)).
-  Proof. move=> ??. iIntros "_!>_". iApply type_incl_refl. Qed.
-
-  Lemma subtype_trans {A B C} E L (f: A → B) (g: B → C) ty ty' ty'' :
-    subtype E L f ty ty' → subtype E L g ty' ty'' → subtype E L (g ∘ f) ty ty''.
-  Proof.
-    move=> Sub Sub' ?. iIntros "L". iDestruct (Sub with "L") as "#Incl".
-    iDestruct (Sub' with "L") as "#Incl'". iIntros "!> #E".
-    iApply type_incl_trans; by [iApply "Incl"|iApply "Incl'"].
-  Qed.
-
-  Lemma subtype_weaken {A B} E E' L L' (f: A → B) ty ty' :
-    E ⊆+ E' → L ⊆+ L' → subtype E L f ty ty' → subtype E' L' f ty ty'.
-  Proof.
-    move=> ?? Sub ?. iIntros "L".
-    iDestruct (Sub with "[L]") as "#Incl"; [by iApply big_sepL_submseteq|].
-    iIntros "!> #E". iApply "Incl". by iApply big_sepL_submseteq.
-  Qed.
-
-  Definition subtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
-    (fl: plist2 (→) As Bs) : Prop :=
-    HForallZip (λ _ _ ty ty' f, subtype E L f ty ty') tyl tyl' fl.
-  Definition eqtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
-    (fl: plist2 (→) As Bs) (gl: plist2 (→) Bs As) : Prop :=
-    HForallZip (λ _ _ ty ty' '(f, g), eqtype E L f g ty ty') tyl tyl'
-      (p2zip fl (p2flip gl)).
-
-  Lemma subtypel_llctx_nth {C As Bs} E L (ty: _ C) (tyl: _ As) (tyl': _ Bs) fl qL :
-    subtypel E L tyl tyl' fl → llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ∀i, type_incl (p2nth id fl i) (hnth ty tyl i) (hnth ty tyl' i)).
-  Proof.
-    elim=>/= [|>Sub _ IH]. { iIntros "_!>_" (?). iApply type_incl_refl. } iIntros "L".
-    iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
-    iIntros "!> #E" (i). iDestruct ("Sub" with "E") as "Sub'".
-    iDestruct ("IH" with "E") as "IH'". by case i=> [|j].
-  Qed.
-
-  Lemma subtypel_llctx_bigsep {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl qL :
-    subtypel E L tyl tyl' fl → llctx_interp L qL -∗ □ (elctx_interp E -∗
-      [∗ hlist] ty; ty';- f ∈ tyl; tyl';- fl, type_incl f ty ty').
-  Proof.
-    elim=>/= [|>Sub _ IH]; [by iIntros "_!>_"|]. iIntros "L".
-    iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
-    iIntros "!> #E". iDestruct ("Sub" with "E") as "$". iDestruct ("IH" with "E") as "$".
-  Qed.
-
-  (** Type Equivalence *)
-
-  Lemma equiv_subtype {A} E L (ty ty': _ A) : ty ≡ ty' → subtype E L id ty ty'.
-  Proof.
-    move=> Eqv ?. iIntros "_!>_". iSplit. { iPureIntro. apply Eqv. }
-    iSplit. { rewrite Eqv. iApply lft_incl_refl. }
-    iSplit; iIntros "!>*"; rewrite Eqv; iIntros "$".
-  Qed.
-
   Lemma eqtype_unfold {A B} E L f g `{@Iso A B f g} ty ty' :
     eqtype E L f g ty ty' ↔
     ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
@@ -800,30 +719,127 @@ Section subtyping.
       (□ ∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l ↔ ty'.(ty_shr) vπ d κ tid l)).
   Proof. by rewrite eqtype_unfold. Qed.
 
+  Global Instance type_incl_ne {A B} (f: A → B) : NonExpansive2 (type_incl f).
+  Proof.
+    rewrite /type_incl.
+    move=> ???[->->_ EqvOwn EqvShr]??[->->_ EqvOwn' EqvShr']. do 4 f_equiv.
+    - do 8 f_equiv. by rewrite EqvOwn EqvOwn'.
+    - do 10 f_equiv. by rewrite EqvShr EqvShr'.
+  Qed.
+
+  Global Instance type_incl_persistent {A B} (f: A → B) ty ty' :
+    Persistent (type_incl f ty ty') := _.
+
+  Lemma type_incl_refl {A} (ty: _ A) : ⊢ type_incl id ty ty.
+  Proof.
+    iSplit; [done|]. iSplit; [by iApply lft_incl_refl|]. iSplit; iModIntro; by iIntros.
+  Qed.
+
+  Lemma type_incl_trans {A B C} (f: A → B) (g: B → C) ty ty' ty'' :
+    type_incl f ty ty' -∗ type_incl g ty' ty'' -∗ type_incl (g ∘ f) ty ty''.
+  Proof.
+    iIntros "[%[#InLft[#InOwn #InShr]]] [%[#InLft'[#InOwn' #InShr']]]".
+    iSplit. { iPureIntro. by etrans. } iSplit; [|iSplit].
+    - iApply lft_incl_trans; [iApply "InLft'"|iApply "InLft"].
+    - iIntros "!>*?". iApply "InOwn'". by iApply "InOwn".
+    - iIntros "!>*?". iApply "InShr'". by iApply "InShr".
+  Qed.
+
+  Lemma equiv_subtype {A} (ty ty': _ A) E L : ty ≡ ty' → subtype E L id ty ty'.
+  Proof.
+    move=> Eqv ?. iIntros "_!>_". iSplit. { iPureIntro. apply Eqv. }
+    iSplit. { rewrite Eqv. iApply lft_incl_refl. }
+    iSplit; iIntros "!>*"; rewrite Eqv; iIntros "$".
+  Qed.
+
+  Lemma equiv_eqtype {A} (ty ty': _ A) E L : ty ≡ ty' → eqtype E L id id ty ty'.
+  Proof. by split; apply equiv_subtype. Qed.
+
+  Global Instance subtype_refl {E L A} : Reflexive (subtype E L (@id A)).
+  Proof. move=> ?. by apply equiv_subtype. Qed.
+
   Global Instance eqtype_refl {E L A} : Reflexive (eqtype E L (@id A) id).
   Proof. done. Qed.
 
-  Lemma equiv_eqtype {A} E L (ty ty': _ A) : ty ≡ ty' → eqtype E L id id ty ty'.
-  Proof. by split; apply equiv_subtype. Qed.
-
-  Global Instance subtype_proper {A B} E L (f: A → B) :
-    Proper (eqtype E L id id ==> eqtype E L id id ==> (↔)) (subtype E L f).
-  Proof.
-    move=> ??[Sub1 Sub1']??[Sub2 Sub2']. split; move=> ?;
-    eapply (subtype_trans _ _ id f); [by apply Sub1'| |by apply Sub1|];
-    eapply (subtype_trans _ _ f id); [|by apply Sub2| |by apply Sub2']; done.
-  Qed.
-
-  Lemma eqtype_symm {A B} E L (f: A → B) g ty ty' :
+  Lemma eqtype_symm {A B} (f: A → B) g ty ty' E L :
     eqtype E L f g ty ty' → eqtype E L g f ty' ty.
   Proof. move=> [??]. by split. Qed.
 
-  Lemma eqtype_trans {A B C} E L (f: A → B) f' (g: B → C) g' ty ty' ty'' :
+  Lemma subtype_trans {A B C} (f: A → B) (g: B → C) ty ty' ty'' E L :
+    subtype E L f ty ty' → subtype E L g ty' ty'' → subtype E L (g ∘ f) ty ty''.
+  Proof.
+    move=> Sub Sub' ?. iIntros "L". iDestruct (Sub with "L") as "#Incl".
+    iDestruct (Sub' with "L") as "#Incl'". iIntros "!> #E".
+    iApply type_incl_trans; by [iApply "Incl"|iApply "Incl'"].
+  Qed.
+
+  Lemma eqtype_trans {A B C} (f: A → B) f' (g: B → C) g' ty ty' ty'' E L :
     eqtype E L f f' ty ty' → eqtype E L g g' ty' ty'' →
     eqtype E L (g ∘ f) (f' ∘ g') ty ty''.
   Proof.
-    move=> [Sub1 Sub1'] [??].
-    split; eapply subtype_trans; [apply Sub1| | |apply Sub1']; done.
+    move=> [Sub1 Sub1'] [??]. split; eapply subtype_trans;
+    [apply Sub1| | |apply Sub1']; done.
+  Qed.
+
+  Lemma subtype_weaken {A B} (f: A → B) ty ty' E E' L L' :
+    E ⊆+ E' → L ⊆+ L' → subtype E L f ty ty' → subtype E' L' f ty ty'.
+  Proof.
+    move=> ?? Sub ?. iIntros "L".
+    iDestruct (Sub with "[L]") as "#Incl"; [by iApply big_sepL_submseteq|].
+    iIntros "!> #E". iApply "Incl". by iApply big_sepL_submseteq.
+  Qed.
+
+  Lemma subtype_eq {A B} (f g: A → B) ty ty' E L :
+    subtype E L f ty ty' → f = g → subtype E L g ty ty'.
+  Proof. by move=> ? <-. Qed.
+
+  Lemma eqtype_eq {A B} (f f': A → B) g g' ty ty' E L :
+    eqtype E L f g ty ty' → f = f' → g = g' → eqtype E L f' g' ty ty'.
+  Proof. by move=> ? <-<-. Qed.
+
+  Global Instance subtype_proper {A B} (f: A → B) E L :
+    Proper (eqtype E L id id ==> eqtype E L id id ==> (↔)) (subtype E L f).
+  Proof.
+    move=> ??[Sub1 Sub1']??[Sub2 Sub2']. split; move=> ?;
+    eapply (subtype_trans id _); [by apply Sub1'| |by apply Sub1|];
+    eapply (subtype_trans _ id); [|by apply Sub2| |by apply Sub2']; done.
+  Qed.
+
+  (** List *)
+
+  Definition subtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
+    (fl: plist2 (→) As Bs) : Prop :=
+    HForallZip (λ _ _ ty ty' f, subtype E L f ty ty') tyl tyl' fl.
+  Definition eqtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
+    (fl: plist2 (→) As Bs) (gl: plist2 (→) Bs As) : Prop :=
+    HForallZip (λ _ _ ty ty' '(f, g), eqtype E L f g ty ty') tyl tyl'
+      (p2zip fl (p2flip gl)).
+
+  Lemma subtypel_nil E L : subtypel E L +[] +[] -[].
+  Proof. constructor. Qed.
+
+  Lemma subtypel_cons {A B As Bs} (f: A → B) (fl: _ As Bs) ty ty' tyl tyl' E L :
+    subtype E L f ty ty' → subtypel E L tyl tyl' fl →
+    subtypel E L (ty +:: tyl) (ty' +:: tyl') (f -:: fl).
+  Proof. by constructor. Qed.
+
+  Lemma subtypel_llctx_nth {C As Bs} (ty: _ C) (tyl: _ As) (tyl': _ Bs) fl q E L :
+    subtypel E L tyl tyl' fl → llctx_interp L q -∗ □ (elctx_interp E -∗
+      ∀i, type_incl (p2nth id fl i) (hnth ty tyl i) (hnth ty tyl' i)).
+  Proof.
+    elim=>/= [|>Sub _ IH]. { iIntros "_!>_" (?). iApply type_incl_refl. } iIntros "L".
+    iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
+    iIntros "!> #E" (i). iDestruct ("Sub" with "E") as "Sub'".
+    iDestruct ("IH" with "E") as "IH'". by case i=> [|j].
+  Qed.
+
+  Lemma subtypel_llctx_bigsep {As Bs} (tyl: _ As) (tyl': _ Bs) fl q E L :
+    subtypel E L tyl tyl' fl → llctx_interp L q -∗ □ (elctx_interp E -∗
+      [∗ hlist] ty; ty';- f ∈ tyl; tyl';- fl, type_incl f ty ty').
+  Proof.
+    elim=>/= [|>Sub _ IH]; [by iIntros "_!>_"|]. iIntros "L".
+    iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
+    iIntros "!> #E". iDestruct ("Sub" with "E") as "$". iDestruct ("IH" with "E") as "$".
   Qed.
 
   (** Simple Type *)

@@ -11,14 +11,14 @@ Bind Scope expr_scope with path.
 
 (* TODO: Consider making this a pair of a path and the rest. We could
    then e.g. formulate tctx_elt_hasty_path more generally. *)
-Inductive tctx_elt `{!typeG Σ} (A : Type) : Type :=
-| TCtx_hasty  (p : path) (ty : type A)
-| TCtx_blocked (p : path) (κ : lft) (ty : type A).
+Inductive tctx_elt `{!typeG Σ} (A: Type) : Type :=
+| TCtx_hasty (p: path) (ty: type A)
+| TCtx_blocked (p: path) (κ: lft) (ty: type A).
 
 Notation tctx := (hlist tctx_elt).
 
-Notation "p ◁ ty" := (TCtx_hasty _ p ty%list%T) (at level 55).
-Notation "p ◁{ κ } ty" := (TCtx_blocked _ p κ ty)
+Notation "p ◁ ty" := (TCtx_hasty _ p ty%T) (at level 55).
+Notation "p ◁{ κ } ty" := (TCtx_blocked _ p κ ty%T)
    (at level 55, format "p  ◁{ κ }  ty").
 
 Notation pred As := (Π! As → Prop).

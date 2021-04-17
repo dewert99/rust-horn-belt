@@ -162,9 +162,6 @@ Global Instance prod_cons_prod_iso {A B} : Iso (@prod_to_cons_prod A B) cons_pro
 Proof. split; fun_ext; by case. Qed.
 
 Definition cons_prod_map {A B A' B'} (f: A → A') (g: B → B') '(x -:: y) := f x -:: g y.
-Lemma cons_prod_map_via_prod_map {A B A' B'} (f: A → A') (g: B → B') :
-  cons_prod_map f g = prod_to_cons_prod ∘ prod_map f g ∘ cons_prod_to_prod.
-Proof. fun_ext; by case. Qed.
 
 Fixpoint plist (F: Type → Type) As : Type :=
   match As with ^[] => :1 | A ^:: As' => F A :* plist F As' end.
@@ -176,36 +173,26 @@ Fixpoint papp {F As Bs} (xl: plist F As) (yl: plist F Bs) : plist F (As ^++ Bs) 
   match As, xl with ^[], _ => yl | _ ^:: _, x -:: xl' => x -:: papp xl' yl end.
 Infix "-++" := papp (at level 60, right associativity).
 
-Fixpoint psep {F As Bs} (xl: plist F (As ^++ Bs)) : plist F As * plist F Bs :=
-  match As, xl with ^[], _ => (-[], xl) |
-    _ ^:: _, x -:: xl' => let: (yl, zl) := psep xl' in (x -:: yl, zl) end.
-
 Fixpoint psepl {F As Bs} (xl: plist F (As ^++ Bs)) : plist F As :=
   match As, xl with ^[], _ => -[] | _ ^:: _, x -:: xl' => x -:: psepl xl' end.
-
 Fixpoint psepr {F As Bs} (xl: plist F (As ^++ Bs)) : plist F Bs :=
   match As, xl with ^[], _ => xl | _ ^:: _, _ -:: xl' => psepr xl' end.
-
-Lemma psep_pseplr {F As Bs} (xl: _ F (As ^++ Bs)) : psep xl = (psepl xl, psepr xl).
-Proof. move: xl. elim As; [done|]=>/= > IH [??]. by rewrite IH. Qed.
+Notation psep := (λ xl, (psepl xl, psepr xl)).
 
 Lemma papp_sepl {F As Bs} (xl: _ F As) (yl: _ Bs) : psepl (xl -++ yl) = xl.
 Proof. move: xl yl. elim As; [by case|]=>/= > IH [??]?. by rewrite IH. Qed.
 Lemma papp_sepr {F As Bs} (xl: _ F As) (yl: _ Bs) : psepr (xl -++ yl) = yl.
 Proof. move: xl yl. elim As; [by case|]=>/= > IH [??]?. by rewrite IH. Qed.
-Lemma papp_sep {F As Bs} (xl: _ F As) (yl: _ Bs) : psep (xl -++ yl) = (xl, yl).
-Proof. by rewrite psep_pseplr papp_sepl papp_sepr. Qed.
 
-Lemma pseplr_app {F As Bs} (xl: _ F (As ^++ Bs)) : psepl xl -++ psepr xl = xl.
+Lemma psep_app {F As Bs} (xl: _ F (As ^++ Bs)) : psepl xl -++ psepr xl = xl.
 Proof. move: xl. elim As; [done|]=>/= > IH [??]. by rewrite IH. Qed.
-Lemma papp_ex {F As Bs} (xl: plist F (As ^++ Bs)) :
-  ∃(yl: _ As) (zl: _ Bs), xl = yl -++ zl.
-Proof. exists (psepl xl), (psepr xl). by rewrite pseplr_app. Qed.
+Lemma papp_ex {F As Bs} (xl: _ F _) : ∃(yl: _ As) (zl: _ Bs), xl = yl -++ zl.
+Proof. exists (psepl xl), (psepr xl). by rewrite psep_app. Qed.
 
 Global Instance papp_psep_iso {F As Bs} : Iso (curry (@papp F As Bs)) psep.
 Proof. split; fun_ext.
-  - case=>/= [??]. by rewrite papp_sep.
-  - move=>/= ?. by rewrite psep_pseplr /= pseplr_app.
+  - case=>/= [??]. by rewrite papp_sepl papp_sepr.
+  - move=>/= ?. by rewrite psep_app.
 Qed.
 
 Fixpoint pmap {F G As} (f: ∀A, F A → G A) : plist F As → plist G As :=
@@ -308,16 +295,26 @@ Fixpoint pvapp {A m n} (xl: pvec A m) (yl: pvec A n) : pvec A (m + n) :=
   match m, xl with 0, _ => yl | S _, x -:: xl' => x -:: pvapp xl' yl end.
 Infix "-v++" := pvapp (at level 60, right associativity).
 
-Fixpoint pvsep {A m n} (xl: pvec A (m + n)) : pvec A m * pvec A n :=
-  match m, xl with 0, _ => (-[], xl) |
-    S _, x -:: xl' => let (yl, zl) := pvsep xl' in (x -:: yl, zl) end.
+Fixpoint pvsepl {A m n} (xl: pvec A (m + n)) : pvec A m :=
+  match m, xl with 0, _ => -[] | S _, x -:: xl' => x -:: pvsepl xl' end.
+Fixpoint pvsepr {A m n} (xl: pvec A (m + n)) : pvec A n :=
+  match m, xl with 0, _ => xl | S _, x -:: xl' => pvsepr xl' end.
+Notation pvsep := (λ xl, (pvsepl xl, pvsepr xl)).
+
+Lemma pvapp_sepl {A m n} (xl: _ A m) (yl: _ n) : pvsepl (xl -v++ yl) = xl.
+Proof. move: xl yl. elim m; [by case|]=>/= > IH [??]?. by rewrite IH. Qed.
+Lemma pvapp_sepr {A m n} (xl: _ A m) (yl: _ n) : pvsepr (xl -v++ yl) = yl.
+Proof. move: xl yl. elim m; [by case|]=>/= > IH [??]?. by rewrite IH. Qed.
+
+Lemma pvsep_app {A m n} (xl: _ A (m + n)) : pvsepl xl -v++ pvsepr xl = xl.
+Proof. move: xl. elim m; [done|]=>/= > IH [??]. by rewrite IH. Qed.
+Lemma pvapp_ex {A m n} (xl: _ A _) : ∃(yl: _ m) (zl: _ n), xl = yl -v++ zl.
+Proof. exists (pvsepl xl), (pvsepr xl). by rewrite pvsep_app. Qed.
 
 Global Instance pvapp_pvsep_iso {A m n} : Iso (curry (@pvapp A m n)) pvsep.
-Proof.
-  elim m=>/= [|?[Eq Eq']]; split; fun_ext;
-  [by case=> [[]?]|done|case=> [[? xl]yl]|case=> [? xl]].
-  - move: Eq. by move/equal_f/(.$ (xl, yl))=>/= ->.
-  - move: Eq'. move/equal_f/(.$ xl)=>/=. by case (pvsep xl)=> [??]=>/= ->.
+Proof. split; fun_ext.
+  - case=>/= [??]. by rewrite pvapp_sepl pvapp_sepr.
+  - move=>/= ?. by rewrite pvsep_app.
 Qed.
 
 Program Global Instance pvec_unique `{Unique A} n
@@ -445,10 +442,6 @@ Definition xsum_to_sum {A B} (s: Σ! ^[A; B]) : A + B := match s with
   xinj 0 x => inl x | xinj 1 y => inr y | xinj (S (S _)) z => absurd z end.
 Global Instance sum_xsum_iso {A B} : Iso (@sum_to_xsum A B) xsum_to_sum.
 Proof. split; fun_ext; case; by [| |case=> [|[|]]]. Qed.
-
-Lemma sum_map_via_xsum_map {A B A' B'} (f: A → A') (g: B → B') :
-  sum_map f g = xsum_to_sum ∘ @xsum_map ^[A; B] ^[A'; B'] -[f; g] ∘ sum_to_xsum.
-Proof. fun_ext; by case. Qed.
 
 (** * Setoid *)
 

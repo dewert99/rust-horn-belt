@@ -12,8 +12,9 @@ Section list.
   Lemma list_subtype {A B} E L (f: A → B) ty ty' :
     subtype E L f ty ty' → subtype E L (map f) (list_ty ty) (list_ty ty').
   Proof.
-    move=> ?. apply fix_subtype=> *. rewrite map_via_option_map.
-    apply mod_ty_subtype; [apply _|]. by apply option_subtype, prod_subtype, box_subtype.
+    move=> ?. apply fix_subtype=> *. eapply subtype_eq. { apply mod_ty_subtype;
+    [apply _|]. by apply option_subtype, prod_subtype, box_subtype. }
+    { fun_ext. by case. }
   Qed.
 
   Lemma list_eqtype {A B} E L (f: A → B) g ty ty' :

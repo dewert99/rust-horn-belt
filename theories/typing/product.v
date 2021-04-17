@@ -273,8 +273,8 @@ Section typing.
     subtype E L f ty1 ty1' → subtype E L g ty2 ty2' →
     subtype E L (cons_prod_map f g) (ty1 :* ty2) (ty1' :* ty2').
   Proof.
-    move=> ??. rewrite cons_prod_map_via_prod_map.
-    apply mod_ty_subtype; [apply semi_iso|by apply prod_subtype].
+    move=> ??. eapply subtype_eq. { apply mod_ty_subtype;
+    [apply semi_iso|by apply prod_subtype]. } { fun_ext. by case. }
   Qed.
 
   Lemma xprod_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
@@ -335,21 +335,15 @@ Section typing.
 
   Lemma xprod_app_prod {As Bs} E L (tyl: _ As) (tyl': _ Bs) :
     eqtype E L psep (curry papp) (Π! (tyl h++ tyl')) (Π! tyl * Π! tyl').
-  Proof.
-    elim: tyl=> [|A As' ty tyl Eq].
-    - have [->->]: @psep id ^[] Bs = prod_map unique id ∘ prod_left_id' ∧
-        curry (@papp id ^[] Bs) = prod_left_id ∘ prod_map unique id.
-      { split; fun_ext; by [case=> [[]?]|]. }
-      eapply eqtype_trans; [apply eqtype_symm; apply prod_ty_left_id|].
-      apply prod_eqtype; [|done]. apply mod_ty_inout, _.
-    - have [->->]: @psep id (A ^:: As') Bs = prod_map prod_to_cons_prod id ∘
-          prod_assoc ∘ prod_map id psep ∘ cons_prod_to_prod ∧
-        curry (@papp id (A ^:: As') Bs) = prod_to_cons_prod ∘
-          (prod_map id (curry papp) ∘ (prod_assoc' ∘ prod_map cons_prod_to_prod id)).
-      { split; fun_ext; [|by case=> [[??]?]]. move=> [? xl]/=. by case (psep xl). }
-      eapply eqtype_trans; [by apply mod_ty_outin, _|]. eapply eqtype_trans.
-      { apply prod_eqtype; [reflexivity|apply Eq]. } eapply eqtype_trans;
-      [by apply prod_ty_assoc|]. apply prod_eqtype; [apply mod_ty_inout, _|done].
+  Proof. elim: tyl=> [|> Eq].
+    - eapply eqtype_eq. { eapply eqtype_trans;
+      [apply eqtype_symm; apply prod_ty_left_id|]. apply prod_eqtype; [|done].
+      apply mod_ty_inout, _. } { done. } { done. }
+    - eapply eqtype_eq. { eapply eqtype_trans; [by apply mod_ty_outin, _|].
+      eapply eqtype_trans. { eapply prod_eqtype; [reflexivity|apply Eq]. }
+      eapply eqtype_trans; [by apply prod_ty_assoc|]. apply prod_eqtype;
+      [apply mod_ty_inout, _|done]. } { fun_ext. by case. }
+      { fun_ext. by case=> [[??]?]. }
   Qed.
 
   Lemma prod_outlives_E {A B} (ty: _ A) (ty': _ B) κ :

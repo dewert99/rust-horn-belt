@@ -38,21 +38,15 @@ Section typing.
 
   Lemma array_plus_prod {A} E L m n (ty: _ A) :
     eqtype E L pvsep (curry pvapp) [ty; m + n] ([ty; m] * [ty; n]).
-  Proof.
-    elim: m=> [|m Eq].
-    - have [->->]: @pvsep A 0 n = prod_map unique id ∘ prod_left_id' ∧
-        curry (@pvapp A 0 n) = prod_left_id ∘ prod_map unique id.
-      { split; fun_ext; by [case=> [[]?]|]. }
-      eapply eqtype_trans; [apply eqtype_symm; apply prod_ty_left_id|].
-      apply prod_eqtype; [|done]. apply mod_ty_inout, _.
-    - have [->->]: @pvsep A (S m) n = prod_map prod_to_cons_prod id ∘
-          prod_assoc ∘ prod_map id pvsep ∘ cons_prod_to_prod ∧
-        curry (@pvapp A (S m) n) = prod_to_cons_prod ∘
-          (prod_map id (curry pvapp) ∘ (prod_assoc' ∘ prod_map cons_prod_to_prod id)).
-      { split; fun_ext; [|by case=> [[??]?]]. move=> [? xl]/=. by case (pvsep xl). }
-      eapply eqtype_trans; [by apply mod_ty_outin, _|]. eapply eqtype_trans.
-      { apply prod_eqtype; [reflexivity|apply Eq]. } eapply eqtype_trans;
-      [by apply prod_ty_assoc|]. apply prod_eqtype; [apply mod_ty_inout, _|done].
+  Proof. elim: m=> [|? Eq].
+    - eapply eqtype_eq. { eapply eqtype_trans;
+      [apply eqtype_symm; apply prod_ty_left_id|]. apply prod_eqtype; [|done].
+      apply mod_ty_inout, _. } { done. } { done. }
+    - eapply eqtype_eq. { eapply eqtype_trans; [by apply mod_ty_outin, _|].
+      eapply eqtype_trans. { eapply prod_eqtype; [reflexivity|apply Eq]. }
+      eapply eqtype_trans; [by apply prod_ty_assoc|]. apply prod_eqtype;
+      [apply mod_ty_inout, _|done]. } { fun_ext. by case. }
+      { fun_ext. by case=> [[??]?]. }
   Qed.
 
 End typing.
