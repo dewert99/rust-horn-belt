@@ -125,7 +125,10 @@ Section typing_rules.
     rewrite /elctx_interp /=. by iFrame.
   Qed. *)
 
-  Definition let_trans {A1 A2 O} (p : (xprod A2 → Prop) → xprod A1 → Prop) (x : xprod (A2 ^++ O) → Prop): xprod (A1 ^++ O) → Prop :=
+  Definition let_pre {A1 A2 O} 
+    (p : (xprod A2 → Prop) → xprod A1 → Prop) 
+    (x : xprod (A2 ^++ O) → Prop) 
+    : xprod (A1 ^++ O) → Prop :=
     λ a1o, let '(a1, o) := xprod_split a1o in
       p (λ a2, x (a2 -++ o)) a1.
     
@@ -133,14 +136,14 @@ Section typing_rules.
     Closed (xb :b: []) e' →
     typed_instruction E L T1 e T2 trans -∗
     (∀ v : val, typed_body E L C (T2 v h++ T) (subst' xb v e') pre) -∗
-    typed_body E L C (T1 h++ T) (let: xb := e in e') (let_trans trans pre).
+    typed_body E L C (T1 h++ T) (let: xb := e in e') (let_pre trans pre).
   Proof.
     iIntros (Hc) "He He'". iIntros (tid V) "#LFT #TIME #HE Htl HL HC HT #Hp".
     destruct (hlist_app_split V) as (V1 & V2 & ->).
     rewrite tctx_interp_app.
     iDestruct "HT" as "[HT1 HT]". wp_bind e. iApply (wp_wand with "[He HL HT1 Htl]").
     {
-      rewrite /let_trans.
+      rewrite /let_pre.
       setoid_rewrite (tctx_values_split V1 V2).
       iApply ("He" with "LFT TIME HE Htl HL HT1 Hp").
     }
@@ -178,7 +181,7 @@ Section typing_rules.
     Closed (xb :b: []) e' →
     (⊢ typed_instruction E L T1 e T2 trans) →
     tctx_extract_ctx E L T1 T T' f →
-    f (let_trans trans pre) = g →
+    f (let_pre trans pre) = g →
     (∀ v : val, typed_body E L C (T2 v h++ T') (subst' xb v e') pre) -∗
     typed_body E L C T (let: xb := e in e') g.
   Proof.
