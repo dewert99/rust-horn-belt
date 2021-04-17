@@ -13,13 +13,16 @@ Bind Scope expr_scope with path.
    then e.g. formulate tctx_elt_hasty_path more generally. *)
 Inductive tctx_elt `{!typeG Σ} (A : Type) : Type :=
 | TCtx_hasty  (p : path) (ty : type A)
-| TCtx_blocked (p : path) (κ : lft) (ty : type A). 
+| TCtx_blocked (p : path) (κ : lft) (ty : type A).
 
 Notation tctx := (hlist tctx_elt).
 
-Notation "p ◁ ty" := (TCtx_hasty _ p ty%list%T) (at level 70).
+Notation "p ◁ ty" := (TCtx_hasty _ p ty%list%T) (at level 55).
 Notation "p ◁{ κ } ty" := (TCtx_blocked _ p κ ty)
-   (at level 70, format "p  ◁{ κ }  ty").
+   (at level 55, format "p  ◁{ κ }  ty").
+
+Notation pred As := (Π! As → Prop).
+Notation pred_trans As Bs := (pred Bs → pred As).
 
 Section type_context.
   Context `{!typeG Σ}.
@@ -70,21 +73,21 @@ Section type_context.
   Definition tctx_elt_interp {A} (tid : thread_id) (x : tctx_elt A) (vπ : proph_asn → A): iProp Σ :=
       match x with
       | p ◁ ty =>
-        ∃ v depth, ⧖depth ∗ ⌜eval_path p = Some v⌝ ∗ ty.(ty_own) vπ depth tid [v]
-      | p ◁{κ} ty => ∃ v, ⌜eval_path p = Some v⌝ ∗
-                  ([†κ] ={⊤}=∗ ∃ depth, ⧖depth ∗ ty.(ty_own) vπ depth tid [v])
+        ∃v d, ⌜eval_path p = Some v⌝ ∗ ⧖d ∗ ty.(ty_own) vπ d tid [v]
+      | p ◁{κ} ty => ∃v, ⌜eval_path p = Some v⌝ ∗
+          ([†κ] ={⊤}=∗ ∃vπ' d, ▷(vπ :== vπ') ∗ ⧖d ∗ ty.(ty_own) vπ d tid [v])
       end%I.
 
   (* Block tctx_elt_interp from reducing with simpl when x is a constructor. *)
   Global Arguments tctx_elt_interp : simpl never.
 
   Lemma tctx_hasty_val {A} tid (v : val) (ty : type A) vπ:
-    tctx_elt_interp tid (v ◁ ty) vπ ⊣⊢ ∃ depth, ⧖depth ∗ ty.(ty_own) vπ depth tid [v].
+    tctx_elt_interp tid (v ◁ ty) vπ ⊣⊢ ∃d, ⧖d ∗ ty.(ty_own) vπ d tid [v].
   Proof.
     rewrite /tctx_elt_interp eval_path_of_val. iSplit.
-    - iIntros "H". iDestruct "H" as (??) "(#Ht & EQ & ?)".
+    - iIntros "H". iDestruct "H" as (??) "(#EQ & ? & ?)".
       iDestruct "EQ" as %[=->]. eauto.
-    - iDestruct 1 as (depth) "[??]". eauto.
+    - iDestruct 1 as (d) "[??]". eauto.
   Qed.
 
   Lemma tctx_elt_interp_hasty_path {A} p1 p2 (ty : type A) tid vπ :
@@ -102,105 +105,69 @@ Section type_context.
 
   Lemma wp_hasty {A} E tid p (ty : type A) vπ Φ :
     tctx_elt_interp tid (p ◁ ty) vπ -∗
-    (∀ depth v, ⧖depth -∗ ⌜eval_path p = Some v⌝ -∗ ty.(ty_own) vπ depth tid [v] -∗ Φ v) -∗
+    (∀v d, ⌜eval_path p = Some v⌝ -∗ ⧖d -∗ ty.(ty_own) vπ d tid [v] -∗ Φ v) -∗
     WP p @ E {{ Φ }}.
   Proof.
-    iIntros "Hty HΦ". iDestruct "Hty" as (v depth) "(Hdepth & % & Hown)".
+    iIntros "Hty HΦ". iDestruct "Hty" as (v d ?) "(Hdepth & Hown)".
     iApply (wp_wand with "[]"). { iApply wp_eval_path. done. }
-    iIntros (v') "%". subst v'. by iApply ("HΦ" with "Hdepth [] Hown").
+    iIntros (v') "%". subst v'. by iApply ("HΦ" with "[] Hdepth Hown").
   Qed.
 
   Lemma closed_hasty {A} tid p (ty : type A) vπ : tctx_elt_interp tid (p ◁ ty) vπ -∗ ⌜Closed [] p⌝.
-  Proof. iDestruct 1 as (??) "(_ & % & _)". eauto using eval_path_closed. Qed.
+  Proof. iDestruct 1 as (???) "(_ & _)". eauto using eval_path_closed. Qed.
 
-  (* Fixpoint hzip {F G A B} (x : hlist F A) (y : hlist G B) : hlist (λ ) _. *)
+  Notation plist_pval := (plist (λ A, proph_asn → A)).
+
   (** Type context *)
-  Definition tctx_interp {As} (tid : thread_id) (T : tctx As) (Vs : hlist (λ A, proph_asn → A) As) : iProp Σ :=
-    big_sepHLZip' (λ A x v, tctx_elt_interp tid x v) T Vs.
-  
-  Fixpoint tctx_values {A} π (V : hlist (λ T, proph_asn → T) A) : xprod A :=
-    match V in hlist _ A return xprod A with 
-    | x +:: V => x π -:: tctx_values π V
-    | +[] => -[]
-    end.
+  Definition tctx_interp {As} (tid: thread_id) (T: tctx As) (vπl: plist_pval As)
+    : iProp Σ := [∗ hlist] t;- vπ ∈ T;- vπl, tctx_elt_interp tid t vπ.
 
-  Lemma tctx_values_distr {T1 T2} (V1 : hlist _ T1) (V2 : hlist _ T2) π : 
-    tctx_values π (V1 h++ V2) = tctx_values π V1 -++ tctx_values π V2.
-  Proof. elim V1 => [//| /= ???? -> //]. Qed.
+  Lemma tctx_interp_singleton {A} tid (t: _ A) vπ :
+    tctx_interp tid +[t] -[vπ] ⊣⊢ tctx_elt_interp tid t vπ.
+  Proof. by rewrite /tctx_interp big_sepHL2_singleton. Qed.
 
-  Lemma tctx_values_split_l {A B} (V1 : hlist _ A) (V2 : hlist _ B) π : 
-    xprod_split_l (tctx_values π (V1 h++ V2)) = tctx_values π V1.
-  Proof. elim/hlist_ind: V1 => [ //| ???? /= -> //=]. Qed.
-
-  Lemma tctx_values_split_r {A B} (V1 : hlist _ A) (V2 : hlist _ B) π : 
-    xprod_split_r (tctx_values π (V1 h++ V2)) = tctx_values π V2.
-  Proof. elim/hlist_ind: V1 => [ //| ???? /= -> //=]. Qed.
-
-  Lemma tctx_values_split {A B} (V1 : hlist _ A) (V2 : hlist _ B) π : 
-    xprod_split (tctx_values π (V1 h++ V2)) = (tctx_values π V1, tctx_values π V2).
-  Proof. elim/hlist_ind: V1 => [ //| ???? /= -> //=]. Qed.  
-
-  Lemma tctx_values_merge {A B} (V1 : hlist _ A) (V2 : hlist _ B) π : 
-    tctx_values π V1 -++ tctx_values π V2 = tctx_values π (V1 h++ V2).
-  Proof. elim/hlist_ind: V1 => [ //| ???? /= -> //=]. Qed.
-
-  (* Lemma tctx_interp_permut {As Bs} tid (T1 : tctx As) (T2 : tctx Bs) :
-    T1 ≡ₕₚ T2 -> tctx_interp tid T1  ⊣⊢ tctx_interp tid T2.
-  Proof. apply big_sepHL_permutation. Qed. *)
-
-  Lemma tctx_interp_cons {A As} tid (x : tctx_elt A) (T : tctx As) vπ Vs :
-    tctx_interp tid (x +:: T) (vπ +:: Vs) ⊣⊢ (tctx_elt_interp tid x vπ ∗ tctx_interp tid T Vs).
+  Lemma tctx_interp_cons {A As} tid (t: _ A) (T: _ As) vπ vπl :
+    tctx_interp tid (t +:: T) (vπ -:: vπl) ⊣⊢
+    tctx_elt_interp tid t vπ ∗ tctx_interp tid T vπl.
   Proof. done. Qed.
 
-  Lemma tctx_interp_app {As Bs} tid (T1 : tctx As) V1 (T2 : tctx Bs) V2 :
-    tctx_interp tid (T1 h++ T2) (V1 h++ V2) ⊣⊢ (tctx_interp tid T1 V1 ∗ tctx_interp tid T2 V2).
-  Proof. 
-    induction As as [|?? IH]; dependent destruction T1; dependent destruction V1.
-    - by rewrite left_id.
-    - by rewrite // !tctx_interp_cons -assoc IH.
-  Qed.
-
-  (* Definition tctx_interp_nil tid :
-    tctx_interp tid +[] = True%I := eq_refl _. *)
-
-  Lemma tctx_interp_singleton {A} tid (x : tctx_elt A) v :
-    tctx_interp tid +[x] +[v] ⊣⊢ tctx_elt_interp tid x v.
-  Proof. rewrite /tctx_interp /= right_id //. Qed.
+  Lemma tctx_interp_app {As Bs} tid (T: _ As) (T': _ Bs) vπl vπl' :
+    tctx_interp tid (T h++ T') (vπl -++ vπl') ⊣⊢
+    tctx_interp tid T vπl ∗ tctx_interp tid T' vπl'.
+  Proof. by rewrite /tctx_interp big_sepHL2_app. Qed.
 
   (** Copy typing contexts *)
-  Class CopyC {As: Types} (T : tctx As) Vs :=
-    copyc_persistent tid : Persistent (tctx_interp tid T Vs).
+  Class CopyC {As: Types} (T : tctx As) vπl :=
+    copyc_persistent tid : Persistent (tctx_interp tid T vπl).
   Global Existing Instances copyc_persistent.
 
-  Global Instance tctx_nil_copy : CopyC +[] +[].
+  Global Instance tctx_nil_copy : CopyC +[] -[].
   Proof. rewrite /CopyC. apply _. Qed.
 
-  Global Instance tctx_ty_copy {A As} (T : tctx As) Vs p (ty : type A) vπ:
-    CopyC T Vs → Copy ty → CopyC  ((p ◁ ty) +:: T) (vπ +:: Vs).
-  Proof. intros ???. rewrite tctx_interp_cons. apply _. Qed.
+  Global Instance tctx_ty_copy {A As} (T : tctx As) vπl p (ty : type A) vπ:
+    CopyC T vπl → Copy ty → CopyC  ((p ◁ ty) +:: T) (vπ -:: vπl).
+  Proof. rewrite /CopyC=> *. rewrite tctx_interp_cons. apply _. Qed.
 
   (** Send typing contexts *)
-  Class SendC {As} (T : tctx As) Vs :=
-    sendc_change_tid tid1 tid2 : tctx_interp tid1 T Vs -∗ tctx_interp tid2 T Vs.
+  Class SendC {As} (T: tctx As) vπl :=
+    sendc_change_tid tid1 tid2: tctx_interp tid1 T vπl ⊣⊢ tctx_interp tid2 T vπl.
 
-  Global Instance tctx_nil_send : SendC +[] +[].
+  Global Instance tctx_nil_send : SendC +[] -[].
   Proof. done. Qed.
 
-  Global Instance tctx_ty_send {A As} (T : tctx As) Vs p (ty : type A) vπ :
-    SendC T Vs → Send ty → SendC ((p ◁ ty) +:: T) (vπ +:: Vs).
+  Global Instance tctx_ty_send {A As} (T : tctx As) vπl p (ty : type A) vπ :
+    SendC T vπl → Send ty → SendC (p ◁ ty +:: T) (vπ -:: vπl).
   Proof.
-    iIntros (HT Hty ??). rewrite !tctx_interp_cons.
-    iIntros "[Hty HT]". iSplitR "HT".
-    - iDestruct "Hty" as (??) "(? & % & Hty)". iExists _, _.
-      iSplit; first done. iSplit; first done. by iApply Hty.
-    - by iApply HT.
+    move=> Eq Eq' >. rewrite !tctx_interp_cons Eq. f_equiv.
+    rewrite /tctx_elt_interp. do 6 f_equiv. by rewrite Eq'.
   Qed.
 
-
   (** Type context inclusion *)
-  Definition tctx_incl {A1 A2} (E : elctx) (L : llctx) (T1 : tctx A1) (T2 : tctx A2) (f : (xprod A2 → Prop) → xprod A1 → Prop) : Prop :=
-    ∀ tid q2 V post, lft_ctx -∗ elctx_interp E -∗ llctx_interp L q2 -∗
-              tctx_interp tid T1 V -∗ ⟨ π , f (post π) (tctx_values π V) ⟩ ={⊤}=∗ ∃ V2, llctx_interp L q2 ∗ ⟨ π, post π (tctx_values π V2) ⟩ ∗ tctx_interp tid T2 V2.
+  Definition tctx_incl {As Bs} (E: elctx) (L: llctx) (T: tctx As) (T': tctx Bs)
+    (tr: pred_trans As Bs) : Prop :=
+    ∀tid q vπl post, lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+      tctx_interp tid T vπl -∗ ⟨π, tr (post π) (vπl -$ π)⟩ ={⊤}=∗ ∃vπl',
+      llctx_interp L q ∗ ⟨π, post π (vπl' -$ π)⟩ ∗ tctx_interp tid T' vπl'.
   (* Global Instance : ∀ A E L f, RewriteRelation (@tctx_incl A A E L f) := {}. *)
 
   (* Global Instance tctx_incl_preorder A E L : PreOrder (@tctx_incl A A E L).
@@ -212,22 +179,19 @@ Section type_context.
       by iMod (H2 with "LFT HE HL H") as "($ & $)".
   Qed. *)
 
-  Lemma tctx_incl_reflexive {A} E L (T : tctx A) : tctx_incl E L T T id. 
-    iIntros (?? V?) "#LFT #HE HL ??".
-    iExists V.
-    by iFrame. 
-  Qed.
+  Lemma tctx_incl_reflexive {As} E L (T : tctx As) : tctx_incl E L T T id.
+  Proof. move=> ?? vπl ?. iIntros. iExists vπl. by iFrame. Qed.
 
   Lemma tctx_incl_transitive E L A B C (x : tctx A) (y : tctx B) (z : tctx C) f g :
     tctx_incl E L x y f → tctx_incl E L y z g → tctx_incl E L x z (f ∘ g).
   Proof.
-    iIntros (H1 H2 tid q V post) "#LFT #HE HL H Hp".
+    move=> H1 H2 ?? vπl ?. iIntros "#LFT #HE HL H Hp".
     iMod (H1 with "LFT HE HL H Hp") as (?) "(HL & Hp1 & H)".
-    iMod (H2 with "LFT HE HL H Hp1") as (?) "(? & Hp2 & ?)".
-    iExists V0. by iFrame. 
+    iMod (H2 with "LFT HE HL H Hp1") as (vπl'') "(? & Hp2 & ?)".
+    iExists vπl''. by iFrame.
   Qed.
 
-(* 
+(*
   Definition xprod_hsubmseteq {As Bs} {T1 : tctx As} {T2 : tctx Bs} (sub : T1 ⊆+ₕ T2) : xprod Bs → xprod As.
     intros. dependent induction sub; simpl in *; intuition.
   Qed. *)
@@ -236,21 +200,25 @@ Section type_context.
   Proof.
     rewrite /tctx_incl. iIntros (??) "_ _ $ H". by iApply big_sepHL_submseteq.
   Qed. *)
-  Definition trans_app {A B C D} (f : (Π! A → Prop) → Π! B → Prop) (g : (Π! C → Prop) → Π! D → Prop) : (Π! (A ^++ C) → Prop) → Π! (B ^++ D) → Prop := 
-    λ post bd, f (λ a, g (λ c, post (a -++ c)) (xprod_split_r bd)) (xprod_split_l bd).
 
-  Lemma tctx_incl_app {As Bs Cs Ds} E L (T1 : tctx As) (T1' : tctx Bs) f (T2 : tctx Cs) (T2' : tctx Ds) g:  
-    tctx_incl E L T1 T1' f → tctx_incl E L T2 T2' g → tctx_incl E L (T1 h++ T2) (T1' h++ T2') (trans_app f g).
+  Definition trans_app {As Bs Cs Ds} (f : pred_trans As Bs) (g : pred_trans Cs Ds)
+    : pred_trans (As ^++ Cs) (Bs ^++ Ds) :=
+    λ post bd, f (λ a, g (λ c, post (a -++ c)) (psepr bd)) (psepl bd).
+
+  Lemma tctx_incl_app {As Bs Cs Ds} E L (T1 : tctx As) (T1' : tctx Bs) f (T2: tctx Cs) (T2': tctx Ds) g:
+    tctx_incl E L T1 T1' f → tctx_incl E L T2 T2' g →
+    tctx_incl E L (T1 h++ T2) (T1' h++ T2') (trans_app f g).
   Proof.
-    intros Hincl1 Hincl2 ????. destruct (hlist_app_split V) as (? & ? & ->). rewrite /tctx_incl /tctx_interp !big_sepHLZip'_app.
-    iIntros "#LFT #HE HL [H1 H2] #HP".
-    iMod (Hincl1 with "LFT HE HL H1 [HP]")  as (W1) "(HL & Hp1 & ?)".
-    { by rewrite /trans_app; setoid_rewrite tctx_values_split_l. }
-    iMod (Hincl2 with "LFT HE HL H2 [Hp1]") as (W2) "(HL & Hp2 & ?)".
-    { by setoid_rewrite tctx_values_split_r. }
-    iExists (W1 h++ W2).
-    rewrite big_sepHLZip'_app.
-    iFrame; by setoid_rewrite tctx_values_distr. 
+    move=> Hincl1 Hincl2 ?? vπl ?. move: (papp_ex vπl)=> [?[?->]].
+    rewrite /tctx_incl tctx_interp_app.
+    iIntros "#LFT #HE HL [H1 H2] HP".
+    iMod (Hincl1 with "LFT HE HL H1 [HP]")  as (wπl) "(HL & Hp1 & ?)".
+    { iApply proph_obs_weaken; [|done]=> ?.
+      rewrite /trans_app papply_app papp_sepl papp_sepr. exact id. }
+    iMod (Hincl2 with "LFT HE HL H2 [Hp1]") as (wπl') "(HL & Hp2 & ?)".
+    { iApply proph_obs_weaken; [|done]=> ?. exact id. }
+    iExists (wπl -++ wπl'). rewrite tctx_interp_app. iFrame.
+    iApply proph_obs_weaken; [|done]=>/= ?. rewrite papply_app. exact id.
   Qed.
 
   (* Lemma tctx_incl_frame_l {E L As Bs Cs} (T :tctx As) (T1 : tctx Bs) (T2 : tctx Cs) f:
@@ -262,9 +230,9 @@ Section type_context.
   Proof.  intros. by apply tctx_incl_app, tctx_incl_reflexive. Qed.
   *)
 
-  Lemma tcx_incl_cons {A As Bs} E L (x : tctx_elt A) (T1 : tctx As) (T2 : tctx Bs) f : 
-    tctx_incl E L T1 T2 f → 
-    tctx_incl E L (x +:: T1) (x +:: T2) (trans_app (id : (Π! ^[A] → Prop) → Π! ^[A] → Prop )  f).
+  Lemma tcx_incl_cons {A As Bs} E L (x : tctx_elt A) (T1 : tctx As) (T2 : tctx Bs) f :
+    tctx_incl E L T1 T2 f →
+    tctx_incl E L (x +:: T1) (x +:: T2) (trans_app (id: pred ^[A] → _) f).
   Proof.
     apply (tctx_incl_app E L +[_] +[_]), tctx_incl_reflexive.
   Qed.
@@ -274,7 +242,7 @@ Section type_context.
     tctx_incl E L +[p ◁ ty] +[p ◁ ty; p ◁ ty] (λ x, xprod_merge x x).
   Proof. iIntros (??) "_ _ $ * [#$ $] //". Qed. *)
 
-(* 
+(*
   Lemma copy_elem_of_tctx_incl E L A As (T : tctx As) p `{!Copy (ty : type A)} :
     p ◁ ty ∈ T → tctx_incl E L T ((p ◁ ty) +:: T).
   Proof.
@@ -286,7 +254,7 @@ Section type_context.
     iIntros (Hst ??) "#LFT #HE HL [H _]".
     iDestruct "H" as (v depth) "(? & % & H)".
     iDestruct (Hst with "HL HE") as "#(_ & _ & Ho & _)". iFrame "HL".
-    iApply big_sepHL_singleton. iExists _, _. 
+    iApply big_sepHL_singleton. iExists _, _.
     iFrame "%∗". by iApply "Ho".
   Qed. *)
 
@@ -306,11 +274,11 @@ Section type_context.
     intros.
     eapply tctx_incl_transitive;
       [eapply tcx_incl_cons, H| apply contains_tctx_incl].
-      
+
     Unshelve.
     constructor.
   Qed. *)
-    
+
   (* Lemma tctx_extract_hasty_here_copy {A B As} E L f p1 p2 (ty : type A)  (ty' : type B)  (T : tctx As) :
     p1 = p2 → Copy ty → subtype E L f ty ty' →
     tctx_extract_hasty E L p1 ty' (f ∘ ) ((p2 ◁ ty)+::T) ((p2 ◁ ty [{ }])+::T) (λ p, (f p.1, p)).
@@ -329,7 +297,7 @@ Section type_context.
   Lemma tctx_extract_hasty_here_eq {A As} E L p1 p2 (ty : type A)  (T : tctx As) :
     p1 = p2 → tctx_extract_hasty E L p1 ty  ((p2 ◁ ty)+::T) T id.
   Proof. intros ->. by eapply (tctx_extract_hasty_here _ _ id), subtype_refl. Qed. *)
-(* 
+(*
   Definition tctx_extract_blocked {A As Bs} E L p κ (ty : type A)  (T : tctx As) (T' : tctx Bs) f : Prop :=
     tctx_incl E L T ((p ◁{κ} ty)+::T') (λ A,  +:: f). *)
 
@@ -341,7 +309,7 @@ Section type_context.
     intros.
     eapply tctx_incl_transitive;
       [eapply tcx_incl_cons, H| apply contains_tctx_incl].
-      
+
     Unshelve.
     constructor.
   Qed. *)
@@ -357,17 +325,16 @@ Section type_context.
     tctx_extract_ctx E L +[] T T id.
   Proof. apply tctx_incl_reflexive. Qed.
 
-  Definition tctx_extract_ctx_hasty_trans {A As Bs Cs Ds} 
-    (f : (Π! (A ^:: Cs) → Prop) → Π! Bs → Prop ) 
-    (g : (Π! (As ^++ Ds) → Prop) → Π! Cs → Prop)
-  : (Π! ((A ^:: As) ^++ Ds) → Prop) → Π! Bs → Prop := 
-  λ post b, f (λ '(a -:: c),  g (λ ad, post (a -:: ad)) c) b.
+  Definition tctx_extract_ctx_hasty_trans {A As Bs Cs Ds}
+    (f : pred_trans Bs (A ^:: Cs)) (g : pred_trans Cs (As ^++ Ds))
+    : pred_trans Bs ((A ^:: As) ^++ Ds) :=
+    λ post b, f (λ '(a -:: c),  g (λ ad, post (a -:: ad)) c) b.
 
   Lemma tctx_extract_ctx_hasty {A As Bs Cs Ds} E L (T : tctx As) (T1 : tctx Bs) (T2 : tctx Cs) (T3 : tctx Ds) p (ty : type A) f g:
     tctx_extract_hasty E L p ty T1 T2 f → tctx_extract_ctx E L T T2 T3 g →
-    tctx_extract_ctx E L ((p ◁ ty)+::T) T1 T3 (f ∘ trans_app (id : (Π! ^[A] → Prop) → _) g).
+    tctx_extract_ctx E L ((p ◁ ty)+::T) T1 T3 (f ∘ trans_app (id: pred ^[A] → _) g).
   Proof. unfold tctx_extract_ctx, tctx_extract_hasty => ??.
-    eapply tctx_incl_transitive; [eassumption |  by eapply tcx_incl_cons]. 
+    eapply tctx_incl_transitive; [eassumption |  by eapply tcx_incl_cons].
   Qed.
   (*
   Lemma tctx_extract_ctx_blocked {A As Bs Cs Ds} E L (T : tctx As) (T1 : tctx Bs) (T2 : tctx Cs) (T3 : tctx Ds) p κ (ty : type A) :
@@ -419,7 +386,7 @@ End type_context.
 Global Hint Resolve tctx_extract_hasty_here | 20 : lrust_typing.
 Global Hint Resolve tctx_extract_hasty_further | 50 : lrust_typing. *)
 Global Hint Resolve (* tctx_extract_blocked_here tctx_extract_blocked_cons *)
-             tctx_extract_ctx_nil tctx_extract_ctx_hasty 
+             tctx_extract_ctx_nil tctx_extract_ctx_hasty
              (* tctx_extract_ctx_blocked tctx_extract_ctx_incl *) : lrust_typing.
 Global Hint Opaque tctx_extract_ctx (* tctx_extract_hasty tctx_extract_blocked *)
             tctx_incl : lrust_typing.

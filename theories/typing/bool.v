@@ -17,32 +17,30 @@ Section bool.
 
   Global Instance bool_send: Send bool_ty. Proof. done. Qed.
 
-  Lemma type_bool_instr (b : Datatypes.bool) : typed_val #b bool_ty (λ post _, post -[b]).
+  Lemma type_bool_instr b : typed_val #b bool_ty (λ post _, post -[b]).
   Proof.
     iIntros (E L tid post ?) "_ _ _ $ $ _ ?". iMod persistent_time_receipt_0 as "#H0".
-    iApply wp_value. iExists +[const b]. iFrame. rewrite tctx_interp_singleton tctx_hasty_val' //. 
+    iApply wp_value. iExists -[const b]. iFrame. rewrite tctx_interp_singleton tctx_hasty_val' //.
     iExists 0%nat. iFrame "H0". eauto.
   Qed.
 
-  Lemma type_bool {As} (b : Datatypes.bool) E L C (T : tctx As) x e pre:
+  Lemma type_bool {As} b E L C (T: _ As) x e pre:
     Closed (x :b: []) e →
-    (∀ (v : val), typed_body E L C ((v ◁ bool_ty) +:: T) (subst' x v e) pre) -∗
+    (∀(v: val), typed_body E L C (v ◁ bool_ty +:: T) (subst' x v e) pre) -∗
     typed_body E L C T (let: x := #b in e) (λ p, pre (b -:: p)).
-  Proof. iIntros. iApply type_let; [apply type_bool_instr|solve_typing|done|done]. Qed. 
-  
+  Proof. iIntros. iApply type_let; by [apply type_bool_instr|solve_typing| |]. Qed.
+
   Lemma type_if {As} E L C (T : tctx As) e1 e2 p pre1 pre2:
-    p ◁ bool_ty ∈ T →
     typed_body E L C T e1 pre1 -∗ typed_body E L C T e2 pre2 -∗
-    typed_body E L C T (if: p then e1 else e2) (λ a, pre1 a /\ pre2 a).
+    typed_body E L C (p ◁ bool_ty +:: T) (if: p then e1 else e2)
+      (λ '(b -:: vl), if b then pre1 vl else pre2 vl).
   Proof.
-    iIntros (Hp) "He1 He2". iIntros (tid V) "#LFT #TIME #HE Htl HL HC HT Hv".
-    iDestruct (big_sepHLZip'_elem_of _ _ _ _ Hp with "HT") as (?) "#Hp".
-    wp_bind p. iApply (wp_hasty with "Hp").
-    iIntros (depth [[| |[|[]|]]|]) "_ _ H1"; try (iDestruct "H1" as ([|]) "[_ %]"; done); wp_case.
-    - iApply ("He2" with "LFT TIME HE Htl HL HC HT"). 
-      iApply (proph_obs_weaken with "Hv"). move => ? [? ?] //.
-    - iApply ("He1" with "LFT TIME HE Htl HL HC HT").
-      iApply (proph_obs_weaken with "Hv"); move => ? [? ?] //.
+    iIntros "He1 He2". iIntros (tid [bπ vπl]). rewrite tctx_interp_cons.
+    iIntros "#LFT #TIME #HE Htl HL HC [Hp HT] Hv". wp_bind p.
+    iApply (wp_hasty with "Hp"). iIntros (?? _) "_".
+    iDestruct 1 as (b->) "%Eq". move: Eq=> [=->]. wp_case. case b.
+    - by iApply ("He1" with "LFT TIME HE Htl HL HC HT").
+    - by iApply ("He2" with "LFT TIME HE Htl HL HC HT").
   Qed.
 
 End bool.
