@@ -1,7 +1,6 @@
 From lrust.lang Require Import proofmode memcpy.
 From lrust.typing Require Export type lft_contexts type_context cont_context.
 From lrust.util Require Import types.
-
 Set Default Proof Using "Type".
 
 Section typing.
@@ -14,7 +13,14 @@ Section typing.
     ∀tid vπl, lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
       llctx_interp L 1 -∗ cctx_interp tid C -∗ tctx_interp tid T vπl -∗
       ⟨π, pre (vπl -$ π)⟩ -∗ WP e {{ _, cont_postcondition }}.
-  Global Arguments typed_body _ _ _ _ _ _%E.
+  Global Arguments typed_body {_} _ _ _ _ _%E _.
+
+  Lemma typed_body_impl {As} (pre pre': _ → Prop) E L C (T: _ As) e :
+    (∀vl, pre vl → pre' vl) → typed_body E L C T e pre' -∗ typed_body E L C T e pre.
+  Proof.
+    move=> Imp. rewrite /typed_body. do 12 f_equiv=>/=. do 2 f_equiv. move=> ?.
+    by apply Imp.
+  Qed.
 
   (* Global Instance typed_body_llctx_permut E :
     Proper ((≡ₚ) ==> eq ==> eq ==> eq ==> (⊢)) (typed_body E).
@@ -47,13 +53,13 @@ Section typing.
   Proof. intros ?????????. by eapply typed_body_mono. Qed. *)
 
   (** Instruction *)
-  Definition typed_instruction {As Bs} (E : elctx) (L : llctx)
-    (T: tctx As) (e : expr) (T': val → tctx Bs) (tr: pred_trans As Bs): iProp Σ :=
-    (∀ tid post vπl, lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
-      llctx_interp L 1 -∗ tctx_interp tid T vπl -∗ ⟨π, tr (post π) (vπl -$ π) ⟩ -∗
-      WP e {{ 𝔳, ∃vπl', (na_own tid ⊤ ∗
-        llctx_interp L 1 ∗ tctx_interp tid (T' 𝔳) vπl' ∗  ⟨π, post π (vπl' -$ π)⟩ )}})%I.
-  Global Arguments typed_instruction _ _ _ _ _ _ _%E _.
+  Definition typed_instruction {As Bs} (E: elctx) (L: llctx)
+    (T: tctx As) (e: expr) (T': val → tctx Bs) (tr: pred_trans As Bs) : iProp Σ :=
+    ∀tid post vπl, lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
+      llctx_interp L 1 -∗ tctx_interp tid T vπl -∗ ⟨π, tr (post π) (vπl -$ π)⟩ -∗
+      WP e {{ v, ∃vπl', na_own tid ⊤ ∗ llctx_interp L 1 ∗
+        tctx_interp tid (T' v) vπl' ∗ ⟨π, post π (vπl' -$ π)⟩ }}.
+  Global Arguments typed_instruction _ _ _ _ _ _%E _ _.
 
   (* * Writing and Reading *
   Definition typed_write_def (E : elctx) (L : llctx) (ty1 ty ty2 : type) : iProp Σ :=
@@ -93,21 +99,21 @@ Section typing.
   Proof. rewrite typed_read_eq. apply _. Qed. *)
 End typing.
 
-Definition typed_instruction_ty {As A} `{!typeG Σ} (E : elctx) (L : llctx) (T : tctx As)
-    (e : expr) (ty : type A) pre : iProp Σ :=
-  typed_instruction E L T e (λ 𝔳, +[𝔳 ◁ ty]) pre.
-Arguments typed_instruction_ty {_ _} {_ _} _ _ _ _%E _%T _.
+Definition typed_instruction_ty `{!typeG Σ} {As A} (E: elctx) (L: llctx)
+  (T: tctx As) (e: expr) (ty: type A) pre : iProp Σ :=
+  typed_instruction E L T e (λ v, +[v ◁ ty]) pre.
+Arguments typed_instruction_ty {_ _ _ _} _ _ _ _%E _%T _.
 
-Definition typed_val {A} `{!typeG Σ} (v : val) (ty : type A) pre : Prop :=
-  ∀ E L, ⊢ typed_instruction_ty E L +[] (of_val v) ty pre.
-Arguments typed_val {_} {_ _} _%V _%T.
+Definition typed_val `{!typeG Σ} {A} (v: val) (ty: type A) pre : Prop :=
+  ∀E L, ⊢ typed_instruction_ty E L +[] (of_val v) ty pre.
+Arguments typed_val {_ _ _} _%V _%T.
 
 Section typing_rules.
   Context `{!typeG Σ}.
 
   (* This lemma is helpful when switching from proving unsafe code in Iris
      back to proving it in the type system. *)
-  Lemma type_type {As} E L C (T : tctx As) e p:
+  Lemma type_type {As} E L C (T: tctx As) e p:
     typed_body E L C T e p -∗ typed_body E L C T e p.
   Proof. done. Qed.
 
@@ -123,27 +129,22 @@ Section typing_rules.
     rewrite /elctx_interp /=. by iFrame.
   Qed. *)
 
-  Definition trans_frame {As Bs Cs} (tr: pred_trans As Bs)
-    : pred_trans (As ^++ Cs) (Bs ^++ Cs) :=
-    λ post ao, tr (λ a2, post (a2 -++ psepr ao)) (psepl ao).
-
   Lemma type_let' {As Bs Cs} E L (T1: _ As) (T2: _ → _ Bs) (T : _ Cs) C xb e e' tr pre:
-    Closed (xb :b: []) e' →
-    typed_instruction E L T1 e T2 tr -∗
+    Closed (xb :b: []) e' → typed_instruction E L T1 e T2 tr -∗
     (∀ v : val, typed_body E L C (T2 v h++ T) (subst' xb v e') pre) -∗
-    typed_body E L C (T1 h++ T) (let: xb := e in e') (trans_frame tr pre).
+    typed_body E L C (T1 h++ T) (let: xb := e in e') (trans_upper tr pre).
   Proof.
     iIntros (Hc) "He He'". iIntros (tid vπl_) "#LFT #TIME #HE Htl HL HC HT #Hp".
     move: (papp_ex vπl_)=> [vπl[vπl'->]]. rewrite tctx_interp_app.
     iDestruct "HT" as "[HT1 HT]". wp_bind e. iApply (wp_wand with "[He HL HT1 Htl]").
     {
-      iApply ("He" with "LFT TIME HE Htl HL HT1 [Hp]"). iApply proph_obs_weaken;
-      [|done]=> ?. rewrite /trans_frame papply_app papp_sepl. exact id.
+      iApply ("He" with "LFT TIME HE Htl HL HT1 [Hp]"). iApply proph_obs_impl;
+      [|done]=> ?. rewrite /trans_upper papply_app papp_sepl. exact id.
     }
     iIntros (v). iIntros "Hx". iDestruct "Hx" as (vπ) "(Htl & HL & HT2 & ?)".  wp_let.
     iApply ("He'" $! v tid (vπ -++ vπl') with "LFT TIME HE Htl HL HC [HT2 HT]").
     rewrite tctx_interp_app. by iFrame. iClear "Hp".
-    iApply proph_obs_weaken; [|done]=>/= ?. rewrite papply_app papp_sepr. exact id.
+    iApply proph_obs_impl; [|done]=>/= ?. rewrite papply_app papp_sepr. exact id.
   Qed.
 (*
   Lemma incl_values_compat {A B C } E L (T : tctx A) (T1 : tctx B) (T2 : tctx C) π f:
@@ -151,9 +152,9 @@ Section typing_rules.
     f (tctx_values π T) = tctx_values π (T1 h++ T2).
   Proof. *)
 
-  Lemma type_body_incl {A B} E L C (T : tctx A) (T' : tctx B) e pre f:
-    tctx_incl E L T T' f →
-    typed_body E L C T' e pre -∗ typed_body E L C T e (f pre).
+  Lemma typed_body_tctx_incl {A B} E L C (T: tctx A) (T': tctx B) e pre tr :
+    tctx_incl E L T T' tr →
+    typed_body E L C T' e pre -∗ typed_body E L C T e (tr pre).
   Proof.
     iIntros (?) "Hb".
     iIntros (tid V) "#LFT #TIME #HE Htl HL HC HT #Hp".
@@ -166,17 +167,16 @@ Section typing_rules.
      hypotheses. The is important, since proving [typed_instruction]
      will instantiate [T1] and [T2], and hence we know what to search
      for the following hypothesis. *)
-  Lemma type_let {A B Cs D} E L (T : tctx D) (T' : tctx Cs) (T1 : tctx A) (T2 : val → tctx B) C xb e e' trans pre f g:
-    Closed (xb :b: []) e' →
-    (⊢ typed_instruction E L T1 e T2 trans) →
-    tctx_extract_ctx E L T1 T T' f →
-    f (trans_frame trans pre) = g →
-    (∀ v : val, typed_body E L C (T2 v h++ T') (subst' xb v e') pre) -∗
-    typed_body E L C T (let: xb := e in e') g.
+  Lemma type_let {As Bs Cs Ds} E L (T: tctx Ds) (T' : tctx Cs)
+    (T1: _ As) (T2: _ → _ Bs) C xb e e' tr tr' pre tr_res :
+    Closed (xb :b: []) e' → (⊢ typed_instruction E L T1 e T2 tr) →
+    tctx_extract_ctx E L T1 T T' tr' →
+    tr_res = tr' (trans_upper tr pre) →
+    (∀v: val, typed_body E L C (T2 v h++ T') (subst' xb v e') pre) -∗
+    typed_body E L C T (let: xb := e in e') tr_res.
   Proof.
-    unfold tctx_extract_ctx. iIntros (? He ? <-) "?".
-    rewrite -(type_body_incl _ _ _ _ _ _ _ _ H0).
-    iApply type_let'; done.
+    rewrite /tctx_extract_ctx=> ???->. iIntros.
+    rewrite -typed_body_tctx_incl; [|done]. by iApply type_let'.
   Qed.
 
   (*

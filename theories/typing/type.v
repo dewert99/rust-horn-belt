@@ -1,3 +1,4 @@
+Require Import Equality.
 From iris.algebra Require Import numbers list.
 From iris.base_logic Require Export na_invariants.
 From lrust.util Require Export basic update types.
@@ -22,8 +23,8 @@ Definition thread_id := na_inv_pool_name.
 
 Record type `{!typeG Σ} A := {
   ty_size: nat;  ty_lfts: list lft;  ty_E: elctx;
-  ty_own: (proph_asn → A) → nat → thread_id → list val → iProp Σ;
-  ty_shr: (proph_asn → A) → nat → lft → thread_id → loc → iProp Σ;
+  ty_own: proph A → nat → thread_id → list val → iProp Σ;
+  ty_shr: proph A → nat → lft → thread_id → loc → iProp Σ;
 
   ty_shr_persistent vπ d κ tid l : Persistent (ty_shr vπ d κ tid l);
 
@@ -130,7 +131,7 @@ Bind Scope lrust_type_scope with type.
 
 Record simple_type `{!typeG Σ} A := {
   st_size: nat;  st_lfts: list lft;  st_E: elctx;
-  st_own: (proph_asn → A) → nat → thread_id → list val → iProp Σ;
+  st_own: proph A → nat → thread_id → list val → iProp Σ;
   st_own_persistent vπ d tid vl : Persistent (st_own vπ d tid vl);
   st_size_eq vπ d tid vl : st_own vπ d tid vl -∗ ⌜length vl = st_size⌝;
   st_own_depth_mono d d' vπ tid vl :
@@ -230,8 +231,8 @@ Section ofe.
 
   Definition type_unpack {A} (ty: type A)
     : prodO (prodO (prodO (prodO natO (listO lftO)) (listO (prodO lftO lftO)))
-      ((proph_asn → A) -d> nat -d> thread_id -d> list val -d> iPropO Σ))
-      ((proph_asn → A) -d> nat -d> lft -d> thread_id -d> loc -d> iPropO Σ) :=
+      (proph A -d> nat -d> thread_id -d> list val -d> iPropO Σ))
+      (proph A -d> nat -d> lft -d> thread_id -d> loc -d> iPropO Σ) :=
     (ty.(ty_size), ty.(ty_lfts), ty.(ty_E), ty.(ty_own), ty.(ty_shr)).
 
   Definition type_ofe_mixin {A} : OfeMixin (type A).
@@ -246,33 +247,33 @@ Section ofe.
   Global Instance typel_equiv {As} : Equiv (typel As) := @hlist_equiv type _ _.
   Global Instance typel_dist {As} : Dist (typel As) := @hlist_dist typeO _.
 
-  Global Instance ty_size_ne {A} n : Proper (dist n ==> (=)) (@ty_size _ _ A).
+  Global Instance ty_size_ne {A} n : Proper ((≡{n}≡) ==> (=)) (@ty_size _ _ A).
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_size_proper {A} : Proper ((≡) ==> (=)) (@ty_size _ _ A).
   Proof. move=> ?? Eqv. apply Eqv. Qed.
-  Global Instance ty_lfts_ne {A} n : Proper (dist n ==> (=)) (@ty_lfts _ _ A).
+  Global Instance ty_lfts_ne {A} n : Proper ((≡{n}≡) ==> (=)) (@ty_lfts _ _ A).
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_lfts_proper {A} : Proper ((≡) ==> (=)) (@ty_lfts _ _ A).
   Proof. move=> ?? Eqv. apply Eqv. Qed.
-  Global Instance ty_E_ne {A} n : Proper (dist n ==> (=)) (@ty_E _ _ A).
+  Global Instance ty_E_ne {A} n : Proper ((≡{n}≡) ==> (=)) (@ty_E _ _ A).
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_E_proper {A} : Proper ((≡) ==> (=)) (@ty_E _ _ A).
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_outlives_E_ne {A} n :
-    Proper (dist n ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
+    Proper ((≡{n}≡) ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
   Proof. rewrite /ty_outlives_E. by move=> ?? [_ -> _ _ _]. Qed.
   Global Instance ty_outlives_E_proper {A} :
     Proper ((≡) ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
   Proof. rewrite /ty_outlives_E. by move=> ?? [_ -> _ _ _]. Qed.
 
   Global Instance ty_own_ne {A} n:
-    Proper (dist n ==> (=) ==> (=) ==> (=) ==> (=) ==> dist n) (@ty_own _ _ A).
+    Proper ((≡{n}≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) (@ty_own _ _ A).
   Proof. move=> ?? Eqv ??->??->??->??->. apply Eqv. Qed.
   Global Instance ty_own_proper {A} :
     Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) (@ty_own _ _ A).
   Proof. move=> ?? Eqv ??->??->??->??->. apply Eqv. Qed.
   Global Instance ty_shr_ne {A} n :
-    Proper (dist n ==> (=) ==> (=) ==> (=) ==> (=) ==> (=) ==> dist n) (@ty_shr _ _ A).
+    Proper ((≡{n}≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) (@ty_shr _ _ A).
   Proof. move=> ?? Eqv ??->??->??->??->??->. apply Eqv. Qed.
   Global Instance ty_shr_proper {A} :
     Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) (@ty_shr _ _ A).
@@ -300,7 +301,7 @@ Section ofe.
   Canonical Structure simple_typeO A : ofe := Ofe (simple_type A) simple_type_ofe_mixin.
 
   Global Instance st_own_ne n {A} :
-    Proper (dist n ==> (=) ==> (=) ==> (=) ==> (=) ==> dist n) (@st_own _ _ A).
+    Proper ((≡{n}≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) (@st_own _ _ A).
   Proof. move=> ?? Eqv ??->??->??->??->. apply Eqv. Qed.
   Global Instance st_own_proper {A} :
     Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) (@st_own _ _ A).
@@ -341,7 +342,7 @@ Section ofe.
   Canonical Structure plain_typeO A : ofe := Ofe (plain_type A) plain_type_ofe_mixin.
 
   Global Instance pt_own_ne n {A} :
-    Proper (dist n ==> (=) ==> (=) ==> (=) ==> dist n) (@pt_own _ _ A).
+    Proper ((≡{n}≡) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) (@pt_own _ _ A).
   Proof. move=> ?? Eqv ??->??->??->. apply Eqv. Qed.
   Global Instance pt_own_proper {A} :
     Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (≡)) (@pt_own _ _ A).
@@ -809,19 +810,33 @@ Section subtyping.
 
   Definition subtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
     (fl: plist2 (→) As Bs) : Prop :=
-    HForallZip (λ _ _ ty ty' f, subtype E L f ty ty') tyl tyl' fl.
+    HForall2_1 (λ _ _ ty ty' f, subtype E L f ty ty') tyl tyl' fl.
   Definition eqtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
     (fl: plist2 (→) As Bs) (gl: plist2 (→) Bs As) : Prop :=
-    HForallZip (λ _ _ ty ty' '(f, g), eqtype E L f g ty ty') tyl tyl'
-      (p2zip fl (p2flip gl)).
+    HForall2_2flip (λ _ _ ty ty' f g, eqtype E L f g ty ty') tyl tyl' fl gl.
 
   Lemma subtypel_nil E L : subtypel E L +[] +[] -[].
+  Proof. constructor. Qed.
+
+  Lemma eqtypel_nil E L : eqtypel E L +[] +[] -[] -[].
   Proof. constructor. Qed.
 
   Lemma subtypel_cons {A B As Bs} (f: A → B) (fl: _ As Bs) ty ty' tyl tyl' E L :
     subtype E L f ty ty' → subtypel E L tyl tyl' fl →
     subtypel E L (ty +:: tyl) (ty' +:: tyl') (f -:: fl).
   Proof. by constructor. Qed.
+
+  Lemma eqtypel_cons {A B As Bs} (f: A → B) g (fl: _ As Bs) gl ty ty' tyl tyl' E L :
+    eqtype E L f g ty ty' → eqtypel E L tyl tyl' fl gl →
+    eqtypel E L (ty +:: tyl) (ty' +:: tyl') (f -:: fl) (g -:: gl).
+  Proof. by constructor. Qed.
+
+  Lemma eqtypel_subtypel {As Bs} (fl: _ As Bs) gl tyl tyl' E L :
+    eqtypel E L tyl tyl' fl gl →
+    subtypel E L tyl tyl' fl ∧ subtypel E L tyl' tyl gl.
+  Proof.
+    elim; [split; by constructor|]=>/= > [??] _ [??]; split; by constructor.
+  Qed.
 
   Lemma subtypel_llctx_nth {C As Bs} (ty: _ C) (tyl: _ As) (tyl': _ Bs) fl q E L :
     subtypel E L tyl tyl' fl → llctx_interp L q -∗ □ (elctx_interp E -∗
@@ -916,7 +931,7 @@ Section type_util.
     Proper ((=) ==> pointwise_relation _ (⊣⊢) ==> (⊣⊢)) by_succ.
   Proof. move=> ??->?? Eq. rewrite !by_succ_ex. by setoid_rewrite Eq. Qed.
   Global Instance by_succ_ne n :
-    Proper ((=) ==> pointwise_relation _ (dist n) ==> (dist n)) by_succ.
+    Proper ((=) ==> pointwise_relation _ (≡{n}≡) ==> (≡{n}≡)) by_succ.
   Proof. move=> ??->?? Eq. rewrite !by_succ_ex. by setoid_rewrite Eq. Qed.
   Global Instance by_succ_mono :
     Proper ((=) ==> pointwise_relation _ (⊢) ==> (⊢)) by_succ.
@@ -936,7 +951,7 @@ Section type_util.
     Proper ((=) ==> pointwise_relation _ (⊣⊢) ==> (⊣⊢)) by_just_loc.
   Proof. move=> ??->?? Eq. rewrite !by_just_loc_ex. by setoid_rewrite Eq. Qed.
   Global Instance by_just_loc_ne n :
-    Proper ((=) ==> pointwise_relation _ (dist n) ==> (dist n)) by_just_loc.
+    Proper ((=) ==> pointwise_relation _ (≡{n}≡) ==> (≡{n}≡)) by_just_loc.
   Proof. move=> ??->?? Eq. rewrite !by_just_loc_ex. by setoid_rewrite Eq. Qed.
   Global Instance by_just_loc_mono :
     Proper ((=) ==> pointwise_relation _ (⊢) ==> (⊢)) by_just_loc.

@@ -70,8 +70,8 @@ Section S.
   Qed.
   Program Definition own_shr_chain :=
     {| chain_car n := ((Tn (3 + n)).(ty_own), (Tn (3 + n)).(ty_shr)) :
-        prodO ((proph_asn → A) -d> nat -d> thread_id -d> list val -d> iPropO Σ)
-          ((proph_asn → A) -d> nat -d> lft -d> thread_id -d> loc -d> iPropO Σ) |}.
+        prodO (proph A -d> nat -d> thread_id -d> list val -d> iPropO Σ)
+          (proph A -d> nat -d> lft -d> thread_id -d> loc -d> iPropO Σ) |}.
   Next Obligation.
     move=> n i Hni. split=>/=.
     - move=> >. apply (Tn_cauchy (S _)). lia.

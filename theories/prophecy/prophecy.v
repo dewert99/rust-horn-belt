@@ -15,14 +15,14 @@ Coercion pt_ty: ptType >-> Sortclass.
 Implicit Type Ap Bp: ptType.
 
 (** We use classical axioms only here. *)
-Global Instance pt_type_eq_dec : EqDecision ptType :=
+Global Instance pt_type_eq_dec: EqDecision ptType :=
   { decide_rel _ _ := excluded_middle_informative _ }.
 
 (** * Basic Notions *)
 
 Record proph_var := PVar { pv_ty: ptType; pv_id: positive }.
 
-Global Instance proph_var_eq_dec : EqDecision proph_var.
+Global Instance proph_var_eq_dec: EqDecision proph_var.
 Proof. solve_decision. Qed.
 
 Implicit Type (ξ ζ: proph_var) (ξs ζs: list proph_var).
@@ -33,7 +33,9 @@ Coercion proph_var_of_proph_var': proph_var' >-> proph_var.
 
 Definition proph_asn := ∀ξ, ξ.(pv_ty).
 
-Global Instance proph_asn_inhabited : Inhabited proph_asn :=
+Definition proph A := proph_asn → A.
+
+Global Instance proph_asn_inhabited: Inhabited proph_asn :=
   populate (λ π, π.(pv_ty).(pt_val)).
 
 Implicit Type π: proph_asn.
@@ -95,7 +97,7 @@ Qed.
 (** * Prophecy Log *)
 
 Record proph_log_item :=
-  ProphLogItem { pli_pv: proph_var; pli_val: proph_asn → pli_pv.(pv_ty) }.
+  ProphLogItem { pli_pv: proph_var; pli_val: proph pli_pv.(pv_ty) }.
 Local Notation ".{ ξ := vπ }" := (ProphLogItem ξ vπ)
   (at level 1, format ".{ ξ  :=  vπ }").
 Local Notation "pli .pv" := pli.(pli_pv)
@@ -162,7 +164,7 @@ Proof. move=> ?. exists (inhabitant ! L). by apply proph_ok_modify_sat. Qed.
 Implicit Type q: Qp.
 
 Local Definition proph_itemR Ap :=
-  csumR fracR (agreeR (leibnizO (proph_asn → Ap))).
+  csumR fracR (agreeR (leibnizO (proph Ap))).
 Local Definition proph_gmapUR Ap := gmapUR positive (proph_itemR Ap).
 Local Definition proph_smryUR := discrete_funUR proph_gmapUR.
 Definition prophUR := authUR proph_smryUR.
@@ -177,7 +179,7 @@ Local Definition add_line ξ it S : proph_smryUR :=
 
 Definition prophΣ := #[GFunctor prophUR].
 Class prophPreG Σ := ProphPreG { proph_preG_inG:> inG Σ prophUR }.
-Class prophG Σ := ProphG { proph_inG:> prophPreG Σ; proph_name : gname }.
+Class prophG Σ := ProphG { proph_inG:> prophPreG Σ; proph_name: gname }.
 Instance subG_prophPreG {Σ} : subG prophΣ Σ → prophPreG Σ.
 Proof. solve_inG. Qed.
 
@@ -189,7 +191,7 @@ Local Definition proph_sim S L :=
   ∀Ap i vπ, S Ap !! i ≡ Some (aitem vπ) ↔ .{PVar Ap i := vπ} ∈ L.
 Local Notation "S :~ L" := (proph_sim S L) (at level 70, format "S  :~  L").
 
-Implicit Type (φπ ψπ: proph_asn → Prop) (φ ψ: Prop).
+Implicit Type (φπ ψπ: proph Prop) (φ ψ: Prop).
 
 Section defs.
 Context `{!invG Σ, !prophG Σ}.
@@ -214,7 +216,7 @@ Notation "q :[ ξ ]" := (proph_tok ξ q)
   (at level 2, left associativity, format "q :[ ξ ]") : bi_scope.
 Notation "q :+[ ξs ]" := ([∗ list] ξ ∈ ξs, q:[ξ])%I
   (at level 2, left associativity, format "q :+[ ξs ]") : bi_scope.
-Notation ".⟨ φπ ⟩" := (proph_obs φπ)
+Notation ".⟨ φπ ⟩" := (proph_obs φπ%type%stdpp)
   (at level 1, format ".⟨ φπ ⟩") : bi_scope.
 Notation "⟨ π , φ ⟩" := (proph_obs (λ π, φ%type%stdpp))
   (at level 1, format "⟨ π ,  φ ⟩") : bi_scope.
@@ -226,7 +228,7 @@ Context `{!invG Σ, !prophG Σ}.
 
 (** Instances *)
 
-Global Instance proph_ctx_persistent : Persistent proph_ctx := _.
+Global Instance proph_ctx_persistent: Persistent proph_ctx := _.
 
 Global Instance proph_tok_timeless q ξ : Timeless q:[ξ] := _.
 Global Instance proph_tok_fractional ξ : Fractional (λ q, q:[ξ]%I).
@@ -245,14 +247,13 @@ Global Instance proph_obs_timeless φπ : Timeless .⟨φπ⟩ := _.
 Global Instance proph_obs_proper :
   Proper (pointwise_relation _ (↔) ==> (⊣⊢)) proph_obs.
 Proof.
-  move=> ?? Iff. rewrite /proph_obs. do 4 f_equiv. apply forall_proper => ?.
+  move=> ?? Iff. rewrite /proph_obs. do 4 f_equiv. apply forall_proper=> ?.
   by rewrite Iff.
 Qed.
-
-Global Instance proph_obs_proper_eq :
-Proper (pointwise_relation _ (=) ==> (⊣⊢)) proph_obs.
-  move=> ?? Iff. rewrite /proph_obs. do 4 f_equiv. apply forall_proper => ?.
-  by rewrite Iff.
+Global Instance proph_obs_mono :
+  Proper (pointwise_relation _ impl ==> (⊢)) proph_obs.
+Proof.
+  move=> ?? Imp. rewrite /proph_obs. do 4 f_equiv. move=> Imp' ??. by apply Imp, Imp'.
 Qed.
 
 (** Manipulating Tokens *)
@@ -369,13 +370,10 @@ Qed.
 Lemma proph_obs_trivial φ : φ → ⊢ ⟨_, φ⟩.
 Proof. move=> ?. iExists []. by iSplit. Qed.
 
-Lemma proph_obs_weaken φπ ψπ : (∀π, φπ π → ψπ π) → .⟨φπ⟩ -∗ .⟨ψπ⟩.
-Proof.
-  iIntros (Wkn) "(%L & %SatTo &?)". iExists L. iFrame. iPureIntro=> *.
-  by apply Wkn, SatTo.
-Qed.
+Lemma proph_obs_impl φπ ψπ : (∀π, φπ π → ψπ π) → .⟨φπ⟩ -∗ .⟨ψπ⟩.
+Proof. move=> Imp. do 2 f_equiv. move=> ?. by apply Imp. Qed.
 
-Lemma proph_obs_merge φπ ψπ : .⟨φπ⟩ -∗ .⟨ψπ⟩ -∗ ⟨π, φπ π ∧ ψπ π⟩.
+Lemma proph_obs_and φπ ψπ : .⟨φπ⟩ -∗ .⟨ψπ⟩ -∗ ⟨π, φπ π ∧ ψπ π⟩.
 Proof.
   iIntros "(%L & %SatTo &?) (%L' & %SatTo' &?)". iExists (L ++ L'). iFrame.
   iPureIntro=> ? /Forall_app [??]. split; by [apply SatTo|apply SatTo'].
@@ -431,8 +429,8 @@ Lemma proph_eqz_modify {A} (uπ uπ' vπ: _ → A) :
 Proof.
   iIntros "Obs Eqz" (???) "Ptoks".
   iMod ("Eqz" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
-  iDestruct (proph_obs_merge with "Obs Obs'") as "Obs''".
-  by iApply proph_obs_weaken; [|iApply "Obs''"] => ?[->?].
+  iDestruct (proph_obs_and with "Obs Obs'") as "Obs''".
+  by iApply proph_obs_impl; [|iApply "Obs''"] => ?[->?].
 Qed.
 
 Lemma proph_eqz_constr {A B} f `{Inj A B (=) (=) f} uπ vπ :
@@ -440,7 +438,7 @@ Lemma proph_eqz_constr {A B} f `{Inj A B (=) (=) f} uπ vπ :
 Proof.
   iIntros "Eqz" (?? Dep) "Ptoks". move/proph_dep_destr in Dep.
   iMod ("Eqz" with "[%//] Ptoks") as "[Obs $]". iModIntro.
-  iApply proph_obs_weaken; [|by iApply "Obs"] => ??. by apply (f_equal f).
+  iApply proph_obs_impl; [|by iApply "Obs"] => ??. by apply (f_equal f).
 Qed.
 
 Lemma proph_eqz_constr2 {A B C} f `{Inj2 A B C (=) (=) (=) f} uπ uπ' vπ vπ' :
@@ -449,8 +447,8 @@ Proof.
   iIntros "Eqz Eqz'" (?? Dep) "Ptoks". move: Dep=> /proph_dep_destr2 [??].
   iMod ("Eqz" with "[%//] Ptoks") as "[Obs Ptoks]".
   iMod ("Eqz'" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
-  iDestruct (proph_obs_merge with "Obs Obs'") as "Obs''".
-  iApply proph_obs_weaken; [|by iApply "Obs''"] => ?[??]. by apply (f_equal2 f).
+  iDestruct (proph_obs_and with "Obs Obs'") as "Obs''".
+  iApply proph_obs_impl; [|by iApply "Obs''"] => ?[??]. by apply (f_equal2 f).
 Qed.
 
 Lemma proph_eqz_pair {A B} (uπ vπ: _ → A * B) :

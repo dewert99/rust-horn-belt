@@ -1,6 +1,6 @@
 Require Import Equality FunctionalExtensionality.
 From stdpp Require Import prelude.
-From iris.algebra Require Import monoid ofe.
+From iris.algebra Require Import ofe.
 From iris.proofmode Require Import tactics.
 From lrust.util Require Import basic.
 
@@ -58,11 +58,6 @@ Fixpoint hnth {F B As} (y: F B) (xl: hlist F As) (i: nat) : F (tnth B As i) :=
     match i with 0 => x | S j => hnth y xl' j end end.
 Notation hnthe := (hnth ∅).
 
-Inductive elem_of_hlist {F A} : forall As, ElemOf (F A) (hlist F As) :=
-  | elem_of_hlist_here As (x : F A) (l : hlist F As) : x ∈ (x +:: l)
-  | elem_of_list_further {B} As (x : F A) (y : F B) (l : hlist F As) : x ∈ l -> x ∈ (y +:: l).
-Global Existing Instance elem_of_hlist.
-
 Fixpoint hrepeat {F A} (x: F A) n : hlist F (trepeat A n) :=
   match n with 0 => +[] | S m => x +:: hrepeat x m end.
 
@@ -77,67 +72,6 @@ Notation "( fl +$.)" := (happly fl) (only parsing).
 Lemma hnth_apply {F C B As} (fl: _ As) (y: F B) (x: C) i :
   hnth y (fl +$ x) i = hnth (const y) fl i x.
 Proof. move: i. elim fl; [done|]=> > IH [|i]; [done|]. by rewrite /= IH. Qed.
-
-Inductive HForall {F} (Φ: ∀A, F A → Prop) : ∀{As}, hlist F As → Prop :=
-| HForall_nil: HForall Φ +[]
-| HForall_cons {A As} (x: _ A) (xl: _ As) :
-    Φ _ x → HForall Φ xl → HForall Φ (x +:: xl).
-
-Lemma HForall_impl {F As} (Φ Ψ: ∀A, F A → Prop) (xl: _ As) :
-  (∀A x, Φ A x → Ψ _ x) → HForall Φ xl → HForall Ψ xl.
-Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
-
-Lemma HForall_nth {F B As} (Φ: ∀A, F A → Prop) (y: _ B) (xl: _ As) i :
-  Φ _ y → HForall Φ xl → Φ _ (hnth y xl i).
-Proof.
-  move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
-Qed.
-
-Inductive HForall2 {F G} (Φ: ∀A, F A → G A → Prop)
-  : ∀{As}, hlist F As → hlist G As → Prop :=
-| HForall2_nil: HForall2 Φ +[] +[]
-| HForall2_cons {A As} (x y: _ A) (xl yl: _ As) :
-    Φ _ x y → HForall2 Φ xl yl → HForall2 Φ (x +:: xl) (y +:: yl).
-
-Lemma HForall2_impl {F G As} (Φ Ψ: ∀A, F A → G A → Prop) (xl yl: _ As) :
-  (∀A x y, Φ A x y → Ψ _ x y) → HForall2 Φ xl yl → HForall2 Ψ xl yl.
-Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
-
-Lemma HForall2_forall `{Inhabited B} {F G As}
-  (Φ: ∀A, B → F A → G A → Prop) (xl yl: _ As) :
-  (∀z, HForall2 (λ A, Φ A z) xl yl) ↔ HForall2 (λ A x y, ∀z, Φ _ z x y) xl yl.
-Proof.
-  split; [|elim; by constructor]. move=> All. set One := All inhabitant.
-  dependent induction One; [by constructor|]. constructor.
-  { move=> z. move/(.$ z) in All. by dependent destruction All. }
-  have All': ∀z, HForall2 (λ A, Φ A z) xl yl.
-  { move=> z. move/(.$ z) in All. by dependent destruction All. } auto.
-Qed.
-
-Lemma HForall2_nth {F G B As} (Φ: ∀A, F A → G A → Prop) (x y: _ B) (xl yl: _ As) i :
-  Φ _ x y → HForall2 Φ xl yl → Φ _ (hnth x xl i) (hnth y yl i).
-Proof.
-move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
-Qed.
-
-Global Instance HForall2_reflexive {F As} (R: ∀A, F A → F A → Prop) :
-  (∀A, Reflexive (R A)) → Reflexive (@HForall2 _ _ R As).
-Proof. move=> ?. elim; by constructor. Qed.
-
-Global Instance HForall2_symmetric {F As} (R: ∀A, F A → F A → Prop) :
-  (∀A, Symmetric (R A)) → Symmetric (@HForall2 _ _ R As).
-Proof. move=> >. elim; by constructor. Qed.
-
-Global Instance HForall2_transitive {F As} (R: ∀A, F A → F A → Prop) :
-  (∀A, Transitive (R A)) → Transitive (@HForall2 _ _ R As).
-Proof.
-  move=> ??? zl All. move: zl. elim: All; [done|]=> > ?? IH ? All.
-  dependent destruction All. constructor; by [etrans|apply IH].
-Qed.
-
-Global Instance HForall2_equivalence {F As} (R: ∀A, F A → F A → Prop) :
-  (∀A, Equivalence (R A)) → Equivalence (@HForall2 _ _ R As).
-Proof. split; apply _. Qed.
 
 (** * List-like Product *)
 
@@ -222,8 +156,7 @@ Fixpoint plist2 (F: Type → Type → Type) As Bs : Type :=
 
 Fixpoint p2map {F G As Bs} (f: ∀A B, F A B → G A B) : plist2 F As Bs → plist2 G As Bs :=
   match As, Bs with ^[], ^[] => id
-  | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), f _ _ x -:: p2map f xl'
-  | _, _ => absurd end.
+  | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), f _ _ x -:: p2map f xl' | _, _ => absurd end.
 Infix "-2<$>" := p2map (at level 61, left associativity).
 
 Fixpoint p2nth {F As Bs C D} (y: F C D) :
@@ -231,33 +164,6 @@ Fixpoint p2nth {F As Bs C D} (y: F C D) :
   match As, Bs with ^[], ^[] => λ _ _, y
   | _ ^:: _, _ ^:: _ => λ '(x -:: xl') i, match i with 0 => x | S j => p2nth y xl' j end
   | _, _ => absurd end.
-
-Fixpoint p2flip {F As Bs} : plist2 F As Bs → plist2 (flip F) Bs As :=
-  match As, Bs with ^[], ^[] => id
-  | _ ^:: _, _ ^:: _ => λ '(x -:: xl'), x -:: p2flip xl'
-  | _, _ => absurd end.
-
-Lemma p2flip_invol {F As Bs} (zl: _ F As Bs) : p2flip (p2flip zl) = zl.
-Proof.
-  dependent induction As; dependent induction Bs=>//. case zl=>/= *. by f_equal.
-Qed.
-
-Fixpoint p2zip {F G As Bs} :
-  plist2 F As Bs → plist2 G As Bs → plist2 (λ A B, F A B * G A B)%type As Bs :=
-  match As, Bs with ^[], ^[] => λ _ _, -[]
-  | _ ^:: _, _ ^:: _ => λ '(x -:: xl') '(y -:: yl'), (x, y) -:: p2zip xl' yl'
-  | _, _ => absurd end.
-
-Lemma p2zip_fst {F G As Bs} (xl: _ F As Bs) (yl: _ G _ _) :
-  (λ _ _, fst) -2<$> p2zip xl yl = xl.
-Proof.
-  dependent induction As; dependent induction Bs; case xl, yl=>//= *. by f_equal.
-Qed.
-Lemma p2zip_snd {F G As Bs} (xl: _ F As Bs) (yl: _ G _ _) :
-  (λ _ _, snd) -2<$> p2zip xl yl = yl.
-Proof.
-  dependent induction As; dependent induction Bs; case xl, yl=>//= *. by f_equal.
-Qed.
 
 Fixpoint p2ids {As} : plist2 (→) As As :=
   match As with ^[] => -[] | _ ^:: _ => id -:: p2ids end.
@@ -333,92 +239,6 @@ Proof. split.
   - fun_ext. elim n; [by case|]=>/= > IH [??] /=. by rewrite IH.
 Qed.
 
-Inductive HForallZip {F G H} (Φ: ∀A B, F A → G B → H A B → Prop)
-  : ∀{As Bs}, hlist F As → hlist G Bs → plist2 H As Bs → Prop :=
-| HForallZip_nil: HForallZip Φ +[] +[] -[]
-| HForallZip_cons {A B As Bs} (x: _ A) (y: _ B) z (xl: _ As) (yl: _ Bs) zl :
-    Φ _ _ x y z → HForallZip Φ xl yl zl →
-    HForallZip Φ (x +:: xl) (y +:: yl) (z -:: zl).
-
-Lemma HForallZip_impl {F G H H' As Bs} (Φ Ψ: ∀A B, _ → _ → _ → Prop)
-  (f: ∀A B, H A B → H' _ _) (xl: _ F As) (yl: _ G Bs) zl :
-  (∀A B x y z, Φ A B x y z → Ψ _ _ x y (f _ _ z)) →
-  HForallZip Φ xl yl zl → HForallZip Ψ xl yl (f -2<$> zl).
-Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
-
-Lemma HForallZip_flip {F G H As Bs}
-  (Φ: ∀A B, _ → _ → _ → Prop) (xl: _ F As) (yl: _ G Bs) (zl: _ H _ _) :
-  HForallZip Φ xl yl (p2flip zl) → HForallZip (λ _ _, flip (Φ _ _)) yl xl zl.
-Proof. rewrite -{2}(p2flip_invol zl). elim=>/= *; by constructor. Qed.
-
-Lemma HForallZip_zip {F G H H' As Bs} (Φ Ψ: ∀A B, _ → _ → _ → Prop)
-  (xl: _ F As) (yl: _ G Bs) (zl: _ H _ _) (zl': _ H' _ _) :
-  HForallZip (λ _ _ x y '(z, z'), Φ _ _ x y z ∧ Ψ _ _ x y z') xl yl (p2zip zl zl') →
-  HForallZip Φ xl yl zl ∧ HForallZip Ψ xl yl zl'.
-Proof.
-  rewrite -{2}(p2zip_fst zl zl'). rewrite -{3}(p2zip_snd zl zl').
-  elim=> [|??????[??] > [??]_[??]]; split; by constructor.
-Qed.
-
-Lemma HForallZip_nth {F G H C D As Bs} (Φ: ∀A B, F A → G B → H A B → Prop)
-  (x: _ C) (y: _ D) z (xl: _ As) (yl: _ Bs) zl i :
-  Φ _ _ x y z → HForallZip Φ xl yl zl → Φ _ _ (hnth x xl i) (hnth y yl i) (p2nth z zl i).
-Proof.
-  move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
-Qed.
-
-(* Products of types *)
-(* TODO: generalize them for plist *)
-
-Definition xprod_split_l {t1 t2} (x : xprod (t1 ^++ t2)) : xprod t1.
-  induction t1; simpl in *; intuition.
-Defined.
-
-Definition xprod_split_r {t1 t2} (x : xprod (t1 ^++ t2)) : xprod t2.
-  induction t1; simpl in *; intuition.
-Defined.
-
-Definition xprod_split {t1 t2} (x : xprod (t1 ^++ t2)) : xprod t1 * xprod t2.
-  induction t1; simpl in *; intuition.
-Defined.
-
-Definition xprod_singleton {A B} (f : A → B) : xprod ^[A] → xprod ^[B].
-  simpl; intuition.
-Qed.
-
-Definition xprod_bimap {s1 s2 t1 t2} (f : xprod s1 → xprod s2) (g : xprod t1 → xprod t2) : xprod (s1 ^++ t1) → xprod (s2 ^++ t2).
-  intros; apply papp; eauto using xprod_split_l, xprod_split_r, papp.
-Defined.
-
-Lemma xprod_split_l_papp {T1 T2} (t1 : xprod T1) (t2 : xprod T2) : xprod_split_l (t1 -++ t2) = t1.
-Proof.
-  induction T1.
-  - by destruct t1.
-  - destruct t1. simpl. f_equal. apply IHT1.
-Qed.
-
-(* TODO(xavier): use elim/IndPrinp: here *)
-Lemma xprod_split_r_papp {T1 T2} (t1 : xprod T1) (t2 : xprod T2) : xprod_split_r (t1 -++ t2) = t2.
-Proof.
-  induction T1 as [|???IH]; destruct t1; simpl.
-  - done.
-  - by simpl; rewrite IH.
-Qed.
-
-Lemma bimap_distr {T1 T2 S1 S2} f g t1 t2 :
-  @xprod_bimap T1 T2 S1 S2 f g (t1 -++ t2) = f t1 -++ g t2.
-Proof.
-  rewrite /xprod_bimap xprod_split_l_papp !xprod_split_r_papp //.
-Qed.
-
-Definition xprod_second {s1 t1 t2} (g : xprod t1 → xprod t2) : xprod (s1 ^++ t1) → xprod (s1 ^++ t2).
-  eauto using xprod_bimap.
-Qed.
-
-Definition xprod_first {s1 s2 t1} (g : xprod s1 → xprod s2) : xprod (s1 ^++ t1) → xprod (s2 ^++ t1).
-  eauto using xprod_bimap.
-Qed.
-
 (** * Sum *)
 
 Inductive xsum As : Type := xinj (i: nat) : tnthe As i → xsum As.
@@ -443,10 +263,83 @@ Definition xsum_to_sum {A B} (s: Σ! ^[A; B]) : A + B := match s with
 Global Instance sum_xsum_iso {A B} : Iso (@sum_to_xsum A B) xsum_to_sum.
 Proof. split; fun_ext; case; by [| |case=> [|[|]]]. Qed.
 
+(** * Forall *)
+
+Inductive HForall {F} (Φ: ∀A, F A → Prop) : ∀{As}, hlist F As → Prop :=
+| HForall_nil: HForall Φ +[]
+| HForall_cons {A As} (x: _ A) (xl: _ As) :
+    Φ _ x → HForall Φ xl → HForall Φ (x +:: xl).
+
+Inductive HForall2_1 {F G H} (Φ: ∀A B, F A → G B → H A B → Prop)
+  : ∀{As Bs}, hlist F As → hlist G Bs → plist2 H As Bs → Prop :=
+| HForall2_1_nil: HForall2_1 Φ +[] +[] -[]
+| HForall2_1_cons {A B As Bs} (x: _ A) (y: _ B) z (xl: _ As) (yl: _ Bs) zl :
+    Φ _ _ x y z → HForall2_1 Φ xl yl zl → HForall2_1 Φ (x +:: xl) (y +:: yl) (z -:: zl).
+
+Inductive HForall2_2flip {F G H K} (Φ: ∀A B, F A → G B → H A B → K B A → Prop)
+  : ∀{As Bs}, hlist F As → hlist G Bs → plist2 H As Bs → plist2 K Bs As → Prop :=
+| HForall2_2flip_nil: HForall2_2flip Φ +[] +[] -[] -[]
+| HForall2_2flip_cons {A B As Bs} (x: _ A) (y: _ B) z w (xl: _ As) (yl: _ Bs) zl wl :
+    Φ _ _ x y z w → HForall2_2flip Φ xl yl zl wl →
+    HForall2_2flip Φ (x +:: xl) (y +:: yl) (z -:: zl) (w -:: wl).
+
+Inductive HForallTwo {F G} (Φ: ∀A, F A → G A → Prop)
+  : ∀{As}, hlist F As → hlist G As → Prop :=
+| HForallTwo_nil: HForallTwo Φ +[] +[]
+| HForallTwo_cons {A As} (x y: _ A) (xl yl: _ As) :
+    Φ _ x y → HForallTwo Φ xl yl → HForallTwo Φ (x +:: xl) (y +:: yl).
+
+Lemma HForall_impl {F As} (Φ Ψ: ∀A, F A → Prop) (xl: _ As) :
+(∀A x, Φ A x → Ψ _ x) → HForall Φ xl → HForall Ψ xl.
+Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
+
+Lemma HForallTwo_impl {F G As} (Φ Ψ: ∀A, F A → G A → Prop) (xl yl: _ As) :
+  (∀A x y, Φ A x y → Ψ _ x y) → HForallTwo Φ xl yl → HForallTwo Ψ xl yl.
+Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
+
+Lemma HForall_nth {F B As} (Φ: ∀A, F A → Prop) (y: _ B) (xl: _ As) i :
+Φ _ y → HForall Φ xl → Φ _ (hnth y xl i).
+Proof.
+move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
+Qed.
+
+Lemma HForallTwo_nth {F G B As} (Φ: ∀A, F A → G A → Prop) (x y: _ B) (xl yl: _ As) i :
+  Φ _ x y → HForallTwo Φ xl yl → Φ _ (hnth x xl i) (hnth y yl i).
+Proof.
+move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
+Qed.
+
+Lemma HForallTwo_forall `{Inhabited B} {F G As}
+  (Φ: ∀A, B → F A → G A → Prop) (xl yl: _ As) :
+  (∀z, HForallTwo (λ A, Φ A z) xl yl) ↔ HForallTwo (λ A x y, ∀z, Φ _ z x y) xl yl.
+Proof.
+  split; [|elim; by constructor]. move=> All. set One := All inhabitant.
+  dependent induction One; [by constructor|]. constructor.
+  { move=> z. move/(.$ z) in All. by dependent destruction All. }
+  have All': ∀z, HForallTwo (λ A, Φ A z) xl yl.
+  { move=> z. move/(.$ z) in All. by dependent destruction All. } auto.
+Qed.
+
+Global Instance HForallTwo_reflexive {F As} (R: ∀A, F A → F A → Prop) :
+  (∀A, Reflexive (R A)) → Reflexive (@HForallTwo _ _ R As).
+Proof. move=> ?. elim; by constructor. Qed.
+Global Instance HForallTwo_symmetric {F As} (R: ∀A, F A → F A → Prop) :
+  (∀A, Symmetric (R A)) → Symmetric (@HForallTwo _ _ R As).
+Proof. move=> >. elim; by constructor. Qed.
+Global Instance HForallTwo_transitive {F As} (R: ∀A, F A → F A → Prop) :
+  (∀A, Transitive (R A)) → Transitive (@HForallTwo _ _ R As).
+Proof.
+  move=> ??? zl All. move: zl. elim: All; [done|]=> > ?? IH ? All.
+  dependent destruction All. constructor; by [etrans|apply IH].
+Qed.
+Global Instance HForallTwo_equivalence {F As} (R: ∀A, F A → F A → Prop) :
+  (∀A, Equivalence (R A)) → Equivalence (@HForallTwo _ _ R As).
+Proof. split; apply _. Qed.
+
 (** * Setoid *)
 
 Global Instance hlist_equiv `{∀A, Equiv (F A)} {As} : Equiv (hlist F As) :=
-  HForall2 (λ _, (≡)).
+  HForallTwo (λ _, (≡)).
 
 Section lemmas.
 Context `{∀A, Equiv (F A)}.
@@ -456,21 +349,21 @@ Proof. by constructor. Qed.
 
 Global Instance hnth_proper {B As} :
   Proper ((≡) ==> (≡) ==> forall_relation (λ _, (≡))) (@hnth F B As).
-Proof. move=> ???????. by apply (HForall2_nth _). Qed.
+Proof. move=> ???????. by apply (HForallTwo_nth _). Qed.
 
 End lemmas.
 
 (** * Ofe *)
 
 Global Instance hlist_dist {F: _ → ofe} {As} : Dist (hlist F As) :=
-  λ n, HForall2 (λ _, dist n).
+  λ n, HForallTwo (λ _, (≡{n}≡)).
 
 Definition hlist_ofe_mixin {F: _ → ofe} {As} : OfeMixin (hlist F As).
 Proof. split=> >.
-  - rewrite /equiv /hlist_equiv HForall2_forall.
-    split=> H; dependent induction H; constructor; try done; by apply equiv_dist.
+  - rewrite /equiv /hlist_equiv HForallTwo_forall.
+    split=> H; induction H; constructor=>//; by apply equiv_dist.
   - apply _.
-  - rewrite /dist /hlist_dist. apply HForall2_impl=> >. apply dist_S.
+  - rewrite /dist /hlist_dist. apply HForallTwo_impl=> >. apply dist_S.
 Qed.
 
 Canonical Structure hlistO (F: _ → ofe) As := Ofe (hlist F As) hlist_ofe_mixin.
@@ -482,12 +375,12 @@ Global Instance hcons_ne {A As} : NonExpansive2 (@hcons F A As).
 Proof. by constructor. Qed.
 
 Global Instance hnth_ne {B As} n :
-  Proper (dist n ==> dist n ==> forall_relation (λ _, dist n)) (@hnth F B As).
-Proof. move=> ???????. by apply (HForall2_nth (λ A, ofe_dist (F A) n)). Qed.
+  Proper ((≡{n}≡) ==> (≡{n}≡) ==> forall_relation (λ _, (≡{n}≡))) (@hnth F B As).
+Proof. move=> ???????. by apply (HForallTwo_nth (λ A, ofe_dist (F A) n)). Qed.
 
 End lemmas.
 
-(** * Iris *)
+(** * big_sep *)
 
 Section def.
 Context {PROP: bi}.
@@ -495,14 +388,14 @@ Context {PROP: bi}.
 Fixpoint big_sepHL {F As} (Φ: ∀A, F A → PROP) (xl: hlist F As) : PROP :=
   match xl with +[] => True | x +:: xl' => Φ _ x ∗ big_sepHL Φ xl' end%I.
 
-Fixpoint big_sepHL2 {F G As} (Φ: ∀A, F A → G A → PROP) (xl: hlist F As) (yl: plist G As)
+Fixpoint big_sepHL_1 {F G As} (Φ: ∀A, F A → G A → PROP) (xl: hlist F As) (yl: plist G As)
   : PROP := match xl, yl with +[], _ => True |
-    x +:: xl', y -:: yl' => Φ _ x y ∗ big_sepHL2 Φ xl' yl' end%I.
+    x +:: xl', y -:: yl' => Φ _ x y ∗ big_sepHL_1 Φ xl' yl' end%I.
 
-Fixpoint big_sepHLZip {F G H As Bs} (Φ: ∀A B, F A → G B → H A B → PROP)
-  (xl: hlist F As) (yl: hlist G Bs) (zl: plist2 H As Bs) : PROP:=
+Fixpoint big_sepHL2_1 {F G H As Bs} (Φ: ∀A B, F A → G B → H A B → PROP)
+  (xl: hlist F As) (yl: hlist G Bs) (zl: plist2 H As Bs) : PROP :=
   match xl, yl, zl with +[], +[], _ => True
-  | x +:: xl', y +:: yl', z -:: zl' => Φ _ _ x y z ∗ big_sepHLZip Φ xl' yl' zl'
+  | x +:: xl', y +:: yl', z -:: zl' => Φ _ _ x y z ∗ big_sepHL2_1 Φ xl' yl' zl'
   | _, _, _ => False end%I.
 
 End def.
@@ -511,12 +404,12 @@ Notation "[∗ hlist] x ∈ xl , P" := (big_sepHL (λ _ x, P%I) xl)
   (at level 200, xl at level 10, x at level 1, right associativity,
     format "[∗  hlist]  x  ∈  xl ,  P") : bi_scope.
 
-Notation "[∗ hlist] x ;- y ∈ xl ;- yl , P" := (big_sepHL2 (λ _ x y, P%I) xl yl)
+Notation "[∗ hlist] x ;- y ∈ xl ;- yl , P" := (big_sepHL_1 (λ _ x y, P%I) xl yl)
   (at level 200, xl, yl at level 10, x, y at level 1, right associativity,
     format "[∗  hlist]  x ;-  y  ∈  xl ;-  yl ,  P") : bi_scope.
 
 Notation "[∗ hlist] x ; y ;- z ∈ xl ; yl ;- zl , P" :=
-  (big_sepHLZip (λ _ _ x y z, P%I) xl yl zl)
+  (big_sepHL2_1 (λ _ _ x y z, P%I) xl yl zl)
   (at level 200, xl, yl, zl at level 10, x, y, z at level 1, right associativity,
     format "[∗  hlist]  x ;  y ;-  z  ∈  xl ;  yl ;-  zl ,  P") : bi_scope.
 
@@ -527,41 +420,19 @@ Lemma big_sepHL_singleton {F B} (Φ: ∀A, F A → PROP) (x: _ B) :
   big_sepHL Φ +[x] ⊣⊢ Φ _ x.
 Proof. by rewrite /= right_id. Qed.
 
+Lemma big_sepHL_1_singleton {F G B} (Φ: ∀A, F A → G A → PROP) (x y : _ B) :
+  big_sepHL_1 Φ +[x] -[y] ⊣⊢ Φ _ x y.
+Proof. by rewrite /= right_id. Qed.
+
 Lemma big_sepHL_app {F As Bs} (Φ: ∀A, F A → PROP) (xl: _ As) (xl': _ Bs) :
   big_sepHL Φ (xl h++ xl') ⊣⊢ big_sepHL Φ xl ∗ big_sepHL Φ xl'.
 Proof. elim xl; [by rewrite left_id|]=>/= > ->. by rewrite assoc. Qed.
 
-Lemma big_sepHL2_singleton {F G B} (Φ: ∀A, F A → G A → PROP) (x y : _ B) :
-  big_sepHL2 Φ +[x] -[y] ⊣⊢ Φ _ x y.
-Proof. by rewrite /= right_id. Qed.
-
-Lemma big_sepHL2_app {F G As Bs} (Φ: ∀A, F A → G A → PROP)
+Lemma big_sepHL_1_app {F G As Bs} (Φ: ∀A, F A → G A → PROP)
   (xl: _ As) (xl': _ Bs) yl yl' :
-  big_sepHL2 Φ (xl h++ xl') (yl -++ yl') ⊣⊢ big_sepHL2 Φ xl yl ∗ big_sepHL2 Φ xl' yl'.
+  big_sepHL_1 Φ (xl h++ xl') (yl -++ yl') ⊣⊢ big_sepHL_1 Φ xl yl ∗ big_sepHL_1 Φ xl' yl'.
 Proof.
   dependent induction xl; case yl=>/= >; by [rewrite left_id|rewrite IHxl assoc].
 Qed.
-
-(*
-Lemma big_sepHLZip'_elem_of {A F G As} (Φ: ∀A, F A → G A → PROP) (hl : hlist F As) (il : hlist G As) (x : F A) :
-x ∈ hl → big_sepHLZip' Φ hl il ⊢ ∃ v, Φ _ x v.
-Proof.
-  intros.
-  induction H0 as [| ???????IH]; dependent destruction il; rewrite big_sepHLZip'_cons.
-  - iIntros "[? _]". by iExists g.
-  - iIntros "[_ H]". by rewrite IH.
-Qed.
-
-Lemma big_sepHL_elem_of {A F As} (Φ : ∀ A, F A → PROP) (hl : hlist F As) x `{!Absorbing (Φ A x)} :
-x ∈ hl → ([∗ hlist] y ∈ hl, Φ _ y) ⊢ Φ _ x.
-Proof.
-  intros.
-  induction H0.
-  - simpl. by iIntros "[? _]".
-  - simpl. iIntros "[_ ?]".
-    specialize (IHelem_of_hlist Absorbing0).
-    by iApply IHelem_of_hlist.
-Qed.
-*)
 
 End lemmas.

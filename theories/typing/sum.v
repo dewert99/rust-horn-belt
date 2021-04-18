@@ -278,7 +278,7 @@ Section typing.
     eqtypel E L tyl tyl' fl gl →
     eqtype E L (xsum_map fl) (xsum_map gl) (Σ! tyl) (Σ! tyl').
   Proof.
-    move=> /HForallZip_zip[? /HForallZip_flip ?]. by split; apply xsum_subtype.
+    move=> /eqtypel_subtypel[??]. by split; apply xsum_subtype.
   Qed.
 
   Lemma sum_subtype {A B A' B'} E L (f: A → A') (g: B → B') ty1 ty2 ty1' ty2' :

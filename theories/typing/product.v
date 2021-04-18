@@ -287,13 +287,13 @@ Section typing.
     eqtypel E L tyl tyl' fl gl →
     eqtype E L (xprod_map fl) (xprod_map gl) (Π! tyl) (Π! tyl').
   Proof.
-    move=> /HForallZip_zip[? /HForallZip_flip ?]. by split; apply xprod_subtype.
+    move=> /eqtypel_subtypel[??]. by split; apply xprod_subtype.
   Qed.
 
   Lemma prod_ty_assoc {A B C} E L (ty1: _ A) (ty2: _ B) (ty3: _ C) :
     eqtype E L prod_assoc prod_assoc' (ty1 * (ty2 * ty3)) ((ty1 * ty2) * ty3).
   Proof.
-    have Eq: ∀vπ: proph_asn → (A * (B * C)),
+    have Eq: ∀vπ: proph (A * (B * C)),
       fst ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ vπ ∧
       snd ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ (snd ∘ vπ) ∧
       snd ∘ (prod_assoc ∘ vπ) = snd ∘ (snd ∘ vπ).
@@ -313,7 +313,7 @@ Section typing.
   Proof.
     apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=". iSplit; [done|].
     iSplit; [by iApply lft_equiv_refl|].
-    have Eq: ∀vπ: proph_asn → (() * A), prod_left_id ∘ vπ = snd ∘ vπ.
+    have Eq: ∀vπ: proph (() * A), prod_left_id ∘ vπ = snd ∘ vπ.
     { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [[]?]. }
     iSplit; iIntros "!> *"; rewrite Eq.
     - iSplit; [by iIntros "(%&%&->&->&?)"|]. iIntros. iExists [], _. by iFrame.
@@ -325,7 +325,7 @@ Section typing.
   Proof.
     apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=".
     rewrite !right_id. iSplit; [done|]. iSplit; [by iApply lft_equiv_refl|].
-    have Eq: ∀vπ: proph_asn → (A * ()), prod_right_id ∘ vπ = fst ∘ vπ.
+    have Eq: ∀vπ: proph (A * ()), prod_right_id ∘ vπ = fst ∘ vπ.
     { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [?[]]. }
     iSplit; iIntros "!> *"; rewrite Eq; [iSplit|].
     - iIntros "(%&%&->&?&->)". by rewrite right_id.

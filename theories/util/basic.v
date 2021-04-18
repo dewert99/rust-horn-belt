@@ -1,5 +1,6 @@
 Require Import ssreflect FunctionalExtensionality.
 From stdpp Require Import prelude.
+From iris.algebra Require Import ofe monoid.
 
 (** * Utility for Natural Numbers *)
 
@@ -96,6 +97,14 @@ Next Obligation. move=> *. fun_ext=> ?. by apply absurd. Qed.
 
 Global Instance void_iso `{Void A, Void B} : Iso absurd absurd.
 Proof. split; fun_ext=> ?; by apply absurd. Qed.
+
+(** * OFE *)
+
+Notation "(≡{ n }≡)" := (dist n) (only parsing).
+
+(** * Monoid *)
+
+Global Instance and_monoid: Monoid and := {| monoid_unit := True |}.
 
 (* Applicative Functors *)
 
