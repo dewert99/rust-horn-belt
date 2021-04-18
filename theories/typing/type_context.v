@@ -18,20 +18,21 @@ Notation "p ◁ ty" := (TCtx_hasty _ p ty%T) (at level 55).
 Notation "p ◁{ κ } ty" := (TCtx_blocked _ p κ ty%T)
    (at level 55, format "p  ◁{ κ }  ty").
 
-Notation pred As := (Π! As → Prop).
-Notation pred_trans As Bs := (pred Bs → pred As).
+Definition pred A := A → Prop.
+Definition predl As := pred (Π! As).
+Definition predl_trans As Bs := predl Bs → predl As.
 
-Definition trans_app {As Bs Cs Ds} (tr: pred_trans As Bs) (tr': pred_trans Cs Ds)
-  : pred_trans (As ^++ Cs) (Bs ^++ Ds) :=
-  λ post bd, tr (λ a, tr' (λ c, post (a -++ c)) (psepr bd)) (psepl bd).
+Definition trans_app {As Bs Cs Ds} (tr: predl_trans As Bs) (tr': predl_trans Cs Ds)
+  : predl_trans (As ^++ Cs) (Bs ^++ Ds) :=
+  λ post bdl, tr (λ al, tr' (λ cl, post (al -++ cl)) (psepr bdl)) (psepl bdl).
 
-Definition trans_tail {A Bs Cs} (tr: pred_trans Bs Cs)
-  : pred_trans (A ^:: Bs) (A ^:: Cs) :=
+Definition trans_tail {A Bs Cs} (tr: predl_trans Bs Cs)
+  : predl_trans (A ^:: Bs) (A ^:: Cs) :=
   λ post '(a -:: cl), tr (λ bl, post (a -:: bl)) cl.
 
-Definition trans_upper {As Bs Cs} (tr: pred_trans As Bs)
-  : pred_trans (As ^++ Cs) (Bs ^++ Cs) :=
-  λ post ac, tr (λ b, post (b -++ psepr ac)) (psepl ac).
+Definition trans_upper {As Bs Cs} (tr: predl_trans As Bs)
+  : predl_trans (As ^++ Cs) (Bs ^++ Cs) :=
+  λ post acl, tr (λ bl, post (bl -++ psepr acl)) (psepl acl).
 
 Section type_context.
   Context `{!typeG Σ}.
@@ -160,8 +161,8 @@ Section type_context.
 
   (** Type context inclusion *)
   Definition tctx_incl {As Bs} (E: elctx) (L: llctx) (T: tctx As) (T': tctx Bs)
-    (tr: pred_trans As Bs) : Prop :=
-    ∀tid q vπl post, lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    (tr: predl_trans As Bs) : Prop :=
+    ∀tid q vπl (post: proph _), lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
       tctx_interp tid T vπl -∗ ⟨π, tr (post π) (vπl -$ π)⟩ ={⊤}=∗ ∃vπl',
       llctx_interp L q ∗ ⟨π, post π (vπl' -$ π)⟩ ∗ tctx_interp tid T' vπl'.
   (* Global Instance : ∀ A E L f, RewriteRelation (@tctx_incl A A E L f) := {}. *)
@@ -263,7 +264,7 @@ Section type_context.
   (* Extracting from a type context. *)
 
   Definition tctx_extract_hasty {As Bs A} E L p (ty: type A)
-    (T: tctx As) (T': tctx Bs) (tr: pred_trans As (A ^:: Bs)) : Prop :=
+    (T: tctx As) (T': tctx Bs) (tr: predl_trans As (A ^:: Bs)) : Prop :=
     tctx_incl E L T (p ◁ ty +:: T') tr.
 
   Definition xprod_extract {As A B Bs} (f : Π! As → Π! (B ^:: Bs)) : Π! (A ^:: As) → Π! (B ^:: A ^:: Bs) :=
@@ -322,7 +323,7 @@ Section type_context.
   Proof. intros. apply (tctx_incl_frame_r _ +[_] +[_] id), tctx_incl_refl. Qed. *)
 
   Definition tctx_extract_ctx {As Bs Cs} E L (T: tctx As)
-    (T1: tctx Bs) (T2: tctx Cs) (tr: pred_trans Bs (As ^++ Cs)) : Prop :=
+    (T1: tctx Bs) (T2: tctx Cs) (tr: predl_trans Bs (As ^++ Cs)) : Prop :=
     tctx_incl E L T1 (T h++ T2) tr.
 
   Lemma tctx_extract_ctx_nil {As} (T: _ As) E L : tctx_extract_ctx E L +[] T T id.

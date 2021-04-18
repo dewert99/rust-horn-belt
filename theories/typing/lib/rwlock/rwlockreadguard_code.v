@@ -114,13 +114,13 @@ Section rwlockreadguard_functions.
           iDestruct "Hst" as (ν' q'') "(EQν & H†' & Hh & Hshr & Hq & Hν')".
           iDestruct "EQν" as %EQν. revert Hag Hq. rewrite /= EQν to_agree_included.
           intros <-%leibniz_equiv ->%leibniz_equiv.
-          iExists (Some (Cinr (to_agree ν, q0, Pos.pred n))).
+          iExists (Some (Cinr (to_agree ν, q0, Pos.predl n))).
           iSplitL "Hlx"; first by destruct n.
           replace (q ⋅ q0 + q'')%Qp with (q0 + (q + q''))%Qp by
               by rewrite (comm _ q q0) assoc. iCombine "Hν" "Hν'" as "Hν".
           iSplitL "H● H◯"; last by eauto with iFrame.
           iApply (own_update_2 with "H● H◯"). apply auth_update_dealloc.
-          assert (n = 1%positive ⋅ Pos.pred n) as EQn.
+          assert (n = 1%positive ⋅ Pos.predl n) as EQn.
           { rewrite pos_op_plus -Pplus_one_succ_l Pos.succ_pred // =>?. by subst. }
           rewrite {1}EQn -{1}(agree_idemp (to_agree _)) 2!pair_op Cinr_op Some_op.
           apply (cancel_local_update_unit (reading_st q ν)) , _. }

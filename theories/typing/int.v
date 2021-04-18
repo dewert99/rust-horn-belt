@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import bool (* programs *).
+From lrust.typing Require Import bool programs.
 Set Default Proof Using "Type".
 
 Implicit Type z: Z.
@@ -19,65 +19,81 @@ Section int.
     iSplit; [iApply lft_incl_refl|]. by iIntros.
   Qed.
 
-(*
-  Lemma type_int_instr (z : Z) : typed_val #z int.
+  Lemma type_int_instr z : typed_val #z int (λ post, post z).
   Proof.
-    iIntros (E L tid) "_ _ _ $ $ _". iMod persistent_time_receipt_0 as "#H0".
-    iApply wp_value. rewrite tctx_interp_singleton tctx_hasty_val' //. auto.
+    iIntros (?????) "_ _ _ $$ _ Obs". iMod persistent_time_receipt_0 as "Time".
+    iApply wp_value. iExists -[const z]. iFrame "Obs". rewrite tctx_interp_singleton
+    tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "Time". by iExists z.
   Qed.
 
-  Lemma type_int (z : Z) E L C T x e :
+  Lemma type_int {As} z E L C (T: _ As) x e tr :
     Closed (x :b: []) e →
-    (∀ (v : val), typed_body E L C ((v ◁ int) :: T) (subst' x v e)) -∗
-    typed_body E L C T (let: x := #z in e).
-  Proof. iIntros. iApply type_let; [apply type_int_instr|solve_typing|done]. Qed.
+    (∀v: val, typed_body E L C (v ◁ int +:: T) (subst' x v e) tr) -∗
+    typed_body E L C T (let: x := #z in e) (λ al, tr (z -:: al)).
+  Proof. iIntros. iApply type_let; by [apply type_int_instr|solve_typing]. Qed.
 
   Lemma type_plus_instr E L p1 p2 :
-    ⊢ typed_instruction_ty E L [p1 ◁ int; p2 ◁ int] (p1 + p2) int.
+    ⊢ typed_instruction_ty E L +[p1 ◁ int; p2 ◁ int] (p1 + p2) int
+      (λ post '(-[z; z']), post (z + z')).
   Proof.
-    iIntros (tid) "_ _ _ $ $ [Hp1 [Hp2 _]]". iMod persistent_time_receipt_0 as "#H0".
-    wp_apply (wp_hasty with "Hp1"). iIntros (? [[]|]) "_ _ H1"; try done.
-    wp_apply (wp_hasty with "Hp2"). iIntros (? [[]|]) "_ _ H2"; try done.
-    wp_op. rewrite tctx_interp_singleton tctx_hasty_val' //. auto.
+    iIntros (??(?&?&[])) "_ _ _ $$ (P1 & P2 &_) Obs".
+    wp_apply (wp_hasty with "P1"). iIntros (? d) "Time". iIntros ((z&->&[=->])).
+    wp_apply (wp_hasty with "P2"). iIntros (??) "_". iIntros ((z'&->&[=->])).
+    wp_op. iExists -[const (z + z')]. iFrame "Obs". rewrite tctx_interp_singleton
+    tctx_hasty_val'; [|done]. iExists d. iFrame "Time". by iExists (z + z').
   Qed.
 
-  Lemma type_plus E L C T T' p1 p2 x e :
-    Closed (x :b: []) e →
-    tctx_extract_ctx E L [p1 ◁ int; p2 ◁ int] T T' →
-    (∀ (v : val), typed_body E L C ((v ◁ int) :: T') (subst' x v e)) -∗
-    typed_body E L C T (let: x := p1 + p2 in e).
-  Proof. iIntros. iApply type_let; [iApply type_plus_instr|solve_typing|done]. Qed.
+  Lemma type_plus {As Bs} E L C (T: _ As) (T': _ Bs) p1 p2 x e tr pre :
+    Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' tr →
+    (∀v: val, typed_body E L C (v ◁ int +:: T') (subst' x v e) pre) -∗
+    typed_body E L C T (let: x := p1 + p2 in e)
+      (tr (λ '(z -:: z' -:: bl), pre (z + z' -:: bl))).
+  Proof.
+    iIntros. iApply type_let; [iApply type_plus_instr|solve_typing| |done].
+    f_equal. fun_ext. by case=> [?[??]].
+  Qed.
 
   Lemma type_minus_instr E L p1 p2 :
-    ⊢ typed_instruction_ty E L [p1 ◁ int; p2 ◁ int] (p1 - p2) int.
+    ⊢ typed_instruction_ty E L +[p1 ◁ int; p2 ◁ int] (p1 - p2) int
+      (λ post '(-[z; z']), post (z - z')).
   Proof.
-    iIntros (tid) "_ _ _ $ $ [Hp1 [Hp2 _]]". iMod persistent_time_receipt_0 as "#H0".
-    wp_apply (wp_hasty with "Hp1"). iIntros (? [[]|]) "_ _ H1"; try done.
-    wp_apply (wp_hasty with "Hp2"). iIntros (? [[]|]) "_ _ H2"; try done.
-    wp_op. rewrite tctx_interp_singleton tctx_hasty_val' //. auto.
+    iIntros (??(?&?&[])) "_ _ _ $$ (P1 & P2 &_) Obs".
+    wp_apply (wp_hasty with "P1"). iIntros (? d) "Time". iIntros ((z&->&[=->])).
+    wp_apply (wp_hasty with "P2"). iIntros (??) "_". iIntros ((z'&->&[=->])).
+    wp_op. iExists -[const (z - z')]. iFrame "Obs". rewrite tctx_interp_singleton
+    tctx_hasty_val'; [|done]. iExists d. iFrame "Time". by iExists (z - z').
   Qed.
 
-  Lemma type_minus E L C T T' p1 p2 x e :
-    Closed (x :b: []) e →
-    tctx_extract_ctx E L [p1 ◁ int; p2 ◁ int] T T' →
-    (∀ (v : val), typed_body E L C ((v ◁ int) :: T') (subst' x v e)) -∗
-    typed_body E L C T (let: x := p1 - p2 in e).
-  Proof. iIntros. iApply type_let; [apply type_minus_instr|solve_typing|done]. Qed.
+  Lemma type_minus {As Bs} E L C (T: _ As) (T': _ Bs) p1 p2 x e tr pre :
+    Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' tr →
+    (∀v: val, typed_body E L C (v ◁ int +:: T') (subst' x v e) pre) -∗
+    typed_body E L C T (let: x := p1 - p2 in e)
+      (tr (λ '(z -:: z' -:: bl), pre (z - z' -:: bl))).
+  Proof.
+    iIntros. iApply type_let; [iApply type_minus_instr|solve_typing| |done].
+    f_equal. fun_ext. by case=> [?[??]].
+  Qed.
 
   Lemma type_le_instr E L p1 p2 :
-    ⊢ typed_instruction_ty E L [p1 ◁ int; p2 ◁ int] (p1 ≤ p2) bool.
+    ⊢ typed_instruction_ty E L +[p1 ◁ int; p2 ◁ int] (p1 ≤ p2) bool_ty
+      (λ post '(-[z; z']), post (bool_decide (z ≤ z'))).
   Proof.
-    iIntros (tid) "_ _ _ $ $ [Hp1 [Hp2 _]]". iMod persistent_time_receipt_0 as "#H0".
-    wp_apply (wp_hasty with "Hp1"). iIntros (? [[]|]) "_ _ H1"; try done.
-    wp_apply (wp_hasty with "Hp2"). iIntros (? [[]|]) "_ _ H2"; try done.
-    wp_op; case_bool_decide; rewrite tctx_interp_singleton tctx_hasty_val' //; auto.
+    iIntros (??(?&?&[])) "_ _ _ $$ (P1 & P2 &_) Obs".
+    wp_apply (wp_hasty with "P1"). iIntros (? d) "Time". iIntros ((z&->&[=->])).
+    wp_apply (wp_hasty with "P2"). iIntros (??) "_". iIntros ((z'&->&[=->])).
+    wp_op. iExists -[const (bool_decide (z <= z'))]. iFrame "Obs".
+    rewrite tctx_interp_singleton tctx_hasty_val'; [|done]. iExists d.
+    iFrame "Time". by iExists (bool_decide (z <= z')).
   Qed.
 
-  Lemma type_le E L C T T' p1 p2 x e :
-    Closed (x :b: []) e →
-    tctx_extract_ctx E L [p1 ◁ int; p2 ◁ int] T T' →
-    (∀ (v : val), typed_body E L C ((v ◁ bool) :: T') (subst' x v e)) -∗
-    typed_body E L C T (let: x := p1 ≤ p2 in e).
-  Proof. iIntros. iApply type_let; [apply type_le_instr|solve_typing|done]. Qed.
-*)
+  Lemma type_le {As Bs} E L C (T: _ As) (T': _ Bs) p1 p2 x e tr pre :
+    Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' tr →
+    (∀v: val, typed_body E L C (v ◁ bool_ty +:: T') (subst' x v e) pre) -∗
+    typed_body E L C T (let: x := p1 ≤ p2 in e)
+      (tr (λ '(z -:: z' -:: bl), pre (bool_decide (z ≤ z') -:: bl))).
+  Proof.
+    iIntros. iApply type_let; [iApply type_le_instr|solve_typing| |done].
+    f_equal. fun_ext. by case=> [?[??]].
+  Qed.
+
 End int.

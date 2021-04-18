@@ -9,18 +9,21 @@ Section typing.
   (** Function Body *)
   (* This is an iProp because it is also used by the function type. *)
   Definition typed_body {As} (E: elctx) (L: llctx)
-    (C: cctx) (T: tctx As) (e: expr) (pre: pred As): iProp Σ :=
+    (C: cctx) (T: tctx As) (e: expr) (pre: predl As) : iProp Σ :=
     ∀tid vπl, lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
       llctx_interp L 1 -∗ cctx_interp tid C -∗ tctx_interp tid T vπl -∗
       ⟨π, pre (vπl -$ π)⟩ -∗ WP e {{ _, cont_postcondition }}.
   Global Arguments typed_body {_} _ _ _ _ _%E _.
 
-  Lemma typed_body_impl {As} (pre pre': _ → Prop) E L C (T: _ As) e :
+  Lemma typed_body_impl' {As} (pre pre': predl As) E L C T e :
     (∀vl, pre vl → pre' vl) → typed_body E L C T e pre' -∗ typed_body E L C T e pre.
   Proof.
     move=> Imp. rewrite /typed_body. do 12 f_equiv=>/=. do 2 f_equiv. move=> ?.
     by apply Imp.
   Qed.
+  Lemma typed_body_impl {As} (pre pre': predl As) E L C T e :
+    typed_body E L C T e pre' -∗ ⌜∀vl, pre vl → pre' vl⌝ -∗ typed_body E L C T e pre.
+  Proof. iIntros. by iApply typed_body_impl'. Qed.
 
   (* Global Instance typed_body_llctx_permut E :
     Proper ((≡ₚ) ==> eq ==> eq ==> eq ==> (⊢)) (typed_body E).
@@ -54,8 +57,8 @@ Section typing.
 
   (** Instruction *)
   Definition typed_instruction {As Bs} (E: elctx) (L: llctx)
-    (T: tctx As) (e: expr) (T': val → tctx Bs) (tr: pred_trans As Bs) : iProp Σ :=
-    ∀tid post vπl, lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
+    (T: tctx As) (e: expr) (T': val → tctx Bs) (tr: predl_trans As Bs) : iProp Σ :=
+    ∀tid (post: proph _) vπl, lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
       llctx_interp L 1 -∗ tctx_interp tid T vπl -∗ ⟨π, tr (post π) (vπl -$ π)⟩ -∗
       WP e {{ v, ∃vπl', na_own tid ⊤ ∗ llctx_interp L 1 ∗
         tctx_interp tid (T' v) vπl' ∗ ⟨π, post π (vπl' -$ π)⟩ }}.
@@ -99,13 +102,13 @@ Section typing.
   Proof. rewrite typed_read_eq. apply _. Qed. *)
 End typing.
 
-Definition typed_instruction_ty `{!typeG Σ} {As A} (E: elctx) (L: llctx)
-  (T: tctx As) (e: expr) (ty: type A) pre : iProp Σ :=
-  typed_instruction E L T e (λ v, +[v ◁ ty]) pre.
+Definition typed_instruction_ty `{!typeG Σ} {As B} (E: elctx) (L: llctx)
+  (T: tctx As) (e: expr) (ty: type B) (tr: pred B → predl As) : iProp Σ :=
+  typed_instruction E L T e (λ v, +[v ◁ ty]) (λ post al, tr (λ b, post -[b]) al).
 Arguments typed_instruction_ty {_ _ _ _} _ _ _ _%E _%T _.
 
-Definition typed_val `{!typeG Σ} {A} (v: val) (ty: type A) pre : Prop :=
-  ∀E L, ⊢ typed_instruction_ty E L +[] (of_val v) ty pre.
+Definition typed_val `{!typeG Σ} {A} (v: val) (ty: type A) (tr: pred A → Prop) : Prop :=
+  ∀E L, ⊢ typed_instruction_ty E L +[] (of_val v) ty (λ post _, tr post).
 Arguments typed_val {_ _ _} _%V _%T.
 
 Section typing_rules.
@@ -156,9 +159,8 @@ Section typing_rules.
     tctx_incl E L T T' tr →
     typed_body E L C T' e pre -∗ typed_body E L C T e (tr pre).
   Proof.
-    iIntros (?) "Hb".
-    iIntros (tid V) "#LFT #TIME #HE Htl HL HC HT #Hp".
-    iMod (H with "LFT HE HL HT Hp") as (X) "(HL & Hp' & HT')".
+    iIntros (?) "Hb". iIntros (??) "#LFT #TIME #HE Htl HL HC HT #Hp".
+    iMod (H with "LFT HE HL HT Hp") as (?) "(HL & Hp' & HT')".
     by iApply ("Hb" with "LFT TIME HE Htl HL HC HT'").
   Qed.
 
@@ -167,13 +169,13 @@ Section typing_rules.
      hypotheses. The is important, since proving [typed_instruction]
      will instantiate [T1] and [T2], and hence we know what to search
      for the following hypothesis. *)
-  Lemma type_let {As Bs Cs Ds} E L (T: tctx Ds) (T' : tctx Cs)
-    (T1: _ As) (T2: _ → _ Bs) C xb e e' tr tr' pre tr_res :
+  Lemma type_let {As Bs Cs Ds} E L (T1: _ As) (T2: _ → _ Bs)
+    (T: _ Cs) (T': _ Ds) C xb e e' tr tr' pre (tr_ret: predl _) :
     Closed (xb :b: []) e' → (⊢ typed_instruction E L T1 e T2 tr) →
     tctx_extract_ctx E L T1 T T' tr' →
-    tr_res = tr' (trans_upper tr pre) →
+    (tr_ret = tr' (trans_upper tr pre)) →
     (∀v: val, typed_body E L C (T2 v h++ T') (subst' xb v e') pre) -∗
-    typed_body E L C T (let: xb := e in e') tr_res.
+    typed_body E L C T (let: xb := e in e') tr_ret.
   Proof.
     rewrite /tctx_extract_ctx=> ???->. iIntros.
     rewrite -typed_body_tctx_incl; [|done]. by iApply type_let'.
