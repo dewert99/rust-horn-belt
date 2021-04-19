@@ -204,29 +204,25 @@ Section typing.
     { iApply ty_own_depth_mono; [|done]. lia. } iIntros "?!>!>". iExists vl. by iSplit.
   Qed.
 
-(*
-  Lemma type_new_instr {E L} (n : Z) :
-    0 ≤ n →
-    ⊢ let n' := Z.to_nat n in
-      typed_instr_ty E L [] (new [ #n ]%E) (own_ptr n' (uninit n')).
+  Lemma type_new_instr n E L :
+    (0 ≤ n)%Z → let n' := Z.to_nat n in
+    ⊢ typed_instr_ty E L +[] (new [ #n])%E (own_ptr n' (↯ n')) (λ post _, post ()).
   Proof.
-    iIntros (? tid) "#LFT #TIME #HE $ $ _". iMod persistent_time_receipt_0 as "Ht".
-    iApply (wp_persistent_time_receipt with "TIME Ht")=>//.
-    iApply wp_new; try done. iModIntro.
-    iIntros (l) "(H† & Hlft) #Ht". rewrite tctx_interp_singleton tctx_hasty_val.
-    iExists 1%nat. iFrame "Ht". rewrite /= freeable_sz_full Z2Nat.id //. iFrame.
-    iExists (repeat #☠ (Z.to_nat n)). iFrame. by rewrite /= repeat_length.
+    iIntros (?????) "_ TIME _ $$ _ ?". iMod persistent_time_receipt_0 as "Time".
+    iApply (wp_persistent_time_receipt with "TIME Time"); [done|].
+    iApply wp_new=>//. iIntros "!>" (l) "(Fr & Mt) #Time". iExists -[const ()].
+    iSplit; [|done]. rewrite/= right_id (tctx_hasty_val #l).
+    iExists 1. iFrame "Time". rewrite/= freeable_sz_full Z2Nat.id; [|done].
+    iFrame "Fr". iNext. iExists _. iFrame "Mt". by rewrite repeat_length.
   Qed.
 
-  Lemma type_new {E L C T} (n' : nat) x (n : Z) e :
-    Closed (x :b: []) e →
-    0 ≤ n →
-    n' = Z.to_nat n →
-    (∀ (v : val),
-        typed_body E L C ((v ◁ own_ptr n' (uninit n')) :: T) (subst' x v e)) -∗
-    typed_body E L C T (let: x := new [ #n ] in e).
-  Proof. iIntros. subst. iApply type_let; [by apply type_new_instr|solve_typing..]. Qed.
+  Lemma type_new {As} x (n: Z) n' e pre E L C (T: _ As) :
+    Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n →
+    (∀v: val, typed_body E L C (v ◁ own_ptr n' (↯ n') +:: T) (subst' x v e) pre) -∗
+    typed_body E L C T (let: x := new [ #n] in e) (λ al, pre (() -:: al)).
+  Proof. iIntros. subst. iApply type_let; by [apply type_new_instr|solve_typing]. Qed.
 
+(*
   Lemma type_new_subtype ty E L C T x (n : Z) e :
     Closed (x :b: []) e →
     0 ≤ n →
@@ -239,32 +235,31 @@ Section typing.
     iIntros (v). iApply typed_body_mono; last iApply "Htyp"; try done.
     by apply (tctx_incl_frame_r _ [_] [_]), subtype_tctx_incl, own_subtype.
   Qed.
+*)
 
-  Lemma type_delete_instr {E L} ty (n : Z) p :
-    Z.of_nat (ty.(ty_size)) = n →
-    ⊢ typed_instr E L [p ◁ own_ptr ty.(ty_size) ty] (delete [ #n; p])%E (λ _, []).
+  Lemma type_delete_instr {A} (ty: _ A) (n: Z) p E L :
+    let n' := ty.(ty_size) in n = n' →
+    ⊢ typed_instr E L +[p ◁ own_ptr n' ty] (delete [ #n; p])%E (λ _, +[])
+      (λ post _, post -[]).
   Proof.
-    iIntros (<- tid) "#LFT #TIME #HE $ $ Hp". rewrite tctx_interp_singleton.
-    wp_bind p. iApply (wp_hasty with "Hp").
-    iIntros ([|depth] [[]|]) "Hdepth _ Hown"; try done.
-    iDestruct "Hown" as "[H↦: >H†]". iDestruct "H↦:" as (vl) "[>H↦ Hown]".
-    iDestruct (ty_size_eq with "Hown") as "#>EQ".
-    iDestruct "EQ" as %<-. iApply (wp_delete with "[-]"); auto.
-    - iFrame "H↦". by iApply freeable_sz_full.
-    - rewrite /tctx_interp /=; auto.
+    iIntros (?->??[?[]]) "_ TIME E $$ [p _] #Obs". wp_bind p.
+    iApply (wp_hasty with "p"). iIntros (?[|?] _) "? own"; [done|].
+    setoid_rewrite by_just_loc_ex. iDestruct "own" as (?[=->]) "[(%& >Mt & ty)?]".
+    iDestruct (ty_size_eq with "ty") as "#>%Sz". iApply (wp_delete with "[-]").
+    { by rewrite /n' -Sz. } { iFrame "Mt". rewrite Sz. by iApply freeable_sz_full. }
+    { iIntros "!>_". iExists -[]. by iSplit. }
   Qed.
 
-  Lemma type_delete {E L} ty C T T' (n' : nat) (n : Z)  p e :
-    Closed [] e →
-    tctx_extract_hasty E L p (own_ptr n' ty) T T' →
-    n = n' → Z.of_nat (ty.(ty_size)) = n →
-    typed_body E L C T' e -∗
-    typed_body E L C T (delete [ #n; p ] ;; e).
+  Lemma type_delete {A As Bs} (ty: _ A) n' (n: Z) p e E L C (T: _ As) (T': _ Bs) tr pre :
+    Closed [] e → tctx_extract_ctx E L +[p ◁ own_ptr n' ty] T T' tr →
+    n' = ty.(ty_size) → n = n' → typed_body E L C T' e pre -∗
+    typed_body E L C T (delete [ #n; p ] ;; e) (tr (λ '(_ -:: al), pre al)).
   Proof.
-    iIntros (?? -> Hlen) "?". iApply type_seq; [by apply type_delete_instr| |done].
-    by rewrite (inj _ _ _ Hlen).
+    iIntros (??->?) "?". iApply type_seq; [by eapply type_delete_instr|done| |done].
+    f_equal. fun_ext. by case.
   Qed.
 
+(*
   Lemma type_letalloc_1 {E L} ty C T T' (x : string) p e :
     Closed [] p → Closed (x :b: []) e →
     tctx_extract_hasty E L p ty T T' →
@@ -315,7 +310,7 @@ Section typing.
            I guess that's caused by it trying to unify typed_read and typed_write,
            but considering that the Iris connectives are all sealed, why does
            that take so long? *)
-        by eapply (write_own ty (uninit _)).
+        by eapply (write_own ty (↯ _)).
       + solve_typing.
       + done.
       + done.

@@ -89,7 +89,7 @@ Notation tctx_interp tid :=
 Section lemmas.
   Context `{!typeG Σ}.
 
-  Lemma tctx_hasty_val {A} tid (v: val) (ty: _ A) vπ:
+  Lemma tctx_hasty_val {A} (v: val) (ty: _ A) vπ tid :
     tctx_elt_interp tid (v ◁ ty) vπ ⊣⊢ ∃d, ⧖d ∗ ty.(ty_own) vπ d tid [v].
   Proof.
     rewrite /tctx_elt_interp eval_path_of_val. iSplit.

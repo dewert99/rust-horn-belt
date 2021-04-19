@@ -435,16 +435,6 @@ Proof.
   dependent induction xl; case yl=>/= >; by [rewrite left_id|rewrite IHxl assoc].
 Qed.
 
-Global Instance into_from_sep_big_sepHL_cons {F A As}
-  (x: F A) (xl: _ As) (Φ: ∀B, _ → PROP) :
-  IntoFromSep (big_sepHL Φ (x +:: xl)) (Φ _ x) (big_sepHL Φ xl).
-Proof. by apply get_into_from_sep. Qed.
-
-Global Instance into_from_sep_big_sepHL_1_cons {F G A As}
-  (x: F A) (xl: _ As) (y: G _) yl (Φ: ∀B, _ → _ → PROP) :
-  IntoFromSep (big_sepHL_1 Φ (x +:: xl) (y -:: yl)) (Φ _ x y) (big_sepHL_1 Φ xl yl).
-Proof. by apply get_into_from_sep. Qed.
-
 Global Instance into_from_sep_big_sepHL_app {F As Bs}
   (xl: _ F As) (xl': _ Bs) (Φ: ∀C, _ → PROP) :
   IntoFromSep (big_sepHL Φ (xl h++ xl')) (big_sepHL Φ xl) (big_sepHL Φ xl').
