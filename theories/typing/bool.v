@@ -19,7 +19,7 @@ Section bool.
 
   Lemma type_bool_instr b : typed_val #b bool_ty (λ post, post b).
   Proof.
-    iIntros (?????) "_ _ _ $$ _ Obs". iMod persistent_time_receipt_0 as "Time".
+    iIntros (?????) "_ _ _ _ $$ _ Obs". iMod persistent_time_receipt_0 as "Time".
     iApply wp_value. iExists -[const b]. iFrame "Obs". iSplit; [|done].
     rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "Time". by iExists b.
   Qed.
@@ -36,11 +36,11 @@ Section bool.
       (λ '(b -:: vl), if b then pre1 vl else pre2 vl).
   Proof.
     iIntros "e1 e2". iIntros (?[??]).
-    iIntros "#LFT #TIME #E Na L C [p T] Obs". wp_bind p.
+    iIntros "#LFT #TIME #PROPH #E Na L C [p T] Obs". wp_bind p.
     iApply (wp_hasty with "p"). iIntros (?? _) "_".
     iDestruct 1 as ([|]->) "%Eq"; move: Eq=> [=->]; wp_case.
-    - by iApply ("e1" with "LFT TIME E Na L C T").
-    - by iApply ("e2" with "LFT TIME E Na L C T").
+    - by iApply ("e1" with "LFT TIME PROPH E Na L C T").
+    - by iApply ("e2" with "LFT TIME PROPH E Na L C T").
   Qed.
 
 End bool.

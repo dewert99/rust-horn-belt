@@ -10,7 +10,7 @@ Section typing.
   (* This is an iProp because it is also used by the function type. *)
   Definition typed_body {As} (E: elctx) (L: llctx)
     (C: cctx) (T: tctx As) (e: expr) (pre: predl As) : iProp Σ :=
-    ∀tid vπl, lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
+    ∀tid vπl, lft_ctx -∗ time_ctx -∗ proph_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
       llctx_interp L 1 -∗ cctx_interp tid C -∗ tctx_interp tid T vπl -∗
       ⟨π, pre (vπl -$ π)⟩ -∗ WP e {{ _, cont_postcondition }}.
   Global Arguments typed_body {_} _ _ _ _ _%E _.
@@ -18,7 +18,7 @@ Section typing.
   Lemma typed_body_impl {As} (pre pre': predl As) E L C T e :
     (∀vl, pre vl → pre' vl) → typed_body E L C T e pre' -∗ typed_body E L C T e pre.
   Proof.
-    move=> Imp. rewrite /typed_body. do 12 f_equiv=>/=. do 2 f_equiv. move=> ?.
+    move=> Imp. rewrite /typed_body. do 13 f_equiv=>/=. do 2 f_equiv. move=> ?.
     by apply Imp.
   Qed.
 
@@ -55,7 +55,7 @@ Section typing.
   (** Instruction *)
   Definition typed_instr {As Bs} (E: elctx) (L: llctx)
     (T: tctx As) (e: expr) (T': val → tctx Bs) (tr: predl_trans As Bs) : iProp Σ :=
-    ∀tid postπ vπl, lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
+    ∀tid postπ vπl, lft_ctx -∗ time_ctx -∗ proph_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
       llctx_interp L 1 -∗ tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩ -∗
       WP e {{ v, ∃vπl', na_own tid ⊤ ∗ llctx_interp L 1 ∗
         tctx_interp tid (T' v) vπl' ∗ ⟨π, postπ π (vπl' -$ π)⟩ }}.
@@ -118,9 +118,9 @@ Section typing_rules.
     typed_body (κ ⊑ₑ κ' :: κ' ⊑ₑ κ :: E) L C T e pre -∗
     typed_body E (κ ⊑ₗ [κ'] :: L) C T e pre.
   Proof.
-    iIntros "He" (??) "#LFT TIME E Na [Eq L] C T".
+    iIntros "He" (??) "#LFT TIME #PROPH E Na [Eq L] C T".
     iMod (lctx_equalize_lft with "LFT Eq") as "[In In']".
-    iApply ("He" with "LFT TIME [$E $In $In'] Na L C T").
+    iApply ("He" with "LFT TIME PROPH [$E $In $In'] Na L C T").
   Qed.
 
   Lemma type_let' {As Bs Cs} E L (T1: _ As) (T2: _ → _ Bs) (T: _ Cs) C xb e e' tr pre:
@@ -129,12 +129,12 @@ Section typing_rules.
     typed_body E L C (T1 h++ T) (let: xb := e in e') (trans_upper tr pre).
   Proof.
     iIntros (?) "He He'". iIntros (tid vπl2). move: (papp_ex vπl2)=> [vπl[vπl'->]].
-    iIntros "#LFT #TIME #E Na L C [T1 T] Obs". wp_bind e.
+    iIntros "#LFT #TIME #PROPH #E Na L C [T1 T] Obs". wp_bind e.
     iApply (wp_wand with "[He L T1 Na Obs]").
-    { iApply ("He" with "LFT TIME E Na L T1"). iApply proph_obs_impl; [|done]=> ?.
+    { iApply ("He" with "LFT TIME PROPH E Na L T1"). iApply proph_obs_impl; [|done]=> ?.
       rewrite /trans_upper papply_app papp_sepl. exact id. }
     iIntros (v). iIntros "(%vπ & Na & L & T2 & ?)". wp_let. iCombine "T2 T" as "T2T".
-    iApply ("He'" $! v tid (vπ -++ vπl') with "LFT TIME E Na L C T2T").
+    iApply ("He'" $! v tid (vπ -++ vπl') with "LFT TIME PROPH E Na L C T2T").
     iApply proph_obs_impl; [|done]=>/= ?. rewrite papply_app papp_sepr. exact id.
   Qed.
 
@@ -142,9 +142,9 @@ Section typing_rules.
     tctx_incl E L T T' tr →
     typed_body E L C T' e pre -∗ typed_body E L C T e (tr pre).
   Proof.
-    iIntros (In) "He". iIntros (??) "#LFT TIME #E Na L C T Obs".
-    iMod (In with "LFT E L T Obs") as (?) "(L & Obs & T')".
-    iApply ("He" with "LFT TIME E Na L C T' Obs").
+    iIntros (In) "He". iIntros (??) "#LFT TIME #PROPH #E Na L C T Obs".
+    iMod (In with "PROPH LFT E L T Obs") as (?) "(L & Obs & T')".
+    iApply ("He" with "LFT TIME PROPH E Na L C T' Obs").
   Qed.
 
   (* We do not make the [typed_instr] hypothesis part of the
@@ -174,10 +174,10 @@ Section typing_rules.
     Closed [] e → (∀κ, typed_body E (κ ⊑ₗ κs :: L) C T e pre) -∗
     typed_body E L C T (Newlft ;; e) pre.
   Proof.
-    iIntros (?) "He". iIntros (??) "#LFT TIME E Na L C T Obs".
+    iIntros (?) "He". iIntros (??) "#LFT TIME PROPH E Na L C T Obs".
     iMod (lft_create with "LFT") as (Λ) "[Tok #Hinh]"; [done|].
     set κ' := lft_intersect_list κs. wp_seq.
-    iApply ("He" $! κ' ⊓ Λ with "LFT TIME E Na [Tok $L] C T Obs").
+    iApply ("He" $! κ' ⊓ Λ with "LFT TIME PROPH E Na [Tok $L] C T Obs").
     rewrite /llctx_interp. iExists Λ. iFrame "Tok". by iSplit.
   Qed.
 
@@ -201,7 +201,7 @@ Section typing_rules.
   Lemma type_path_instr {A} p (ty: _ A) E L :
     ⊢ typed_instr_ty E L +[p ◁ ty] p ty (λ post '(-[v]), post v).
   Proof.
-    iIntros (??[vπ[]]) "_ _ _ $$ [T _] Obs". iApply (wp_hasty with "T").
+    iIntros (??[vπ[]]) "_ _ _ _ $$ [T _] Obs". iApply (wp_hasty with "T").
     iIntros (v d _) "??". iExists -[vπ]. do 2 (iSplit; [|done]). iExists v, d.
     rewrite eval_path_of_val. by iFrame.
   Qed.
@@ -220,7 +220,7 @@ Section typing_rules.
     (⊢ typed_write E L ty1 ty ty1' wt) →
     (⊢ typed_instr E L +[p1 ◁ ty1; p2 ◁ ty] (p1 <- p2) (λ _, +[p1 ◁ ty1']) (λ post '(-[a; b]), post -[wt a b])). 
   Proof.
-    iIntros (Hwrt tid ??) "#LFT #TIME #HE $ HL".
+    iIntros (Hwrt tid ??) "#LFT #TIME #PROPH #HE $ HL".
     destruct vπl as [vπ1 [vπ2 []]]. 
     iIntros "(Hp1 & Hp2 & _) ?".
     wp_bind p1. iApply (wp_hasty with "Hp1"). iIntros (v1 depth1) "% Hdepth1 Hown1".
@@ -255,7 +255,7 @@ Section typing_rules.
     ⊢ typed_instr E L +[p ◁ ty] (!p) (λ v, +[v ◁ tyb; p ◁ ty'])
       (λ post '(-[a]), post -[gt a; st a]).
   Proof.
-    move=> Sz Read. iIntros (??[vπ[]]) "#LFT #TIME #E Na L [p _] Obs".
+    move=> Sz Read. iIntros (??[vπ[]]) "#LFT #TIME #PROPH #E Na L [p _] Obs".
     wp_bind p. iApply (wp_hasty with "p"). iIntros (???) "#Time ty".
     iMod (Read with "LFT E Na L ty") as (l vl q ->) "(Mt & tyb & Close)".
     iDestruct (ty_size_eq with "tyb") as "#>%Len". rewrite Sz in Len.
@@ -314,7 +314,7 @@ Section typing_rules.
     ⊢ typed_instr E L +[p1 ◁ ty1; p2 ◁ ty2] (p1 <-{n} !p2)
                       (λ _, +[p1 ◁ ty1'; p2 ◁ ty2']) (λ post '(-[a; b]), post -[wt a (gt b); st b]).
   Proof.
-    iIntros (Hsz Hwrt Hread tid ? ?) "#LFT #TIME #HE Htl HL HT ?".
+    iIntros (Hsz Hwrt Hread tid ? ?) "#LFT #TIME #PROPH #HE Htl HL HT ?".
     destruct vπl as [? [? []]]. 
     iApply (type_memcpy_iris with "[] [] [$LFT $TIME $Htl $HE $HL HT]"); try done.
     { iDestruct "HT" as "(Hp1 & ? & _)". iFrame. }
