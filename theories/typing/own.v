@@ -208,7 +208,7 @@ Section typing.
     (0 ≤ n)%Z → let n' := Z.to_nat n in
     ⊢ typed_instr_ty E L +[] (new [ #n])%E (own_ptr n' (↯ n')) (λ post _, post ()).
   Proof.
-    iIntros (?????) "_ TIME _ $$ _ ?". iMod persistent_time_receipt_0 as "Time".
+    iIntros (?????) "_ TIME _ _ _ $$ _ ?". iMod persistent_time_receipt_0 as "Time".
     iApply (wp_persistent_time_receipt with "TIME Time"); [done|].
     iApply wp_new=>//. iIntros "!>" (l) "(Fr & Mt) #Time". iExists -[const ()].
     iSplit; [|done]. rewrite/= right_id (tctx_hasty_val #l).
@@ -242,7 +242,7 @@ Section typing.
     ⊢ typed_instr E L +[p ◁ own_ptr n' ty] (delete [ #n; p])%E (λ _, +[])
       (λ post _, post -[]).
   Proof.
-    iIntros (?->??[?[]]) "_ TIME E $$ [p _] #Obs". wp_bind p.
+    iIntros (?->??[?[]]) "_ TIME _ _ E $$ [p _] #Obs". wp_bind p.
     iApply (wp_hasty with "p"). iIntros (?[|?] _) "? own"; [done|].
     setoid_rewrite by_just_loc_ex. iDestruct "own" as (?[=->]) "[(%& >Mt & ty)?]".
     iDestruct (ty_size_eq with "ty") as "#>%Sz". iApply (wp_delete with "[-]").

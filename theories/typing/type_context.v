@@ -152,7 +152,7 @@ Section lemmas.
   (** Type context inclusion *)
   Definition tctx_incl {As Bs} (E: elctx) (L: llctx) (T: tctx As) (T': tctx Bs)
     (tr: predl_trans As Bs) : Prop :=
-    ∀tid q vπl postπ, proph_ctx -∗ lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    ∀tid q vπl postπ, proph_ctx -∗ uniq_ctx -∗ lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
       tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩ ={⊤}=∗ ∃vπl',
       llctx_interp L q ∗ ⟨π, postπ π (vπl' -$ π)⟩ ∗ tctx_interp tid T' vπl'.
   (* Global Instance : ∀ A E L f, RewriteRelation (@tctx_incl A A E L f) := {}. *)
@@ -170,8 +170,8 @@ Section lemmas.
     (∀post vl, tr post vl → tr' post vl) →
     tctx_incl E L T T' tr' → tctx_incl E L T T' tr.
   Proof.
-    move=> Imp In. iIntros (????) "#LFT #PROPH E L T #Obs".
-    iMod (In with "LFT PROPH E L T []") as "$"; [|done].
+    move=> Imp In. iIntros (????) "#LFT #PROPH UNIQ E L T #Obs".
+    iMod (In with "LFT PROPH UNIQ E L T []") as "$"; [|done].
     iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
   Qed.
 
@@ -181,9 +181,9 @@ Section lemmas.
   Lemma tctx_incl_trans {As Bs Cs} (T1: _ As) (T2: _ Bs) (T3: _ Cs) tr tr' E L :
     tctx_incl E L T1 T2 tr → tctx_incl E L T2 T3 tr' → tctx_incl E L T1 T3 (tr ∘ tr').
   Proof.
-    move=> In In' >. iIntros "#LFT #PROPH #E L T Obs".
-    iMod (In with "LFT PROPH E L T Obs") as (?) "(L & Obs & T)".
-    iMod (In' with "LFT PROPH E L T Obs") as (vπl'') "(?&?&?)". iExists vπl''. by iFrame.
+    move=> In In' >. iIntros "#LFT #PROPH #UNIQ #E L T Obs".
+    iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & Obs & T)".
+    iMod (In' with "LFT PROPH UNIQ E L T Obs") as (vπl'') "(?&?&?)". iExists vπl''. by iFrame.
   Qed.
 
 (*
@@ -202,11 +202,11 @@ Section lemmas.
     tctx_incl E L (T1 h++ T2) (T1' h++ T2') (trans_app tr tr').
   Proof.
     move=> Hincl1 Hincl2 ?? vπl ?. move: (papp_ex vπl)=> [?[?->]].
-    iIntros "#LFT #PROPH #E L [T1 T2] Obs".
-    iMod (Hincl1 with "LFT PROPH E L T1 [Obs]")  as (wπl) "(L & Obs & T1')".
+    iIntros "#LFT #PROPH #UNIQ #E L [T1 T2] Obs".
+    iMod (Hincl1 with "LFT PROPH UNIQ E L T1 [Obs]")  as (wπl) "(L & Obs & T1')".
     { iApply proph_obs_impl; [|done]=> ?.
       rewrite /trans_app papply_app papp_sepl papp_sepr. exact id. }
-    iMod (Hincl2 with "LFT PROPH E L T2 [Obs]") as (wπl') "(L &?& T2')".
+    iMod (Hincl2 with "LFT PROPH UNIQ E L T2 [Obs]") as (wπl') "(L &?& T2')".
     { iApply proph_obs_impl; [|done]=> ?. exact id. }
     iExists (wπl -++ wπl'). iCombine "T1' T2'" as "$". iFrame "L".
     iApply proph_obs_impl; [|done]=>/= ?. rewrite papply_app. exact id.
