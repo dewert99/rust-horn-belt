@@ -1,6 +1,6 @@
 From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
-From lrust.typing Require Import mod_ty product sum (* typing lib.panic *).
+From lrust.typing Require Import mod_ty uninit sum (* typing lib.panic *).
 Set Default Proof Using "Type".
 
 Section option.

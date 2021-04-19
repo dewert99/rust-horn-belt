@@ -7,7 +7,7 @@ From lrust.lifetime Require Export frac_borrow.
 From lrust.lang Require Export proofmode notation.
 From lrust.typing Require Export base lft_contexts uniq_cmra.
 Set Default Proof Using "Type".
-Open Scope nat.
+Open Scope nat_scope.
 
 Class typeG Σ := TypeG {
   type_lrustG:> lrustG Σ;  type_prophG:> prophG Σ;  type_uniqG:> uniqG Σ;
@@ -71,6 +71,10 @@ Arguments ty_lfts {_ _ _} _ / : simpl nomatch.
 Arguments ty_E {_ _ _} _ / : simpl nomatch.
 Arguments ty_own {_ _ _} _ _ _ _ / : simpl nomatch.
 Arguments ty_shr {_ _ _} _ _ _ _ _ / : simpl nomatch.
+Arguments ty_size_eq {_ _ _}. Arguments ty_own_depth_mono {_ _ _}.
+Arguments ty_shr_depth_mono {_ _ _}. Arguments ty_shr_lft_mono {_ _ _}.
+Arguments ty_share {_ _ _}.
+Arguments ty_own_proph {_ _ _}. Arguments ty_shr_proph {_ _ _}.
 
 Notation ty_lft ty := (lft_intersect_list ty.(ty_lfts)).
 

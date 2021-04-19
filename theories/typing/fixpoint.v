@@ -110,7 +110,7 @@ Section S.
     apply limit_preserving_Persistent=> ??? Eq. apply Eq.
   Qed.
   Next Obligation.
-    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_size_eq _ (Tn' _))].
+    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_size_eq (Tn' _))].
     apply limit_preserving_entails; [|done]. move=> ??? Eq. apply Eq.
   Qed.
   Next Obligation.
@@ -126,16 +126,16 @@ Section S.
     apply limit_preserving_entails; [done|]=> ??? Eq. f_equiv; apply Eq.
   Qed.
   Next Obligation.
-    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_share _ (Tn' _))].
+    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_share (Tn' _))].
     apply limit_preserving_entails; [done|]=> ??? Eq. do 6 f_equiv; [|f_equiv]; apply Eq.
   Qed.
   Next Obligation.
-    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_own_proph _ (Tn' _))].
+    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_own_proph (Tn' _))].
     apply limit_preserving_entails; [done|]=> ??? Eq.
     do 2 f_equiv; [|do 13 f_equiv]; apply Eq.
   Qed.
   Next Obligation.
-    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_shr_proph _ (Tn' _))].
+    move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_shr_proph (Tn' _))].
     apply limit_preserving_entails; [done|]=> ??? Eq.
     do 3 f_equiv; [|do 15 f_equiv]; apply Eq.
   Qed.

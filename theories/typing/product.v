@@ -1,26 +1,10 @@
 Require Import FunctionalExtensionality Equality.
 From lrust.typing Require Export type.
-From lrust.typing Require Import mod_ty.
+From lrust.typing Require Import uninit mod_ty.
 Set Default Proof Using "Type".
 
 Section product.
   Context `{!typeG Σ}.
-
-  Program Definition unit_ty: type unit := {|
-    ty_size := 0;  ty_lfts := [];  ty_E := [];
-    ty_own _ _ _ vl := ⌜vl = []⌝;  ty_shr _ _ _ _ _ := True;
-  |}%I.
-  Next Obligation. iIntros. by subst. Qed. Next Obligation. by iIntros. Qed.
-  Next Obligation. by iIntros. Qed. Next Obligation. by iIntros. Qed.
-  Next Obligation. iIntros. iApply step_fupdN_intro; [done|]. by iFrame. Qed.
-  Next Obligation.
-    iIntros. iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
-    iSplit; [|simpl; by iFrame]. iPureIntro. apply proph_dep_unique.
-  Qed.
-  Next Obligation.
-    iIntros. iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
-    iSplit; [|simpl; by iFrame]. iPureIntro. apply proph_dep_unique.
-  Qed.
 
   Lemma split_prod_mt {A B} (vπ: _ → A) d (vπ': _ → B) d' tid ty ty' q l :
     (l ↦∗{q}: λ vl, ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
@@ -123,7 +107,6 @@ Section product.
 
 End product.
 
-Notation "()" := unit_ty : lrust_type_scope.
 Notation "ty * ty'" := (prod_ty ty%T ty'%T) : lrust_type_scope.
 Notation ":1" := nil_unit_ty : lrust_type_scope.
 Notation "ty :* ty'" := (cons_prod_ty ty%T ty'%T) : lrust_type_scope.
@@ -202,16 +185,6 @@ Section typing.
     move=> [Tl[->All]]. clear T. dependent induction All.
     { rewrite /happly /hmap /compose. apply _. } by apply cons_prod_type_contractive.
   Qed.
-
-  Global Instance unit_ty_copy: Copy ().
-  Proof.
-    split; [apply _|]=> *. iIntros "_ _ Na $ !> /=". iExists 1%Qp, [].
-    rewrite heap_mapsto_vec_nil.
-    iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
-    do 2 (iSplit; [done|]). iIntros "Na". by iDestruct ("ToNa" with "Na") as "$".
-  Qed.
-  Global Instance unit_ty_send: Send (). Proof. done. Qed.
-  Global Instance unit_ty_sync: Sync (). Proof. done. Qed.
 
   Global Instance prod_copy {A B} (ty: _ A) (ty': _ B) :
     Copy ty → Copy ty' → Copy (ty * ty').
@@ -316,7 +289,7 @@ Section typing.
     have Eq: ∀vπ: proph (() * A), prod_left_id ∘ vπ = snd ∘ vπ.
     { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [[]?]. }
     iSplit; iIntros "!> *"; rewrite Eq.
-    - iSplit; [by iIntros "(%&%&->&->&?)"|]. iIntros. iExists [], _. by iFrame.
+    - iSplit; [by iDestruct 1 as ([|]?->?) "?"|]. iIntros. iExists [], _. by iFrame.
     - rewrite left_id shift_loc_0. by iApply (bi.iff_refl True%I).
   Qed.
 
@@ -327,8 +300,8 @@ Section typing.
     rewrite !right_id. iSplit; [done|]. iSplit; [by iApply lft_equiv_refl|].
     have Eq: ∀vπ: proph (A * ()), prod_right_id ∘ vπ = fst ∘ vπ.
     { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [?[]]. }
-    iSplit; iIntros "!> *"; rewrite Eq; [iSplit|].
-    - iIntros "(%&%&->&?&->)". by rewrite right_id.
+    iSplit; iIntros "!>*"; rewrite Eq; [iSplit|].
+    - iDestruct 1 as (?[|]->) "[?%]"; by [rewrite right_id|].
     - iIntros. iExists _, []. rewrite right_id. by iFrame.
     - rewrite right_id. by iApply (bi.iff_refl True%I).
   Qed.
@@ -344,6 +317,16 @@ Section typing.
       eapply eqtype_trans; [by apply prod_ty_assoc|]. apply prod_eqtype;
       [apply mod_ty_inout, _|done]. } { fun_ext. by case. }
       { fun_ext. by case=> [[??]?]. }
+  Qed.
+
+  Lemma uninit_plus_prod E L m n :
+    eqtype E L unique unique (↯ (m + n)) (↯ m * ↯ n).
+  Proof.
+    apply eqtype_unfold; [apply _|]. iIntros "*_!>_". iSplit; [done|].
+    iSplit; [iApply lft_equiv_refl|]. iSplit; iIntros "!>*!%"; [|done]. split.
+    - move: vl. elim m; [by exists [], vl|]=>/= ? IH [|v?]// [=/IH[wl[wl'[->[??]]]]].
+      exists (v :: wl), wl'. split; [done|]. split; [|done]=>/=. by f_equal.
+    - move=> [?[?[->[??]]]]. rewrite app_length. by f_equal.
   Qed.
 
   Lemma prod_outlv_E {A B} (ty: _ A) (ty': _ B) κ :

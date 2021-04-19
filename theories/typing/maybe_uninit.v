@@ -1,5 +1,6 @@
 Require Import FunctionalExtensionality Equality.
 From lrust.typing Require Export type.
+From lrust.typing Require Import uninit.
 Set Default Proof Using "Type".
 
 Section maybe_uninit.
@@ -96,7 +97,7 @@ Section typing.
   Proof.
     move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Sub".
     iIntros "!> E". iDestruct ("Sub" with "E") as "(%&?& #InOwn & #InShr)".
-    do 2 (iSplit; [done|]). iSplit; iIntros "!> * /=".
+    do 2 (iSplit; [done|]). iSplit; iIntros "!>*/=".
     - iIntros "[[->->]|(%vπ'&->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
       iSplit; [done|]. by iApply "InOwn".
     - iIntros "[->|(%vπ'&->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
@@ -106,17 +107,24 @@ Section typing.
     eqtype E L f g ty ty' → eqtype E L (option_map f) (option_map g) (? ty) (? ty').
   Proof. move=> [??]. split; by apply maybe_uninit_subtype. Qed.
 
+  Lemma uninit_to_maybe_uninit {A} (ty: _ A) E L :
+    subtype E L (const None) (↯ ty.(ty_size)) (? ty).
+  Proof.
+    iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_static|].
+    by iSplit; iIntros "!>*%/="; iLeft.
+  Qed.
+
   Lemma into_maybe_uninit {A} (ty: _ A) E L : subtype E L Some ty (? ty).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
-    iSplit; iIntros "!> * ? /="; iRight; iExists vπ; by iFrame.
+    iSplit; iIntros "!>*?/="; iRight; iExists vπ; by iFrame.
   Qed.
 
   Lemma maybe_uninit_join {A} (ty: _ A) E L :
     subtype E L (option_join _) (? (? ty)) (? ty).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
-    iSplit; iIntros "!> * /=".
+    iSplit; iIntros "!>*/=".
     - iIntros "[[->->]|(%&->&[[->->]|(%vπ''&->&?)])]"; [by iLeft|by iLeft|].
       iRight. iExists vπ''. by iFrame.
     - iIntros "[->|(%&->&[->|(%vπ''&->&?)])]"; [by iLeft|by iLeft|].

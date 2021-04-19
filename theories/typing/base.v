@@ -6,8 +6,6 @@ From lrust.lang Require Import proofmode.
    sets coming from the prelude. *)
 From lrust.lang.lib Require Export new_delete.
 
-Open Scope Z_scope.
-
 Create HintDb lrust_typing.
 Create HintDb lrust_typing_merge.
 

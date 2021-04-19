@@ -113,11 +113,11 @@ Section lemmas.
 
   Lemma wp_hasty {A} E tid p (ty : type A) vπ Φ :
     tctx_elt_interp tid (p ◁ ty) vπ -∗
-    (∀v d, ⧖d -∗ ty.(ty_own) vπ d tid [v] -∗ Φ v) -∗ WP p @ E {{ Φ }}.
+    (∀v d, ⌜Some v = eval_path p⌝ -∗ ⧖d -∗ ty.(ty_own) vπ d tid [v] -∗ Φ v) -∗
+    WP p @ E {{ Φ }}.
   Proof.
-    iDestruct 1 as (???) "[#? ?]". iIntros "ToΦ".
-    iApply (wp_wand with "[]"); [by iApply wp_eval_path|].
-    iIntros (?) "->". by iApply "ToΦ".
+    iDestruct 1 as (???) "[#? ?]". iIntros "ToΦ". iApply (wp_wand with "[]");
+    [by iApply wp_eval_path|]. iIntros (?) "->". by iApply "ToΦ".
   Qed.
 
   Lemma closed_hasty {A} tid p (ty: _ A) vπ :

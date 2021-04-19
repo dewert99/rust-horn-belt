@@ -1,7 +1,8 @@
 From lrust.lang.lib Require Import memcpy.
 From lrust.typing Require Export type.
-(* From lrust.typing Require Import uninit type_context programs. *)
+From lrust.typing Require Import uninit type_context programs.
 Set Default Proof Using "Type".
+Open Scope nat_scope.
 
 Section own.
   Context `{!typeG Σ}.
@@ -80,10 +81,10 @@ Section own.
   Qed.
   Next Obligation.
     move=> ?????[|?]*; [by iIntros|]. rewrite/= {1}by_just_loc_ex.
-    iIntros "#LFT #In (%&->& [%[Mt Own]] & Free) Tok !>!>!>".
+    iIntros "#LFT #In (%&->& [%[Mt Own]] & Fr) Tok !>!>!>".
     iDestruct (ty_own_proph with "LFT In Own Tok") as "Upd"; [done|].
     iApply (step_fupdN_wand with "Upd"). iIntros ">(%ξs & %q &%& PTok & Close) !>".
-    iExists ξs, q. iSplit; [done|]. iFrame "PTok Free". iIntros "PTok".
+    iExists ξs, q. iSplit; [done|]. iFrame "PTok Fr". iIntros "PTok".
     iMod ("Close" with "PTok") as "[?$]". iExists vl. by iFrame.
   Qed.
   Next Obligation.
@@ -170,29 +171,10 @@ Section box.
 
 End box.
 
-Section util.
-  Context `{!typeG Σ}.
-
-  (*
-  Lemma ownptr_uninit_own n m tid depth v :
-    (own_ptr n (uninit m)).(ty_own) depth tid [v] ⊣⊢
-         ∃ (l : loc) (vl' : vec val m), ⌜depth > 0⌝%nat ∗ ⌜v = #l⌝ ∗
-                                      ▷ l ↦∗ vl' ∗ ▷ freeable_sz n m l.
-  Proof.
-    rewrite ownptr_own. apply bi.exist_proper=>l. iSplit.
-    (* FIXME: The goals here look rather confusing:  One cannot tell that we are looking at
-       a statement in Iris; the top-level → could just as well be a Coq implication. *)
-    - iIntros "H". iDestruct "H" as (vl) "(% & -> & Hl & _ & $)". auto.
-    - iIntros "H". iDestruct "H" as (vl) "(% & -> & Hl & $)".
-      iExists vl. rewrite /= vec_to_list_length. auto.
-  Qed.*)
-End util.
-
-(*
 Section typing.
   Context `{!typeG Σ}.
 
-  (** Typing *)
+(*
   Lemma write_own {E L} ty ty' n :
     ty.(ty_size) = ty'.(ty_size) → ⊢ typed_write E L (own_ptr n ty') ty (own_ptr n ty).
   Proof.
@@ -201,30 +183,28 @@ Section typing.
     rewrite /= Hsz. iDestruct "Hown" as "[H↦ $]". iDestruct "H↦" as (vl) "[>H↦ Hown]".
     iDestruct (ty_size_eq with "Hown") as "#>%". auto 10 with iFrame.
   Qed.
+*)
 
-  Lemma read_own_copy E L ty n :
-    Copy ty → ⊢ typed_read E L (own_ptr n ty) ty (own_ptr n ty).
+  Lemma read_own_copy {A} (ty: _ A) n E L :
+    Copy ty → typed_read E L (own_ptr n ty) ty (own_ptr n ty) id id.
   Proof.
-    rewrite typed_read_eq. iIntros (Hsz) "!>".
-    iIntros ([[]|] [|depth] tid F qL ?) "_ _ $ $ Hown"; try done.
-    iDestruct "Hown" as "[H↦ H†]". iDestruct "H↦" as (vl) "[>H↦ Hown]".
-    iDestruct (ty_own_depth_mono _ _ (S depth) with "Hown") as "#?"; [lia|].
-    iExists l, _, _. iFrame "∗#". iSplitR; first done. iIntros "!> Hl !>".
-    iExists _. auto.
+    move=> ??[|?]???; iIntros "_ _ $$ own"=>//=. setoid_rewrite by_just_loc_ex at 1.
+    iDestruct "own" as (l[=->]) "[(%vl & >Mt & ty) Fr]". iModIntro.
+    iExists l, vl, 1%Qp. iSplit; [done|]. iFrame "Mt Fr". iSplit.
+    { iApply ty_own_depth_mono; [|done]. lia. } iIntros "? !>!>". iExists vl. iFrame.
   Qed.
 
-  Lemma read_own_move E L ty n :
-    ⊢ typed_read E L (own_ptr n ty) ty (own_ptr n $ uninit ty.(ty_size)).
+  Lemma read_own_move {A} (ty: _ A) n E L :
+    typed_read E L (own_ptr n ty) ty (own_ptr n (↯ ty.(ty_size))) id unique.
   Proof.
-    rewrite typed_read_eq. iModIntro.
-    iIntros ([[]|] [|depth] tid F qL ?) "_ _ $ $ Hown"; try done.
-    iDestruct "Hown" as "[H↦ H†]". iDestruct "H↦" as (vl) "[>H↦ Hown]".
-    iDestruct (ty_size_eq with "Hown") as "#>%".
-    iDestruct (ty_own_depth_mono _ _ (S depth) with "Hown") as "Hown"; [lia|].
-    iExists l, vl, _. iFrame "∗#". iSplitR; first done. iIntros "!> Hl !> !>".
-    iExists _. iFrame. done.
+    move=> ?[|?]???; iIntros "_ _ $$ own"=>//. setoid_rewrite by_just_loc_ex at 1.
+    iDestruct "own" as (l[=->]) "[(%vl & >Mt & ty) Fr]".
+    iDestruct (ty_size_eq with "ty") as "#>%". iModIntro.
+    iExists l, vl, 1%Qp. iSplit; [done|]. iFrame "Mt Fr". iSplitL "ty".
+    { iApply ty_own_depth_mono; [|done]. lia. } iIntros "?!>!>". iExists vl. by iSplit.
   Qed.
 
+(*
   Lemma type_new_instr {E L} (n : Z) :
     0 ≤ n →
     ⊢ let n' := Z.to_nat n in
@@ -340,8 +320,8 @@ Section typing.
       + done.
       + done.
   Qed.
-End typing.
 *)
+End typing.
 
 Global Hint Resolve own_subtype own_eqtype box_subtype box_eqtype
             (* write_own read_own_copy *) : lrust_typing.

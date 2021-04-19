@@ -37,7 +37,7 @@ Section bool.
   Proof.
     iIntros "e1 e2". iIntros (?[??]).
     iIntros "#LFT #TIME #E Na L C [p T] Obs". wp_bind p.
-    iApply (wp_hasty with "p"). iIntros (??) "_".
+    iApply (wp_hasty with "p"). iIntros (?? _) "_".
     iDestruct 1 as ([|]->) "%Eq"; move: Eq=> [=->]; wp_case.
     - by iApply ("e1" with "LFT TIME E Na L C T").
     - by iApply ("e2" with "LFT TIME E Na L C T").

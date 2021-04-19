@@ -37,8 +37,8 @@ Section int.
       (λ post '(-[z; z']), post (z + z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ $$ (P1 & P2 &_) Obs".
-    wp_apply (wp_hasty with "P1"). iIntros (? d) "Time". iIntros ((z&->&[=->])).
-    wp_apply (wp_hasty with "P2"). iIntros (??) "_". iIntros ((z'&->&[=->])).
+    wp_apply (wp_hasty with "P1"). iIntros (? d _) "Time". iIntros ((z&->&[=->])).
+    wp_apply (wp_hasty with "P2"). iIntros (?? _) "_". iIntros ((z'&->&[=->])).
     wp_op. iExists -[const (z + z')]. iFrame "Obs". rewrite right_id
     tctx_hasty_val'; [|done]. iExists d. iFrame "Time". by iExists (z + z').
   Qed.
@@ -58,8 +58,8 @@ Section int.
       (λ post '(-[z; z']), post (z - z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ $$ (P1 & P2 &_) Obs".
-    wp_apply (wp_hasty with "P1"). iIntros (? d) "Time". iIntros ((z&->&[=->])).
-    wp_apply (wp_hasty with "P2"). iIntros (??) "_". iIntros ((z'&->&[=->])).
+    wp_apply (wp_hasty with "P1"). iIntros (? d _) "Time". iIntros ((z&->&[=->])).
+    wp_apply (wp_hasty with "P2"). iIntros (?? _) "_". iIntros ((z'&->&[=->])).
     wp_op. iExists -[const (z - z')]. iFrame "Obs". rewrite right_id
     tctx_hasty_val'; [|done]. iExists d. iFrame "Time". by iExists (z - z').
   Qed.
@@ -79,8 +79,8 @@ Section int.
       (λ post '(-[z; z']), post (bool_decide (z ≤ z'))).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ $$ (P1 & P2 &_) Obs".
-    wp_apply (wp_hasty with "P1"). iIntros (? d) "Time". iIntros ((z&->&[=->])).
-    wp_apply (wp_hasty with "P2"). iIntros (??) "_". iIntros ((z'&->&[=->])).
+    wp_apply (wp_hasty with "P1"). iIntros (? d _) "Time". iIntros ((z&->&[=->])).
+    wp_apply (wp_hasty with "P2"). iIntros (?? _) "_". iIntros ((z'&->&[=->])).
     wp_op. iExists -[const (bool_decide (z <= z'))]. iFrame "Obs".
     rewrite right_id tctx_hasty_val'; [|done]. iExists d.
     iFrame "Time". by iExists (bool_decide (z <= z')).
