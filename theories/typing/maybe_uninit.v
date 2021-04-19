@@ -87,9 +87,9 @@ Section typing.
   Qed.
 
   Global Instance maybe_uninit_send {A} (ty: _ A) : Send ty → Send (? ty).
-  Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
+  Proof. move=> >/=. by do 4 f_equiv. Qed.
   Global Instance maybe_uninit_sync {A} (ty: _ A) : Sync ty → Sync (? ty).
-  Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
+  Proof. move=> >/=. by do 4 f_equiv. Qed.
 
   Lemma maybe_uninit_subtype {A B} (f: A → B) ty ty' E L :
     subtype E L f ty ty' → subtype E L (option_map f) (? ty) (? ty').

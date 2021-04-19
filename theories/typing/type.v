@@ -100,7 +100,7 @@ Qed.
 Lemma elctx_interp_ty_outlives_E `{!typeG Σ} {A} (ty: _ A) α :
   elctx_interp (ty_outlives_E ty α) ⊣⊢ α ⊑ ty.(ty_lft).
 Proof.
-  rewrite /ty_outlives_E /elctx_interp /elctx_elt_interp big_sepL_fmap /=.
+  rewrite /ty_outlives_E /elctx_elt_interp big_sepL_fmap /=.
   elim ty.(ty_lfts)=>/= [|κ l ->].
   { iSplit; iIntros "_"; [|done]. iApply lft_incl_static. } iSplit.
   - iIntros "#[??]". by iApply lft_incl_glb.
@@ -387,7 +387,17 @@ Lemma type_lft_morphism_id_like {A B} (T: _ A → _ B) :
 Proof.
   move=> EqLfts EqE. apply (type_lft_morphism_add _ static [] [])=> ?.
   + rewrite left_id EqLfts. apply lft_equiv_refl.
-  + by rewrite /elctx_interp /= left_id right_id EqE.
+  + by rewrite/= left_id right_id EqE.
+Qed.
+
+Lemma type_lft_morphism_add_one {A B} κ (T: _ A → _ B) :
+  (∀ty, (T ty).(ty_lfts) = κ :: ty.(ty_lfts)) →
+  (∀ty, (T ty).(ty_E) = ty.(ty_E) ++ ty_outlives_E ty κ) →
+  TypeLftMorphism T.
+Proof.
+  move=> EqLfts EqE. apply (type_lft_morphism_add _ κ [κ] [])=> ?.
+  + rewrite EqLfts. apply lft_equiv_refl.
+  + by rewrite EqE elctx_interp_app elctx_interp_ty_outlives_E /= left_id right_id.
 Qed.
 
 Global Instance type_lft_morphism_compose {A B C} (T: _ → _ C) (U: _ A → _ B) :
@@ -400,19 +410,19 @@ Proof.
       iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|iApply HUα].
     + rewrite HTE HUE !elctx_interp_app big_sepL_app -!assoc.
       setoid_rewrite (lft_incl_equiv_proper_r _ _ _ (HUα _)). iSplit.
-      * iIntros "($ & $ & $ & $ & H)". rewrite /elctx_interp big_sepL_fmap.
+      * iIntros "($ & $ & $ & $ & H)". rewrite big_sepL_fmap.
         iSplit; iApply (big_sepL_impl with "H"); iIntros "!> * _ #H";
         (iApply lft_incl_trans; [done|]);
         [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
       * iIntros "($ & $ & H1 & $ & H2 & $)".
-        rewrite /elctx_interp big_sepL_fmap. iCombine "H1 H2" as "H".
+        rewrite big_sepL_fmap. iCombine "H1 H2" as "H".
         rewrite -big_sepL_sep. iApply (big_sepL_impl with "H").
         iIntros "!> * _ #[??]". by iApply lft_incl_glb.
   - apply (type_lft_morphism_const _ (αT ⊓ αU)
             (ET ++ EU ++ ((λ β, β ⊑ₑ αU) <$> βst)))=>ty.
     + iApply lft_equiv_trans. iApply HTα.
       iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|iApply HUα].
-    + rewrite HTE HUE !elctx_interp_app /elctx_interp big_sepL_fmap.
+    + rewrite HTE HUE !elctx_interp_app big_sepL_fmap.
       do 5 f_equiv. by apply lft_incl_equiv_proper_r.
   - apply (type_lft_morphism_const _ αT ET)=>//=.
   - apply (type_lft_morphism_const _ αT ET)=>//=.

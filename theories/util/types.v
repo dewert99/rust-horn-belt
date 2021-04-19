@@ -416,23 +416,44 @@ Notation "[∗ hlist] x ; y ;- z ∈ xl ; yl ;- zl , P" :=
 Section lemmas.
 Context `{BiAffine PROP}.
 
-Lemma big_sepHL_singleton {F B} (Φ: ∀A, F A → PROP) (x: _ B) :
+Lemma big_sepHL_singleton {F A} (x: F A) (Φ: ∀B, _ → PROP) :
   big_sepHL Φ +[x] ⊣⊢ Φ _ x.
 Proof. by rewrite /= right_id. Qed.
 
-Lemma big_sepHL_1_singleton {F G B} (Φ: ∀A, F A → G A → PROP) (x y : _ B) :
+Lemma big_sepHL_1_singleton {F G A} (x: F A) (y: G _) (Φ: ∀B, _ → _ → PROP) :
   big_sepHL_1 Φ +[x] -[y] ⊣⊢ Φ _ x y.
 Proof. by rewrite /= right_id. Qed.
 
-Lemma big_sepHL_app {F As Bs} (Φ: ∀A, F A → PROP) (xl: _ As) (xl': _ Bs) :
+Lemma big_sepHL_app {F As Bs} (xl: _ F As) (xl': _ Bs) (Φ: ∀C, _ → PROP) :
   big_sepHL Φ (xl h++ xl') ⊣⊢ big_sepHL Φ xl ∗ big_sepHL Φ xl'.
 Proof. elim xl; [by rewrite left_id|]=>/= > ->. by rewrite assoc. Qed.
 
-Lemma big_sepHL_1_app {F G As Bs} (Φ: ∀A, F A → G A → PROP)
-  (xl: _ As) (xl': _ Bs) yl yl' :
+Lemma big_sepHL_1_app {F G As Bs}
+  (xl: _ F As) (xl': _ Bs) (yl: _ G _) yl' (Φ: ∀C, _ → _ → PROP) :
   big_sepHL_1 Φ (xl h++ xl') (yl -++ yl') ⊣⊢ big_sepHL_1 Φ xl yl ∗ big_sepHL_1 Φ xl' yl'.
 Proof.
   dependent induction xl; case yl=>/= >; by [rewrite left_id|rewrite IHxl assoc].
 Qed.
+
+Global Instance into_from_sep_big_sepHL_cons {F A As}
+  (x: F A) (xl: _ As) (Φ: ∀B, _ → PROP) :
+  IntoFromSep (big_sepHL Φ (x +:: xl)) (Φ _ x) (big_sepHL Φ xl).
+Proof. by apply get_into_from_sep. Qed.
+
+Global Instance into_from_sep_big_sepHL_1_cons {F G A As}
+  (x: F A) (xl: _ As) (y: G _) yl (Φ: ∀B, _ → _ → PROP) :
+  IntoFromSep (big_sepHL_1 Φ (x +:: xl) (y -:: yl)) (Φ _ x y) (big_sepHL_1 Φ xl yl).
+Proof. by apply get_into_from_sep. Qed.
+
+Global Instance into_from_sep_big_sepHL_app {F As Bs}
+  (xl: _ F As) (xl': _ Bs) (Φ: ∀C, _ → PROP) :
+  IntoFromSep (big_sepHL Φ (xl h++ xl')) (big_sepHL Φ xl) (big_sepHL Φ xl').
+Proof. by apply get_into_from_sep, big_sepHL_app. Qed.
+
+Global Instance into_from_sep_big_sepHL_1_app {F G As Bs}
+  (xl: _ F As) (xl': _ Bs) (yl: _ G _) yl' (Φ: ∀C, _ → _ → PROP) :
+  IntoFromSep (big_sepHL_1 Φ (xl h++ xl') (yl -++ yl'))
+    (big_sepHL_1 Φ xl yl) (big_sepHL_1 Φ xl' yl').
+Proof. by apply get_into_from_sep, big_sepHL_1_app. Qed.
 
 End lemmas.

@@ -80,6 +80,15 @@ Section type_context.
   (* Block tctx_elt_interp from reducing with simpl when t is a constructor. *)
   Global Arguments tctx_elt_interp : simpl never.
 
+End type_context.
+
+(** Type context *)
+Notation tctx_interp tid :=
+  (big_sepHL_1 (λ A t vπ, @tctx_elt_interp _ _ A tid t vπ)).
+
+Section lemmas.
+  Context `{!typeG Σ}.
+
   Lemma tctx_hasty_val {A} tid (v: val) (ty: _ A) vπ:
     tctx_elt_interp tid (v ◁ ty) vπ ⊣⊢ ∃d, ⧖d ∗ ty.(ty_own) vπ d tid [v].
   Proof.
@@ -115,24 +124,6 @@ Section type_context.
     tctx_elt_interp tid (p ◁ ty) vπ -∗ ⌜Closed [] p⌝.
   Proof. iDestruct 1 as (???) "(_ & _)". eauto using eval_path_closed. Qed.
 
-  (** Type context *)
-  Definition tctx_interp {As} (tid: thread_id) (T: tctx As) (vπl: plist proph As)
-    : iProp Σ := [∗ hlist] t;- vπ ∈ T;- vπl, tctx_elt_interp tid t vπ.
-
-  Lemma tctx_interp_singleton {A} tid (t: _ A) vπ :
-    tctx_interp tid +[t] -[vπ] ⊣⊢ tctx_elt_interp tid t vπ.
-  Proof. by rewrite /tctx_interp big_sepHL_1_singleton. Qed.
-
-  Lemma tctx_interp_cons {A As} tid (t: _ A) (T: _ As) vπ vπl :
-    tctx_interp tid (t +:: T) (vπ -:: vπl) ⊣⊢
-    tctx_elt_interp tid t vπ ∗ tctx_interp tid T vπl.
-  Proof. done. Qed.
-
-  Lemma tctx_interp_app {As Bs} tid (T: _ As) (T': _ Bs) vπl vπl' :
-    tctx_interp tid (T h++ T') (vπl -++ vπl') ⊣⊢
-    tctx_interp tid T vπl ∗ tctx_interp tid T' vπl'.
-  Proof. by rewrite /tctx_interp big_sepHL_1_app. Qed.
-
   (** Copy typing contexts *)
   Class CopyC {As} (T : tctx As) vπl :=
     copyc_persistent tid : Persistent (tctx_interp tid T vπl).
@@ -141,9 +132,9 @@ Section type_context.
   Global Instance tctx_nil_copy : CopyC +[] -[].
   Proof. rewrite /CopyC. apply _. Qed.
 
-  Global Instance tctx_ty_copy {A As} (T: _ As) vπl p (ty: _ A) vπ :
-    CopyC T vπl → Copy ty → CopyC (p ◁ ty +:: T) (vπ -:: vπl).
-  Proof. rewrite /CopyC=> *. rewrite tctx_interp_cons. apply _. Qed.
+  Global Instance tctx_cons_copy {A As} (T: _ As) vπl p (ty: _ A) vπ :
+    Copy ty → CopyC T vπl → CopyC (p ◁ ty +:: T) (vπ -:: vπl).
+  Proof. rewrite /CopyC=> *. apply _. Qed.
 
   (** Send typing contexts *)
   Class SendC {As} (T: tctx As) vπl :=
@@ -152,19 +143,18 @@ Section type_context.
   Global Instance tctx_nil_send : SendC +[] -[].
   Proof. done. Qed.
 
-  Global Instance tctx_ty_send {A As} (T : tctx As) vπl p (ty : type A) vπ :
-    SendC T vπl → Send ty → SendC (p ◁ ty +:: T) (vπ -:: vπl).
+  Global Instance tctx_cons_send {A As} (T : tctx As) vπl p (ty : type A) vπ :
+    Send ty → SendC T vπl → SendC (p ◁ ty +:: T) (vπ -:: vπl).
   Proof.
-    move=> Eq Eq' >. rewrite !tctx_interp_cons Eq. f_equiv.
-    rewrite /tctx_elt_interp. do 6 f_equiv. by rewrite Eq'.
+    move=> Eq Eq' >/=. rewrite Eq' /tctx_elt_interp. do 7 f_equiv. by rewrite Eq.
   Qed.
 
   (** Type context inclusion *)
   Definition tctx_incl {As Bs} (E: elctx) (L: llctx) (T: tctx As) (T': tctx Bs)
     (tr: predl_trans As Bs) : Prop :=
-    ∀tid q vπl (post: proph _), lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
-      tctx_interp tid T vπl -∗ ⟨π, tr (post π) (vπl -$ π)⟩ ={⊤}=∗ ∃vπl',
-      llctx_interp L q ∗ ⟨π, post π (vπl' -$ π)⟩ ∗ tctx_interp tid T' vπl'.
+    ∀tid q vπl postπ, lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+      tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩ ={⊤}=∗ ∃vπl',
+      llctx_interp L q ∗ ⟨π, postπ π (vπl' -$ π)⟩ ∗ tctx_interp tid T' vπl'.
   (* Global Instance : ∀ A E L f, RewriteRelation (@tctx_incl A A E L f) := {}. *)
 
   (* Global Instance tctx_incl_preorder A E L : PreOrder (@tctx_incl A A E L).
@@ -212,14 +202,13 @@ Section type_context.
     tctx_incl E L (T1 h++ T2) (T1' h++ T2') (trans_app tr tr').
   Proof.
     move=> Hincl1 Hincl2 ?? vπl ?. move: (papp_ex vπl)=> [?[?->]].
-    rewrite /tctx_incl tctx_interp_app.
-    iIntros "#LFT #HE HL [H1 H2] HP".
-    iMod (Hincl1 with "LFT HE HL H1 [HP]")  as (wπl) "(HL & Hp1 & ?)".
+    iIntros "#LFT #E L [T1 T2] Obs".
+    iMod (Hincl1 with "LFT E L T1 [Obs]")  as (wπl) "(L & Obs & T1')".
     { iApply proph_obs_impl; [|done]=> ?.
       rewrite /trans_app papply_app papp_sepl papp_sepr. exact id. }
-    iMod (Hincl2 with "LFT HE HL H2 [Hp1]") as (wπl') "(HL & Hp2 & ?)".
+    iMod (Hincl2 with "LFT E L T2 [Obs]") as (wπl') "(L &?& T2')".
     { iApply proph_obs_impl; [|done]=> ?. exact id. }
-    iExists (wπl -++ wπl'). rewrite tctx_interp_app. iFrame.
+    iExists (wπl -++ wπl'). iCombine "T1' T2'" as "$". iFrame "L".
     iApply proph_obs_impl; [|done]=>/= ?. rewrite papply_app. exact id.
   Qed.
 
@@ -379,7 +368,7 @@ Section type_context.
     iIntros (H12 tid) "#H†". rewrite !tctx_interp_cons. iIntros "[$ HT1]".
     by iMod (H12 with "H† HT1") as "$".
   Qed.  *)
-End type_context.
+End lemmas.
 
 (* Global Hint Resolve tctx_extract_hasty_here_copy | 1 : lrust_typing.
 Global Hint Resolve tctx_extract_hasty_here | 20 : lrust_typing.

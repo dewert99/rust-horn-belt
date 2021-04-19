@@ -160,7 +160,7 @@ Section case.
   Lemma type_sum_assign_instr {E L} (i : nat) ty1 tyl ty ty2 p1 p2 :
     tyl !! i = Some ty →
     (⊢ typed_write E L ty1 (sum tyl) ty2) →
-    ⊢ typed_instruction E L [p1 ◁ ty1; p2 ◁ ty] (p1 <-{Σ i} p2) (λ _, [p1 ◁ ty2]).
+    ⊢ typed_instr E L [p1 ◁ ty1; p2 ◁ ty] (p1 <-{Σ i} p2) (λ _, [p1 ◁ ty2]).
   Proof.
     iIntros (Hty Hw tid) "#LFT #TIME #HE $ HL Hp".
     rewrite tctx_interp_cons tctx_interp_singleton.
@@ -194,7 +194,7 @@ Section case.
     Closed [] e →
     0 ≤ i →
     sty = sum tyl →
-    tctx_extract_ctx E L [p1 ◁ ty1; p2 ◁ ty] T T' →
+    tctx_extract E L [p1 ◁ ty1; p2 ◁ ty] T T' →
     tyl !! (Z.to_nat i) = Some ty →
     (⊢ typed_write E L ty1 sty ty1') →
     typed_body E L C ((p1 ◁ ty1') :: T') e -∗
@@ -207,7 +207,7 @@ Section case.
   Lemma type_sum_unit_instr {E L} (i : nat) tyl ty1 ty2 p :
     tyl !! i = Some unit →
     (⊢ typed_write E L ty1 (sum tyl) ty2) →
-    ⊢ typed_instruction E L [p ◁ ty1] (p <-{Σ i} ()) (λ _, [p ◁ ty2]).
+    ⊢ typed_instr E L [p ◁ ty1] (p <-{Σ i} ()) (λ _, [p ◁ ty2]).
   Proof.
     iIntros (Hty Hw tid) "#LFT #TIME #HE $ HL Hp". rewrite tctx_interp_singleton.
     wp_apply (wp_hasty with "Hp"). iIntros (depth v) "Hdepth". iIntros (Hv) "Hty".
@@ -241,7 +241,7 @@ Section case.
     tyl !! i = Some ty →
     (⊢ typed_write E L ty1 (sum tyl) ty1') →
     (⊢ typed_read E L ty2 ty ty2') →
-    ⊢ typed_instruction E L [p1 ◁ ty1; p2 ◁ ty2]
+    ⊢ typed_instr E L [p1 ◁ ty1; p2 ◁ ty2]
                (p1 <-{ty.(ty_size),Σ i} !p2) (λ _, [p1 ◁ ty1'; p2 ◁ ty2']).
   Proof.
     iIntros (Hty Hw Hr tid) "#LFT #TIME #HE Htl [HL1 HL2] Hp".
@@ -287,7 +287,7 @@ Section case.
     Closed [] e →
     0 ≤ i →
     sty = sum tyl →
-    tctx_extract_ctx E L [p1 ◁ ty1; p2 ◁ ty2] T T' →
+    tctx_extract E L [p1 ◁ ty1; p2 ◁ ty2] T T' →
     tyl !! (Z.to_nat i) = Some ty →
     (⊢ typed_write E L ty1 sty ty1') →
     (⊢ typed_read E L ty2 ty ty2') →

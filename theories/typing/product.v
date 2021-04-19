@@ -236,10 +236,10 @@ Section typing.
 
   Global Instance prod_send {A B} (ty: _ A) (ty': _ B) :
     Send ty → Send ty' → Send (ty * ty').
-  Proof. move=> Eq Eq' >/=. setoid_rewrite Eq at 1. by setoid_rewrite Eq' at 1. Qed.
+  Proof. move=> >/=. by do 6 f_equiv. Qed.
   Global Instance prod_sync {A B} (ty: _ A) (ty': _ B) :
     Sync ty → Sync ty' → Sync (ty * ty').
-  Proof. move=> Eq Eq' >/=. by rewrite Eq Eq'. Qed.
+  Proof. move=> >/=. by f_equiv. Qed.
 
   Global Instance xprod_copy {As} (tyl: _ As) : ListCopy tyl → Copy (Π! tyl).
   Proof. elim; apply _. Qed.

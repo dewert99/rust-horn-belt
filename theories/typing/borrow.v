@@ -33,7 +33,7 @@ Section borrow.
 
   Lemma type_share_instr E L p κ ty :
     lctx_lft_alive E L κ →
-    ⊢ typed_instruction E L [p ◁ &uniq{κ}ty] Share (λ _, [p ◁ &shr{κ} ty]).
+    ⊢ typed_instr E L [p ◁ &uniq{κ}ty] Share (λ _, [p ◁ &shr{κ} ty]).
   Proof.
     iIntros (Hκ ?) "#LFT #TIME #HE $ HL Huniq".
     iMod (Hκ with "HE HL") as (q) "[Htok Hclose]"; [done..|].
@@ -80,7 +80,7 @@ Section borrow.
 
   Lemma type_deref_uniq_own_instr {E L} κ p n ty :
     lctx_lft_alive E L κ →
-    ⊢ typed_instruction_ty E L [p ◁ &uniq{κ}(own_ptr n ty)] (!p) (&uniq{κ} ty).
+    ⊢ typed_instr_ty E L [p ◁ &uniq{κ}(own_ptr n ty)] (!p) (&uniq{κ} ty).
   Proof.
     iIntros (Hκ tid) "#LFT #TIME HE $ HL Hp".
     rewrite tctx_interp_singleton.
@@ -122,7 +122,7 @@ Section borrow.
 
   Lemma type_deref_shr_own_instr {E L} κ p n ty :
     lctx_lft_alive E L κ →
-    ⊢ typed_instruction_ty E L [p ◁ &shr{κ}(own_ptr n ty)] (!p) (&shr{κ} ty).
+    ⊢ typed_instr_ty E L [p ◁ &shr{κ}(own_ptr n ty)] (!p) (&shr{κ} ty).
   Proof.
     iIntros (Hκ tid) "#LFT #TIME HE $ HL Hp".
     rewrite tctx_interp_singleton.
@@ -146,7 +146,7 @@ Section borrow.
 
   Lemma type_deref_uniq_uniq_instr {E L} κ κ' p ty :
     lctx_lft_alive E L κ →
-    ⊢ typed_instruction_ty E L [p ◁ &uniq{κ}(&uniq{κ'}ty)] (!p) (&uniq{κ} ty).
+    ⊢ typed_instr_ty E L [p ◁ &uniq{κ}(&uniq{κ'}ty)] (!p) (&uniq{κ} ty).
   Proof.
     iIntros (Hκ tid) "#LFT #TIME #HE $ HL Hp".
     rewrite tctx_interp_singleton.
@@ -220,7 +220,7 @@ Section borrow.
 
   Lemma type_deref_shr_uniq_instr {E L} κ κ' p ty :
     lctx_lft_alive E L κ →
-    ⊢ typed_instruction_ty E L [p ◁ &shr{κ}(&uniq{κ'}ty)] (!p) (&shr{κ}ty).
+    ⊢ typed_instr_ty E L [p ◁ &shr{κ}(&uniq{κ'}ty)] (!p) (&shr{κ}ty).
   Proof.
     iIntros (Hκ tid) "#LFT #TIME HE $ HL Hp". rewrite tctx_interp_singleton.
     iMod (Hκ with "HE HL") as (q) "[Htok Hclose]"; first solve_ndisj.

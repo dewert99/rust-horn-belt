@@ -343,7 +343,7 @@ Section typing.
     p ◁ fn fp ∈ T →
     Forall (lctx_lft_alive E L) (L.*1) →
     (∀ ϝ, elctx_sat (((λ κ, ϝ ⊑ₑ κ) <$> (L.*1)) ++ E) L (fp_E (fp x) ϝ)) →
-    tctx_extract_ctx E L (zip_with TCtx_hasty ps
+    tctx_extract E L (zip_with TCtx_hasty ps
                                    (box <$> vec_to_list (fp x).(fp_tys))) T T' →
     k ◁cont(L, T'') ∈ C →
     (∀ ret : val, tctx_incl E L ((ret ◁ box (fp x).(fp_ty))::T') (T'' [# ret])) →
@@ -363,7 +363,7 @@ Section typing.
     p ◁ fn fp ∈ T →
     Forall (lctx_lft_alive E L) (L.*1) →
     (∀ ϝ, elctx_sat (((λ κ, ϝ ⊑ₑ κ) <$> (L.*1)) ++ E) L (fp_E (fp x) ϝ)) →
-    tctx_extract_ctx E L (zip_with TCtx_hasty ps
+    tctx_extract E L (zip_with TCtx_hasty ps
                                    (box <$> vec_to_list (fp x).(fp_tys))) T T' →
     (∀ ret : val, typed_body E L C ((ret ◁ box (fp x).(fp_ty))::T') (subst' b ret e)) -∗
     typed_body E L C T (letcall: b := p ps in e).
@@ -403,7 +403,7 @@ Section typing.
                         zip_with (TCtx_hasty ∘ of_val) args
                                  (box <$> vec_to_list (fp x).(fp_tys)) ++ T)
                      (subst_v (fb :: BNamed "return" :: argsb) (f ::: k ::: args) e)) -∗
-    typed_instruction_ty E L T ef (fn fp).
+    typed_instr_ty E L T ef (fn fp).
   Proof.
     iIntros (<- ->) "#Hbody /=". iIntros (tid) "#LFT #TIME _ $ $ #HT".
     iMod persistent_time_receipt_0 as "#?". iApply wp_value.
@@ -426,7 +426,7 @@ Section typing.
                    (zip_with (TCtx_hasty ∘ of_val) args
                              (box <$> vec_to_list (fp x).(fp_tys)) ++ T)
                    (subst_v (BNamed "return" :: argsb) (k ::: args) e)) -∗
-    typed_instruction_ty E L T ef (fn fp).
+    typed_instr_ty E L T ef (fn fp).
   Proof.
     iIntros (??) "#He". iApply type_rec; try done. iIntros "!> *".
     iApply typed_body_mono; last iApply "He"; try done.

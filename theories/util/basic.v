@@ -1,6 +1,7 @@
 Require Import ssreflect FunctionalExtensionality.
 From stdpp Require Import prelude.
 From iris.algebra Require Import ofe monoid.
+From iris.proofmode Require Import tactics.
 
 (** * Utility for Natural Numbers *)
 
@@ -105,6 +106,15 @@ Notation "(≡{ n }≡)" := (dist n) (only parsing).
 (** * Monoid *)
 
 Global Instance and_monoid: Monoid and := {| monoid_unit := True |}.
+
+(** * Iris *)
+
+Notation big_sepL := (big_opL bi_sep) (only parsing).
+
+Class IntoFromSep {PROP: bi} (P Q Q': PROP) :=
+  { into_from_sep_into:> IntoSep P Q Q'; into_from_sep_from:> FromSep P Q Q' }.
+Lemma get_into_from_sep {PROP: bi} (P Q Q': PROP) : P ⊣⊢ Q ∗ Q' → IntoFromSep P Q Q'.
+Proof. move=> Eq. split; [rewrite /IntoSep|rewrite /FromSep]; by rewrite Eq. Qed.
 
 (* Applicative Functors *)
 

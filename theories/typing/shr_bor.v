@@ -38,12 +38,8 @@ Section typing.
   Context `{!typeG Σ}.
 
   Global Instance shr_type_contractive {A} κ : TypeContractive (@shr_bor _ _ A κ).
-  Proof. split.
-    - apply (type_lft_morphism_add _ κ [κ] [])=> ?; [by apply lft_equiv_refl|].
-      by rewrite elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp
-        /= left_id right_id.
-    - done.
-    - move=>/= > ???? EqShr *. by setoid_rewrite EqShr.
+  Proof. split; [by apply (type_lft_morphism_add_one κ)|done| |].
+    - move=>/= *. by do 4 f_equiv.
     - move=>/= *. do 8 (f_contractive || f_equiv). by simpl in *.
   Qed.
 

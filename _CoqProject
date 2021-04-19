@@ -46,7 +46,6 @@ theories/typing/type.v
 theories/typing/cont_context.v
 theories/typing/type_context.v
 theories/typing/maybe_uninit.v
-# theories/typing/uninit.v
 theories/typing/bool.v
 theories/typing/int.v
 theories/typing/mod_ty.v

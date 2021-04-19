@@ -107,10 +107,10 @@ Section own.
   Proof. solve_ne_type. Qed.
 
   Global Instance own_send A n ty : Send ty → Send (@own_ptr A n ty).
-  Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
+  Proof. move=> >/=. by do 9 f_equiv. Qed.
 
   Global Instance own_sync A n ty : Sync ty → Sync (@own_ptr A n ty).
-  Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
+  Proof. move=> >/=. by do 6 f_equiv. Qed.
 
   Lemma own_type_incl {A B} n (f: A → B) ty1 ty2 :
     type_incl f ty1 ty2 -∗ type_incl f (own_ptr n ty1) (own_ptr n ty2).
@@ -228,7 +228,7 @@ Section typing.
   Lemma type_new_instr {E L} (n : Z) :
     0 ≤ n →
     ⊢ let n' := Z.to_nat n in
-      typed_instruction_ty E L [] (new [ #n ]%E) (own_ptr n' (uninit n')).
+      typed_instr_ty E L [] (new [ #n ]%E) (own_ptr n' (uninit n')).
   Proof.
     iIntros (? tid) "#LFT #TIME #HE $ $ _". iMod persistent_time_receipt_0 as "Ht".
     iApply (wp_persistent_time_receipt with "TIME Ht")=>//.
@@ -262,7 +262,7 @@ Section typing.
 
   Lemma type_delete_instr {E L} ty (n : Z) p :
     Z.of_nat (ty.(ty_size)) = n →
-    ⊢ typed_instruction E L [p ◁ own_ptr ty.(ty_size) ty] (delete [ #n; p])%E (λ _, []).
+    ⊢ typed_instr E L [p ◁ own_ptr ty.(ty_size) ty] (delete [ #n; p])%E (λ _, []).
   Proof.
     iIntros (<- tid) "#LFT #TIME #HE $ $ Hp". rewrite tctx_interp_singleton.
     wp_bind p. iApply (wp_hasty with "Hp").

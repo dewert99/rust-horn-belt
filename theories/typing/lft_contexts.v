@@ -1,5 +1,6 @@
 From iris.proofmode Require Import tactics.
 From iris.bi Require Import fractional.
+From lrust.util Require Import basic.
 From lrust.lang Require Import proofmode.
 From lrust.typing Require Export base.
 From lrust.lifetime Require Import frac_borrow.
@@ -15,23 +16,22 @@ Delimit Scope lrust_elctx_scope with EL.
    notations, so we have to use [Arguments] everywhere. *)
 Bind Scope lrust_elctx_scope with elctx_elt.
 
-Notation "κ1 ⊑ₑ κ2" := (@pair lft lft κ1 κ2) (at level 70).
+Notation "κ1 ⊑ₑ κ2" := (@pair lft lft κ1 κ2) (at level 55).
 
 Definition llctx_elt : Type := lft * list lft.
 Notation llctx := (list llctx_elt).
 
-Notation "κ ⊑ₗ κl" := (@pair lft (list lft) κ κl) (at level 70).
+Notation "κ ⊑ₗ κl" := (@pair lft (list lft) κ κl) (at level 55).
+
+(* External lifetime context. *)
+Definition elctx_elt_interp `{!invG Σ, !lftG Σ} (x : elctx_elt) : iProp Σ :=
+  (x.1 ⊑ x.2)%I.
+Notation elctx_interp := (big_sepL (λ _, elctx_elt_interp)).
 
 Section lft_contexts.
   Context `{!invG Σ, !lftG Σ}.
-  Implicit Type (κ : lft).
+  Implicit Type (κ: lft).
 
-  (* External lifetime contexts. *)
-  Definition elctx_elt_interp (x : elctx_elt) : iProp Σ :=
-    (x.1 ⊑ x.2)%I.
-
-  Definition elctx_interp (E : elctx) : iProp Σ :=
-    ([∗ list] x ∈ E, elctx_elt_interp x)%I.
   Global Instance elctx_interp_permut :
     Proper ((≡ₚ) ==> (⊣⊢)) elctx_interp.
   Proof. intros ???. by apply big_opL_permutation. Qed.
@@ -42,7 +42,7 @@ Section lft_contexts.
     elctx_interp (E1 ++ E2) ⊣⊢ elctx_interp E1 ∗ elctx_interp E2.
   Proof. apply big_sepL_app. Qed.
 
-  (* Local lifetime contexts. *)
+  (* Local lifetime context. *)
   Definition llctx_elt_interp (x : llctx_elt) (q : Qp) : iProp Σ :=
     let κ' := lft_intersect_list (x.2) in
     (∃ κ0, ⌜x.1 = κ' ⊓ κ0⌝ ∗ q.[κ0] ∗ □ (1.[κ0] ={↑lftN ∪ ↑lft_userN}[↑lft_userN]▷=∗ [†κ0]))%I.
@@ -143,13 +143,12 @@ Section lft_contexts.
 
   Lemma lctx_lft_incl_external κ κ' : κ ⊑ₑ κ' ∈ E → lctx_lft_incl κ κ'.
   Proof.
-    iIntros (??) "_ !> #HE".
-    rewrite /elctx_interp /elctx_elt_interp big_sepL_elem_of //. done.
+    iIntros (??) "_!>?". by rewrite /elctx_elt_interp big_sepL_elem_of //.
   Qed.
 
   Lemma lctx_lft_incl_external' κ κ' κ'' :
     κ ⊑ₑ κ' ∈ E → lctx_lft_incl κ' κ'' → lctx_lft_incl κ κ''.
-  Proof. intros. etrans; last done. by eapply lctx_lft_incl_external. Qed.
+  Proof. intros. etrans; [|done]. by eapply lctx_lft_incl_external. Qed.
 
   Lemma lctx_lft_incl_intersect κ κ' κ'' :
     lctx_lft_incl κ κ' → lctx_lft_incl κ κ'' →
@@ -277,17 +276,15 @@ Section lft_contexts.
     ∀ qL, llctx_interp L qL -∗ □ (elctx_interp E -∗ elctx_interp E').
 
   Lemma elctx_sat_nil : elctx_sat [].
-  Proof. iIntros (?) "_ !> _". by rewrite /elctx_interp /=. Qed.
+  Proof. by iIntros (?) "_!>_". Qed.
 
   Lemma elctx_sat_lft_incl E' κ κ' :
-    lctx_lft_incl κ κ' → elctx_sat E' → elctx_sat ((κ ⊑ₑ κ') :: E').
+    lctx_lft_incl κ κ' → elctx_sat E' → elctx_sat (κ ⊑ₑ κ' :: E').
   Proof.
     iIntros (Hκκ' HE' qL) "HL".
     iDestruct (Hκκ' with "HL") as "#Hincl".
     iDestruct (HE' with "HL") as "#HE'".
-    iClear "∗". iIntros "!> #HE". iSplit.
-    - by iApply "Hincl".
-    - by iApply "HE'".
+    iClear "∗". iIntros "!> #HE". iSplit; by [iApply "Hincl"|iApply "HE'"].
   Qed.
 
   Lemma elctx_sat_app E1 E2 :
