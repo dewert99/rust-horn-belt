@@ -666,7 +666,7 @@ Section code.
     { rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val tctx_hasty_val' //.
       unlock. iFrame "Hrcx". iFrame "Hx†". iExists [_]. rewrite heap_mapsto_vec_singleton.
       iFrame "Hx". iApply (ty_shr_mono with "[] Hshr").
-      iApply lft_incl_glb; [done|]. iApply elctx_interp_ty_outlives_E.
+      iApply lft_incl_glb; [done|]. iApply elctx_interp_ty_outlv_E.
       rewrite !elctx_interp_app /=. iDestruct "HE" as "(_ & [[_ $] _] & _)". }
     iApply type_delete; [solve_typing..|].
     iApply type_jump; solve_typing.

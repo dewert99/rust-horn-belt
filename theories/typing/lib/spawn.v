@@ -94,7 +94,7 @@ Section spawn.
 
   Lemma spawn_type fty retty call_once `(!Send fty, !Send retty) :
     typed_val call_once (fn(∅; fty) → retty) → (* fty : FnOnce() -> retty, as witnessed by the impl call_once *)
-    let E ϝ := ty_outlives_E fty static ++ ty_outlives_E retty static in
+    let E ϝ := ty_outlv_E fty static ++ ty_outlv_E retty static in
     typed_val (spawn call_once) (fn(E; fty) → join_handle retty).
   Proof.
     intros Hf ? E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".

@@ -83,24 +83,24 @@ Proof.
   iApply ty_own_depth_mono; by [apply Le|].
 Qed.
 
-Definition ty_outlives_E `{!typeG Σ} {A} (ty: _ A) (κ: lft) : elctx :=
+Definition ty_outlv_E `{!typeG Σ} {A} (ty: _ A) (κ: lft) : elctx :=
   (λ α, κ ⊑ₑ α) <$> ty.(ty_lfts).
 
-Lemma ty_outlives_E_elctx_sat `{!typeG Σ} {A} E L (ty: _ A) α β :
-  ty_outlives_E ty β ⊆+ E → lctx_lft_incl E L α β →
-  elctx_sat E L (ty_outlives_E ty α).
+Lemma ty_outlv_E_elctx_sat `{!typeG Σ} {A} E L (ty: _ A) α β :
+  ty_outlv_E ty β ⊆+ E → lctx_lft_incl E L α β →
+  elctx_sat E L (ty_outlv_E ty α).
 Proof.
-  rewrite /ty_outlives_E. elim ty.(ty_lfts)=> [|?? IH]; [by solve_typing|].
+  rewrite /ty_outlv_E. elim ty.(ty_lfts)=> [|?? IH]; [by solve_typing|].
   move=> Sub Incl. apply elctx_sat_lft_incl.
   - etrans; [by apply Incl|].
     eapply lctx_lft_incl_external, elem_of_submseteq, Sub. set_solver.
   - apply IH, Incl. etrans; [|by apply Sub]. by apply submseteq_cons.
 Qed.
 
-Lemma elctx_interp_ty_outlives_E `{!typeG Σ} {A} (ty: _ A) α :
-  elctx_interp (ty_outlives_E ty α) ⊣⊢ α ⊑ ty.(ty_lft).
+Lemma elctx_interp_ty_outlv_E `{!typeG Σ} {A} (ty: _ A) α :
+  elctx_interp (ty_outlv_E ty α) ⊣⊢ α ⊑ ty.(ty_lft).
 Proof.
-  rewrite /ty_outlives_E /elctx_elt_interp big_sepL_fmap /=.
+  rewrite /ty_outlv_E /elctx_elt_interp big_sepL_fmap /=.
   elim ty.(ty_lfts)=>/= [|κ l ->].
   { iSplit; iIntros "_"; [|done]. iApply lft_incl_static. } iSplit.
   - iIntros "#[??]". by iApply lft_incl_glb.
@@ -111,14 +111,14 @@ Qed.
 Notation tyl_lfts tyl := (concat ((λ _, ty_lfts) +c<$> tyl)).
 Notation tyl_lft tyl := (lft_intersect_list (tyl_lfts tyl)).
 Notation tyl_E tyl := (concat ((λ _, ty_E) +c<$> tyl)).
-Notation tyl_outlives_E tyl κ := (concat ((λ _ ty, ty_outlives_E ty κ) +c<$> tyl)).
+Notation tyl_outlv_E tyl κ := (concat ((λ _ ty, ty_outlv_E ty κ) +c<$> tyl)).
 
-Lemma tyl_outlives_E_elctx_sat `{!typeG Σ} {As} E L (tyl: typel As) α β :
-  tyl_outlives_E tyl β ⊆+ E → lctx_lft_incl E L α β →
-  elctx_sat E L (tyl_outlives_E tyl α).
+Lemma tyl_outlv_E_elctx_sat `{!typeG Σ} {As} E L (tyl: typel As) α β :
+  tyl_outlv_E tyl β ⊆+ E → lctx_lft_incl E L α β →
+  elctx_sat E L (tyl_outlv_E tyl α).
 Proof.
   elim tyl; [solve_typing|]=> > IH Outlv Incl. apply elctx_sat_app.
-  - eapply ty_outlives_E_elctx_sat; [|by apply Incl]. etrans; [|by apply Outlv].
+  - eapply ty_outlv_E_elctx_sat; [|by apply Incl]. etrans; [|by apply Outlv].
     by apply submseteq_inserts_r.
   - apply IH; [|done]. etrans; [|by apply Outlv]. by apply submseteq_inserts_l.
 Qed.
@@ -259,12 +259,12 @@ Section ofe.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_E_proper {A} : Proper ((≡) ==> (=)) (@ty_E _ _ A).
   Proof. move=> ?? Eqv. apply Eqv. Qed.
-  Global Instance ty_outlives_E_ne {A} n :
-    Proper ((≡{n}≡) ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
-  Proof. rewrite /ty_outlives_E. by move=> ?? [_ -> _ _ _]. Qed.
-  Global Instance ty_outlives_E_proper {A} :
-    Proper ((≡) ==> (=) ==> (=)) (@ty_outlives_E _ _ A).
-  Proof. rewrite /ty_outlives_E. by move=> ?? [_ -> _ _ _]. Qed.
+  Global Instance ty_outlv_E_ne {A} n :
+    Proper ((≡{n}≡) ==> (=) ==> (=)) (@ty_outlv_E _ _ A).
+  Proof. rewrite /ty_outlv_E. by move=> ?? [_ -> _ _ _]. Qed.
+  Global Instance ty_outlv_E_proper {A} :
+    Proper ((≡) ==> (=) ==> (=)) (@ty_outlv_E _ _ A).
+  Proof. rewrite /ty_outlv_E. by move=> ?? [_ -> _ _ _]. Qed.
 
   Global Instance ty_own_ne {A} n:
     Proper ((≡{n}≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) (@ty_own _ _ A).
@@ -361,7 +361,7 @@ Ltac solve_ne_type :=
   constructor;
   solve_proper_core ltac:(fun _ => (
     (eapply ty_size_ne || eapply ty_lfts_ne || eapply ty_E_ne ||
-     eapply ty_outlives_E_ne || eapply ty_own_ne || eapply ty_shr_ne); try reflexivity
+     eapply ty_outlv_E_ne || eapply ty_own_ne || eapply ty_shr_ne); try reflexivity
   ) || f_equiv).
 
 (** * Nonexpansiveness/Contractiveness of Type Morphisms *)
@@ -392,12 +392,12 @@ Qed.
 
 Lemma type_lft_morphism_add_one {A B} κ (T: _ A → _ B) :
   (∀ty, (T ty).(ty_lfts) = κ :: ty.(ty_lfts)) →
-  (∀ty, (T ty).(ty_E) = ty.(ty_E) ++ ty_outlives_E ty κ) →
+  (∀ty, (T ty).(ty_E) = ty.(ty_E) ++ ty_outlv_E ty κ) →
   TypeLftMorphism T.
 Proof.
   move=> EqLfts EqE. apply (type_lft_morphism_add _ κ [κ] [])=> ?.
   + rewrite EqLfts. apply lft_equiv_refl.
-  + by rewrite EqE elctx_interp_app elctx_interp_ty_outlives_E /= left_id right_id.
+  + by rewrite EqE elctx_interp_app elctx_interp_ty_outlv_E /= left_id right_id.
 Qed.
 
 Global Instance type_lft_morphism_compose {A B C} (T: _ → _ C) (U: _ A → _ B) :
@@ -978,6 +978,6 @@ Notation "[S d' := d ] P" := (by_succ d (λ d', P)) (at level 200,
 Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
   right associativity, format "[loc[ l ]  :=  vl ]  P") : bi_scope.
 
-Global Hint Resolve ty_outlives_E_elctx_sat tyl_outlives_E_elctx_sat : lrust_typing.
+Global Hint Resolve ty_outlv_E_elctx_sat tyl_outlv_E_elctx_sat : lrust_typing.
 Global Hint Resolve subtype_refl eqtype_refl : lrust_typing.
 Global Hint Opaque subtype eqtype : lrust_typing.

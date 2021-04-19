@@ -6,7 +6,7 @@ Section shr_bor.
   Context `{!typeG Σ}.
 
   Program Definition shr_bor {A} (κ: lft) (ty: type A) : type A := {|
-    st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlv_E ty κ;
     st_own vπ d tid vl := [S d' := d] [loc[l] := vl] ty.(ty_shr) vπ d' κ tid l
   |}%I.
   Next Obligation.

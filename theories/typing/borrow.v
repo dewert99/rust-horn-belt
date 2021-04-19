@@ -12,14 +12,14 @@ Section borrow.
   Context `{!typeG Σ}.
 
   Lemma tctx_borrow E L p n ty κ :
-    elctx_sat E L (ty_outlives_E ty κ) →
+    elctx_sat E L (ty_outlv_E ty κ) →
     tctx_incl E L [p ◁ own_ptr n ty] [p ◁ &uniq{κ}ty; p ◁{κ} own_ptr n ty].
   Proof.
-    iIntros (Houtlives tid ?)  "#LFT #HE HL [H _]".
+    iIntros (Houtlv tid ?)  "#LFT #HE HL [H _]".
     iDestruct "H" as ([[]|] [|depth]) "(#Hdepth & % & Hown)"=>//=.
     iDestruct "Hown" as "[Hmt ?]".
-    iDestruct (Houtlives with "HL HE") as "#Hout0".
-    iDestruct (elctx_interp_ty_outlives_E with "Hout0") as "Hout".
+    iDestruct (Houtlv with "HL HE") as "#Hout0".
+    iDestruct (elctx_interp_ty_outlv_E with "Hout0") as "Hout".
     iMod (own_alloc (●E depth ⋅ ◯E depth)) as (γ) "[H● H◯]";
       [by apply excl_auth_valid|].
     iMod (bor_create ⊤ κ (∃ depth, own γ (●E depth) ∗ ⧖S depth ∗
@@ -69,7 +69,7 @@ Section borrow.
 
   Lemma tctx_extract_hasty_borrow E L p n ty ty' κ T :
     subtype E L ty' ty →
-    elctx_sat E L (ty_outlives_E ty κ) →
+    elctx_sat E L (ty_outlv_E ty κ) →
     tctx_extract_hasty E L p (&uniq{κ}ty) ((p ◁ own_ptr n ty')::T)
                        ((p ◁{κ} own_ptr n ty)::T).
   Proof.

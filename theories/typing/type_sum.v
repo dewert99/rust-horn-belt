@@ -299,14 +299,14 @@ Section case.
     by iApply type_seq; [eapply type_sum_memcpy_instr, Hr|done|done].
   Qed.
 
-  Lemma ty_outlives_E_elctx_sat_sum E L tyl α:
-    elctx_sat E L (tyl_outlives_E tyl α) →
-    elctx_sat E L (ty_outlives_E (sum tyl) α).
+  Lemma ty_outlv_E_elctx_sat_sum E L tyl α:
+    elctx_sat E L (tyl_outlv_E tyl α) →
+    elctx_sat E L (ty_outlv_E (sum tyl) α).
   Proof.
     intro Hsat. eapply eq_ind; [done|]. clear Hsat.
-    rewrite /tyl_outlives_E /ty_outlives_E /=.
+    rewrite /tyl_outlv_E /ty_outlv_E /=.
     induction tyl as [|?? IH]=>//=. by rewrite IH fmap_app.
   Qed.
 End case.
 
-Global Hint Resolve ty_outlives_E_elctx_sat_sum : lrust_typing.
+Global Hint Resolve ty_outlv_E_elctx_sat_sum : lrust_typing.

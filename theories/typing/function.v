@@ -18,8 +18,8 @@ Section fn.
     pointwise_relation lft eq fp1.(fp_E_explicit) fp2.(fp_E_explicit).
 
   Definition fp_E (fp : fn_params) ϝ :=
-    fp.(fp_E_explicit) ϝ ++ tyl_E fp.(fp_tys) ++ tyl_outlives_E fp.(fp_tys) ϝ ++
-                       fp.(fp_ty).(ty_E) ++ ty_outlives_E fp.(fp_ty) ϝ.
+    fp.(fp_E_explicit) ϝ ++ tyl_E fp.(fp_tys) ++ tyl_outlv_E fp.(fp_tys) ϝ ++
+                       fp.(fp_ty).(ty_E) ++ ty_outlv_E fp.(fp_ty) ϝ.
 
   Global Instance fp_E_ne n':
     Proper (fn_params_dist n' ==> eq ==> eq) fp_E.
@@ -74,16 +74,16 @@ Section fn.
       intros x. destruct (HTl x) as (Tl' & EQTl & HTl').
       do 12 (f_contractive || f_equiv); [|do 3 f_equiv].
       + apply equiv_dist.
-        rewrite /fp_E /= !elctx_interp_app !EQTl /tyl_E /tyl_outlives_E.
+        rewrite /fp_E /= !elctx_interp_app !EQTl /tyl_E /tyl_outlv_E.
         clear Tl HTl EQTl. (do 2 f_equiv); [|f_equiv; [|f_equiv]].
         * induction HTl' as [|T' Tl' HT' _ IH]=>//=.
           rewrite !elctx_interp_app IH type_lft_morphism_elctx_interp_proper //.
         * induction HTl' as [|T' Tl' HT' _ IH]=>//=.
-          rewrite !elctx_interp_app IH !elctx_interp_ty_outlives_E
+          rewrite !elctx_interp_app IH !elctx_interp_ty_outlv_E
                   lft_incl_equiv_proper_r //.
           by iApply type_lft_morphism_lft_equiv_proper.
         * apply type_lft_morphism_elctx_interp_proper=>//. apply _.
-        * rewrite !elctx_interp_ty_outlives_E.
+        * rewrite !elctx_interp_ty_outlv_E.
           apply lft_incl_equiv_proper_r.
           by iApply type_lft_morphism_lft_equiv_proper.
       + rewrite !cctx_interp_singleton /=. do 5 f_equiv.

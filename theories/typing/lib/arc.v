@@ -497,7 +497,7 @@ Section arc.
     { rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val tctx_hasty_val' //.
       unlock. iFrame "Hrcx". iFrame "Hx†". iExists [_]. rewrite heap_mapsto_vec_singleton.
       iFrame "Hx". iApply (ty_shr_mono with "[] Hshr").
-      iApply lft_incl_glb; [done|]. iApply elctx_interp_ty_outlives_E.
+      iApply lft_incl_glb; [done|]. iApply elctx_interp_ty_outlv_E.
       rewrite !elctx_interp_app /=. iDestruct "HE" as "(_ & [[_ $] _] & _)". }
     iApply type_delete; [solve_typing..|].
     iApply type_jump; solve_typing.
@@ -808,10 +808,10 @@ Section arc.
     { iDestruct "Hrc'" as "[?|$]"; last done.
       iMod (lctx_lft_alive_tok ty.(ty_lft) with "HE HL")
         as (?) "(Htok & HL & Hclose)"; [done| |].
-      { change (ty_outlives_E (arc ty)) with (ty_outlives_E ty).
+      { change (ty_outlv_E (arc ty)) with (ty_outlv_E ty).
         eapply (lctx_lft_alive_incl _ _ ϝ); first solve_typing.
         iIntros (?) "_ !>". rewrite !elctx_interp_app /=.
-        iIntros "(_ & _ & [? _] & _ & _)". by iApply elctx_interp_ty_outlives_E. }
+        iIntros "(_ & _ & [? _] & _ & _)". by iApply elctx_interp_ty_outlv_E. }
       iMod (arc_own_share with "LFT Htok [$]") as "[Htok $]"; first solve_ndisj.
       by iApply ("Hclose" with "Htok"). }
     iDestruct "Hrc'" as (γ ν q) "(#Hpersist & Htok & Hν)".
@@ -923,10 +923,10 @@ Section arc.
     { iDestruct "Hrc'" as "[?|$]"; last done.
       iMod (lctx_lft_alive_tok ty.(ty_lft) with "HE HL")
         as (?) "(Htok & HL & Hclose)"; [done| |].
-      { change (ty_outlives_E (arc ty)) with (ty_outlives_E ty).
+      { change (ty_outlv_E (arc ty)) with (ty_outlv_E ty).
         eapply (lctx_lft_alive_incl _ _ ϝ); first solve_typing.
         iIntros (?) "_ !>". rewrite !elctx_interp_app /=.
-        iIntros "(_ & _ & [?_] & _ & _)". by iApply elctx_interp_ty_outlives_E. }
+        iIntros "(_ & _ & [?_] & _ & _)". by iApply elctx_interp_ty_outlv_E. }
       iMod (arc_own_share with "LFT Htok [$]") as "[Htok $]"; first solve_ndisj.
       by iApply ("Hclose" with "Htok"). }
     iDestruct "Hrc'" as (γ ν q) "(#Hpersist & Htok & Hν)".

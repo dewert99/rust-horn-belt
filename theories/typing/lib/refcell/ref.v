@@ -22,7 +22,7 @@ Section ref.
   Program Definition ref (α : lft) (ty : type) :=
     tc_opaque
     {| ty_size := 2;
-       ty_lfts := α :: ty.(ty_lfts); ty_E := ty.(ty_E) ++ ty_outlives_E ty α;
+       ty_lfts := α :: ty.(ty_lfts); ty_E := ty.(ty_E) ++ ty_outlv_E ty α;
        ty_own tid vl :=
          match vl return _ with
          | [ #(LitLoc lv);  #(LitLoc lrc) ] =>
@@ -75,7 +75,7 @@ Section ref.
     split.
     - apply (type_lft_morphism_add _ α [α] []) => ?.
       + iApply lft_equiv_refl.
-      + by rewrite elctx_interp_app /= elctx_interp_ty_outlives_E
+      + by rewrite elctx_interp_app /= elctx_interp_ty_outlv_E
                    /= /elctx_interp /= left_id right_id.
     - done.
     - intros n ty1 ty2 Hsz Hl HE Ho Hs tid [|[[|lv|]|][|[[|lrc|]|][]]]=>//=.

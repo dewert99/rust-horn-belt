@@ -15,15 +15,12 @@ Section typing.
       ⟨π, pre (vπl -$ π)⟩ -∗ WP e {{ _, cont_postcondition }}.
   Global Arguments typed_body {_} _ _ _ _ _%E _.
 
-  Lemma typed_body_impl' {As} (pre pre': predl As) E L C T e :
+  Lemma typed_body_impl {As} (pre pre': predl As) E L C T e :
     (∀vl, pre vl → pre' vl) → typed_body E L C T e pre' -∗ typed_body E L C T e pre.
   Proof.
     move=> Imp. rewrite /typed_body. do 12 f_equiv=>/=. do 2 f_equiv. move=> ?.
     by apply Imp.
   Qed.
-  Lemma typed_body_impl {As} (pre pre': predl As) E L C T e :
-    typed_body E L C T e pre' -∗ ⌜∀vl, pre vl → pre' vl⌝ -∗ typed_body E L C T e pre.
-  Proof. iIntros. by iApply typed_body_impl'. Qed.
 
   (* Global Instance typed_body_llctx_permut E :
     Proper ((≡ₚ) ==> eq ==> eq ==> eq ==> (⊢)) (typed_body E).
@@ -131,7 +128,7 @@ Section typing_rules.
     iApply ("He" with "LFT TIME [$E $In $In'] Na L C T").
   Qed.
 
-  Lemma type_let' {As Bs Cs} E L (T1: _ As) (T2: _ → _ Bs) (T : _ Cs) C xb e e' tr pre:
+  Lemma type_let' {As Bs Cs} E L (T1: _ As) (T2: _ → _ Bs) (T: _ Cs) C xb e e' tr pre:
     Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr -∗
     (∀v: val, typed_body E L C (T2 v h++ T) (subst' xb v e') pre) -∗
     typed_body E L C (T1 h++ T) (let: xb := e in e') (trans_upper tr pre).
@@ -145,11 +142,6 @@ Section typing_rules.
     iApply ("He'" $! v tid (vπ -++ vπl') with "LFT TIME E Na L C T2T").
     iApply proph_obs_impl; [|done]=>/= ?. rewrite papply_app papp_sepr. exact id.
   Qed.
-(*
-  Lemma incl_values_compat {A B C } E L (T : tctx A) (T1 : tctx B) (T2 : tctx C) π f:
-    tctx_incl E L T (T1 h++ T2) f ->
-    f (tctx_values π T) = tctx_values π (T1 h++ T2).
-  Proof. *)
 
   Lemma typed_body_tctx_incl {A B} E L C (T: tctx A) (T': tctx B) e pre tr :
     tctx_incl E L T T' tr →

@@ -6,7 +6,7 @@ Section uniq_bor.
   Context `{!typeG Σ}.
 
   Program Definition uniq_bor {A} (κ: lft) (ty: type A) : type (A * A) := {|
-    ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlv_E ty κ;
     ty_own vπ d tid vl := [loc[l] := vl] ∃d' (ξ: proph_var' A),
       ⌜S d' ≤ d ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ, d') ∗
       &{κ} (∃vπ' d', l ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖ S d' ∗ .PC[ξ] (vπ', d'));

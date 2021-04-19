@@ -346,19 +346,19 @@ Section typing.
       { fun_ext. by case=> [[??]?]. }
   Qed.
 
-  Lemma prod_outlives_E {A B} (ty: _ A) (ty': _ B) κ :
-    ty_outlives_E (ty * ty') κ = ty_outlives_E ty κ ++ ty_outlives_E ty' κ.
-  Proof. by rewrite /ty_outlives_E /= fmap_app. Qed.
+  Lemma prod_outlv_E {A B} (ty: _ A) (ty': _ B) κ :
+    ty_outlv_E (ty * ty') κ = ty_outlv_E ty κ ++ ty_outlv_E ty' κ.
+  Proof. by rewrite /ty_outlv_E /= fmap_app. Qed.
 
-  Lemma xprod_outlives_E_elctx_sat {As} E L (tyl: _ As) κ:
-    elctx_sat E L (tyl_outlives_E tyl κ) → elctx_sat E L (ty_outlives_E (Π! tyl) κ).
+  Lemma xprod_outlv_E_elctx_sat {As} E L (tyl: _ As) κ:
+    elctx_sat E L (tyl_outlv_E tyl κ) → elctx_sat E L (ty_outlv_E (Π! tyl) κ).
   Proof.
-    move=> ?. eapply eq_ind; [done|]. rewrite /ty_outlives_E /=.
+    move=> ?. eapply eq_ind; [done|]. rewrite /ty_outlv_E /=.
     elim tyl=>/= [|> IH]; [done|]. by rewrite fmap_app -IH.
   Qed.
 
 End typing.
 
 Arguments xprod_ty : simpl never.
-Global Hint Resolve prod_subtype prod_eqtype xprod_outlives_E_elctx_sat
+Global Hint Resolve prod_subtype prod_eqtype xprod_outlv_E_elctx_sat
   : lrust_typing.
