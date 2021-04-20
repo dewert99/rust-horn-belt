@@ -132,3 +132,5 @@ Section typing.
   Qed.
 
 End typing.
+
+Global Hint Resolve maybe_uninit_subtype maybe_uninit_eqtype : lrust_typing.

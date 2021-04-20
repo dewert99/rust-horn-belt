@@ -141,16 +141,15 @@ Section box.
 
   Definition box {A} (ty: type A) : type A := own_ptr ty.(ty_size) ty.
 
+  Global Instance box_ne A : NonExpansive (@box A).
+  Proof. solve_ne_type. Qed.
+
   Global Instance box_type_contractive A : TypeContractive (@box A).
   Proof.
-    split.
-    - by apply type_lft_morphism_id_like.
-    - done.
+    split; [by apply type_lft_morphism_id_like|done| |].
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
-  Global Instance box_ne A : NonExpansive (@box A).
-  Proof. solve_ne_type. Qed.
 
   Lemma box_type_incl {A B} (f: A → B) ty ty':
     type_incl f ty ty' -∗ type_incl f (box ty) (box ty').
@@ -174,16 +173,15 @@ End box.
 Section typing.
   Context `{!typeG Σ}.
 
-(*
-  Lemma write_own {E L} ty ty' n :
-    ty.(ty_size) = ty'.(ty_size) → ⊢ typed_write E L (own_ptr n ty') ty (own_ptr n ty).
+  Lemma write_own {A B} (ty: _ A) (ty': _ B) n E L :
+    ty.(ty_size) = ty'.(ty_size) →
+    typed_write E L (own_ptr n ty') ty (own_ptr n ty) (λ _ a, a).
   Proof.
-    rewrite typed_write_eq. iIntros (Hsz) "!>".
-    iIntros ([[]|] [|depth] tid F qL ?) "_ _ $ Hown"; try done.
-    rewrite /= Hsz. iDestruct "Hown" as "[H↦ $]". iDestruct "H↦" as (vl) "[>H↦ Hown]".
-    iDestruct (ty_size_eq with "Hown") as "#>%". auto 10 with iFrame.
+    iIntros (Sz ?[|?]???) "_ _ $ own"; [done|]. setoid_rewrite by_just_loc_ex at 1.
+    iDestruct "own" as (l[=->]) "[(%vl & >Mt & ty') Fr]". rewrite Sz.
+    iDestruct (ty_size_eq with "ty'") as ">%". iModIntro. iExists l, vl.
+    iSplit; [done|]. iFrame "Mt". iIntros (??) "$ ? !>". by rewrite Sz.
   Qed.
-*)
 
   Lemma read_own_copy {A} (ty: _ A) n E L :
     Copy ty → typed_read E L (own_ptr n ty) ty (own_ptr n ty) id id.
@@ -259,29 +257,27 @@ Section typing.
     f_equal. fun_ext. by case.
   Qed.
 
-(*
-  Lemma type_letalloc_1 {E L} ty C T T' (x : string) p e :
-    Closed [] p → Closed (x :b: []) e →
-    tctx_extract_hasty E L p ty T T' →
-    ty.(ty_size) = 1%nat →
-    (∀ (v : val), typed_body E L C ((v ◁ own_ptr 1 ty)::T') (subst x v e)) -∗
-    typed_body E L C T (letalloc: x <- p in e).
+  Lemma type_letalloc_1 {A As Bs} (ty: _ A) (x: string) p e
+    (T: _ As) (T': _ Bs) tr pre E L C :
+    Closed [] p → Closed [x] e →
+    tctx_extract_ctx E L +[p ◁ ty] T T' tr → ty.(ty_size) = 1 →
+    (∀v: val, typed_body E L C (v ◁ own_ptr 1 ty +:: T') (subst x v e) pre) -∗
+    typed_body E L C T (letalloc: x <- p in e) (tr pre).
   Proof.
-    iIntros (??? Hsz) "**". iApply type_new.
-    - rewrite /Closed /=. rewrite !andb_True.
-      eauto 10 using is_closed_weaken with set_solver.
-    - done.
-    - solve_typing.
-    - iIntros (xv) "/=". rewrite -Hsz.
-      assert (subst x xv (x <- p ;; e)%E = (xv <- p ;; subst x xv e)%E) as ->.
-      { (* TODO : simpl_subst should be able to do this. *)
-        unfold subst=>/=. repeat f_equal.
-        - by rewrite bool_decide_true.
-        - eapply is_closed_subst. done. set_solver. }
-      iApply type_assign; [|solve_typing|by eapply write_own|solve_typing].
-      apply subst_is_closed; last done. apply is_closed_of_val.
+    iIntros (??? Sz) "e". iApply typed_body_eq; last first.
+    { iApply type_new; [|done|done|].
+      - rewrite /Closed /= !andb_True. split; [done|]. split; [|done].
+        split; [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
+      - rewrite -Sz. iIntros (xv) "/=".
+        have ->: (subst x xv (x <- p;; e))%E = (xv <- p;; subst x xv e)%E.
+        { rewrite /subst /=. repeat f_equal;
+          [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
+        iApply type_assign; [|solve_typing|by eapply write_own|done].
+        { apply subst_is_closed; [|done]. apply is_closed_of_val. } }
+    f_equal. fun_ext. by case.
   Qed.
 
+(*
   Lemma type_letalloc_n {E L} ty ty1 ty2 C T T' (x : string) p e :
     Closed [] p → Closed (x :b: []) e →
     tctx_extract_hasty E L p ty1 T T' →
@@ -319,9 +315,7 @@ Section typing.
 End typing.
 
 Global Hint Resolve own_subtype own_eqtype box_subtype box_eqtype
-            (* write_own read_own_copy *) : lrust_typing.
+            write_own read_own_copy : lrust_typing.
 (* By setting the priority high, we make sure copying is tried before
    moving. *)
-(*
 Global Hint Resolve read_own_move | 100 : lrust_typing.
-*)

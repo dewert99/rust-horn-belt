@@ -143,3 +143,5 @@ Section typing.
   Proof. move=> [??]. split; by apply mod_ty_subtype. Qed.
 
 End typing.
+
+Global Hint Resolve mod_ty_subtype mod_ty_eqtype : lrust_typing.

@@ -109,3 +109,5 @@ Section option.
 *)
 
 End option.
+
+Global Hint Resolve option_subtype option_eqtype : lrust_typing.

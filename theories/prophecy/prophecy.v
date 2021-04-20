@@ -373,6 +373,9 @@ Proof. move=> ?. iExists []. by iSplit. Qed.
 Lemma proph_obs_impl φπ ψπ : (∀π, φπ π → ψπ π) → .⟨φπ⟩ -∗ .⟨ψπ⟩.
 Proof. move=> Imp. do 2 f_equiv. move=> ?. by apply Imp. Qed.
 
+Lemma proph_obs_eq φπ ψπ : (∀π, φπ π = ψπ π) → .⟨φπ⟩ -∗ .⟨ψπ⟩.
+Proof. move=> Eq. apply proph_obs_impl=> ?. by rewrite Eq. Qed.
+
 Lemma proph_obs_and φπ ψπ : .⟨φπ⟩ -∗ .⟨ψπ⟩ -∗ ⟨π, φπ π ∧ ψπ π⟩.
 Proof.
   iIntros "(%L & %SatTo &?) (%L' & %SatTo' &?)". iExists (L ++ L'). iFrame.
@@ -430,7 +433,7 @@ Proof.
   iIntros "Obs Eqz" (???) "Ptoks".
   iMod ("Eqz" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
   iDestruct (proph_obs_and with "Obs Obs'") as "Obs''".
-  by iApply proph_obs_impl; [|iApply "Obs''"] => ?[->?].
+  by iApply proph_obs_impl; [|by iApply "Obs''"]=> ?[->?].
 Qed.
 
 Lemma proph_eqz_constr {A B} f `{Inj A B (=) (=) f} uπ vπ :
@@ -438,7 +441,7 @@ Lemma proph_eqz_constr {A B} f `{Inj A B (=) (=) f} uπ vπ :
 Proof.
   iIntros "Eqz" (?? Dep) "Ptoks". move/proph_dep_destr in Dep.
   iMod ("Eqz" with "[%//] Ptoks") as "[Obs $]". iModIntro.
-  iApply proph_obs_impl; [|by iApply "Obs"] => ??. by apply (f_equal f).
+  iApply proph_obs_impl; [|by iApply "Obs"]=> ??/=. by f_equal.
 Qed.
 
 Lemma proph_eqz_constr2 {A B C} f `{Inj2 A B C (=) (=) (=) f} uπ uπ' vπ vπ' :
@@ -448,7 +451,7 @@ Proof.
   iMod ("Eqz" with "[%//] Ptoks") as "[Obs Ptoks]".
   iMod ("Eqz'" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
   iDestruct (proph_obs_and with "Obs Obs'") as "Obs''".
-  iApply proph_obs_impl; [|by iApply "Obs''"] => ?[??]. by apply (f_equal2 f).
+  iApply proph_obs_impl; [|by iApply "Obs''"]=> ?[??]/=. by f_equal.
 Qed.
 
 Lemma proph_eqz_pair {A B} (uπ vπ: _ → A * B) :

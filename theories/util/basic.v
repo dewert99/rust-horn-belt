@@ -30,9 +30,11 @@ Proof. done. Qed.
 
 Definition s_comb {A B C} (f: A → B → C) (g: A → B) x := (f x) (g x).
 Infix "⊛" := s_comb (left associativity, at level 50).
+Global Arguments s_comb {_ _ _} _ _ _ / : assert.
+Typeclasses Transparent s_comb.
 
 Lemma surjective_pairing_fun {A B C} (f: A → B * C) : f = pair ∘ (fst ∘ f) ⊛ (snd ∘ f).
-Proof. fun_ext=> ?. by rewrite /s_comb /compose -surjective_pairing. Qed.
+Proof. fun_ext=> ?/=. by rewrite -surjective_pairing. Qed.
 
 Definition prod_assoc {A B C} '((x, (y, z))) : (A * B) * C := ((x, y), z).
 Definition prod_assoc' {A B C} '(((x, y), z)) : A * (B * C) := (x, (y, z)).

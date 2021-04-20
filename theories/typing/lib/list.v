@@ -12,9 +12,8 @@ Section list.
   Lemma list_subtype {A B} E L (f: A → B) ty ty' :
     subtype E L f ty ty' → subtype E L (map f) (list_ty ty) (list_ty ty').
   Proof.
-    move=> ?. apply fix_subtype=> *. eapply subtype_eq. { apply mod_ty_subtype;
-    [apply _|]. by apply option_subtype, prod_subtype, box_subtype. }
-    { fun_ext. by case. }
+    move=> ?. apply fix_subtype=> *. eapply subtype_eq; [solve_typing|].
+    fun_ext. by case.
   Qed.
 
   Lemma list_eqtype {A B} E L (f: A → B) g ty ty' :
@@ -22,3 +21,5 @@ Section list.
   Proof. move=> [??]. by split; apply list_subtype. Qed.
 
 End list.
+
+Global Hint Resolve list_subtype list_eqtype : lrust_typing.

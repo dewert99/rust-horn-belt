@@ -236,7 +236,6 @@ Section typing.
       iSplit; [done|]. iSplitL "Own"; by [iApply "InOwn"|iApply "InOwn'"].
     - iIntros "* #[??]". rewrite Eq. iSplit; by [iApply "InShr"|iApply "InShr'"].
   Qed.
-
   Lemma prod_eqtype {A B A' B'} E L (f: A → A') f' (g: B → B') g' ty1 ty2 ty1' ty2' :
     eqtype E L f f' ty1 ty1' → eqtype E L g g' ty2 ty2' →
     eqtype E L (prod_map f g) (prod_map f' g') (ty1 * ty2) (ty1' * ty2').
@@ -247,7 +246,7 @@ Section typing.
     subtype E L (cons_prod_map f g) (ty1 :* ty2) (ty1' :* ty2').
   Proof.
     move=> ??. eapply subtype_eq. { apply mod_ty_subtype;
-    [apply semi_iso|by apply prod_subtype]. } { fun_ext. by case. }
+    [apply _|by apply prod_subtype]. } { fun_ext. by case. }
   Qed.
 
   Lemma xprod_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
@@ -342,6 +341,5 @@ Section typing.
 
 End typing.
 
-Arguments xprod_ty : simpl never.
-Global Hint Resolve prod_subtype prod_eqtype xprod_outlv_E_elctx_sat
-  : lrust_typing.
+Global Hint Resolve prod_subtype prod_eqtype xprod_subtype xprod_eqtype
+  xprod_outlv_E_elctx_sat : lrust_typing.

@@ -15,6 +15,10 @@ Section typing.
       ⟨π, pre (vπl -$ π)⟩ -∗ WP e {{ _, cont_postcondition }}.
   Global Arguments typed_body {_} _ _ _ _ _%E _.
 
+  Lemma typed_body_eq {As} (pre pre': predl As) E L C T e :
+    pre = pre' → typed_body E L C T e pre' -∗ typed_body E L C T e pre.
+  Proof. by move=> ->. Qed.
+
   Lemma typed_body_impl {As} (pre pre': predl As) E L C T e :
     (∀vl, pre vl → pre' vl) → typed_body E L C T e pre' -∗ typed_body E L C T e pre.
   Proof.
@@ -110,9 +114,9 @@ Section typing_rules.
     typed_body (κ ⊑ₑ κ' :: κ' ⊑ₑ κ :: E) L C T e pre -∗
     typed_body E (κ ⊑ₗ [κ'] :: L) C T e pre.
   Proof.
-    iIntros "He" (??) "#LFT TIME PROPH UNIQ E Na [Eq L] C T".
+    iIntros "e" (??) "#LFT TIME PROPH UNIQ E Na [Eq L] C T".
     iMod (lctx_equalize_lft with "LFT Eq") as "[In In']".
-    iApply ("He" with "LFT TIME PROPH UNIQ [$E $In $In'] Na L C T").
+    iApply ("e" with "LFT TIME PROPH UNIQ [$E $In $In'] Na L C T").
   Qed.
 
   Lemma type_let' {As Bs Cs} E L (T1: _ As) (T2: _ → _ Bs) (T: _ Cs) C xb e e' tr pre:
@@ -120,13 +124,13 @@ Section typing_rules.
     (∀v: val, typed_body E L C (T2 v h++ T) (subst' xb v e') pre) -∗
     typed_body E L C (T1 h++ T) (let: xb := e in e') (trans_upper tr pre).
   Proof.
-    iIntros (?) "He He'". iIntros (tid vπl2). move: (papp_ex vπl2)=> [vπl[vπl'->]].
+    iIntros (?) "e e'". iIntros (tid vπl2). move: (papp_ex vπl2)=> [vπl[vπl'->]].
     iIntros "#LFT #TIME #PROPH #UNIQ #E Na L C [T1 T] Obs". wp_bind e.
-    iApply (wp_wand with "[He L T1 Na Obs]").
-    { iApply ("He" with "LFT TIME PROPH UNIQ E Na L T1"). iApply proph_obs_impl; [|done]=> ?.
+    iApply (wp_wand with "[e L T1 Na Obs]").
+    { iApply ("e" with "LFT TIME PROPH UNIQ E Na L T1"). iApply proph_obs_impl; [|done]=> ?.
       rewrite /trans_upper papply_app papp_sepl. exact id. }
     iIntros (v). iIntros "(%vπ & Na & L & T2 & ?)". wp_let. iCombine "T2 T" as "T2T".
-    iApply ("He'" $! v tid (vπ -++ vπl') with "LFT TIME PROPH UNIQ E Na L C T2T").
+    iApply ("e'" $! v tid (vπ -++ vπl') with "LFT TIME PROPH UNIQ E Na L C T2T").
     iApply proph_obs_impl; [|done]=>/= ?. rewrite papply_app papp_sepr. exact id.
   Qed.
 
@@ -212,7 +216,7 @@ Section typing_rules.
     ⊢ typed_instr E L +[p ◁ ty; pb ◁ tyb] (p <- pb) (λ _, +[p ◁ ty'])
       (λ post '(-[a; b]), post -[st a b]).
   Proof.
-    iIntros (Wrt ??(vπ&wπ&[])) "LFT TIME _ _ E $ L (p & pb & _) Obs".
+    iIntros (Wrt ?? (vπ & wπ &[])) "LFT TIME _ _ E $ L (p & pb & _) Obs".
     wp_bind p. iApply (wp_hasty with "p"). iIntros (???) "_ ty".
     wp_bind pb. iApply (wp_hasty with "pb"). iIntros (vb db ?) "#time tyb".
     iApply wp_fupd. iMod (Wrt with "LFT E L ty") as (? vl (Sz&->)) "[Mt Close]".
@@ -252,12 +256,15 @@ Section typing_rules.
 
   Lemma type_deref {A B A' As Bs} (ty: _ A) (tyb: _ B) (ty': _ A') gt st
     (T: _ As) (T': _ Bs) p x e tr pre E L C :
-    Closed (x :b: []) e → tctx_extract_hasty E L p ty T T' tr →
+    Closed (x :b: []) e → tctx_extract_ctx E L +[p ◁ ty] T T' tr →
     typed_read E L ty tyb ty' gt st → tyb.(ty_size) = 1%nat →
     (∀v: val, typed_body E L C (v ◁ tyb +:: p ◁ ty' +:: T') (subst' x v e) pre) -∗
     typed_body E L C T (let: x := !p in e)
       (tr (λ '(a -:: al), pre (gt a -:: st a -:: al))).
-  Proof. iIntros. iApply type_let; by [eapply type_deref_instr|solve_typing|]. Qed.
+  Proof.
+    iIntros. iApply type_let; [by eapply type_deref_instr|done| |done].
+    f_equal. fun_ext. by case.
+  Qed.
 
   Local Lemma type_memcpy_iris {A A' B B' C} (tyw: _ A) (tyw': _ A') (tyr: _ B)
     (tyr': _ B') (tyb: _ C) stw gtr str (n: Z) pw pr vπw vπr E L qL tid :
