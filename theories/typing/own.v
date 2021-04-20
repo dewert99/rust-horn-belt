@@ -270,41 +270,31 @@ Section typing.
     f_equal. fun_ext. by case.
   Qed.
 
-(*
-  Lemma type_letalloc_n {E L} ty ty1 ty2 C T T' (x : string) p e :
-    Closed [] p → Closed (x :b: []) e →
-    tctx_extract_hasty E L p ty1 T T' →
-    (⊢ typed_read E L ty1 ty ty2) →
-    (∀ (v : val),
-        typed_body E L C ((v ◁ own_ptr (ty.(ty_size)) ty)::(p ◁ ty2)::T') (subst x v e)) -∗
-    typed_body E L C T (letalloc: x <-{ty.(ty_size)} !p in e).
+  Lemma type_letalloc_n {A B B' As Bs} (ty: _ A) (tyr: _ B) (tyr': _ B')
+    gt st (T: _ As) (T': _ Bs) tr pre (x: string) p e E L C :
+    Closed [] p → Closed [x] e → tctx_extract_ctx E L +[p ◁ tyr] T T' tr →
+    typed_read E L tyr ty tyr' gt st →
+    (∀v: val, typed_body E L C
+      (v ◁ box ty +:: p ◁ tyr' +:: T') (subst x v e) pre) -∗
+    typed_body E L C T (letalloc: x <-{ty.(ty_size)} !p in e)
+      (tr (λ '(b -:: bl), pre (gt b -:: st b -:: bl))).
   Proof.
-    iIntros. iApply type_new.
-    - rewrite /Closed /=. rewrite !andb_True.
-      eauto 10 using is_closed_of_val, is_closed_weaken with set_solver.
-    - lia.
-    - done.
-    - iIntros (xv) "/=".
-      assert (subst x xv (x <-{ty.(ty_size)} !p ;; e)%E =
-              (xv <-{ty.(ty_size)} !p ;; subst x xv e)%E) as ->.
-      { (* TODO : simpl_subst should be able to do this. *)
-        unfold subst=>/=. repeat f_equal.
-        - eapply (is_closed_subst []). apply is_closed_of_val. set_solver.
-        - by rewrite bool_decide_true.
-        - eapply is_closed_subst. done. set_solver. }
-      rewrite Nat2Z.id. iApply type_memcpy.
-      + apply subst_is_closed; last done. apply is_closed_of_val.
-      + solve_typing.
-      + (* TODO: Doing "eassumption" here shows that unification takes *forever* to fail.
-           I guess that's caused by it trying to unify typed_read and typed_write,
-           but considering that the Iris connectives are all sealed, why does
-           that take so long? *)
-        by eapply (write_own ty (↯ _)).
-      + solve_typing.
-      + done.
-      + done.
+    iIntros. iApply typed_body_eq; last first.
+    { iApply type_new; [|lia|done|]=>/=.
+      - rewrite /Closed /= !andb_True !right_id. split; [done|].
+        split; [by apply is_closed_of_val|]. split;
+        [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
+      - iIntros (xv). have ->: subst x xv (x <-{ty.(ty_size)} !p ;; e)%E =
+          (xv <-{ty.(ty_size)} !p ;; subst x xv e)%E.
+        { rewrite /subst /=. repeat f_equal.
+          - eapply (is_closed_subst []); [apply is_closed_of_val|set_solver].
+          - by rewrite bool_decide_true.
+          - eapply is_closed_subst; [done|set_solver]. } rewrite Nat2Z.id.
+        iApply type_memcpy; [|solve_typing| |solve_typing|done|done].
+        + apply subst_is_closed; [|done]. apply is_closed_of_val.
+        + by apply write_own. } done.
   Qed.
-*)
+
 End typing.
 
 Global Hint Resolve own_subtype own_eqtype box_subtype box_eqtype
