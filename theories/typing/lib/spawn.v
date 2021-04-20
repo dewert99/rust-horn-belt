@@ -106,7 +106,7 @@ Section spawn.
       iIntros (tid) "#LFT #TIME #HE $ $ [Hf' [Henv _]]". rewrite !tctx_hasty_val [fn _]lock.
       iApply wp_fupd. iApply (spawn_spec _ (join_inv retty) with "[-]"); last first.
       { iIntros "!> *". rewrite tctx_interp_singleton tctx_hasty_val.
-        iIntros "?". iExists 0%nat. iMod persistent_time_receipt_0 as "$". by iFrame. }
+        iIntros "?". iExists 0%nat. iMod persist_time_rcpt_0 as "$". by iFrame. }
       simpl_subst. iIntros (c) "Hfin". iMod na_alloc as (tid') "Htl". wp_let. wp_let.
       iDestruct "Hf'" as (?) "[_ Hf']".
       unlock. iApply (type_call_iris _ [] () [_] with "LFT TIME HE Htl [] Hf' [Henv]");

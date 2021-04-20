@@ -109,7 +109,7 @@ Section lemmas.
 
   Lemma tctx_hasty_val' {A} tid p v (ty: _ A) vπ:
     Some v = eval_path p →
-    tctx_elt_interp tid (p ◁ ty) vπ ⊣⊢ ∃d, ⧖d∗ ty.(ty_own) vπ d tid [v].
+    tctx_elt_interp tid (p ◁ ty) vπ ⊣⊢ ∃d, ⧖d ∗ ty.(ty_own) vπ d tid [v].
   Proof.
     move=> ?. rewrite -tctx_hasty_val. apply tctx_elt_interp_hasty_path.
     by rewrite eval_path_of_val.

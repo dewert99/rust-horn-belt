@@ -9,7 +9,7 @@ Section uniq_bor.
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlv_E ty κ;
     ty_own vπ d tid vl := [loc[l] := vl] ∃d' (ξ: proph_var' A),
       ⌜S d' ≤ d ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ, d') ∗
-      &{κ} (∃vπ' d', l ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖ S d' ∗ .PC[ξ] (vπ', d'));
+      &{κ} (∃vπ' d', l ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ξ] (vπ', d'));
     ty_shr vπ d κ' tid l := [S d' := d] ∃(l': loc) ξ, ⌜snd ∘ vπ ./ [ξ]⌝ ∗
       &frac{κ'}(λ q', l ↦{q'} #l') ∗ &frac{κ'} (λ q, q:[ξ]) ∗
       ▷ ty.(ty_shr) (fst ∘ vπ) d' κ' tid l';
@@ -154,7 +154,7 @@ Section typing.
     iMod (rebor with "LFT Hκκ' Hb") as "[Hb Hext]"; try done.
     iMod (bor_create _ κ' (∃ depth2', own γ (◯E depth2') ∗ ⧖S depth2')%I
             with "LFT [H◯]") as "[H◯ H◯†]"; [done| |].
-    { iExists depth2. iFrame. iApply persistent_time_receipt_mono; [|done]. lia. }
+    { iExists depth2. iFrame. iApply persist_time_rcpt_mono; [|done]. lia. }
     iMod (bor_combine with "LFT H◯ Hb") as "Hb"; [done|].
     iMod (bor_acc_atomic_cons with "LFT Hb") as "[[[>H◯ H] Hclose]|[#H† Hclose]]";
       [done| |]; last first.

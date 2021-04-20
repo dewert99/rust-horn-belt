@@ -19,7 +19,7 @@ Section bool.
 
   Lemma type_bool_instr b : typed_val #b bool_ty (λ post, post b).
   Proof.
-    iIntros (?????) "_ _ _ _ _ $$ _ Obs". iMod persistent_time_receipt_0 as "Time".
+    iIntros (?????) "_ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "Time".
     iApply wp_value. iExists -[const b]. iFrame "Obs". iSplit; [|done].
     rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "Time". by iExists b.
   Qed.

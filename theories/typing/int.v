@@ -21,9 +21,9 @@ Section int.
 
   Lemma type_int_instr z : typed_val #z int (λ post, post z).
   Proof.
-    iIntros (?????) "_ _ _ _ _ $$ _ Obs". iMod persistent_time_receipt_0 as "Time".
+    iIntros (?????) "_ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "time".
     iApply wp_value. iExists -[const z]. iFrame "Obs". iSplit; [|done].
-    rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "Time". by iExists z.
+    rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "time". by iExists z.
   Qed.
 
   Lemma type_int {As} z E L C (T: _ As) x e tr :
@@ -37,10 +37,10 @@ Section int.
       (λ post '(-[z; z']), post (z + z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (P1 & P2 &_) Obs".
-    wp_apply (wp_hasty with "P1"). iIntros (? d _) "Time". iIntros ((z&->&[=->])).
+    wp_apply (wp_hasty with "P1"). iIntros (? d _) "time". iIntros ((z&->&[=->])).
     wp_apply (wp_hasty with "P2"). iIntros (?? _) "_". iIntros ((z'&->&[=->])).
     wp_op. iExists -[const (z + z')]. iFrame "Obs". rewrite right_id
-    tctx_hasty_val'; [|done]. iExists d. iFrame "Time". by iExists (z + z').
+    tctx_hasty_val'; [|done]. iExists d. iFrame "time". by iExists (z + z').
   Qed.
 
   Lemma type_plus {As Bs} E L C (T: _ As) (T': _ Bs) p1 p2 x e tr pre :
@@ -58,10 +58,10 @@ Section int.
       (λ post '(-[z; z']), post (z - z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (P1 & P2 &_) Obs".
-    wp_apply (wp_hasty with "P1"). iIntros (? d _) "Time". iIntros ((z&->&[=->])).
+    wp_apply (wp_hasty with "P1"). iIntros (? d _) "time". iIntros ((z&->&[=->])).
     wp_apply (wp_hasty with "P2"). iIntros (?? _) "_". iIntros ((z'&->&[=->])).
     wp_op. iExists -[const (z - z')]. iFrame "Obs". rewrite right_id
-    tctx_hasty_val'; [|done]. iExists d. iFrame "Time". by iExists (z - z').
+    tctx_hasty_val'; [|done]. iExists d. iFrame "time". by iExists (z - z').
   Qed.
 
   Lemma type_minus {As Bs} E L C (T: _ As) (T': _ Bs) p1 p2 x e tr pre :
@@ -79,11 +79,11 @@ Section int.
       (λ post '(-[z; z']), post (bool_decide (z ≤ z'))).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (P1 & P2 &_) Obs".
-    wp_apply (wp_hasty with "P1"). iIntros (? d _) "Time". iIntros ((z&->&[=->])).
+    wp_apply (wp_hasty with "P1"). iIntros (? d _) "time". iIntros ((z&->&[=->])).
     wp_apply (wp_hasty with "P2"). iIntros (?? _) "_". iIntros ((z'&->&[=->])).
     wp_op. iExists -[const (bool_decide (z <= z'))]. iFrame "Obs".
     rewrite right_id tctx_hasty_val'; [|done]. iExists d.
-    iFrame "Time". by iExists (bool_decide (z <= z')).
+    iFrame "time". by iExists (bool_decide (z <= z')).
   Qed.
 
   Lemma type_le {As Bs} E L C (T: _ As) (T': _ Bs) p1 p2 x e tr pre :

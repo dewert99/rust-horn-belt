@@ -46,7 +46,7 @@ Section borrow.
     iMod (bor_sep with "LFT Hbor") as "[Hdepth3 Hbor]"; [done|].
     iMod (bor_persistent with "LFT Hdepth3 Htok") as "[>Hdepth3 Htok]"; [done|].
     iMod (ty.(ty_share) with "LFT Hout Hbor Htok") as "H"; [done|].
-    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME Hdepth3 [H]");
+    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME Hdepth3 [H]");
       [done..| |].
     { (* TODO : lemma for handling masks properly here. *)
       rewrite difference_empty_L. iInduction depth3 as [|depth3] "IH"; simpl.
@@ -56,7 +56,7 @@ Section borrow.
         iMod "Hclose" as "_". iMod "H". by iMod ("IH" with "H"). }
     wp_seq. iIntros "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
     rewrite /tctx_interp /= right_id. iExists _, _. iFrame "% Hshr".
-    iApply persistent_time_receipt_0.
+    iApply persist_time_rcpt_0.
   Qed.
 
   Lemma type_share {E L} p e κ ty C T T' :
@@ -92,7 +92,7 @@ Section borrow.
     iDestruct "H" as ([|depth3]) "(H● & _ & H↦)";
     iDestruct "H↦" as ([|[[|l'|]|][]]) "[>H↦ Hown]"; try iDestruct "Hown" as ">[]".
     iDestruct "Hown" as "[Hown H†]". rewrite heap_mapsto_vec_singleton -wp_fupd.
-    iApply wp_cumulative_time_receipt=>//. wp_read. iIntros "Ht".
+    iApply wp_cumul_time_rcpt=>//. wp_read. iIntros "Ht".
     iMod (own_alloc (●E depth3 ⋅ ◯E depth3)) as (γ') "[H●' H◯']";
       [by apply excl_auth_valid|].
     iDestruct (own_valid_2 with "H● H◯") as %<-%excl_auth_agree_L.
@@ -105,11 +105,11 @@ Section borrow.
       iExists (S depth1). iFrame "Hdepth1 Hout". iExists depth3, γ'.
       iFrame "H◯' Hbor". auto with lia.
     - iIntros "!>(?&?&H)". iDestruct "H" as (depth') "(? & >Hdepth' & Hown)". iExists _.
-      iMod (cumulative_persistent_time_receipts with "TIME Ht Hdepth'") as "$";
+      iMod (cumul_persist_time_rcpts with "TIME Ht Hdepth'") as "$";
         [solve_ndisj|].
       iMod (own_update_2 with "H● H◯") as "[$ _]"; [by apply excl_auth_update|].
       iExists [_]. rewrite heap_mapsto_vec_singleton. iFrame. simpl. by iFrame.
-    - iFrame. iExists _. iFrame. iApply persistent_time_receipt_mono; [|done]. lia.
+    - iFrame. iExists _. iFrame. iApply persist_time_rcpt_mono; [|done]. lia.
   Qed.
 
   Lemma type_deref_uniq_own {E L} κ x p e n ty C T T' :
@@ -133,7 +133,7 @@ Section borrow.
     iApply wp_fupd. wp_read. iMod ("Hclose'" with "[H↦]") as "Htok1"; first by auto.
     iMod ("Hclose" with "[Htok1 Htok2]") as "($ & $)"; first by iFrame.
     rewrite tctx_interp_singleton tctx_hasty_val' //. iFrame "#".
-    iExists 0%nat. iApply persistent_time_receipt_0.
+    iExists 0%nat. iApply persist_time_rcpt_0.
   Qed.
 
   Lemma type_deref_shr_own {E L} κ x p e n ty C T T' :
@@ -171,11 +171,11 @@ Section borrow.
       iDestruct "Hd" as (depth3') "[Hdepth3' ?]".
       iMod (own_update_2 with "H● H◯") as "[? _]"; [by apply excl_auth_update|].
       iCombine "Hdepth2' Hdepth3'" as "Hd".
-      rewrite -persistent_time_receipt_sep -!Max.succ_max_distr. iExists _.
+      rewrite -persist_time_rcpt_sep -!Max.succ_max_distr. iExists _.
       iFrame "Hd ∗". iExists [ #l'']. rewrite heap_mapsto_vec_singleton.
       iFrame "∗#". auto 10 with lia iFrame. }
     { rewrite heap_mapsto_vec_singleton. iExists _, _. iFrame. iExists _. iFrame.
-      iApply (persistent_time_receipt_mono with "Hdepth2'"). lia. }
+      iApply (persist_time_rcpt_mono with "Hdepth2'"). lia. }
     iClear "Hdepth1 Hdepth2'". clear dependent p depth1 depth2' depth3 γ γ' Hκ.
     iMod (bor_exists with "LFT Hbor") as (l') "Hbor". done.
     iMod (bor_exists with "LFT Hbor") as (γ') "Hbor". done.
@@ -183,7 +183,7 @@ Section borrow.
     iMod (bor_acc with "LFT H↦ Htok") as "[>H↦ Hclose']". done.
     iMod (bor_sep with "LFT Hbor") as "[Hdepth3 Hbor]". done.
     iMod (bor_unnest with "LFT Hbor") as "Hbor"; [done|].
-    iApply wp_fupd. iApply wp_cumulative_time_receipt=>//. wp_read. iIntros "Ht".
+    iApply wp_fupd. iApply wp_cumul_time_rcpt=>//. wp_read. iIntros "Ht".
     iMod "Hbor".
     iMod ("Hclose'" with "[H↦]") as "[_ Htok]"; first by auto.
     iMod (bor_combine with "LFT Hdepth3 [Hbor]") as "Hbor"; [done| |].
@@ -202,7 +202,7 @@ Section borrow.
     { iIntros "!> H". iDestruct "H" as (depth3') "(_ & >#Hd & Ho)".
       iMod (own_update_2 with "H●' H◯'") as "[H●' H◯']"; [by apply excl_auth_update|].
       iSplitR "Ho H●'"; [|by auto with iFrame]. iExists _. iFrame.
-      by iMod (cumulative_persistent_time_receipts with "TIME Ht Hd") as "$";
+      by iMod (cumul_persist_time_rcpts with "TIME Ht Hd") as "$";
         [solve_ndisj|]. }
     { iExists _. iIntros "{$H●'' $Hdepth3} !>". iApply ty_own_mt_depth_mono; [|done]. lia. }
     rewrite tctx_interp_singleton /tctx_elt_interp /=.

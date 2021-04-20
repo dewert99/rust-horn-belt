@@ -168,7 +168,7 @@ Section case.
     iDestruct (closed_hasty with "Hp2") as "%".
     wp_apply (wp_hasty with "Hp1"). iIntros (depth1 v1) "Hdepth1". iIntros (Hv1) "Hty1".
     iDestruct "Hp2" as (v2 depth2) "(Hdepth2 & H)". iDestruct "H" as (Hv2) "Hty2".
-    iCombine "Hdepth1 Hdepth2" as "Hdepth". rewrite -persistent_time_receipt_sep.
+    iCombine "Hdepth1 Hdepth2" as "Hdepth". rewrite -persist_time_rcpt_sep.
     rewrite !(ty_own_depth_mono _ _ (depth1 `max` depth2)); [|lia..].
     rewrite typed_write_eq in Hw.
     iMod (Hw with "[] LFT HE HL Hty1") as (l vl) "(H & H↦ & Hw)"=>//=.
@@ -182,7 +182,7 @@ Section case.
       - intros [= ->]. simpl in *. lia.
       - apply IHtyl. simpl in *. lia. }
     rewrite heap_mapsto_vec_cons -wp_fupd.
-    iApply (wp_persistent_time_receipt with "TIME Hdepth")=>//.
+    iApply (wp_persist_time_rcpt with "TIME Hdepth")=>//.
     iDestruct "H↦vl" as "[H↦ H↦vl]". wp_write. iIntros "#Hdepth".
     rewrite tctx_interp_singleton tctx_hasty_val' //.
     rewrite -(bi.exist_intro (S _)). iFrame "Hdepth". iApply ("Hw" with "[-] [//]").
@@ -215,7 +215,7 @@ Section case.
     iMod (Hw with "[] LFT HE HL Hty") as (l vl) "(H & H↦ & Hw)"; first done.
     simpl. destruct vl as [|? vl]; iDestruct "H" as %[[= Hlen] ->].
     rewrite heap_mapsto_vec_cons -wp_fupd. iDestruct "H↦" as "[H↦0 H↦vl]".
-    iApply (wp_persistent_time_receipt with "TIME Hdepth")=>//.
+    iApply (wp_persist_time_rcpt with "TIME Hdepth")=>//.
     wp_write. iIntros "#Hdepth". rewrite tctx_interp_singleton tctx_hasty_val' //.
     rewrite -(bi.exist_intro (S _)). iFrame "Hdepth".
     iApply ("Hw" with "[-] Hdepth"). iModIntro. iExists (_::_).
@@ -250,7 +250,7 @@ Section case.
     iDestruct (closed_hasty with "Hp2") as "%". wp_apply (wp_hasty with "Hp1").
     iIntros (depth1 v1) "Hdepth1". iIntros (Hv1) "Hty1".
     iDestruct "Hp2" as (v2 depth2) "(Hdepth2 & H)". iDestruct "H" as (Hv2) "Hty2".
-    iCombine "Hdepth1 Hdepth2" as "Hdepth". rewrite -persistent_time_receipt_sep.
+    iCombine "Hdepth1 Hdepth2" as "Hdepth". rewrite -persist_time_rcpt_sep.
     rewrite !(ty_own_depth_mono _ _ (depth1 `max` depth2)); [|lia..].
     rewrite typed_write_eq in Hw.
     iMod (Hw with "[] LFT HE HL1 Hty1") as (l1 vl1) "(H & H↦ & Hw)"=>//=.
@@ -267,7 +267,7 @@ Section case.
     rewrite -(take_drop (ty.(ty_size)) vl1) heap_mapsto_vec_app.
     iDestruct "H↦vl1" as "[H↦vl1 H↦pad]".
     iDestruct (ty_size_eq with "Hty") as "#>%".
-    iApply (wp_persistent_time_receipt with "TIME Hdepth")=>//.
+    iApply (wp_persist_time_rcpt with "TIME Hdepth")=>//.
     iApply (wp_memcpy with "[$H↦vl1 $H↦2]"); [|lia|].
     { rewrite take_length. lia. }
     iNext; iIntros "[H↦vl1 H↦2] #Hdepth".
@@ -275,7 +275,7 @@ Section case.
     iMod ("Hr" with "H↦2") as "($ & $ & Hty2)".
     iMod ("Hw" with "[-Hty2] Hdepth") as "[$ Hty]"; last first.
     { iSplitL "Hty"; [eauto with iFrame|]. iExists _. iFrame.
-      iApply persistent_time_receipt_mono; [|done]. lia. }
+      iApply persist_time_rcpt_mono; [|done]. lia. }
     iNext. rewrite split_sum_mt /is_pad. iExists i. rewrite nth_lookup Hty. iFrame.
     iSplitL "H↦pad".
     - rewrite (shift_loc_assoc_nat _ 1) take_length Nat.min_l; last lia.

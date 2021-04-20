@@ -128,7 +128,7 @@ Section typing.
     iDestruct "HT" as (depth) "[_ H]". destruct depth as [|depth]; [done|].
     destruct x as [[]|]=>//=. iDestruct "H" as "[H ?]".
     iDestruct "H" as (vl) "[? H]". iDestruct "H" as (depth') "[>Hdepth' ?]".
-    wp_bind Skip. iApply (wp_persistent_time_receipt with "TIME Hdepth'"); [done|].
+    wp_bind Skip. iApply (wp_persist_time_rcpt with "TIME Hdepth'"); [done|].
     wp_let. iIntros "Hdepth'". wp_let.
     rewrite cctx_interp_singleton /=. iApply ("HC" $! [# #l] with "Hna HL").
     rewrite tctx_interp_singleton tctx_hasty_val. iExists _. iFrame. iExists _. iFrame.
@@ -148,16 +148,16 @@ Section typing.
     iDestruct "H" as "[H >H†]". iDestruct "H" as (vl) "(>H↦ & #Hout & H)".
     destruct vl as [|[[]|] []], depth as [|depth]; try by iDestruct "H" as ">[]".
     iDestruct "H" as (depth' γ) "(>% & _ & Hbor)".
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
+    wp_bind Skip. iApply (wp_cumul_time_rcpt with "TIME"); [done|].
     wp_let. iIntros "H⧗1". wp_let.
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
+    wp_bind Skip. iApply (wp_cumul_time_rcpt with "TIME"); [done|].
     wp_let. iIntros "H⧗2". wp_let.
     iMod (lctx_lft_alive_tok α with "HE HL") as (q) "(Htok & HL & Hclose1)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Hbor Htok") as "[H Hclose]"; [done|].
     iDestruct "H" as (depth2') "(>H● & >Hdepth2' & H)". iDestruct "H" as (vl) "[>H↦' H]".
     iDestruct "H" as (depth'') "[>Hdepth'' H]".
-    iMod (cumulative_persistent_time_receipts with "TIME H⧗1 Hdepth''") as "Hdepth''"; [done|].
-    iMod (cumulative_persistent_time_receipts with "TIME H⧗2 Hdepth''") as "#Hdepth''"; [done|].
+    iMod (cumul_persist_time_rcpts with "TIME H⧗1 Hdepth''") as "Hdepth''"; [done|].
+    iMod (cumul_persist_time_rcpts with "TIME H⧗2 Hdepth''") as "#Hdepth''"; [done|].
     iMod (own_alloc (●E _ ⋅ ◯E _)) as (γ') "[H●' H◯']"; [by apply excl_auth_valid|].
     iMod ("Hclose" with "[H● Hdepth2'] [H●' H↦' H]") as "[Hbor Htok]"; last first.
     - iMod ("Hclose1" with "Htok HL") as "HL".
@@ -165,12 +165,12 @@ Section typing.
       rewrite tctx_interp_singleton tctx_hasty_val. iExists (S (S depth'')).
       iFrame "H† Hdepth''". iExists _. iFrame "∗ Hout". iExists depth''. auto with iFrame.
     - iExists _. iFrame "H●'".
-      iDestruct (persistent_time_receipt_mono with "Hdepth''") as "$"; [lia|].
+      iDestruct (persist_time_rcpt_mono with "Hdepth''") as "$"; [lia|].
       iExists _. iFrame.
     - iIntros "!> H". iExists _. iFrame "H● ∗".
       iDestruct "H" as (?) "(_ & >Hd & Ho)". iDestruct "Ho" as (vl') "[>? ?]".
       iExists vl'. iFrame. iExists _. iFrame.
-      iApply (persistent_time_receipt_mono with "Hd"). lia.
+      iApply (persist_time_rcpt_mono with "Hd"). lia.
   Qed.
 
   Definition cell_from_mut : val :=
@@ -187,7 +187,7 @@ Section typing.
     iDestruct "H" as "[H >H†]". iDestruct "H" as (vl) "(>H↦ & #Hout & H)".
     destruct vl as [|[[]|] []], depth as [|depth]; try by iDestruct "H" as ">[]".
     iDestruct "H" as (depth' γ) "(>% & H◯ & Hbor)".
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
+    wp_bind Skip. iApply (wp_cumul_time_rcpt with "TIME"); [done|].
     wp_let. iIntros "H⧗". wp_let.
     iMod (lctx_lft_alive_tok α with "HE HL") as (q) "(Htok & HL & Hclose1)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Hbor Htok") as "[H Hclose]"; [done|].
@@ -200,14 +200,14 @@ Section typing.
       rewrite tctx_interp_singleton tctx_hasty_val. iExists (S (S depth)).
       iFrame "Hdepth H†". iExists _. iFrame "H↦ Hout". iExists depth, γ'.
       by iFrame.
-    - iExists _. iFrame. iSplitR; [iApply persistent_time_receipt_mono; [|done]; lia|].
+    - iExists _. iFrame. iSplitR; [iApply persist_time_rcpt_mono; [|done]; lia|].
       iExists _. iFrame. iExists _. iFrame.
-      iApply persistent_time_receipt_mono; [|done]. lia.
+      iApply persist_time_rcpt_mono; [|done]. lia.
     - iIntros "!> H". iDestruct "H" as (?) "(_ & _ & Ho)".
       iDestruct "Ho" as (vl') "[>? Ho]". iDestruct "Ho" as (?) "[>Hdepth0 Ho]".
       iMod (own_update_2 with "H● H◯") as "[H● _]"; [by apply excl_auth_update|].
       iExists _. iFrame.
-      iMod (cumulative_persistent_time_receipts with "TIME H⧗ Hdepth0") as "$"; [solve_ndisj|].
+      iMod (cumul_persist_time_rcpts with "TIME H⧗ Hdepth0") as "$"; [solve_ndisj|].
       iExists vl'. by iFrame.
   Qed.
 
@@ -226,12 +226,12 @@ Section typing.
     destruct vl as [|[[]|] []], depth as [|depth]=>//; try by iDestruct "Ho" as ">[]".
     iDestruct "Ho" as "[Ho ?]". iDestruct "Ho" as (?) "[H↦' Ho]".
     iDestruct "Ho" as (depth') "[Hdepth' Ho]".
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
+    wp_bind Skip. iApply (wp_cumul_time_rcpt with "TIME"); [done|].
     wp_let. iIntros "H⧗1". wp_let.
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
+    wp_bind Skip. iApply (wp_cumul_time_rcpt with "TIME"); [done|].
     wp_let. iIntros "H⧗2". wp_let.
-    iMod (cumulative_persistent_time_receipts with "TIME H⧗1 Hdepth'") as "Hdepth'"; [done|].
-    iMod (cumulative_persistent_time_receipts with "TIME H⧗2 Hdepth'") as "#Hdepth'"; [done|].
+    iMod (cumul_persist_time_rcpts with "TIME H⧗1 Hdepth'") as "Hdepth'"; [done|].
+    iMod (cumul_persist_time_rcpts with "TIME H⧗2 Hdepth'") as "#Hdepth'"; [done|].
     rewrite cctx_interp_singleton /=. iApply ("HC" $! [# #l] with "Hna HL").
     rewrite tctx_interp_singleton tctx_hasty_val. iExists (S (S depth')).
     iFrame "H† Hdepth'". iExists _. iFrame "∗∗". auto with iFrame.
@@ -253,7 +253,7 @@ Section typing.
     destruct vl as [|[[]|] []], depth as [|depth]=>//=.
     iDestruct "Ho" as "[Ho $]". iDestruct "Ho" as (vl) "[H↦ Ho]".
     iExists _. iFrame. iExists _. iFrame.
-    iApply persistent_time_receipt_mono; [|done]. lia.
+    iApply persist_time_rcpt_mono; [|done]. lia.
   Qed.
 
   (** Reading from a cell *)
@@ -314,7 +314,7 @@ Section typing.
     iDestruct "Heq" as %Heq.
     (* FIXME: Changing the order of $Hr↦ $Hc'↦ breaks applying...?? *)
     wp_bind (_ <-{ty_size ty} !_)%E.
-    iApply (wp_persistent_time_receipt with "TIME Hdepth"); [done|].
+    iApply (wp_persist_time_rcpt with "TIME Hdepth"); [done|].
     wp_apply (wp_memcpy with "[$Hr↦ $Hc'↦]"); [lia..|].
     iIntros "[Hr↦ Hc'↦] #Hdepth". wp_seq.
     iDestruct "Hx" as "[Hx↦ Hx†]". iDestruct "Hx↦" as (vx) "[Hx↦ Hxown]".
@@ -323,7 +323,7 @@ Section typing.
     iIntros "[Hc'↦ Hx↦]". wp_seq.
     iMod ("Hclose2" with "[Hc'↦ Hxown] Htl") as "[Htok Htl]".
     { iExists depthx.
-      iSplitR; [iApply (persistent_time_receipt_mono with "Hdepthx"); lia|].
+      iSplitR; [iApply (persist_time_rcpt_mono with "Hdepthx"); lia|].
       auto with iFrame. }
     iMod ("Hclose1" with "Htok HL") as "HL".
     (* Now go back to typing level. *)

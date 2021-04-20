@@ -61,7 +61,7 @@ Section typing.
     (ty': type A') (st: A → B → A') : Prop := ∀vπ d v tid qL,
     lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗ ty.(ty_own) vπ d tid [v] ={⊤}=∗
       ∃(l: loc) vl, ⌜length vl = tyb.(ty_size) ∧ v = #l⌝ ∗ l ↦∗ vl ∗
-        ∀wπ db, ▷ l ↦∗: tyb.(ty_own) wπ db tid -∗ ⧖ S db ={⊤}=∗
+        ∀wπ db, ▷ l ↦∗: tyb.(ty_own) wπ db tid -∗ ⧖(S db) ={⊤}=∗
           llctx_interp L qL ∗ ty'.(ty_own) (st ∘ vπ ⊛ wπ) (S db) tid [v].
   Global Arguments typed_write {_ _ _} _ _ _%T _%T _%T _.
 
@@ -201,7 +201,7 @@ Section typing_rules.
     wp_bind p. iApply (wp_hasty with "p"). iIntros (???) "_ ty".
     wp_bind pb. iApply (wp_hasty with "pb"). iIntros (vb db ?) "#time tyb".
     iApply wp_fupd. iMod (Wrt with "LFT E L ty") as (? vl (Sz&->)) "[Mt Close]".
-    iApply (wp_persistent_time_receipt with "TIME time")=>//.
+    iApply (wp_persist_time_rcpt with "TIME time")=>//.
     iDestruct (ty_size_eq with "tyb") as "%Sz'". move: Sz. rewrite -Sz' /=.
     case vl=> [|?[|]]=>// ?. rewrite heap_mapsto_vec_singleton. wp_write.
     iIntros "#timeS". iMod ("Close" with "[Mt tyb] timeS") as "($ & ty')".
@@ -255,14 +255,14 @@ Section typing_rules.
         tctx_interp tid +[pw ◁ tyw; pr ◁ tyr] -[vπw; vπr] }}}
       (pw <-{n} !pr)
     {{{ RET #☠; na_own tid ⊤ ∗ llctx_interp L qL ∗ tctx_interp tid
-        +[pw ◁ tyw'; pr ◁ tyr'] -[(stw ∘ vπw) ⊛ (gtr ∘ vπr); str ∘ vπr] }}}.
+        +[pw ◁ tyw'; pr ◁ tyr'] -[stw ∘ vπw ⊛ (gtr ∘ vπr); str ∘ vπr] }}}.
   Proof.
     iIntros (-> Wrt Read ?) "(#LFT & #TIME & #E & Na & [L L'] & (pw & pr &_)) ToΦ".
     wp_bind pw. iApply (wp_hasty with "pw"). iIntros (???) "_ tyw".
     wp_bind pr. iApply (wp_hasty with "pr"). iIntros (???) "#time tyr".
     iApply wp_fupd. iMod (Wrt with "LFT E L tyw") as (?? [?->]) "[Mtw Closew]".
     iMod (Read with "LFT E Na L' tyr") as (? vlb ?->) "(Mtr & tyb & Closer)".
-    iApply (wp_persistent_time_receipt with "TIME time"); [done|].
+    iApply (wp_persist_time_rcpt with "TIME time"); [done|].
     iDestruct (ty_size_eq with "tyb") as "#>%".
     iApply (wp_memcpy with "[$Mtw $Mtr]"); [congruence|congruence|]. iNext.
     iIntros "[Mtw Mtr] #timeS". iMod ("Closew" with "[Mtw tyb] timeS") as "[L tyw']".

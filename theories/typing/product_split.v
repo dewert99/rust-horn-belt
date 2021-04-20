@@ -110,7 +110,7 @@ Section product_split.
     iDestruct "H1" as "(H↦1 & H†1)".
     iDestruct "H2" as (v2 [|depth2]) "(#Hdepth2 & Hp2 & H2)"=>//=. iDestruct "Hp1" as %Hρ1.
     rewrite Hρ1. iDestruct "Hp2" as %[=<-]. iDestruct "H2" as "[H↦2 H†2]".
-    iExists #l, (S depth1 `max` S depth2)%nat. rewrite persistent_time_receipt_sep.
+    iExists #l, (S depth1 `max` S depth2)%nat. rewrite persist_time_rcpt_sep.
     iFrame "#%". rewrite /= -freeable_sz_split. iFrame.
     iDestruct "H↦1" as (vl1) "[H↦1 H1]". iDestruct "H↦2" as (vl2) "[H↦2 H2]".
     iExists (vl1 ++ vl2). rewrite heap_mapsto_vec_app. iFrame.
@@ -171,12 +171,12 @@ Section product_split.
       + iExists _, _. iFrame "#%". auto with iFrame.
       + iExists _, _. iFrame "#". rewrite /= Hp. iSplitR; [done|]. auto with iFrame.
     - rewrite -!(bi.exist_intro depth'). iFrame.
-      iSplit; iApply (persistent_time_receipt_mono with "Hdepth"); lia.
+      iSplit; iApply (persist_time_rcpt_mono with "Hdepth"); lia.
     - iIntros "!> [H1 H2]".
       iDestruct "H1" as (depth1) "(_ & >Hdepth1 & H1)".
       iDestruct "H2" as (depth2) "(_ & >Hdepth2 & H2)".
       iCombine "Hdepth1 Hdepth2" as "Hdepth12".
-      rewrite -persistent_time_receipt_sep -Max.succ_max_distr.
+      rewrite -persist_time_rcpt_sep -Max.succ_max_distr.
       iExists _. iFrame "Hdepth12".
       iMod (own_update_2 with "H● H◯") as "[$ _]"; [by apply excl_auth_update|].
       iSplitL "H1"; (iApply ty_own_mt_depth_mono; [|done]); lia.
@@ -193,7 +193,7 @@ Section product_split.
     rewrite /tctx_elt_interp /= Hp1.
     iDestruct "H2" as (v2 [|depth2]) "(Hdepth2 & Hp2 & #Hout2 & H2)"=>//. iDestruct "Hp2" as %[=<-].
     iExists _, _. iCombine "Hdepth1 Hdepth2" as "Hdepth".
-    rewrite -persistent_time_receipt_sep -Max.succ_max_distr. iFrame "Hdepth".
+    rewrite -persist_time_rcpt_sep -Max.succ_max_distr. iFrame "Hdepth".
     iSplitR; [done|]. iSplitR.
     { rewrite lft_intersect_list_app. by iApply lft_incl_glb. }
     iDestruct "H1" as (depth1' γ1 ?) "[H◯1 H1]".
@@ -211,7 +211,7 @@ Section product_split.
     iDestruct (own_valid_2 with "H●1 H◯1") as %->%excl_auth_agree_L.
     iDestruct (own_valid_2 with "H●2 H◯2") as %->%excl_auth_agree_L.
     iCombine "Hdepth1' Hdepth2'" as "Hdepth".
-    rewrite -persistent_time_receipt_sep -Max.succ_max_distr.
+    rewrite -persist_time_rcpt_sep -Max.succ_max_distr.
     iApply ("Hclose" with "[H◯1 H◯2 H●1 H●2]").
     - iIntros "!> H". iDestruct "H" as (depth') "(_ & >#Hdepth' & H1 & H2)".
       rewrite -!(bi.exist_intro depth'). iFrame "∗#".
@@ -268,7 +268,7 @@ Section product_split.
     iDestruct "H1" as ([[]|] depth1) "(_ & Hp1 & Hown1)"=>//.
     iDestruct "H2" as ([[]|] depth2) "(_ & Hp2 & Hown2)"; try done.
     simpl. iDestruct "Hp1" as %Hp1. rewrite Hp1. iDestruct "Hp2" as %[=<-].
-    iExists #l, 0%nat. iFrame "∗%". iApply persistent_time_receipt_0.
+    iExists #l, 0%nat. iFrame "∗%". iApply persist_time_rcpt_0.
   Qed.
 
   Lemma shr_is_ptr κ ty depth tid (vl : list val) :

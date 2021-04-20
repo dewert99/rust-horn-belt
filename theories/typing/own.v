@@ -204,8 +204,8 @@ Section typing.
     (0 ≤ n)%Z → let n' := Z.to_nat n in
     ⊢ typed_instr_ty E L +[] (new [ #n])%E (own_ptr n' (↯ n')) (λ post _, post ()).
   Proof.
-    iIntros (?????) "_ TIME _ _ _ $$ _ ?". iMod persistent_time_receipt_0 as "Time".
-    iApply (wp_persistent_time_receipt with "TIME Time"); [done|].
+    iIntros (?????) "_ TIME _ _ _ $$ _ ?". iMod persist_time_rcpt_0 as "Time".
+    iApply (wp_persist_time_rcpt with "TIME Time"); [done|].
     iApply wp_new=>//. iIntros "!>" (l) "(Fr & Mt) #Time". iExists -[const ()].
     iSplit; [|done]. rewrite/= right_id (tctx_hasty_val #l).
     iExists 1. iFrame "Time". rewrite/= freeable_sz_full Z2Nat.id; [|done].

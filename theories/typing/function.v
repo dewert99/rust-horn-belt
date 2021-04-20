@@ -310,7 +310,7 @@ Section typing.
     WP (call: f ps → k) {{ _, cont_postcondition }}.
   Proof.
     iIntros (HE Hk') "#LFT #TIME #HE Htl Hκs Hf Hargs Hk".
-    iMod persistent_time_receipt_0 as "#?".
+    iMod persist_time_rcpt_0 as "#?".
     iApply (type_call_iris' with "LFT TIME HE Htl [] Hκs [Hf] Hargs [Hk]"); [done|..].
     - instantiate (1 := 1%Qp). by rewrite /llctx_interp.
     - rewrite tctx_hasty_val. auto.
@@ -406,7 +406,7 @@ Section typing.
     typed_instr_ty E L T ef (fn fp).
   Proof.
     iIntros (<- ->) "#Hbody /=". iIntros (tid) "#LFT #TIME _ $ $ #HT".
-    iMod persistent_time_receipt_0 as "#?". iApply wp_value.
+    iMod persist_time_rcpt_0 as "#?". iApply wp_value.
     rewrite tctx_interp_singleton. iLöb as "IH". iExists _, 0%nat.
     iSplit; [done|]. iSplit; [by rewrite /= decide_left|].
     iExists fb, _, argsb, e, _. iSplit. done. iSplit. done. iNext.
