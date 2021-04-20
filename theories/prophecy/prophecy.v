@@ -367,7 +367,7 @@ Qed.
 
 (** Manipulating Prophecy Observations *)
 
-Lemma proph_obs_trivial φ : φ → ⊢ ⟨_, φ⟩.
+Lemma proph_obs_true φπ : (∀π, φπ π) → ⊢ ⟨π, φπ π⟩.
 Proof. move=> ?. iExists []. by iSplit. Qed.
 
 Lemma proph_obs_impl φπ ψπ : (∀π, φπ π → ψπ π) → .⟨φπ⟩ -∗ .⟨ψπ⟩.
@@ -419,13 +419,16 @@ Context `{!invG Σ, !prophG Σ}.
 
 (** ** Constructing Prophecy Equalizers *)
 
-Lemma proph_token_eqz ξ vπ : proph_ctx -∗ 1:[ξ] -∗ (.$ ξ) :== vπ.
+Lemma proph_eqz_token ξ vπ : proph_ctx -∗ 1:[ξ] -∗ (.$ ξ) :== vπ.
 Proof.
   iIntros "PROPH Tok" (???) "Ptoks". by iMod (proph_resolve with "PROPH Tok Ptoks").
 Qed.
 
-Lemma proph_obs_eqz {A} (uπ vπ: _ → A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
+Lemma proph_eqz_obs {A} (uπ vπ: _ → A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
 Proof. iIntros "?" (???) "? !>". iFrame. Qed.
+
+Lemma proph_eqz_eq {A} (vπ: _ → A) : ⊢ vπ :== vπ.
+Proof. iApply proph_eqz_obs. by iApply proph_obs_true. Qed.
 
 Lemma proph_eqz_modify {A} (uπ uπ' vπ: _ → A) :
   ⟨π, uπ' π = uπ π⟩ -∗ uπ :== vπ -∗ uπ' :== vπ.

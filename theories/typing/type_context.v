@@ -79,7 +79,7 @@ Section type_context.
     : iProp Σ := match t with
     | p ◁ ty => ∃v d, ⌜eval_path p = Some v⌝ ∗ ⧖d ∗ ty.(ty_own) vπ d tid [v]
     | p ◁{κ} ty => ∃v, ⌜eval_path p = Some v⌝ ∗
-        ([†κ] ={⊤}=∗ ∃vπ' d, ▷(vπ :== vπ') ∗ ⧖d ∗ ty.(ty_own) vπ d tid [v]) end%I.
+        ([†κ] ={⊤}=∗ ∃vπ' d, ▷(vπ :== vπ') ∗ ⧖d ∗ ty.(ty_own) vπ' d tid [v]) end%I.
 
   (* Block tctx_elt_interp from reducing with simpl when t is a constructor. *)
   Global Arguments tctx_elt_interp : simpl never.
@@ -133,7 +133,7 @@ Section lemmas.
     copyc_persistent tid vπl : Persistent (tctx_interp tid T vπl).
   Global Existing Instances copyc_persistent.
 
-  Global Instance tctx_nil_copy : CopyC +[].
+  Global Instance tctx_nil_copy: CopyC +[].
   Proof. rewrite /CopyC. apply _. Qed.
 
   Global Instance tctx_cons_copy {A As} p (ty: _ A) (T: _ As) :
@@ -160,16 +160,6 @@ Section lemmas.
       lft_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
       tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩ ={⊤}=∗ ∃vπl',
       llctx_interp L q ∗ ⟨π, postπ π (vπl' -$ π)⟩ ∗ tctx_interp tid T' vπl'.
-  (* Global Instance : ∀ A E L f, RewriteRelation (@tctx_incl A A E L f) := {}. *)
-
-  (* Global Instance tctx_incl_preorder A E L : PreOrder (@tctx_incl A A E L).
-  Proof.
-    split.
-    - by iIntros (???) "_ _ $ $".
-    - rewrite /Transitive. iIntros (??? H1 H2 ??) "#LFT #HE HL H".
-      iMod (H1 with "LFT HE HL H") as "(HL & H)".
-      by iMod (H2 with "LFT HE HL H") as "($ & $)".
-  Qed. *)
 
   Lemma tctx_incl_impl {As Bs} (T: _ As) (T': _ Bs) (tr tr': _ → _ → Prop) E L :
     (∀post vl, tr post vl → tr' post vl) →
@@ -239,11 +229,19 @@ Section lemmas.
     iExists (vπ' -:: vπ -:: wπl). iFrame.
   Qed.
 
+  Lemma tctx_incl_leak_lower {As Bs} (T: _ As) (T': _ Bs) E L :
+    tctx_incl E L (T h++ T') T (λ post abl, post (psepl abl)).
+  Proof.
+    move=> ?? abπl ?. move: (papp_ex abπl)=> [aπl[?->]].
+    iIntros "_ _ _ _ $ [T _] ? !>". iExists aπl. iFrame "T".
+    iApply proph_obs_eq; [|done]=> ?. by rewrite/= papply_app papp_sepl.
+  Qed.
+
   Lemma copy_tctx_incl {A As} (ty: _ A) `{!Copy ty} (T: _ As) p E L :
     tctx_incl E L (p ◁ ty +:: T) (p ◁ ty +:: p ◁ ty +:: T)
       (λ post '(a -:: al), post (a -:: a -:: al)).
   Proof.
-    iIntros (??[vπ wπl]?) "_ _ _ _ $ [#? T] Obs !>".
+    iIntros (??[vπ wπl]?) "_ _ _ _ $ /=[#? T] Obs !>".
     iExists (vπ -:: vπ -:: wπl). iFrame "Obs T". by iSplit.
   Qed.
 
@@ -252,10 +250,26 @@ Section lemmas.
     tctx_incl E L (p ◁ ty +:: T) (p ◁ ty' +:: T)
       (λ post '(a -:: al), post (f a -:: al)).
   Proof.
-    iIntros (Sub ??[vπ wπl]?) "#LFT _ _ E L [(%v & %d &%&?& ty) T] Obs /=".
+    iIntros (Sub ??[vπ wπl]?) "#LFT _ _ E L /=[(%v & %d &%&?& ty) T] Obs /=".
     iDestruct (Sub with "L E") as "#(_ & _ & #InOwn & _)". iModIntro.
     iExists (f ∘ vπ -:: wπl). iFrame "L Obs T". iExists v, d.
     do 2 (iSplit; [done|]). by iApply "InOwn".
+  Qed.
+
+  Lemma subtype_tctx_incl_blocked {A B As} ty ty' `{@Inj A B (=) (=) f}
+    κ κ' (T: _ As) p E L :
+    subtype E L f ty ty' → lctx_lft_incl E L κ κ' →
+    tctx_incl E L (p ◁{κ} ty +:: T) (p ◁{κ'} ty' +:: T)
+      (λ post '(a -:: al), post (f a -:: al)).
+  Proof.
+    iIntros (Sub InLft ??[vπ wπl]?) "#LFT _ _ E L /=[(%v &%& Upd) T] Obs".
+    iDestruct (Sub with "L E") as "#(_&_& #InOwn &_)".
+    iDestruct (InLft with "L E") as "#InLft". iModIntro. iExists (f ∘ vπ -:: wπl).
+    iFrame "L Obs T". iExists v. iSplit; [done|]. iIntros "†κ'".
+    iMod (lft_incl_dead with "InLft †κ'") as "†κ"; [done|].
+    iMod ("Upd" with "†κ") as (vπ' d) "(?& d & ty)". iModIntro.
+    iExists (f ∘ vπ'), d. iFrame "d".
+    iSplitR "ty"; by [iApply proph_eqz_constr|iApply "InOwn"].
   Qed.
 
   (* Extracting from a type context. *)
@@ -309,50 +323,44 @@ Section lemmas.
     tctx_extract_ctx E L (t +:: T) T1 T3 (tr ∘ trans_tail tr').
   Proof. move=> ??. eapply tctx_incl_trans; by [|apply tctx_incl_tail]. Qed.
 
-  (*
-  Lemma tctx_extract_ctx_blocked {A As Bs Cs Ds} E L (T : tctx As) (T1 : tctx Bs) (T2 : tctx Cs) (T3 : tctx Ds) p κ (ty : type A) :
-    tctx_extract_blocked E L p κ ty  T1 T2 → tctx_extract_ctx E L T T2 T3 →
-    tctx_extract_ctx E L ((p ◁{κ} ty)+::T) T1 T3.
-  Proof. unfold tctx_extract_ctx, tctx_extract_blocked => ?? //.
-    eapply tctx_incl_trans, tcx_incl_cons; eassumption.
+  Lemma tctx_extract_ctx_incl {As Bs Cs} (T: _ As) (T': _ Bs) (Tx: _ Cs) tr E L :
+    tctx_extract_ctx E L T' T Tx tr →
+    tctx_incl E L T T' (λ post, tr (λ bcl, post (psepl bcl))).
+  Proof.
+    move=> Ex. eapply tctx_incl_eq; last first. { eapply tctx_incl_trans;
+    [apply Ex|apply tctx_incl_leak_lower]. } done.
   Qed.
 
-  Lemma tctx_extract_ctx_incl {As Bs Cs} E L (T : tctx As) (T' : tctx Bs) (T0 : tctx Cs):
-    tctx_extract_ctx E L T' T T0 →
-    tctx_incl E L T T'.
-  Proof.
-    unfold tctx_extract_ctx=> ?.
-    eapply tctx_incl_trans; first eassumption.
-    apply contains_tctx_incl, hsubmseteq_inserts_r, hpermutation_hsubmseteq, hpermutation_refl.
-  Qed. *)
-
-  (* Unblocking a type context. *)
+  (** Unblocking a type context. *)
   (* TODO : That would be great if this could also remove all the
      instances mentionning the lifetime in question.
      E.g., if [p ◁ &uniq{κ} ty] should be removed, because this is now
      useless. *)
 
-  (* Class UnblockTctx (κ : lft) (A : Types) (T1 T2 : tctx A) : Prop :=
-    unblock_tctx : ∀ tid, [†κ] -∗ tctx_interp tid T1 ={⊤}=∗ tctx_interp tid T2.
+  Class UnblockTctx {As} (κ: lft) (T T': tctx As) : Prop := unblock_tctx:
+    ∀tid vπl, [†κ] -∗ tctx_interp tid T vπl ={⊤}=∗ ∃vπl',
+      ([∗ plist] vπ; vπ' ∈ vπl; vπl', ▷(vπ :== vπ')) ∗ tctx_interp tid T' vπl'.
 
-  Global Instance unblock_tctx_nil κ : UnblockTctx κ _ +[] +[].
-  Proof. by iIntros (tid) "_ $". Qed.
+  Global Instance unblock_tctx_nil κ : UnblockTctx κ +[] +[].
+  Proof. move=> ??. by iIntros. Qed.
 
-  Global Instance unblock_tctx_cons_unblock A As (T1 T2 : tctx As) p κ (ty : type A) :
-    UnblockTctx κ _ T1 T2 →
-    UnblockTctx κ _ ((p ◁{κ} ty) +:: T1) ((p ◁ ty) +:: T2).
+  Global Instance unblock_tctx_cons_unblock {A As} (ty: _ A) (T T': _ As) p κ :
+    UnblockTctx κ T T' → UnblockTctx κ (p ◁{κ} ty +:: T) (p ◁ ty +:: T').
   Proof.
-    iIntros (H12 tid) "#H†". rewrite !tctx_interp_cons. iIntros "[H HT1]".
-    iMod (H12 with "H† HT1") as "$". iDestruct "H" as (v) "[% H]".
-    iMod ("H" with "H†") as (depth) "[??]". iExists v, depth. auto.
+    move=> Un ?/=[??]. iIntros "#†κ [(%v &%& Upd) T]".
+    iMod ("Upd" with "†κ") as (vπ' d) "(Eqz &?&?)".
+    iMod (Un with "†κ T") as (vπl') "[Eqzs T']". iModIntro.
+    iExists (vπ' -:: vπl'). iFrame "Eqz Eqzs T'". iExists v, d. by iFrame.
   Qed.
 
-  Global Instance unblock_tctx_cons κ A As (T1 T2 : tctx As) (x : tctx_elt A) :
-    UnblockTctx κ _ T1 T2 → UnblockTctx κ _ (x +:: T1) (x +:: T2) | 100.
+  Global Instance unblock_tctx_cons {A As} (t: _ A) (T T': _ As) κ :
+    UnblockTctx κ T T' → UnblockTctx κ (t +:: T) (t +:: T') | 100.
   Proof.
-    iIntros (H12 tid) "#H†". rewrite !tctx_interp_cons. iIntros "[$ HT1]".
-    by iMod (H12 with "H† HT1") as "$".
-  Qed.  *)
+    move=> Un ?/=[vπ ?]. iIntros "†κ [t T]".
+    iMod (Un with "†κ T") as (vπl') "[Eqzs T']". iModIntro.
+    iExists (vπ -:: vπl'). iFrame "Eqzs t T'". iApply proph_eqz_eq.
+  Qed.
+
 End lemmas.
 
 Global Hint Resolve tctx_extract_elt_here_copy | 1 : lrust_typing.
@@ -360,5 +368,5 @@ Global Hint Resolve tctx_extract_elt_here_exact | 2 : lrust_typing.
 Global Hint Resolve tctx_extract_elt_here | 20 : lrust_typing.
 Global Hint Resolve tctx_extract_elt_further | 50 : lrust_typing.
 Global Hint Resolve tctx_extract_ctx_nil tctx_extract_ctx_elt
-                    (* tctx_extract_ctx_incl *) : lrust_typing.
+                    tctx_extract_ctx_incl : lrust_typing.
 Global Hint Opaque tctx_extract_ctx tctx_extract_elt tctx_incl : lrust_typing.

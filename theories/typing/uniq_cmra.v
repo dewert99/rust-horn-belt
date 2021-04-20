@@ -161,7 +161,7 @@ Proof.
   iIntros (??) "PROPH Vo Pc Ptoks". iDestruct (vo_pc with "Vo Pc") as (<-) "[? Tok]".
   iMod (proph_resolve with "PROPH Tok Ptoks") as "[#? $]"; [done|done|].
   iModIntro. iSplitR; [done|]. iRight. iSplitL; [by iExists (vπ,d)|].
-  by iApply proph_obs_eqz.
+  by iApply proph_eqz_obs.
 Qed.
 
 Lemma uniq_preresolve E ξ u vπ d vπd' ζs q : ↑prophN ⊆ E → u ./ ζs →
@@ -176,6 +176,6 @@ Proof.
 Qed.
 
 Lemma proph_ctrl_eqz ξ vπ d : proph_ctx -∗ .PC[ξ] (vπ,d) -∗ (.$ ξ) :== vπ.
-Proof. iIntros "#? [[_ ?]|[_ ?]]"; by [iApply proph_token_eqz|]. Qed.
+Proof. iIntros "#? [[_ ?]|[_ ?]]"; by [iApply proph_eqz_token|]. Qed.
 
 End lemmas.
