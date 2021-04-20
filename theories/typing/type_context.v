@@ -205,12 +205,11 @@ Section lemmas.
     move=> Hincl1 Hincl2 ?? vπl ?. move: (papp_ex vπl)=> [?[?->]].
     iIntros "#LFT #PROPH #UNIQ #E L [T1 T2] Obs".
     iMod (Hincl1 with "LFT PROPH UNIQ E L T1 [Obs]")  as (wπl) "(L & Obs & T1')".
-    { iApply proph_obs_impl; [|done]=> ?.
-      rewrite /trans_app papply_app papp_sepl papp_sepr. exact id. }
-    iMod (Hincl2 with "LFT PROPH UNIQ E L T2 [Obs]") as (wπl') "(L &?& T2')".
-    { iApply proph_obs_impl; [|done]=> ?. exact id. }
+    { iApply proph_obs_eq; [|done]=> ?.
+      by rewrite /trans_app papply_app papp_sepl papp_sepr. }
+    iMod (Hincl2 with "LFT PROPH UNIQ E L T2 Obs") as (wπl') "(L &?& T2')".
     iExists (wπl -++ wπl'). iCombine "T1' T2'" as "$". iFrame "L".
-    iApply proph_obs_impl; [|done]=>/= ?. rewrite papply_app. exact id.
+    iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app.
   Qed.
 
   Lemma tctx_incl_frame_l {As Bs Cs} (T: _ As) (T': _ Bs) (Tf: _ Cs) tr E L :
@@ -232,27 +231,31 @@ Section lemmas.
     { by apply (tctx_incl_frame_l _ _ +[_]). } by move=> ?[??].
   Qed.
 
-  Lemma tctx_incl_swap {A B} (t: _ A) (t': _ B) E L :
-    tctx_incl E L +[t; t'] +[t'; t] (λ post '(-[a; b]), post -[b; a]).
+  Lemma tctx_incl_swap {A B As} (t: _ A) (t': _ B) (T: _ As) E L :
+    tctx_incl E L (t +:: t' +:: T) (t' +:: t +:: T)
+      (λ post '(a -:: b -:: al), post (b -:: a -:: al)).
   Proof.
-    iIntros (??(vπ & wπ &[])?) "_ _ _ _ $ (?&?&_) ?!>". iExists -[wπ; vπ]. iFrame.
+    iIntros (??(vπ & vπ' & wπl)?) "_ _ _ _ $ (?&?&?) ?!>".
+    iExists (vπ' -:: vπ -:: wπl). iFrame.
   Qed.
 
-  Lemma copy_tctx_incl {A} (ty: _ A) `{!Copy ty} E L p :
-    tctx_incl E L +[p ◁ ty] +[p ◁ ty; p ◁ ty] (λ post '(-[a]), post -[a; a]).
+  Lemma copy_tctx_incl {A As} (ty: _ A) `{!Copy ty} (T: _ As) p E L :
+    tctx_incl E L (p ◁ ty +:: T) (p ◁ ty +:: p ◁ ty +:: T)
+      (λ post '(a -:: al), post (a -:: a -:: al)).
   Proof.
-    iIntros (??(vπ &[])?) "_ _ _ _ $ (#?&_) Obs !>". iExists -[vπ; vπ].
-    iFrame "Obs". rewrite/= right_id. by iSplit.
+    iIntros (??[vπ wπl]?) "_ _ _ _ $ [#? T] Obs !>".
+    iExists (vπ -:: vπ -:: wπl). iFrame "Obs T". by iSplit.
   Qed.
 
-  Lemma subtype_tctx_incl {A B} ty ty' (f: A → B) p E L :
+  Lemma subtype_tctx_incl {A B As} ty ty' (f: A → B) (T: _ As) p E L :
     subtype E L f ty ty' →
-    tctx_incl E L +[p ◁ ty] +[p ◁ ty'] (λ post '(-[a]), post -[f a]).
+    tctx_incl E L (p ◁ ty +:: T) (p ◁ ty' +:: T)
+      (λ post '(a -:: al), post (f a -:: al)).
   Proof.
-    iIntros (Sub ??[vπ[]]?) "#LFT _ _ E L [(%v & %d &%&?& ty) _] Obs /=".
+    iIntros (Sub ??[vπ wπl]?) "#LFT _ _ E L [(%v & %d &%&?& ty) T] Obs /=".
     iDestruct (Sub with "L E") as "#(_ & _ & #InOwn & _)". iModIntro.
-    iExists (-[f ∘ vπ]). iFrame "L Obs". rewrite right_id.
-    iExists v, d. do 2 (iSplit; [done|]). by iApply "InOwn".
+    iExists (f ∘ vπ -:: wπl). iFrame "L Obs T". iExists v, d.
+    do 2 (iSplit; [done|]). by iApply "InOwn".
   Qed.
 
   (* Extracting from a type context. *)
@@ -268,8 +271,7 @@ Section lemmas.
       (λ post '(b -:: al), tr (λ '(a -:: bl), post (a -:: b -:: bl)) al).
   Proof.
     move=> ?. eapply tctx_incl_eq; last first. { eapply tctx_incl_trans;
-    [by eapply tctx_incl_tail|]. apply (tctx_incl_frame_r +[_; _] +[_; _]),
-    tctx_incl_swap. } move=> ?[??]/=. f_equal. fun_ext. by case.
+    by [eapply tctx_incl_tail|apply tctx_incl_swap]. } move=> ?[??]/=. f_equal.
   Qed.
 
   Lemma tctx_extract_elt_here_copy {A B As} ty ty' (f: A → B) (T: _ As) p p' E L :
@@ -277,10 +279,8 @@ Section lemmas.
     tctx_extract_elt E L (p ◁ ty) (p' ◁ ty' +:: T) (p' ◁ ty' +:: T)
       (λ post '(b -:: al), post (f b -:: b -:: al)).
   Proof.
-    move=> ->??. eapply tctx_incl_eq; last first. {
-    eapply (tctx_incl_frame_r +[_] +[_; _]). eapply tctx_incl_trans;
-    [by eapply copy_tctx_incl|]. apply (tctx_incl_frame_r +[_] +[_]).
-    by apply subtype_tctx_incl. } by move=> ?[??].
+    move=> ->??. eapply tctx_incl_eq; last first. { eapply tctx_incl_trans;
+    by [apply copy_tctx_incl|apply subtype_tctx_incl]. } by move=> ?[??].
   Qed.
 
   Lemma tctx_extract_elt_here_exact {A As} (ty: _ A) (T: _ As) p p' E L :
@@ -292,8 +292,8 @@ Section lemmas.
     tctx_extract_elt E L (p ◁ ty) (p' ◁ ty' +:: T) T
       (λ post '(b -:: al), post (f b -:: al)).
   Proof.
-    move=> ->?. eapply tctx_incl_eq; last first.
-    { apply (tctx_incl_frame_r +[_] +[_]). by apply subtype_tctx_incl. } by move=> ?[??].
+    move=> ->?. eapply tctx_incl_eq; [|by apply subtype_tctx_incl].
+    by move=> ?[??].
   Qed.
 
   Definition tctx_extract_ctx {As Bs Cs} E L (T: tctx As)

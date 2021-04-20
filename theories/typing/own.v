@@ -98,9 +98,7 @@ Section own.
 
   Global Instance own_type_contractive A n : TypeContractive (@own_ptr A n).
   Proof.
-    split.
-    - by apply type_lft_morphism_id_like.
-    - done.
+    split; [by apply type_lft_morphism_id_like|done| |].
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= > *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
@@ -214,29 +212,24 @@ Section typing.
     iFrame "Fr". iNext. iExists _. iFrame "Mt". by rewrite repeat_length.
   Qed.
 
-  Lemma type_new {As} x (n: Z) n' e pre E L C (T: _ As) :
+  Lemma type_new {As} (n: Z) n' x e pre E L C (T: _ As) :
     Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n →
     (∀v: val, typed_body E L C (v ◁ own_ptr n' (↯ n') +:: T) (subst' x v e) pre) -∗
     typed_body E L C T (let: x := new [ #n] in e) (λ al, pre (() -:: al)).
   Proof. iIntros. subst. iApply type_let; by [apply type_new_instr|solve_typing]. Qed.
 
-(*
-  Lemma type_new_subtype ty E L C T x (n : Z) e :
-    Closed (x :b: []) e →
-    0 ≤ n →
-    let n' := Z.to_nat n in
-    subtype E L (uninit n') ty →
-    (∀ (v : val), typed_body E L C ((v ◁ own_ptr n' ty) :: T) (subst' x v e)) -∗
-    typed_body E L C T (let: x := new [ #n ] in e).
+  Lemma type_new_subtype {A As} (ty: _ A) n' (n: Z) (T: _ As) f e pre x E L C :
+    Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n → subtype E L f (↯ n') ty →
+    (∀v: val, typed_body E L C (v ◁ own_ptr n' ty +:: T) (subst' x v e) pre) -∗
+    typed_body E L C T (let: x := new [ #n] in e) (λ al, pre (f () -:: al)).
   Proof.
-    iIntros (????) "Htyp". iApply type_let; [by apply type_new_instr|solve_typing|].
-    iIntros (v). iApply typed_body_mono; last iApply "Htyp"; try done.
-    by apply (tctx_incl_frame_r _ [_] [_]), subtype_tctx_incl, own_subtype.
+    iIntros (??->Sub) "?". iApply type_let; [by apply type_new_instr|solve_typing| |];
+    last first. { iIntros (?). iApply typed_body_tctx_incl;
+    [eapply subtype_tctx_incl, own_subtype, Sub|done]. } done.
   Qed.
-*)
 
   Lemma type_delete_instr {A} (ty: _ A) (n: Z) p E L :
-    let n' := ty.(ty_size) in n = n' →
+    let n' := ty.(ty_size) in n = Z.of_nat n' →
     ⊢ typed_instr E L +[p ◁ own_ptr n' ty] (delete [ #n; p])%E (λ _, +[])
       (λ post _, post -[]).
   Proof.

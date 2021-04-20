@@ -120,7 +120,7 @@ Qed.
 Lemma wp_persistent_time_receipt n E e Φ :
   TCEq (to_val e) None → ↑timeN ⊆ E →
   time_ctx -∗
-  ⧖n -∗ WP e @ (E∖↑timeN) {{ v, ⧖(S n) -∗ Φ v }} -∗
+  ⧖n -∗ WP e @ (E∖↑timeN) {{ v, ⧖ S n -∗ Φ v }} -∗
   WP e @ E {{ Φ }}.
 Proof.
   iIntros. iApply wp_fupd. iApply wp_cumulative_time_receipt=>//.

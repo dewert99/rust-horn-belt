@@ -15,7 +15,7 @@ Section typing.
       ⟨π, pre (vπl -$ π)⟩ -∗ WP e {{ _, cont_postcondition }}.
   Global Arguments typed_body {_} _ _ _ _ _%E _.
 
-  Lemma typed_body_eq {As} (pre pre': predl As) E L C T e :
+  Lemma typed_body_eq {As} pre pre' E L C (T: _ As) e :
     pre = pre' → typed_body E L C T e pre' -∗ typed_body E L C T e pre.
   Proof. by move=> ->. Qed.
 
@@ -26,19 +26,14 @@ Section typing.
     by apply Imp.
   Qed.
 
-  (* Global Instance typed_body_llctx_permut E :
-    Proper ((≡ₚ) ==> eq ==> eq ==> eq ==> (⊢)) (typed_body E).
+  Lemma typed_body_tctx_incl {As Bs} (T: _ As) (T': _ Bs) tr pre E L C e :
+    tctx_incl E L T T' tr →
+    typed_body E L C T' e pre -∗ typed_body E L C T e (tr pre).
   Proof.
-    intros L1 L2 HL C ? <- T ? <- e ? <-. rewrite /typed_body.
-    by setoid_rewrite HL.
-  Qed. *)
-
-  (* Global Instance typed_body_elctx_permut :
-    Proper ((≡ₚ) ==> eq ==> eq ==> eq ==> eq ==> (⊢)) typed_body.
-  Proof.
-    intros E1 E2 HE L ? <- C ? <- T ? <- e ? <-. rewrite /typed_body.
-    by setoid_rewrite HE.
-  Qed. *)
+    iIntros (In) "e". iIntros (??) "#LFT TIME #PROPH #UNIQ #E Na L C T Obs".
+    iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & Obs & T')".
+    iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T' Obs").
+  Qed.
 
   (* Global Instance typed_body_mono E L:
     Proper (flip (cctx_incl E) ==> flip (tctx_incl E L) ==> eq ==> (⊢))
@@ -50,11 +45,6 @@ Section typing.
     iApply ("H" with "LFT TIME HE Htl HL [HC] HT").
     by iApply (HC with "LFT HE HC").
   Qed. *)
-
-  (* Global Instance typed_body_mono_flip E L:
-    Proper (cctx_incl E ==> tctx_incl E L ==> eq ==> flip (⊢))
-           (typed_body E L).
-  Proof. intros ?????????. by eapply typed_body_mono. Qed. *)
 
   (** Instruction *)
   Definition typed_instr {As Bs} (E: elctx) (L: llctx)
@@ -71,7 +61,7 @@ Section typing.
     (ty': type A') (st: A → B → A') : Prop := ∀vπ d v tid qL,
     lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗ ty.(ty_own) vπ d tid [v] ={⊤}=∗
       ∃(l: loc) vl, ⌜length vl = tyb.(ty_size) ∧ v = #l⌝ ∗ l ↦∗ vl ∗
-        ∀wπ db, ▷ l ↦∗: tyb.(ty_own) wπ db tid -∗ ⧖(S db) ={⊤}=∗
+        ∀wπ db, ▷ l ↦∗: tyb.(ty_own) wπ db tid -∗ ⧖ S db ={⊤}=∗
           llctx_interp L qL ∗ ty'.(ty_own) (st ∘ vπ ⊛ wπ) (S db) tid [v].
   Global Arguments typed_write {_ _ _} _ _ _%T _%T _%T _.
 
@@ -127,20 +117,11 @@ Section typing_rules.
     iIntros (?) "e e'". iIntros (tid vπl2). move: (papp_ex vπl2)=> [vπl[vπl'->]].
     iIntros "#LFT #TIME #PROPH #UNIQ #E Na L C [T1 T] Obs". wp_bind e.
     iApply (wp_wand with "[e L T1 Na Obs]").
-    { iApply ("e" with "LFT TIME PROPH UNIQ E Na L T1"). iApply proph_obs_impl; [|done]=> ?.
-      rewrite /trans_upper papply_app papp_sepl. exact id. }
+    { iApply ("e" with "LFT TIME PROPH UNIQ E Na L T1"). iApply proph_obs_eq; [|done]=> ?.
+      by rewrite /trans_upper papply_app papp_sepl. }
     iIntros (v). iIntros "(%vπ & Na & L & T2 & ?)". wp_let. iCombine "T2 T" as "T2T".
     iApply ("e'" $! v tid (vπ -++ vπl') with "LFT TIME PROPH UNIQ E Na L C T2T").
-    iApply proph_obs_impl; [|done]=>/= ?. rewrite papply_app papp_sepr. exact id.
-  Qed.
-
-  Lemma typed_body_tctx_incl {A B} E L C (T: tctx A) (T': tctx B) e pre tr :
-    tctx_incl E L T T' tr →
-    typed_body E L C T' e pre -∗ typed_body E L C T e (tr pre).
-  Proof.
-    iIntros (In) "e". iIntros (??) "#LFT TIME #PROPH #UNIQ #E Na L C T Obs".
-    iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & Obs & T')".
-    iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T' Obs").
+    iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app papp_sepr.
   Qed.
 
   (* We do not make the [typed_instr] hypothesis part of the

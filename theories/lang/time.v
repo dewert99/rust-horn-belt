@@ -47,10 +47,10 @@ Typeclasses Opaque persistent_time_receipt cumulative_time_receipt.
 Instance: Params (@persistent_time_receipt) 2 := {}.
 Instance: Params (@cumulative_time_receipt) 2 := {}.
 
-Notation "⧖ n" :=
-  (persistent_time_receipt n) (at level 20, format "⧖ n") : bi_scope.
-Notation "⧗ n" :=
-  (cumulative_time_receipt n) (at level 20, format "⧗ n") : bi_scope.
+Notation "⧖ n" := (persistent_time_receipt n)
+  (at level 20, format "⧖  n") : bi_scope.
+Notation "⧗ n" := (cumulative_time_receipt n)
+  (at level 20, format "⧗  n") : bi_scope.
 
 Section time.
   Context `{!timeG Σ}.
@@ -93,7 +93,7 @@ Section time.
 
   Lemma cumulative_persistent_time_receipts `{!invG Σ} E n m :
     ↑timeN ⊆ E →
-    time_ctx -∗ ⧗n -∗ ⧖m ={E}=∗ ⧖(n+m).
+    time_ctx -∗ ⧗n -∗ ⧖m ={E}=∗ ⧖ (n + m).
   Proof.
     iIntros (?) "#TIME Hn #Hm".
     unfold persistent_time_receipt, cumulative_time_receipt.
