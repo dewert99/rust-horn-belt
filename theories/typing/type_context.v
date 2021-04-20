@@ -297,16 +297,26 @@ Section lemmas.
     by [apply copy_tctx_incl|apply subtype_tctx_incl]. } by move=> ?[??].
   Qed.
 
-  Lemma tctx_extract_elt_here_exact {A As} (ty: _ A) (T: _ As) p p' E L :
-    p = p' → tctx_extract_elt E L (p ◁ ty) (p' ◁ ty +:: T) T id.
-  Proof. move=> ->. apply tctx_incl_refl. Qed.
+  Lemma tctx_extract_elt_here_exact {A As} (t: _ A) (T: _ As) E L :
+    tctx_extract_elt E L t (t +:: T) T id.
+  Proof. apply tctx_incl_refl. Qed.
 
-  Lemma tctx_extract_elt_here {A B As} ty ty' (f: B → A) (T: _ As) p p' E L :
-    p = p' → subtype E L f ty' ty →
-    tctx_extract_elt E L (p ◁ ty) (p' ◁ ty' +:: T) T
+  Lemma tctx_extract_elt_here {A B As} ty ty' (f: B → A) (T: _ As) p E L :
+    subtype E L f ty' ty →
+    tctx_extract_elt E L (p ◁ ty) (p ◁ ty' +:: T) T
       (λ post '(b -:: al), post (f b -:: al)).
   Proof.
-    move=> ->?. eapply tctx_incl_eq; [|by apply subtype_tctx_incl].
+    move=> ?. eapply tctx_incl_eq; [|by apply subtype_tctx_incl].
+    by move=> ?[??].
+  Qed.
+
+  Lemma tctx_extract_elt_here_blocked {A B As} κ κ' ty ty'
+    (f: B → A) `{!Inj (=) (=) f} (T: _ As) p E L :
+    subtype E L f ty' ty → lctx_lft_incl E L κ' κ →
+    tctx_extract_elt E L (p ◁{κ} ty) (p ◁{κ'} ty' +:: T) T
+      (λ post '(b -:: al), post (f b -:: al)).
+  Proof.
+    move=> ??. eapply tctx_incl_eq; [|by apply subtype_tctx_incl_blocked].
     by move=> ?[??].
   Qed.
 
@@ -382,7 +392,7 @@ End lemmas.
 
 Global Hint Resolve tctx_extract_elt_here_copy | 1 : lrust_typing.
 Global Hint Resolve tctx_extract_elt_here_exact | 2 : lrust_typing.
-Global Hint Resolve tctx_extract_elt_here | 20 : lrust_typing.
+Global Hint Resolve tctx_extract_elt_here tctx_extract_elt_here_blocked | 20 : lrust_typing.
 Global Hint Resolve tctx_extract_elt_further | 50 : lrust_typing.
 Global Hint Resolve tctx_extract_ctx_nil tctx_extract_ctx_elt
                     tctx_extract_ctx_incl : lrust_typing.

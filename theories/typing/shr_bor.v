@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-(* From lrust.typing Require Import type_context programs. *)
+From lrust.typing Require Import programs.
 Set Default Proof Using "Type".
 
 Section shr_bor.
@@ -69,31 +69,20 @@ Section typing.
     eqtype E L f g (&shr{κ} ty) (&shr{κ'} ty').
   Proof. move=> [??] [??]. split; by apply shr_subtype. Qed.
 
-(*
-  Lemma tctx_reborrow_shr E L p ty κ κ' :
-    lctx_lft_incl E L κ' κ →
-    tctx_incl E L [p ◁ &shr{κ}ty] [p ◁ &shr{κ'}ty; p ◁{κ} &shr{κ}ty].
+  Lemma read_shr {A} (ty: _ A) κ E L :
+    Copy ty → lctx_lft_alive E L κ →
+    typed_read E L (&shr{κ} ty) ty (&shr{κ} ty) id id.
   Proof.
-    iIntros (Hκκ' tid ?) "#LFT #HE HL [H _]". iDestruct (Hκκ' with "HL HE") as "#Hκκ'".
-    iFrame. rewrite /tctx_interp /=. simpl.
-    iDestruct "H" as ([[]|] depth) "(? & % & #Hshr)"; try done. iModIntro. iSplit.
-    - iExists _, _. do 2 (iSplit; [done|]). by iApply (ty_shr_mono with "Hκκ' Hshr").
-    - iSplit=> //. iExists _. auto 10.
+    iIntros (? Alv ?[|?]???) "#LFT E Na L shr"; [done|].
+    setoid_rewrite by_just_loc_ex at 1. iDestruct "shr" as (l[=->]) "#shr".
+    iMod (Alv with "E L") as (q) "[κ ToL]"; [done|].
+    iMod (copy_shr_acc with "LFT shr Na κ") as (q' vl) "(Na & Mt & ty & Toκ)";
+    [done|by rewrite ->shr_locsE_shrN|]. iExists l, vl, q'. iIntros "!>".
+    iFrame "Mt". iSplit; [done|]. iSplit.
+    { iApply ty_own_depth_mono; [|done]. lia. } iIntros "Mt".
+    iMod ("Toκ" with "Na Mt") as "[$ κ]". by iMod ("ToL" with "κ") as "$".
   Qed.
 
-  Lemma read_shr E L κ ty :
-    Copy ty → lctx_lft_alive E L κ → ⊢ typed_read E L (&shr{κ}ty) ty (&shr{κ}ty).
-  Proof.
-    rewrite typed_read_eq. iIntros (Hcopy Halive) "!>".
-    iIntros ([[]|] depth tid F qL ?) "#LFT #HE Htl HL #Hshr"; try done.
-    iMod (Halive with "HE HL") as (q) "[Hκ Hclose]"; first solve_ndisj.
-    iMod (copy_shr_acc with "LFT Hshr Htl Hκ")
-      as (q' vl) "(Htl & H↦ & #Hown & Hcl)"; first solve_ndisj.
-    { rewrite ->shr_locsE_shrN. solve_ndisj. }
-    iExists _, _, _. iIntros "!> {$∗ $#}". iSplit; first done. iIntros "H↦".
-    iMod ("Hcl" with "Htl H↦") as "[$ Hκ]". iApply ("Hclose" with "Hκ").
-  Qed.
-*)
 End typing.
 
-Global Hint Resolve shr_subtype shr_eqtype (* read_shr *) : lrust_typing.
+Global Hint Resolve shr_subtype shr_eqtype read_shr : lrust_typing.

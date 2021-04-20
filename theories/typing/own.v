@@ -244,7 +244,7 @@ Section typing.
   Lemma type_delete {A As Bs} (ty: _ A) n' (n: Z) p e E L C (T: _ As) (T': _ Bs) tr pre :
     Closed [] e → tctx_extract_ctx E L +[p ◁ own_ptr n' ty] T T' tr →
     n' = ty.(ty_size) → n = n' → typed_body E L C T' e pre -∗
-    typed_body E L C T (delete [ #n; p ] ;; e) (tr (λ '(_ -:: al), pre al)).
+    typed_body E L C T (delete [ #n; p ];; e) (tr (λ '(_ -:: al), pre al)).
   Proof.
     iIntros (??->?) "?". iApply type_seq; [by eapply type_delete_instr|done| |done].
     f_equal. fun_ext. by case.
@@ -266,7 +266,7 @@ Section typing.
         { rewrite /subst /=. repeat f_equal;
           [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
         iApply type_assign; [|solve_typing|by eapply write_own|done].
-        { apply subst_is_closed; [|done]. apply is_closed_of_val. } }
+        apply subst_is_closed; [|done]. apply is_closed_of_val. }
     f_equal. fun_ext. by case.
   Qed.
 
@@ -284,15 +284,15 @@ Section typing.
       - rewrite /Closed /= !andb_True !right_id. split; [done|].
         split; [by apply is_closed_of_val|]. split;
         [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
-      - iIntros (xv). have ->: subst x xv (x <-{ty.(ty_size)} !p ;; e)%E =
-          (xv <-{ty.(ty_size)} !p ;; subst x xv e)%E.
+      - iIntros (xv). have ->: subst x xv (x <-{ty.(ty_size)} !p;; e)%E =
+          (xv <-{ty.(ty_size)} !p;; subst x xv e)%E.
         { rewrite /subst /=. repeat f_equal.
           - eapply (is_closed_subst []); [apply is_closed_of_val|set_solver].
           - by rewrite bool_decide_true.
           - eapply is_closed_subst; [done|set_solver]. } rewrite Nat2Z.id.
         iApply type_memcpy; [|solve_typing| |solve_typing|done|done].
-        + apply subst_is_closed; [|done]. apply is_closed_of_val.
-        + by apply write_own. } done.
+        { apply subst_is_closed; [|done]. apply is_closed_of_val. }
+        by apply write_own. } done.
   Qed.
 
 End typing.

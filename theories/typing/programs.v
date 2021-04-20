@@ -1,6 +1,6 @@
 From lrust.lang Require Import proofmode memcpy.
-From lrust.typing Require Export lft_contexts type type_context cont_context.
 From lrust.util Require Import types.
+From lrust.typing Require Export lft_contexts type type_context cont_context.
 Set Default Proof Using "Type".
 
 Section typing.
@@ -42,14 +42,14 @@ Section typing.
       na_own tid ⊤ -∗ llctx_interp L 1 -∗ tctx_interp tid T vπl -∗
       ⟨π, tr (postπ π) (vπl -$ π)⟩ -∗ WP e {{ v, ∃vπl', na_own tid ⊤ ∗
         llctx_interp L 1 ∗ tctx_interp tid (T' v) vπl' ∗ ⟨π, postπ π (vπl' -$ π)⟩ }}.
-  Global Arguments typed_instr _ _ _ _ _ _%E _ _.
+  Global Arguments typed_instr {_ _} _ _ _ _%E _ _.
 
   (** Writing and Reading *)
 
   Definition typed_write {A B A'} (E: elctx) (L: llctx) (ty: type A) (tyb: type B)
     (ty': type A') (st: A → B → A') : Prop := ∀vπ d v tid qL,
     lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗ ty.(ty_own) vπ d tid [v] ={⊤}=∗
-      ∃(l: loc) vl, ⌜length vl = tyb.(ty_size) ∧ v = #l⌝ ∗ l ↦∗ vl ∗
+      ∃(l: loc) vl, ⌜v = #l ∧ length vl = tyb.(ty_size)⌝ ∗ l ↦∗ vl ∗
         ∀wπ db, ▷ l ↦∗: tyb.(ty_own) wπ db tid -∗ ⧖(S db) ={⊤}=∗
           llctx_interp L qL ∗ ty'.(ty_own) (st ∘ vπ ⊛ wπ) (S db) tid [v].
   Global Arguments typed_write {_ _ _} _ _ _%T _%T _%T _.
@@ -189,7 +189,7 @@ Section typing_rules.
     iIntros (Wrt ?? (vπ & wπ &[])) "LFT TIME _ _ E $ L (p & pb & _) Obs".
     wp_bind p. iApply (wp_hasty with "p"). iIntros (???) "_ ty".
     wp_bind pb. iApply (wp_hasty with "pb"). iIntros (vb db ?) "#time tyb".
-    iApply wp_fupd. iMod (Wrt with "LFT E L ty") as (? vl (Sz&->)) "[Mt Close]".
+    iApply wp_fupd. iMod (Wrt with "LFT E L ty") as (? vl (->&Sz)) "[Mt Close]".
     iApply (wp_persist_time_rcpt with "TIME time")=>//.
     iDestruct (ty_size_eq with "tyb") as "%Sz'". move: Sz. rewrite -Sz' /=.
     case vl=> [|?[|]]=>// ?. rewrite heap_mapsto_vec_singleton. wp_write.
@@ -249,7 +249,7 @@ Section typing_rules.
     iIntros (-> Wrt Read ?) "(#LFT & #TIME & #E & Na & [L L'] & (pw & pr &_)) ToΦ".
     wp_bind pw. iApply (wp_hasty with "pw"). iIntros (???) "_ tyw".
     wp_bind pr. iApply (wp_hasty with "pr"). iIntros (???) "#time tyr".
-    iApply wp_fupd. iMod (Wrt with "LFT E L tyw") as (?? [?->]) "[Mtw Closew]".
+    iApply wp_fupd. iMod (Wrt with "LFT E L tyw") as (??[->?]) "[Mtw Closew]".
     iMod (Read with "LFT E Na L' tyr") as (? vlb ?->) "(Mtr & tyb & Closer)".
     iApply (wp_persist_time_rcpt with "TIME time"); [done|].
     iDestruct (ty_size_eq with "tyb") as "#>%".
