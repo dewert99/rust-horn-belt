@@ -104,11 +104,11 @@ Section lemmas.
   Proof. intros Hp. rewrite /tctx_elt_interp /=. setoid_rewrite Hp. done. Qed.
 
   Lemma tctx_hasty_val' {A} tid p v (ty: _ A) vπ:
-    eval_path p = Some v →
-    tctx_elt_interp tid (p ◁ ty) vπ ⊣⊢ ∃ depth, ⧖depth ∗ ty.(ty_own) vπ depth tid [v].
+    Some v = eval_path p →
+    tctx_elt_interp tid (p ◁ ty) vπ ⊣⊢ ∃d, ⧖d∗ ty.(ty_own) vπ d tid [v].
   Proof.
-    intros ?. rewrite -tctx_hasty_val. apply tctx_elt_interp_hasty_path.
-    rewrite eval_path_of_val. done.
+    move=> ?. rewrite -tctx_hasty_val. apply tctx_elt_interp_hasty_path.
+    by rewrite eval_path_of_val.
   Qed.
 
   Lemma wp_hasty {A} E tid p (ty : type A) vπ Φ :
@@ -151,8 +151,8 @@ Section lemmas.
 
   (** Type context inclusion *)
   Definition tctx_incl {As Bs} (E: elctx) (L: llctx) (T: tctx As) (T': tctx Bs)
-    (tr: predl_trans As Bs) : Prop :=
-    ∀tid q vπl postπ, proph_ctx -∗ uniq_ctx -∗ lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    (tr: predl_trans As Bs) : Prop := ∀tid q vπl postπ,
+      lft_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
       tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩ ={⊤}=∗ ∃vπl',
       llctx_interp L q ∗ ⟨π, postπ π (vπl' -$ π)⟩ ∗ tctx_interp tid T' vπl'.
   (* Global Instance : ∀ A E L f, RewriteRelation (@tctx_incl A A E L f) := {}. *)
@@ -170,7 +170,7 @@ Section lemmas.
     (∀post vl, tr post vl → tr' post vl) →
     tctx_incl E L T T' tr' → tctx_incl E L T T' tr.
   Proof.
-    move=> Imp In. iIntros (????) "#LFT #PROPH UNIQ E L T #Obs".
+    move=> Imp In. iIntros (????) "LFT PROPH UNIQ E L T #Obs".
     iMod (In with "LFT PROPH UNIQ E L T []") as "$"; [|done].
     iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
   Qed.
@@ -183,7 +183,8 @@ Section lemmas.
   Proof.
     move=> In In' >. iIntros "#LFT #PROPH #UNIQ #E L T Obs".
     iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & Obs & T)".
-    iMod (In' with "LFT PROPH UNIQ E L T Obs") as (vπl'') "(?&?&?)". iExists vπl''. by iFrame.
+    iMod (In' with "LFT PROPH UNIQ E L T Obs") as (vπl'') "(?&?&?)".
+    iExists vπl''. by iFrame.
   Qed.
 
 (*
