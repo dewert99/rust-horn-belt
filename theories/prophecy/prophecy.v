@@ -410,7 +410,7 @@ End lemmas.
 (** * Prophecy Equalizer *)
 
 Definition proph_eqz `{!invG Σ, !prophG Σ} {A} (uπ vπ: _ → A) : iProp Σ :=
-  ∀ξs q, ⌜vπ ./ ξs⌝ -∗ q:+[ξs] ={↑prophN}=∗ ⟨π, uπ π = vπ π⟩ ∗ q:+[ξs].
+  ∀E ξs q, ⌜↑prophN ⊆ E ∧ vπ ./ ξs⌝ -∗ q:+[ξs] ={E}=∗ ⟨π, uπ π = vπ π⟩ ∗ q:+[ξs].
 
 Notation "uπ :== vπ" := (proph_eqz uπ vπ) (at level 70, format "uπ  :==  vπ") : bi_scope.
 
@@ -421,11 +421,11 @@ Context `{!invG Σ, !prophG Σ}.
 
 Lemma proph_eqz_token ξ vπ : proph_ctx -∗ 1:[ξ] -∗ (.$ ξ) :== vπ.
 Proof.
-  iIntros "PROPH Tok" (???) "Ptoks". by iMod (proph_resolve with "PROPH Tok Ptoks").
+  iIntros "PROPH Tok" (???[??]) "Ptoks". by iMod (proph_resolve with "PROPH Tok Ptoks").
 Qed.
 
 Lemma proph_eqz_obs {A} (uπ vπ: _ → A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
-Proof. iIntros "?" (???) "? !>". iFrame. Qed.
+Proof. iIntros "?" (???[??]) "? !>". iFrame. Qed.
 
 Lemma proph_eqz_eq {A} (vπ: _ → A) : ⊢ vπ :== vπ.
 Proof. iApply proph_eqz_obs. by iApply proph_obs_true. Qed.
@@ -433,7 +433,7 @@ Proof. iApply proph_eqz_obs. by iApply proph_obs_true. Qed.
 Lemma proph_eqz_modify {A} (uπ uπ' vπ: _ → A) :
   ⟨π, uπ' π = uπ π⟩ -∗ uπ :== vπ -∗ uπ' :== vπ.
 Proof.
-  iIntros "Obs Eqz" (???) "Ptoks".
+  iIntros "Obs Eqz" (???[??]) "Ptoks".
   iMod ("Eqz" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
   iDestruct (proph_obs_and with "Obs Obs'") as "Obs''".
   by iApply proph_obs_impl; [|by iApply "Obs''"]=> ?[->?].
@@ -442,7 +442,7 @@ Qed.
 Lemma proph_eqz_constr {A B} f `{Inj A B (=) (=) f} uπ vπ :
   uπ :== vπ -∗ f ∘ uπ :== f ∘ vπ.
 Proof.
-  iIntros "Eqz" (?? Dep) "Ptoks". move/proph_dep_destr in Dep.
+  iIntros "Eqz" (???[? Dep]) "Ptoks". move/proph_dep_destr in Dep.
   iMod ("Eqz" with "[%//] Ptoks") as "[Obs $]". iModIntro.
   iApply proph_obs_impl; [|by iApply "Obs"]=> ??/=. by f_equal.
 Qed.
@@ -450,7 +450,7 @@ Qed.
 Lemma proph_eqz_constr2 {A B C} f `{Inj2 A B C (=) (=) (=) f} uπ uπ' vπ vπ' :
   uπ :== vπ -∗ uπ' :== vπ' -∗ f ∘ uπ ⊛ uπ' :== f ∘ vπ ⊛ vπ'.
 Proof.
-  iIntros "Eqz Eqz'" (?? Dep) "Ptoks". move: Dep=> /proph_dep_destr2 [??].
+  iIntros "Eqz Eqz'" (???[? Dep]) "Ptoks". move: Dep=> /proph_dep_destr2 [??].
   iMod ("Eqz" with "[%//] Ptoks") as "[Obs Ptoks]".
   iMod ("Eqz'" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
   iDestruct (proph_obs_and with "Obs Obs'") as "Obs''".

@@ -1,6 +1,7 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import bool programs.
 Set Default Proof Using "Type".
+Open Scope Z_scope.
 
 Implicit Type z: Z.
 

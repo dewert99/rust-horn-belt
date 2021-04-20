@@ -630,7 +630,8 @@ Notation LetCtx x e2 := (AppRCtx (LamV [x] e2) [] []).
 Notation SeqCtx e2 := (LetCtx BAnon e2).
 Notation Skip := (Seq (Lit LitPoison) (Lit LitPoison)).
 Coercion lit_of_bool : bool >-> base_lit.
-Notation If e0 e1 e2 := (Case e0 (@cons expr e2 (@cons expr e1 (@nil expr)))) (only parsing).
+Notation If e0 e1 e2 := (Case e0 (@cons expr e2 (@cons expr e1 (@nil expr))))
+  (only parsing).
 Notation Newlft := (Lit LitPoison) (only parsing).
-Notation Endlft := Skip (only parsing).
+Notation Endlft := (Seq Skip Skip) (only parsing).
 Notation Share := Skip (only parsing).

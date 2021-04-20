@@ -1,6 +1,6 @@
 From iris.proofmode Require Import tactics.
-From lrust.typing Require Import type lft_contexts.
 From lrust.util Require Import types.
+From lrust.typing Require Export lft_contexts type.
 Set Default Proof Using "Type".
 
 Definition path := expr.
@@ -337,28 +337,45 @@ Section lemmas.
      E.g., if [p ◁ &uniq{κ} ty] should be removed, because this is now
      useless. *)
 
-  Class UnblockTctx {As} (κ: lft) (T T': tctx As) : Prop := unblock_tctx:
-    ∀tid vπl, [†κ] -∗ tctx_interp tid T vπl ={⊤}=∗ ∃vπl',
-      ([∗ plist] vπ; vπ' ∈ vπl; vπl', ▷(vπ :== vπ')) ∗ tctx_interp tid T' vπl'.
+  Class UnblockTctx {As} (E: elctx) (L: llctx) (κ: lft) (T T': tctx As) : Prop :=
+    unblock_tctx: ∀qL tid vπl, lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
+      [†κ] -∗ tctx_interp tid T vπl ={⊤}=∗ ∃d vπl', ⧖d ∗ |={⊤}▷=> |={⊤}▷=>^d |={⊤}=>
+        llctx_interp L qL ∗ ⟨π, vπl -$ π = vπl' -$ π⟩ ∗ tctx_interp tid T' vπl'.
 
-  Global Instance unblock_tctx_nil κ : UnblockTctx κ +[] +[].
-  Proof. move=> ??. by iIntros. Qed.
-
-  Global Instance unblock_tctx_cons_unblock {A As} (ty: _ A) (T T': _ As) p κ :
-    UnblockTctx κ T T' → UnblockTctx κ (p ◁{κ} ty +:: T) (p ◁ ty +:: T').
+  Global Instance unblock_tctx_nil κ E L : UnblockTctx E L κ +[] +[].
   Proof.
-    move=> Un ?/=[??]. iIntros "#†κ [(%v &%& Upd) T]".
-    iMod ("Upd" with "†κ") as (vπ' d) "(Eqz &?&?)".
-    iMod (Un with "†κ T") as (vπl') "[Eqzs T']". iModIntro.
-    iExists (vπ' -:: vπl'). iFrame "Eqz Eqzs T'". iExists v, d. by iFrame.
+    iIntros (??[]) "_ _ L _ _". iMod persist_time_rcpt_0. iExists 0, -[].
+    iModIntro. iSplit; [done|]. iIntros "!>!>!>!>". iFrame "L".
+    iSplit; [|done]. by iApply proph_obs_true.
   Qed.
 
-  Global Instance unblock_tctx_cons {A As} (t: _ A) (T T': _ As) κ :
-    UnblockTctx κ T T' → UnblockTctx κ (t +:: T) (t +:: T') | 100.
+  Global Instance unblock_tctx_cons_unblock {A As} p (ty: _ A) (T T': _ As) κ E L :
+    lctx_lft_alive E L ty.(ty_lft) → UnblockTctx E L κ T T' →
+    UnblockTctx E L κ (p ◁{κ} ty +:: T) (p ◁ ty +:: T').
   Proof.
-    move=> Un ?/=[vπ ?]. iIntros "†κ [t T]".
-    iMod (Un with "†κ T") as (vπl') "[Eqzs T']". iModIntro.
-    iExists (vπ -:: vπl'). iFrame "Eqzs t T'". iApply proph_eqz_eq.
+    iIntros (Alv Un ??[??]) "#LFT #E [L L'] #†κ /=[(%v &%& Upd) T]".
+    iMod ("Upd" with "†κ") as (vπ' dp) "(Eqz & #timep & ty)".
+    iMod (Un with "LFT E L †κ T") as (dT vπl') "[timeT >ToT']".
+    iMod (Alv with "E L'") as (?) "[Tok ToL']"; [done|].
+    iMod (ty_own_proph with "LFT [] ty Tok") as "Toty";
+    [done|by iApply lft_incl_refl|]. iExists (dp `max` dT), (vπ' -:: vπl').
+    rewrite persist_time_rcpt_sep. iFrame "timep timeT". iIntros "!>!>!>".
+    iDestruct (step_fupdN_combine_max with "Toty ToT'") as "Big".
+    iApply (step_fupdN_wand with "Big"). iIntros "[>(%&%&%& PTok & Toty) >($& Obs' &$)]".
+    iMod ("Eqz" with "[] PTok") as "[Obs PTok]"; [done|].
+    iMod ("Toty" with "PTok") as "[ty Tok]". iMod ("ToL'" with "Tok") as "$".
+    iDestruct (proph_obs_and with "Obs Obs'") as "?". iModIntro. iSplit.
+    { by iApply proph_obs_impl; [|done]=> ?[->->]. } iExists v, dp.
+    iSplit; [done|]. by iFrame.
+  Qed.
+
+  Global Instance unblock_tctx_cons {A As} (t: _ A) (T T': _ As) κ E L :
+    UnblockTctx E L κ T T' → UnblockTctx E L κ (t +:: T) (t +:: T') | 100.
+  Proof.
+    iIntros (Un ??[vπ ?]) "LFT E L †κ [t T]".
+    iMod (Un with "LFT E L †κ T") as (d vπl') "[time Upd]". iModIntro.
+    iExists d, (vπ -:: vπl'). iFrame "time". iApply (step_fupdN_wand with "Upd").
+    iIntros "!> >($&?&$) !>". iFrame "t". by iApply proph_obs_impl; [|done]=>/= ?->.
   Qed.
 
 End lemmas.

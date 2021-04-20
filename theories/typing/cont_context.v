@@ -1,7 +1,7 @@
 From iris.proofmode Require Import tactics.
-From lrust.lang Require Import notation.
-From lrust.typing Require Import type lft_contexts type_context.
 From lrust.util Require Import types.
+From lrust.lang Require Import notation.
+From lrust.typing Require Export lft_contexts type type_context.
 
 Set Default Proof Using "Type".
 
@@ -40,7 +40,7 @@ Section cont_context.
   Proof.
     iSplit.
     - iIntros "H". iSplit; [|iIntros (??)]; iApply "H"; rewrite elem_of_cons; auto.
-    - iIntros "H". iIntros (? Hin). revert Hin. rewrite elem_of_cons. intros [-> |?]. 
+    - iIntros "H". iIntros (? Hin). revert Hin. rewrite elem_of_cons. intros [-> |?].
       + by iDestruct "H" as "[H _]".
       + iDestruct "H" as "[_ H]". by iApply "H".
   Qed.
@@ -83,7 +83,7 @@ Section cont_context.
     rewrite /cctx_incl /cctx_interp. iIntros (HC1C2 tid) "_ #HE H * %".
     iApply ("H" with "[%]"). by apply HC1C2.
   Qed. *)
-(* 
+(*
   Lemma cctx_incl_cons {As} E k L n (T1 T2 : vec val n → tctx As) C1 C2 :
     cctx_incl E C1 C2 → (∀ args, tctx_incl E L (T2 args) (T1 args)) →
     cctx_incl E (k ◁cont(L, T1) :: C1) (k ◁cont(L, T2) :: C2).

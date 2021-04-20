@@ -1,5 +1,5 @@
 From lrust.lang Require Import proofmode memcpy.
-From lrust.typing Require Export type lft_contexts type_context cont_context.
+From lrust.typing Require Export lft_contexts type type_context cont_context.
 From lrust.util Require Import types.
 Set Default Proof Using "Type".
 
@@ -34,17 +34,6 @@ Section typing.
     iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & Obs & T')".
     iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T' Obs").
   Qed.
-
-  (* Global Instance typed_body_mono E L:
-    Proper (flip (cctx_incl E) ==> flip (tctx_incl E L) ==> eq ==> (⊢))
-           (typed_body E L).
-  Proof.
-    intros C1 C2 HC T1 T2 HT e ? <-. iIntros "H".
-    iIntros (tid) "#LFT #TIME #HE Htl HL HC HT".
-    iMod (HT with "LFT HE HL HT") as "(HL & HT)".
-    iApply ("H" with "LFT TIME HE Htl HL [HC] HT").
-    by iApply (HC with "LFT HE HC").
-  Qed. *)
 
   (** Instruction *)
   Definition typed_instr {As Bs} (E: elctx) (L: llctx)
@@ -158,22 +147,22 @@ Section typing_rules.
     rewrite /llctx_interp. iExists Λ. iFrame "Tok". by iSplit.
   Qed.
 
-(*
-  (* TODO: It should be possible to show this while taking only one step.
-     Right now, we could take two. *)
-  Lemma type_endlft E L C T1 T2 κ κs e :
-    Closed [] e → UnblockTctx κ T1 T2 →
-    typed_body E L C T2 e -∗ typed_body E ((κ ⊑ₗ κs) :: L) C T1 (Endlft ;; e).
+  Lemma type_endlft {As} (T T': _ As) κ κs pre e E L C :
+    Closed [] e → UnblockTctx E L κ T T' →
+    typed_body E L C T' e pre -∗ typed_body E (κ ⊑ₗ κs :: L) C T (Endlft;; e) pre.
   Proof.
-    iIntros (Hc Hub) "He". iIntros (tid) "#LFT #TIME #HE Htl [Hκ HL] HC HT".
-    iDestruct "Hκ" as (Λ) "(% & Htok & #Hend)".
-    iSpecialize ("Hend" with "Htok"). wp_bind Endlft.
-    iApply (wp_mask_mono _ (↑lftN ∪ ↑lft_userN)); first done.
-    iApply (wp_step_fupd with "Hend"); first set_solver-. wp_seq.
-    iIntros "#Hdead !>". wp_seq. iApply ("He" with "LFT TIME HE Htl HL HC [> -]").
-    iApply (Hub with "[] HT"). simpl in *. subst κ. rewrite -lft_dead_or. auto.
+    iIntros (? Un) "e". iIntros (??) "#LFT #TIME PROPH UNIQ #E Na
+    [(%&%& Tok & End) L] C T Obs". iSpecialize ("End" with "Tok").
+    wp_bind Skip. iApply (wp_mask_mono _ (↑lftN ∪ ↑lft_userN)); [done|].
+    iApply (wp_step_fupd with "End"); [set_solver|]. wp_seq. iIntros "#Dead !>".
+    wp_seq. wp_bind Skip. iMod (Un with "LFT E L [] T") as (d vπl') "[time ToT']".
+    { simpl in *. subst. rewrite -lft_dead_or. by iRight. }
+    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME time [ToT']")=>//.
+    { iApply step_fupdN_with_emp. by rewrite difference_empty_L. } wp_seq.
+    iIntros "(L & Obs' & T') !>". iDestruct (proph_obs_and with "Obs Obs'") as "?".
+    wp_seq. iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T'").
+    by iApply proph_obs_impl; [|done]=> ?[?<-].
   Qed.
-*)
 
   Lemma type_path_instr {A} p (ty: _ A) E L :
     ⊢ typed_instr_ty E L +[p ◁ ty] p ty (λ post '(-[v]), post v).
@@ -221,7 +210,7 @@ Section typing_rules.
   Qed.
 
   Lemma type_deref_instr {A B A'} (ty: _ A) (tyb: _ B) (ty': _ A') gt st p E L :
-    tyb.(ty_size) = 1%nat → typed_read E L ty tyb ty' gt st →
+    tyb.(ty_size) = 1 → typed_read E L ty tyb ty' gt st →
     ⊢ typed_instr E L +[p ◁ ty] (!p) (λ v, +[v ◁ tyb; p ◁ ty'])
       (λ post '(-[a]), post -[gt a; st a]).
   Proof.
@@ -238,7 +227,7 @@ Section typing_rules.
   Lemma type_deref {A B A' As Bs} (ty: _ A) (tyb: _ B) (ty': _ A') gt st
     (T: _ As) (T': _ Bs) p x e tr pre E L C :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p ◁ ty] T T' tr →
-    typed_read E L ty tyb ty' gt st → tyb.(ty_size) = 1%nat →
+    typed_read E L ty tyb ty' gt st → tyb.(ty_size) = 1 →
     (∀v: val, typed_body E L C (v ◁ tyb +:: p ◁ ty' +:: T') (subst' x v e) pre) -∗
     typed_body E L C T (let: x := !p in e)
       (tr (λ '(a -:: al), pre (gt a -:: st a -:: al))).

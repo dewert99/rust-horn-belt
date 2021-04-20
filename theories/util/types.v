@@ -173,14 +173,14 @@ Proof. move: i. elim As; [done|]=> ???. by case. Qed.
 
 Notation plist_fun B F := (plist (λ A, B → F A)).
 
-Definition papply {F B As} (fl: plist_fun B F As) (x: B) : plist F As :=
-  (λ _ (f: _ → _), f x) -<$> fl.
+Fixpoint papply {F B As} (fl: plist_fun B F As) (x: B) : plist F As :=
+  match As, fl with ^[], _ => -[] | _ ^:: _, f -:: fl' => f x -:: papply fl' x end.
 Infix "-$" := papply (at level 61, left associativity).
 Notation "( fl -$.)" := (papply fl) (only parsing).
 
 Lemma papply_app {F C As Bs} (fl: plist_fun C F As) (gl: _ Bs) (x: C) :
   (fl -++ gl) -$ x = (fl -$ x) -++ (gl -$ x).
-Proof. by rewrite /papply pmap_app. Qed.
+Proof. move: fl. elim As; [done|]=>/= ?? IH [??]. by rewrite IH. Qed.
 
 Fixpoint xprod_map {As Bs} : plist2 (→) As Bs → Π! As → Π! Bs :=
   match As, Bs with ^[], ^[] => λ _, id
@@ -398,10 +398,6 @@ Fixpoint big_sepHL2_1 {F G H As Bs} (Φ: ∀A B, F A → G B → H A B → PROP)
   | x +:: xl', y +:: yl', z -:: zl' => Φ _ _ x y z ∗ big_sepHL2_1 Φ xl' yl' zl'
   | _, _, _ => False end%I.
 
-Fixpoint big_sepPLTwo {F G As} (Φ: ∀A, F A → G A → PROP) (xl: plist F As) (yl: plist G As)
-  : PROP := match As, xl, yl with ^[], _, _ => True |
-    _ ^:: _, x -:: xl', y -:: yl' => Φ _ x y ∗ big_sepPLTwo Φ xl' yl' end%I.
-
 End def.
 
 Notation "[∗ hlist] x ∈ xl , P" := (big_sepHL (λ _ x, P%I) xl)
@@ -416,10 +412,6 @@ Notation "[∗ hlist] x ; y ;- z ∈ xl ; yl ;- zl , P" :=
   (big_sepHL2_1 (λ _ _ x y z, P%I) xl yl zl)
   (at level 200, xl, yl, zl at level 10, x, y, z at level 1, right associativity,
     format "[∗  hlist]  x ;  y ;-  z  ∈  xl ;  yl ;-  zl ,  P") : bi_scope.
-
-Notation "[∗ plist] x ; y ∈ xl ; yl , P" := (big_sepPLTwo (λ _ x y, P%I) xl yl)
-  (at level 200, xl, yl at level 10, x, y at level 1, right associativity,
-    format "[∗  plist]  x ;  y  ∈  xl ;  yl ,  P") : bi_scope.
 
 Section lemmas.
 Context `{BiAffine PROP}.
