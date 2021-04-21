@@ -9,6 +9,7 @@ theories/util/basic.v
 theories/util/update.v
 theories/util/discrete_fun.v
 theories/util/types.v
+theories/util/functional_choice.v
 theories/prophecy/prophecy.v
 theories/lifetime/lifetime_sig.v
 theories/lifetime/model/definitions.v
@@ -52,7 +53,7 @@ theories/typing/bool.v
 theories/typing/int.v
 theories/typing/mod_ty.v
 theories/typing/product.v
-# theories/typing/product_split.v
+theories/typing/product_split.v
 theories/typing/sum.v
 theories/typing/array.v
 theories/typing/own.v

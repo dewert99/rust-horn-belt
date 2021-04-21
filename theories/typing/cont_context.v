@@ -1,7 +1,6 @@
 From iris.proofmode Require Import tactics.
-From lrust.util Require Import types.
 From lrust.lang Require Import notation.
-From lrust.typing Require Export lft_contexts type type_context.
+From lrust.typing Require Export type_context.
 
 Set Default Proof Using "Type".
 
@@ -12,7 +11,7 @@ Fixpoint valpl_to_exprs {As} (vl: valpl As) : list expr :=
     _ ^:: _, v -:: vl' => (v: expr) :: valpl_to_exprs vl' end.
 
 Section cont_context.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Definition cont_postcondition: iProp Σ := True%I.
 
@@ -37,7 +36,7 @@ Notation "k ◁cont{ L , T } pre" := (CCtxe k L _ T pre)
 Notation cctx_interp tid := (big_sepTL (cctx_elt_interp tid)).
 
 Section cont_context.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Lemma cctx_interp_forall tid C :
     cctx_interp tid C ⊣⊢ ∀ c, ⌜c ∈ C⌝ → cctx_elt_interp tid c.

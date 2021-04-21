@@ -4,7 +4,7 @@ From lrust.typing Require Import fixpoint mod_ty lib.option product own.
 Set Default Proof Using "Type".
 
 Section list.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Definition list_ty {A} (ty: type A) : type (list A) :=
     fix_ty (λ ty', <{option_to_list}> (option_ty (ty * box ty')))%T.

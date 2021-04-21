@@ -5,7 +5,7 @@ Set Default Proof Using "Type".
 Open Scope nat_scope.
 
 Section own.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Definition freeable_sz (n sz: nat) (l: loc) : iProp Σ :=
     match sz, n with 0, _ => True | _, 0 => False |
@@ -135,7 +135,7 @@ Section own.
 End own.
 
 Section box.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Definition box {A} (ty: type A) : type A := own_ptr ty.(ty_size) ty.
 
@@ -169,7 +169,7 @@ Section box.
 End box.
 
 Section typing.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Lemma write_own {A B} (ty: _ A) (ty': _ B) n E L :
     ty.(ty_size) = ty'.(ty_size) →

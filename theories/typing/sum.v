@@ -6,12 +6,12 @@ Set Default Proof Using "Type".
 Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
 
 Section sum.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   (* We define the actual empty type as being the empty sum, so that it is
      convertible to it---and in particular, we can pattern-match on it
      (as in, pattern-match in the language of lambda-rust, not in Coq). *)
-  Program Definition empty_ty `{!typeG Σ} : type ∅ :=
+  Program Definition empty_ty `{!typeG TYPE Ty Σ} : type ∅ :=
     {| pt_size := 1;  pt_own _ _ _ := False; |}%I.
   Next Obligation. by iIntros. Qed.
   Global Instance empty_ty_empty: Empty (type ∅) := empty_ty.
@@ -136,12 +136,7 @@ Notation "Σ!" := xsum_ty : lrust_type_scope.
 Notation "ty + ty'" := (sum_ty ty%T ty'%T) : lrust_type_scope.
 
 Section typing.
-  Context `{!typeG Σ}.
-
-  Lemma xsum_nil_empty: (Σ! +[] ≡ <{absurd}> ∅)%T.
-  Proof.
-    constructor=>//; by [rewrite ![ty_own _]eq_unique|rewrite ![ty_shr _]eq_unique].
-  Qed.
+  Context `{!typeG TYPE Ty Σ}.
 
   Lemma xsum_lft_morphism {B As} (Tl: _ As) :
     HForall (λ _, TypeLftMorphism) Tl → TypeLftMorphism (λ (ty: _ B), Σ! (Tl +$ ty))%T.
@@ -214,7 +209,7 @@ Section typing.
   Global Instance xsum_copy {As} (tyl: _ As) : ListCopy tyl → Copy (Σ! tyl).
   Proof.
     move=> ?. have Copy: ∀i, Copy (hnthe tyl i).
-    { move=> *. apply (HForall_nth (λ A, @Copy _ _ A)); by [apply _|]. }
+    { move=> *. apply (HForall_nth (λ A, @Copy _ _ _ _ A)); by [apply _|]. }
     split; [apply _|]. move=>/= ?????? l ?? SubF. iIntros "#LFT".
     iDestruct 1 as (i d ->) "[Bor Shr]". iIntros "Na [Tok Tok']".
     iMod (frac_bor_acc with "LFT Bor Tok") as (q) "[>[Idx Pad] Close]";
@@ -248,8 +243,8 @@ Section typing.
     subtypel E L tyl tyl' fl → subtype E L (xsum_map fl) (Σ! tyl) (Σ! tyl').
   Proof.
     move=> Subs ?. iIntros "L".
-    iAssert (□ (lft_contexts.elctx_interp E -∗ ⌜max_ty_size tyl =
-      max_ty_size tyl'⌝))%I as "#Size".
+    iAssert (□ (lft_contexts.elctx_interp E -∗
+      ⌜max_ty_size tyl = max_ty_size tyl'⌝))%I as "#Size".
     { iInduction Subs as [|?????????? Sub Subs] "IH"; [by iIntros "!>_"|].
       iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
       iIntros "!> E /=". iDestruct ("Sub" with "E") as (->) "#_".

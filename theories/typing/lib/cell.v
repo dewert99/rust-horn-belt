@@ -6,7 +6,7 @@ From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
 Section cell.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Program Definition cell (ty : type) :=
     {| ty_size := ty.(ty_size); ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
@@ -94,7 +94,7 @@ Section cell.
 End cell.
 
 Section typing.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   (** The next couple functions essentially show owned-type equalities, as they
       are all different types for the identity function. *)

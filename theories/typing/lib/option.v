@@ -4,7 +4,7 @@ From lrust.typing Require Import mod_ty uninit sum (* typing lib.panic *).
 Set Default Proof Using "Type".
 
 Section option.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Definition option_ty {A} (ty: type A) : type (option A) :=
     <{sum_to_option}> (unit_ty + ty).

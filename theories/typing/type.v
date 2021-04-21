@@ -9,9 +9,11 @@ From lrust.typing Require Export base lft_contexts uniq_cmra.
 Set Default Proof Using "Type".
 Open Scope nat_scope.
 
-Class typeG Σ := TypeG {
-  type_lrustG:> lrustG Σ;  type_prophG:> prophG Σ;  type_uniqG:> uniqG Σ;
+Class typeG TYPE Ty Σ := TypeG {
+  type_lrustG:> lrustG Σ;
+  type_prophG:> prophG TYPE Ty Σ;  type_uniqG:> uniqG TYPE Ty Σ;
   type_lftG:> lftG Σ;  type_na_invG:> na_invG Σ;  type_frac_borG:> frac_borG Σ;
+  type_type_eq_dec:> EqDecision TYPE;
 }.
 
 Definition lrustN := nroot .@ "lrust".
@@ -21,7 +23,7 @@ Definition thread_id := na_inv_pool_name.
 
 (** * Type *)
 
-Record type `{!typeG Σ} A := {
+Record type `{!typeG TYPE Ty Σ} A := {
   ty_size: nat;  ty_lfts: list lft;  ty_E: elctx;
   ty_own: proph A → nat → thread_id → list val → iProp Σ;
   ty_shr: proph A → nat → lft → thread_id → loc → iProp Σ;
@@ -63,34 +65,34 @@ Record type `{!typeG Σ} A := {
       q':+[ξs] ∗ (q':+[ξs] ={E}=∗ ty_shr vπ d κ tid l ∗ q.[κ']);
 }.
 Existing Instance ty_shr_persistent.
-Instance: Params (@ty_size) 3 := {}.  Instance: Params (@ty_lfts) 3 := {}.
-Instance: Params (@ty_E) 3 := {}.
-Instance: Params (@ty_own) 3 := {}.  Instance: Params (@ty_shr) 3 := {}.
-Arguments ty_size {_ _ _} _ / : simpl nomatch.
-Arguments ty_lfts {_ _ _} _ / : simpl nomatch.
-Arguments ty_E {_ _ _} _ / : simpl nomatch.
-Arguments ty_own {_ _ _} _ _ _ _ / : simpl nomatch.
-Arguments ty_shr {_ _ _} _ _ _ _ _ / : simpl nomatch.
-Arguments ty_size_eq {_ _ _}. Arguments ty_own_depth_mono {_ _ _}.
-Arguments ty_shr_depth_mono {_ _ _}. Arguments ty_shr_lft_mono {_ _ _}.
-Arguments ty_share {_ _ _}.
-Arguments ty_own_proph {_ _ _}. Arguments ty_shr_proph {_ _ _}.
+Instance: Params (@ty_size) 5 := {}.  Instance: Params (@ty_lfts) 5 := {}.
+Instance: Params (@ty_E) 5 := {}.
+Instance: Params (@ty_own) 5 := {}.  Instance: Params (@ty_shr) 5 := {}.
+Arguments ty_size {_ _ _ _ _} _ / : simpl nomatch.
+Arguments ty_lfts {_ _ _ _ _} _ / : simpl nomatch.
+Arguments ty_E {_ _ _ _ _} _ / : simpl nomatch.
+Arguments ty_own {_ _ _ _ _} _ _ _ _ / : simpl nomatch.
+Arguments ty_shr {_ _ _ _ _} _ _ _ _ _ / : simpl nomatch.
+Arguments ty_size_eq {_ _ _ _ _}. Arguments ty_own_depth_mono {_ _ _ _ _}.
+Arguments ty_shr_depth_mono {_ _ _ _ _}. Arguments ty_shr_lft_mono {_ _ _ _ _}.
+Arguments ty_share {_ _ _ _ _}.
+Arguments ty_own_proph {_ _ _ _ _}. Arguments ty_shr_proph {_ _ _ _ _}.
 
 Notation ty_lft ty := (lft_intersect_list ty.(ty_lfts)).
 
 Notation typel := (hlist type).
 
-Lemma ty_own_mt_depth_mono `{!typeG Σ} {A} (ty: _ A) d d' vπ tid l :
+Lemma ty_own_mt_depth_mono `{!typeG TYPE Ty Σ} {A} (ty: _ A) d d' vπ tid l :
   d ≤ d' → l ↦∗: ty.(ty_own) vπ d tid -∗ l ↦∗: ty.(ty_own) vπ d' tid.
 Proof.
   iIntros (Le) "[%vl[Mt ?]]". iExists vl. iFrame "Mt".
   iApply ty_own_depth_mono; by [apply Le|].
 Qed.
 
-Definition ty_outlv_E `{!typeG Σ} {A} (ty: _ A) (κ: lft) : elctx :=
+Definition ty_outlv_E `{!typeG TYPE Ty Σ} {A} (ty: _ A) (κ: lft) : elctx :=
   (λ α, κ ⊑ₑ α) <$> ty.(ty_lfts).
 
-Lemma ty_outlv_E_elctx_sat `{!typeG Σ} {A} E L (ty: _ A) α β :
+Lemma ty_outlv_E_elctx_sat `{!typeG TYPE Ty Σ} {A} E L (ty: _ A) α β :
   ty_outlv_E ty β ⊆+ E → lctx_lft_incl E L α β →
   elctx_sat E L (ty_outlv_E ty α).
 Proof.
@@ -101,7 +103,7 @@ Proof.
   - apply IH, Incl. etrans; [|by apply Sub]. by apply submseteq_cons.
 Qed.
 
-Lemma elctx_interp_ty_outlv_E `{!typeG Σ} {A} (ty: _ A) α :
+Lemma elctx_interp_ty_outlv_E `{!typeG TYPE Ty Σ} {A} (ty: _ A) α :
   elctx_interp (ty_outlv_E ty α) ⊣⊢ α ⊑ ty.(ty_lft).
 Proof.
   rewrite /ty_outlv_E /elctx_elt_interp big_sepL_fmap /=.
@@ -117,7 +119,7 @@ Notation tyl_lft tyl := (lft_intersect_list (tyl_lfts tyl)).
 Notation tyl_E tyl := (concat ((λ _, ty_E) +c<$> tyl)).
 Notation tyl_outlv_E tyl κ := (concat ((λ _ ty, ty_outlv_E ty κ) +c<$> tyl)).
 
-Lemma tyl_outlv_E_elctx_sat `{!typeG Σ} {As} E L (tyl: typel As) α β :
+Lemma tyl_outlv_E_elctx_sat `{!typeG TYPE Ty Σ} {As} E L (tyl: typel As) α β :
   tyl_outlv_E tyl β ⊆+ E → lctx_lft_incl E L α β →
   elctx_sat E L (tyl_outlv_E tyl α).
 Proof.
@@ -133,7 +135,7 @@ Bind Scope lrust_type_scope with type.
 
 (** Simple Type *)
 
-Record simple_type `{!typeG Σ} A := {
+Record simple_type `{!typeG TYPE Ty Σ} A := {
   st_size: nat;  st_lfts: list lft;  st_E: elctx;
   st_own: proph A → nat → thread_id → list val → iProp Σ;
   st_own_persistent vπ d tid vl : Persistent (st_own vπ d tid vl);
@@ -146,14 +148,14 @@ Record simple_type `{!typeG Σ} A := {
       q':+[ξs] ∗ (q':+[ξs] ={E}=∗ st_own vπ d tid vl ∗ q.[κ]);
 }.
 Existing Instance st_own_persistent.
-Instance: Params (@st_size) 3 := {}.  Instance: Params (@st_lfts) 3 := {}.
-Instance: Params (@st_E) 3 := {}.  Instance: Params (@st_own) 3 := {}.
-Arguments st_size {_ _ _} _ / : simpl nomatch.
-Arguments st_lfts {_ _ _} _ / : simpl nomatch.
-Arguments st_E {_ _ _} _ / : simpl nomatch.
-Arguments st_own {_ _ _} _ _ _ _ / : simpl nomatch.
+Instance: Params (@st_size) 5 := {}.  Instance: Params (@st_lfts) 5 := {}.
+Instance: Params (@st_E) 5 := {}.  Instance: Params (@st_own) 5 := {}.
+Arguments st_size {_ _ _ _ _} _ / : simpl nomatch.
+Arguments st_lfts {_ _ _ _ _} _ / : simpl nomatch.
+Arguments st_E {_ _ _ _ _} _ / : simpl nomatch.
+Arguments st_own {_ _ _ _ _} _ _ _ _ / : simpl nomatch.
 
-Program Definition ty_of_st `{!typeG Σ} {A} (st: simple_type A) : type A := {|
+Program Definition ty_of_st `{!typeG TYPE Ty Σ} {A} (st: simple_type A) : type A := {|
   ty_size := st.(st_size);  ty_lfts := st.(st_lfts);  ty_E := st.(st_E);
   ty_own := st.(st_own);
   ty_shr vπ d κ tid l := ∃vl, &frac{κ} (λ q, l ↦∗{q} vl) ∗ ▷ st.(st_own) vπ d tid vl;
@@ -189,17 +191,17 @@ Coercion ty_of_st: simple_type >-> type.
 
 (** Plain Type *)
 
-Record plain_type `{!typeG Σ} A := {
+Record plain_type `{!typeG TYPE Ty Σ} A := {
   pt_size: nat;  pt_own: A → thread_id → list val → iProp Σ;
   pt_own_persistent v tid vl : Persistent (pt_own v tid vl);
   pt_size_eq v tid vl : pt_own v tid vl -∗ ⌜length vl = pt_size⌝;
 }.
 Existing Instance pt_own_persistent.
-Instance: Params (@pt_size) 3 := {}.  Instance: Params (@pt_own) 3 := {}.
-Arguments pt_size {_ _ _} _ / : simpl nomatch.
-Arguments pt_own {_ _ _} _ _ _ _ / : simpl nomatch.
+Instance: Params (@pt_size) 5 := {}.  Instance: Params (@pt_own) 5 := {}.
+Arguments pt_size {_ _ _ _ _} _ / : simpl nomatch.
+Arguments pt_own {_ _ _ _ _} _ _ _ _ / : simpl nomatch.
 
-Program Definition st_of_pt `{!typeG Σ} {A} (pt: plain_type A) : simple_type A := {|
+Program Definition st_of_pt `{!typeG TYPE Ty Σ} {A} (pt: plain_type A) : simple_type A := {|
   st_size := pt.(pt_size);  st_lfts := [];  st_E := [];
   st_own vπ d tid vl := ∃v, ⌜vπ = const v⌝ ∗ pt.(pt_own) v tid vl;
 |}%I.
@@ -216,7 +218,7 @@ Coercion st_of_pt: plain_type >-> simple_type.
 (** * OFE Structures on Types *)
 
 Section ofe.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   (**  Type *)
 
@@ -251,36 +253,36 @@ Section ofe.
   Global Instance typel_equiv {As} : Equiv (typel As) := @hlist_equiv type _ _.
   Global Instance typel_dist {As} : Dist (typel As) := @hlist_dist typeO _.
 
-  Global Instance ty_size_ne {A} n : Proper ((≡{n}≡) ==> (=)) (@ty_size _ _ A).
+  Global Instance ty_size_ne {A} n : Proper ((≡{n}≡@{_ A}) ==> (=)) ty_size.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
-  Global Instance ty_size_proper {A} : Proper ((≡) ==> (=)) (@ty_size _ _ A).
+  Global Instance ty_size_proper {A} : Proper ((≡@{_ A}) ==> (=)) ty_size.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
-  Global Instance ty_lfts_ne {A} n : Proper ((≡{n}≡) ==> (=)) (@ty_lfts _ _ A).
+  Global Instance ty_lfts_ne {A} n : Proper ((≡{n}≡@{_ A}) ==> (=)) ty_lfts.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
-  Global Instance ty_lfts_proper {A} : Proper ((≡) ==> (=)) (@ty_lfts _ _ A).
+  Global Instance ty_lfts_proper {A} : Proper ((≡@{_ A}) ==> (=)) ty_lfts.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
-  Global Instance ty_E_ne {A} n : Proper ((≡{n}≡) ==> (=)) (@ty_E _ _ A).
+  Global Instance ty_E_ne {A} n : Proper ((≡{n}≡@{_ A}) ==> (=)) ty_E.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
-  Global Instance ty_E_proper {A} : Proper ((≡) ==> (=)) (@ty_E _ _ A).
+  Global Instance ty_E_proper {A} : Proper ((≡@{_ A}) ==> (=)) ty_E.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_outlv_E_ne {A} n :
-    Proper ((≡{n}≡) ==> (=) ==> (=)) (@ty_outlv_E _ _ A).
+    Proper ((≡{n}≡@{_ A}) ==> (=) ==> (=)) ty_outlv_E.
   Proof. rewrite /ty_outlv_E. by move=> ?? [_ -> _ _ _]. Qed.
   Global Instance ty_outlv_E_proper {A} :
-    Proper ((≡) ==> (=) ==> (=)) (@ty_outlv_E _ _ A).
+    Proper ((≡@{_ A}) ==> (=) ==> (=)) ty_outlv_E.
   Proof. rewrite /ty_outlv_E. by move=> ?? [_ -> _ _ _]. Qed.
 
   Global Instance ty_own_ne {A} n:
-    Proper ((≡{n}≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) (@ty_own _ _ A).
+    Proper ((≡{n}≡@{_ A}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) ty_own.
   Proof. move=> ?? Eqv ??->??->??->??->. apply Eqv. Qed.
   Global Instance ty_own_proper {A} :
-    Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) (@ty_own _ _ A).
+    Proper ((≡@{_ A}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) ty_own.
   Proof. move=> ?? Eqv ??->??->??->??->. apply Eqv. Qed.
   Global Instance ty_shr_ne {A} n :
-    Proper ((≡{n}≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) (@ty_shr _ _ A).
+    Proper ((≡{n}≡@{_ A}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) ty_shr.
   Proof. move=> ?? Eqv ??->??->??->??->??->. apply Eqv. Qed.
   Global Instance ty_shr_proper {A} :
-    Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) (@ty_shr _ _ A).
+    Proper ((≡@{_ A}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) ty_shr.
   Proof. move=> ?? Eqv ??->??->??->??->??->. apply Eqv. Qed.
 
   (** Simple Type *)
@@ -305,18 +307,18 @@ Section ofe.
   Canonical Structure simple_typeO A : ofe := Ofe (simple_type A) simple_type_ofe_mixin.
 
   Global Instance st_own_ne n {A} :
-    Proper ((≡{n}≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) (@st_own _ _ A).
+    Proper ((≡{n}≡@{_ A}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) st_own.
   Proof. move=> ?? Eqv ??->??->??->??->. apply Eqv. Qed.
   Global Instance st_own_proper {A} :
-    Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) (@st_own _ _ A).
+    Proper ((≡@{_ A}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) st_own.
   Proof. move=> ?? Eqv ??->??->??->??->. apply Eqv. Qed.
 
-  Global Instance ty_of_st_ne {A} : NonExpansive (@ty_of_st _ _ A).
+  Global Instance ty_of_st_ne {A} : NonExpansive (@ty_of_st _ _ _ _ A).
   Proof.
     move=> ??? Eqv. split; try apply Eqv. move=> > /=. do 2 f_equiv.
     by rewrite Eqv.
   Qed.
-  Global Instance ty_of_st_proper {A} : Proper ((≡) ==> (≡)) (@ty_of_st _ _ A).
+  Global Instance ty_of_st_proper {A} : Proper ((≡@{_ A}) ==> (≡)) ty_of_st.
   Proof. apply (ne_proper _). Qed.
 
   (** Plain Type *)
@@ -346,17 +348,17 @@ Section ofe.
   Canonical Structure plain_typeO A : ofe := Ofe (plain_type A) plain_type_ofe_mixin.
 
   Global Instance pt_own_ne n {A} :
-    Proper ((≡{n}≡) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) (@pt_own _ _ A).
+    Proper ((≡{n}≡@{_ A}) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) pt_own.
   Proof. move=> ?? Eqv ??->??->??->. apply Eqv. Qed.
   Global Instance pt_own_proper {A} :
-    Proper ((≡) ==> (=) ==> (=) ==> (=) ==> (≡)) (@pt_own _ _ A).
+    Proper ((≡@{_ A}) ==> (=) ==> (=) ==> (=) ==> (≡)) pt_own.
   Proof. move=> ?? Eqv ??->??->??->. apply Eqv. Qed.
 
-  Global Instance st_of_pt_ne {A} : NonExpansive (@st_of_pt _ _ A).
+  Global Instance st_of_pt_ne {A} : NonExpansive (@st_of_pt _ _ _ _ A).
   Proof.
     move=> ??? [? Eqv]. split=>//= *. do 3 f_equiv. by rewrite Eqv.
   Qed.
-  Global Instance st_of_pt_proper {A} : Proper ((≡) ==> (≡)) (@st_of_pt _ _ A).
+  Global Instance st_of_pt_proper {A} : Proper ((≡@{_ A}) ==> (≡)) st_of_pt.
   Proof. apply (ne_proper _). Qed.
 
 End ofe.
@@ -370,7 +372,7 @@ Ltac solve_ne_type :=
 
 (** * Nonexpansiveness/Contractiveness of Type Morphisms *)
 
-Inductive TypeLftMorphism `{!typeG Σ} {A B} (T: type A → type B) : Prop :=
+Inductive TypeLftMorphism `{!typeG TYPE Ty Σ} {A B} (T: type A → type B) : Prop :=
 | type_lft_morphism_add α βs E :
     (∀ty, ⊢ (T ty).(ty_lft) ≡ₗ α ⊓ ty.(ty_lft)) →
     (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢
@@ -383,7 +385,7 @@ Inductive TypeLftMorphism `{!typeG Σ} {A B} (T: type A → type B) : Prop :=
 Existing Class TypeLftMorphism.
 
 Section type_lft_morphism.
-Context `{!typeG Σ}.
+Context `{!typeG TYPE Ty Σ}.
 
 Lemma type_lft_morphism_id_like {A B} (T: _ A → _ B) :
   (∀ty, (T ty).(ty_lfts) = ty.(ty_lfts)) → (∀ty, (T ty).(ty_E) = ty.(ty_E)) →
@@ -455,7 +457,7 @@ Qed.
 
 End type_lft_morphism.
 
-Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A → type B) : Prop := {
+Class TypeNonExpansive `{!typeG TYPE Ty Σ} {A B} (T: type A → type B) : Prop := {
   type_non_expansive_type_lft_morphism:> TypeLftMorphism T;
   type_non_expansive_ty_size ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (T ty).(ty_size) = (T ty').(ty_size);
@@ -474,7 +476,7 @@ Class TypeNonExpansive `{!typeG Σ} {A B} (T: type A → type B) : Prop := {
     (∀vπ d κ tid l, (T ty).(ty_shr) vπ d κ tid l ≡{n}≡ (T ty').(ty_shr) vπ d κ tid l);
 }.
 
-Class TypeContractive `{!typeG Σ} {A B} (T: type A → type B) : Prop := {
+Class TypeContractive `{!typeG TYPE Ty Σ} {A B} (T: type A → type B) : Prop := {
   type_contractive_type_lft_morphism:> TypeLftMorphism T;
   type_contractive_ty_size ty ty' : (T ty).(ty_size) = (T ty').(ty_size);
   type_contractive_ty_own n ty ty' :
@@ -492,14 +494,14 @@ Class TypeContractive `{!typeG Σ} {A B} (T: type A → type B) : Prop := {
     (∀vπ d κ tid l, (T ty).(ty_shr) vπ d κ tid l ≡{n}≡ (T ty').(ty_shr) vπ d κ tid l);
 }.
 
-Class ListTypeNonExpansive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
+Class ListTypeNonExpansive `{!typeG TYPE Ty Σ} {A Bs} (T: type A → typel Bs) : Prop :=
   type_list_non_expansive: ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeNonExpansive) Tl.
 
-Class ListTypeContractive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
+Class ListTypeContractive `{!typeG TYPE Ty Σ} {A Bs} (T: type A → typel Bs) : Prop :=
   type_list_contractive: ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeContractive) Tl.
 
 Section type_contractive.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Global Instance type_contractive_type_ne {A B} (T: _ A → _ B) :
     TypeContractive T → TypeNonExpansive T.
@@ -566,7 +568,7 @@ End type_contractive.
 Fixpoint shr_locsE (l: loc) (n: nat) : coPset :=
   match n with 0 => ∅ | S n => ↑shrN.@l ∪ shr_locsE (l +ₗ 1) n end.
 
-Class Copy `{!typeG Σ} {A} (ty: type A) := {
+Class Copy `{!typeG TYPE Ty Σ} {A} (ty: type A) := {
   copy_persistent vπ d tid vl : Persistent (ty.(ty_own) vπ d tid vl);
   copy_shr_acc vπ d κ tid E F l q :
     ↑lftN ∪ ↑shrN ⊆ E → shr_locsE l (ty.(ty_size) + 1) ⊆ F →
@@ -577,44 +579,44 @@ Class Copy `{!typeG Σ} {A} (ty: type A) := {
         ={E}=∗ na_own tid F ∗ q.[κ])
 }.
 Existing Instances copy_persistent.
-Instance: Params (@Copy) 3 := {}.
+Instance: Params (@Copy) 5 := {}.
 
-Class ListCopy `{!typeG Σ} {As} (tyl: typel As) := list_copy: HForall (λ _, Copy) tyl.
-Instance: Params (@ListCopy) 3 := {}.
-Global Instance list_copy_nil `{!typeG Σ} : ListCopy +[].
+Class ListCopy `{!typeG TYPE Ty Σ} {As} (tyl: typel As) := list_copy: HForall (λ _, Copy) tyl.
+Instance: Params (@ListCopy) 5 := {}.
+Global Instance list_copy_nil `{!typeG TYPE Ty Σ} : ListCopy +[].
 Proof. constructor. Qed.
-Global Instance list_copy_cons `{!typeG Σ} {A As} (ty: _ A) (tyl: _ As) :
+Global Instance list_copy_cons `{!typeG TYPE Ty Σ} {A As} (ty: _ A) (tyl: _ As) :
   Copy ty → ListCopy tyl → ListCopy (ty +:: tyl).
 Proof. by constructor. Qed.
 
-Class Send `{!typeG Σ} {A} (ty: type A) :=
+Class Send `{!typeG TYPE Ty Σ} {A} (ty: type A) :=
   send_change_tid tid tid' vπ d vl :
     ty.(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) vπ d tid' vl.
-Instance: Params (@Send) 3 := {}.
+Instance: Params (@Send) 5 := {}.
 
-Class ListSend `{!typeG Σ} {As} (tyl: typel As) := list_send: HForall (λ _, Send) tyl.
-Instance: Params (@ListSend) 3 := {}.
-Global Instance list_send_nil `{!typeG Σ} : ListSend +[].
+Class ListSend `{!typeG TYPE Ty Σ} {As} (tyl: typel As) := list_send: HForall (λ _, Send) tyl.
+Instance: Params (@ListSend) 5 := {}.
+Global Instance list_send_nil `{!typeG TYPE Ty Σ} : ListSend +[].
 Proof. constructor. Qed.
-Global Instance list_send_cons `{!typeG Σ} {A As} (ty: _ A) (tyl: _ As) :
+Global Instance list_send_cons `{!typeG TYPE Ty Σ} {A As} (ty: _ A) (tyl: _ As) :
   Send ty → ListSend tyl → ListSend (ty +:: tyl).
 Proof. by constructor. Qed.
 
-Class Sync `{!typeG Σ} {A} (ty: type A) :=
+Class Sync `{!typeG TYPE Ty Σ} {A} (ty: type A) :=
   sync_change_tid tid tid' vπ d κ l :
     ty.(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) vπ d κ tid' l.
-Instance: Params (@Sync) 3 := {}.
+Instance: Params (@Sync) 5 := {}.
 
-Class ListSync `{!typeG Σ} {As} (tyl: typel As) := list_sync: HForall (λ _, Sync) tyl.
-Instance: Params (@ListSync) 3 := {}.
-Global Instance list_sync_nil `{!typeG Σ} : ListSync +[].
+Class ListSync `{!typeG TYPE Ty Σ} {As} (tyl: typel As) := list_sync: HForall (λ _, Sync) tyl.
+Instance: Params (@ListSync) 5 := {}.
+Global Instance list_sync_nil `{!typeG TYPE Ty Σ} : ListSync +[].
 Proof. constructor. Qed.
-Global Instance list_sync_cons `{!typeG Σ} {A As} (ty: _ A) (tyl: _ As) :
+Global Instance list_sync_cons `{!typeG TYPE Ty Σ} {A As} (ty: _ A) (tyl: _ As) :
   Sync ty → ListSync tyl → ListSync (ty +:: tyl).
 Proof. by constructor. Qed.
 
 Section traits.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   (** Lemmas on Copy *)
 
@@ -653,7 +655,7 @@ Section traits.
     na_own tid (shr_locsE l n) ∗ na_own tid (shr_locsE (l +ₗ n) m).
   Proof. rewrite shr_locsE_shift na_own_union; by [|apply shr_locsE_disj]. Qed.
 
-  Global Instance copy_equiv {A} : Proper ((≡) ==> impl) (@Copy _ _ A).
+  Global Instance copy_equiv {A} : Proper ((≡@{_ A}) ==> impl) Copy.
   Proof.
     move=> ty ty' [EqSz _ _ EqOwn EqShr] ?. split=> >.
     - rewrite -EqOwn. apply _.
@@ -671,10 +673,10 @@ Section traits.
 
   (** Lemmas on Send and Sync *)
 
-  Global Instance send_equiv {A} : Proper (equiv ==> impl) (@Send _ _ A).
+  Global Instance send_equiv {A} : Proper ((≡@{_ A}) ==> impl) Send.
   Proof. move=> ?? [_ _ _ Eqv _] ?. rewrite /Send=> *. by rewrite -!Eqv. Qed.
 
-  Global Instance sync_equiv {A} : Proper (equiv ==> impl) (@Sync _ _ A).
+  Global Instance sync_equiv {A} : Proper ((≡@{_ A}) ==> impl) Sync.
   Proof. move=> ?? [_ _ _ _ Eqv] ?. rewrite /Sync=> *. by rewrite -!Eqv. Qed.
 
   Global Instance simple_type_sync {A} (st: simple_type A) : Send st → Sync st.
@@ -684,22 +686,23 @@ End traits.
 
 (** * Subtyping *)
 
-Definition type_incl `{!typeG Σ} {A B} (f: A → B) (ty: type A) (ty': type B) : iProp Σ :=
+Definition type_incl `{!typeG TYPE Ty Σ} {A B} (f: A → B) (ty: type A) (ty': type B)
+  : iProp Σ :=
   ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ (ty'.(ty_lft) ⊑ ty.(ty_lft)) ∗
   (□ ∀vπ d tid vl, ty.(ty_own) vπ d tid vl -∗ ty'.(ty_own) (f ∘ vπ) d tid vl) ∗
   (□ ∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l -∗ ty'.(ty_shr) (f ∘ vπ) d κ tid l).
-Instance: Params (@type_incl) 4 := {}.
+Instance: Params (@type_incl) 6 := {}.
 
-Definition subtype `{!typeG Σ} {A B} E L (f: A → B) (ty: type A) (ty': type B) : Prop :=
-  ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗ type_incl f ty ty').
-Instance: Params (@subtype) 6 := {}.
+Definition subtype `{!typeG TYPE Ty Σ} {A B} E L (f: A → B) (ty: type A) (ty': type B)
+  : Prop := ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗ type_incl f ty ty').
+Instance: Params (@subtype) 8 := {}.
 
-Definition eqtype `{!typeG Σ} {A B} E L (f: A → B) (g: B → A) (ty: type A) (ty': type B)
-  : Prop := subtype E L f ty ty' ∧ subtype E L g ty' ty.
-Instance: Params (@eqtype) 6 := {}.
+Definition eqtype `{!typeG TYPE Ty Σ} {A B} E L (f: A → B) (g: B → A)
+  (ty: type A) (ty': type B) : Prop := subtype E L f ty ty' ∧ subtype E L g ty' ty.
+Instance: Params (@eqtype) 8 := {}.
 
 Section subtyping.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   (** Subtyping *)
 
@@ -923,7 +926,7 @@ End subtyping.
 (** * Utility *)
 
 Section type_util.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Lemma heap_mapsto_ty_own {A} l (ty: _ A) vπ d tid :
     l ↦∗: ty.(ty_own) vπ d tid ⊣⊢

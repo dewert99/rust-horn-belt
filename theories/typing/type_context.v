@@ -1,6 +1,5 @@
 From iris.proofmode Require Import tactics.
-From lrust.util Require Import types.
-From lrust.typing Require Export lft_contexts type.
+From lrust.typing Require Export type.
 Set Default Proof Using "Type".
 
 Definition path := expr.
@@ -8,7 +7,7 @@ Bind Scope expr_scope with path.
 
 (* TODO: Consider making this a pair of a path and the rest. We could
    then e.g. formulate tctx_elt_hasty_path more generally. *)
-Inductive tctx_elt `{!typeG Σ} (A: Type) : Type :=
+Inductive tctx_elt `{!typeG TYPE Ty Σ} (A: Type) : Type :=
 | TCtx_hasty (p: path) (ty: type A)
 | TCtx_blocked (p: path) (κ: lft) (ty: type A).
 
@@ -39,7 +38,7 @@ Definition trans_tail {A Bs Cs} (tr: predl_trans Bs Cs)
   λ post '(a -:: cl), tr (λ bl, post (a -:: bl)) cl.
 
 Section type_context.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Fixpoint eval_path (p: path) : option val := match p with
     | BinOp OffsetOp e (Lit (LitInt n)) => match eval_path e with
@@ -88,10 +87,10 @@ End type_context.
 
 (** Type context *)
 Notation tctx_interp tid :=
-  (big_sepHL_1 (λ A t vπ, @tctx_elt_interp _ _ A tid t vπ)).
+  (big_sepHL_1 (λ A t vπ, @tctx_elt_interp _ _ _ _ A tid t vπ)).
 
 Section lemmas.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Lemma tctx_hasty_val {A} (v: val) (ty: _ A) vπ tid :
     tctx_elt_interp tid (v ◁ ty) vπ ⊣⊢ ∃d, ⧖d ∗ ty.(ty_own) vπ d tid [v].

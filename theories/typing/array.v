@@ -4,7 +4,7 @@ From lrust.typing Require Import product mod_ty.
 Set Default Proof Using "Type".
 
 Section array.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Definition array {A} n (ty: type A) : type (pvec A n) := Π! (hrepeat ty n).
 
@@ -18,9 +18,9 @@ End array.
 Notation "[ ty ; n ]" := (array n ty) (format "[ ty ;  n ]") : lrust_type_scope.
 
 Section typing.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
-  Global Instance array_type_ne {A} n : TypeNonExpansive (@array _ _ A n).
+  Global Instance array_type_ne {A} n : TypeNonExpansive (@array _ _ _ _ A n).
   Proof. elim n; apply _. Qed.
   Global Instance array_copy {A} n (ty: _ A) : Copy ty → Copy [ty; n].
   Proof. elim n; apply _. Qed.

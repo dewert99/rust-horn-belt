@@ -5,7 +5,7 @@ Set Default Proof Using "Type".
 Module fix_defs.
 
 Section base.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Program Definition base {A} : type A := {| pt_size := 0; pt_own _ _ _ := False |}%I.
   Next Obligation. by iIntros. Qed.
@@ -23,7 +23,7 @@ Section base.
 End base.
 
 Section S.
-  Context `{!typeG Σ} {A: Type} (T: type A → type A) {HT: TypeContractive T}.
+  Context `{!typeG TYPE Ty Σ} {A: Type} (T: type A → type A) {HT: TypeContractive T}.
 
   Definition Tn n := Nat.iter (S n) T base.
 
@@ -150,7 +150,7 @@ End fix_defs.
 Import fix_defs.
 Global Notation fix_ty := fix_ty.
 
-Lemma fix_unfold_eqtype `{!typeG Σ} {A} (T: _ → _ A) {HT: TypeContractive T} E L :
+Lemma fix_unfold_eqtype `{!typeG TYPE Ty Σ} {A} (T: _ → _ A) {HT: TypeContractive T} E L :
   eqtype E L id id (fix_ty T) (T (fix_ty T)).
 Proof.
   have EqOwn: ∀n vπ d tid vl, (T $ Tn T (3 + n)).(ty_own) vπ d tid vl ≡
@@ -191,7 +191,7 @@ Proof.
   - rewrite EqShr'. by iApply (bi.iff_refl True%I).
 Qed.
 
-Lemma fix_ty_ne `{!typeG Σ} {A} (T T': _ → _ A)
+Lemma fix_ty_ne `{!typeG TYPE Ty Σ} {A} (T T': _ → _ A)
   `{!TypeContractive T, !NonExpansive T, !TypeContractive T'} n :
   (∀ty, T ty ≡{n}≡ T' ty) → fix_ty T ≡{n}≡ fix_ty T'.
 Proof. move=> Eq.
@@ -203,7 +203,7 @@ Proof. move=> Eq.
   split=>/=; (try apply Eq); try apply Eq'. by rewrite /Tn /= (Eq base) Eq.
 Qed.
 
-Lemma fix_type_ne `{!typeG Σ} {A B} (T : _ A → _ → _ B)
+Lemma fix_type_ne `{!typeG TYPE Ty Σ} {A B} (T : _ A → _ → _ B)
   `{!(∀ty, TypeContractive (T ty))} :
   (∀`{!TypeNonExpansive U}, TypeNonExpansive (λ ty, T ty (U ty))) →
     TypeNonExpansive (λ ty, fix_ty (T ty)).
@@ -225,7 +225,7 @@ Proof.
     etrans; [|symmetry; apply conv_compl]. by apply Hne.
 Qed.
 
-Lemma fix_type_contracive `{!typeG Σ} {A B} (T : _ A → _ → _ B)
+Lemma fix_type_contracive `{!typeG TYPE Ty Σ} {A B} (T : _ A → _ → _ B)
   `{!(∀ty, TypeContractive (T ty))} :
   (∀`{!TypeContractive U}, TypeContractive (λ ty, T ty (U ty))) →
     TypeContractive (λ ty, fix_ty (T ty)).
@@ -248,7 +248,7 @@ Proof.
 Qed.
 
 Section traits.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
   Context {A} (T: type A → type A) {HT: TypeContractive T}.
 
   Global Instance fix_copy :
@@ -285,7 +285,7 @@ Section traits.
 End traits.
 
 Section subtyping.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Local Lemma wand_forall P (Φ: nat → iProp Σ) : (∀n, P -∗ Φ n) ⊢ (P -∗ ∀n, Φ n).
   Proof. iIntros "To P %". iApply ("To" with "P"). Qed.

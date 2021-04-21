@@ -1,10 +1,9 @@
-From lrust.lang Require Import proofmode memcpy.
-From lrust.util Require Import types.
-From lrust.typing Require Export lft_contexts type type_context cont_context.
+From lrust.lang Require Import memcpy.
+From lrust.typing Require Export type_context cont_context.
 Set Default Proof Using "Type".
 
 Section typing.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   (** Function Body *)
   (* This is an iProp because it is also used by the function type. *)
@@ -69,17 +68,17 @@ Section typing.
 
 End typing.
 
-Definition typed_instr_ty `{!typeG Σ} {As B} (E: elctx) (L: llctx)
+Definition typed_instr_ty `{!typeG TYPE Ty Σ} {As B} (E: elctx) (L: llctx)
   (T: tctx As) (e: expr) (ty: type B) (tr: pred B → predl As) : iProp Σ :=
   typed_instr E L T e (λ v, +[v ◁ ty]) (λ post al, tr (λ b, post -[b]) al).
-Arguments typed_instr_ty {_ _ _ _} _ _ _ _%E _%T _.
+Global Arguments typed_instr_ty {_ _ _ _ _ _} _ _ _ _%E _%T _.
 
-Definition typed_val `{!typeG Σ} {A} (v: val) (ty: type A) (tr: pred (pred A)) : Prop :=
+Definition typed_val `{!typeG TYPE Ty Σ} {A} (v: val) (ty: type A) (tr: pred (pred A)) : Prop :=
   ∀E L, ⊢ typed_instr_ty E L +[] (of_val v) ty (λ post _, tr post).
-Arguments typed_val {_ _ _} _%V _%T _.
+Global Arguments typed_val {_ _ _ _ _} _%V _%T _.
 
 Section typing_rules.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   (* This lemma is helpful when switching from proving unsafe code in Iris
      back to proving it in the type system. *)

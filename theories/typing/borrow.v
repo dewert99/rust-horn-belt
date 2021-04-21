@@ -9,7 +9,7 @@ Set Default Proof Using "Type".
   concurrently. *)
 
 Section borrow.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Lemma tctx_borrow E L p n ty κ :
     elctx_sat E L (ty_outlv_E ty κ) →

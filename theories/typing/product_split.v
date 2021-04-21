@@ -5,8 +5,9 @@ From lrust.typing Require Import type_context product own uniq_bor shr_bor.
 Set Default Proof Using "Type".
 
 Section product_split.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
+(*
   (** General splitting / merging for pointer types *)
   Fixpoint hasty_ptr_offsets (p : path) (ptr: type → type) tyl (off : nat) : tctx :=
     match tyl with
@@ -361,8 +362,10 @@ Section product_split.
     extract_tyl E L p (shr_bor κ) tyl 0 T T' →
     tctx_extract_hasty E L p (&shr{κ}(Π tyl)) T T'.
   Proof. auto using tctx_extract_merge_ptr_prod, tctx_merge_shr_prod. Qed.
+*)
 End product_split.
 
+(*
 (* We do not want unification to try to unify the definition of these
    types with anything in order to try splitting or merging. *)
 Global Hint Opaque tctx_extract_hasty : lrust_typing lrust_typing_merge.
@@ -385,3 +388,4 @@ Global Hint Resolve tctx_extract_split_own_prod tctx_extract_split_uniq_prod tct
 Global Hint Resolve tctx_extract_merge_own_prod tctx_extract_merge_uniq_prod tctx_extract_merge_shr_prod
     | 40 : lrust_typing_merge.
 Global Hint Unfold extract_tyl : lrust_typing.
+*)

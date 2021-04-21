@@ -4,36 +4,46 @@ From iris.base_logic Require Import invariants.
 From lrust.util Require Import discrete_fun.
 From lrust.prophecy Require Import prophecy.
 
-Implicit Type (Ap: ptType) (q: Qp).
+Section basic.
+Context `{!invG Σ, !prophG TYPE Ty Σ, !EqDecision TYPE}.
+Coercion Ty: TYPE >-> Sortclass.
+Implicit Type (a b: TYPE) (ξ ζ: @proph_var _ Ty).
 
 (** * Camera for Unique Borrowing *)
 
-Local Definition uniq_itemR Ap := frac_agreeR (leibnizO (proph Ap * nat)).
-Local Definition uniq_gmapUR Ap := gmapUR positive (uniq_itemR Ap).
+Local Definition uniq_itemR a := frac_agreeR (leibnizO (@proph _ Ty a * nat)).
+Local Definition uniq_gmapUR a := gmapUR positive (uniq_itemR a).
 Local Definition uniq_smryUR := discrete_funUR uniq_gmapUR.
 Definition uniqUR := authUR uniq_smryUR.
 
 Implicit Type S: uniq_smryUR.
 
-Local Definition item {Ap} q (vπd: proph Ap * nat) : uniq_itemR Ap :=
+Local Definition item {a} q (vπd: proph a * nat) : uniq_itemR a :=
   @to_frac_agree (leibnizO _) q vπd.
 Local Definition line ξ q vπd : uniq_smryUR :=
-  .{[ξ.(pv_ty) := {[ξ.(pv_id) := item q vπd]}]}.
+  .{[ξ.(pv_ty) := {[ξ.(pv_bd).1 := item q vπd]}]}.
 Local Definition add_line ξ q vπd S : uniq_smryUR :=
-  .<[ξ.(pv_ty) := <[ξ.(pv_id) := item q vπd]> (S ξ.(pv_ty))]> S.
+  .<[ξ.(pv_ty) := <[ξ.(pv_bd).1 := item q vπd]> (S ξ.(pv_ty))]> S.
 
 Definition uniqΣ := #[GFunctor uniqUR].
 Class uniqPreG Σ := UniqPreG { uniq_preG_inG:> inG Σ uniqUR }.
 Class uniqG Σ := UniqG { uniq_inG:> uniqPreG Σ; uniq_name: gname }.
-Instance subG_uniqPreG {Σ} : subG uniqΣ Σ → uniqPreG Σ.
+Instance subG_uniqPreG {Σ'} : subG uniqΣ Σ' → uniqPreG Σ'.
 Proof. solve_inG. Qed.
 
 Definition uniqN := nroot .@ "uniq".
 
+End basic.
+
+Arguments uniqG: clear implicits.
+Arguments uniqPreG: clear implicits.
+
 (** * Iris Propositions *)
 
 Section defs.
-Context `{!invG Σ, !prophG Σ, !uniqG Σ}.
+Context `{!invG Σ, !prophG TYPE Ty Σ, uniqG TYPE Ty Σ, !EqDecision TYPE}.
+Coercion Ty: TYPE >-> Sortclass.
+Implicit Type (a b: TYPE) (ξ ζ: @proph_var _ Ty).
 
 (** Unique Reference Context *)
 Definition uniq_inv: iProp Σ := ∃S, own uniq_name (● S).
@@ -60,7 +70,22 @@ Notation ".PC[ ξ ]" := (proph_ctrl ξ)
 (** * Lemmas *)
 
 Section lemmas.
-Context `{!invG Σ, !prophG Σ, !uniqG Σ}.
+Context `{!invG Σ, !prophG TYPE Ty Σ, uniqG TYPE Ty Σ, !EqDecision TYPE}.
+Coercion Ty: TYPE >-> Sortclass.
+Implicit Type (a b: TYPE) (ξ ζ: @proph_var _ Ty).
+
+Global Instance uniq_ctx_persistent : Persistent uniq_ctx := _.
+
+(* these timeless checks take some time *)
+Global Instance uniq_inv_body_timeless S : Timeless (own uniq_name (● S)).
+Proof. apply _. Qed.
+Global Instance val_obs_timeless ξ vπd : Timeless (.VO[ξ] vπd).
+Proof. apply _. Qed.
+Global Instance val_obs2_timeless ξ vπd : Timeless (.VO2[ξ] vπd).
+Proof. apply _. Qed.
+
+(* this speeds up proofs a lot *)
+Global Opaque val_obs val_obs2.
 
 Local Lemma own_line_agree ξ q q' vπd vπd' :
   own_line ξ q vπd -∗ own_line ξ q' vπd' -∗ ⌜(q + q' ≤ 1)%Qp ∧ vπd = vπd'⌝.
@@ -87,33 +112,29 @@ Proof.
   rewrite -vo_vo2. iFrame.
 Qed.
 
-(** Instances *)
-
-Global Instance uniq_ctx_persistent : Persistent uniq_ctx := _.
-
-Global Instance val_obs_timeless ξ vπd : Timeless (.VO[ξ] vπd) := _.
-
 (** Initialization *)
 
-Lemma uniq_init `{!uniqPreG Σ} E :
-  ↑uniqN ⊆ E → ⊢ |={E}=> ∃ _: uniqG Σ, uniq_ctx.
+Lemma uniq_init `{!uniqPreG TYPE Ty Σ} E :
+  ↑uniqN ⊆ E → ⊢ |={E}=> ∃ _: uniqG TYPE Ty Σ, uniq_ctx.
 Proof.
   move=> ?. iMod (own_alloc (● ε)) as (γ) "Auth"; [by apply auth_auth_valid|].
   set IUniqG := UniqG Σ _ γ. iExists IUniqG.
   iMod (inv_alloc _ _ uniq_inv with "[Auth]") as "?"; by [iExists ε|].
 Qed.
 
-Definition pval_to_pt {A} (vπ: proph A) := PtType A (vπ inhabitant).
+Lemma prval_to_inh {a} (vπ: @proph _ Ty a) : inhabited a.
+Proof. move: (@proph_asn_inhabited _ Ty)=> [π]. exists. apply (vπ π). Qed.
 
-Lemma uniq_intro {A} E (vπ: _ → A) d :
+Definition prval_to_prvar {a} vπ i := PrVar a (i, (prval_to_inh vπ)).
+
+Lemma uniq_intro {a} E (vπ: _ → a) d :
   ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗
-    ∃i, let ξ := PVar (pval_to_pt vπ) i in .VO[ξ] (vπ,d) ∗ .PC[ξ] (vπ,d).
+    ∃i, let ξ := prval_to_prvar vπ i in .VO[ξ] (vπ,d) ∗ .PC[ξ] (vπ,d).
 Proof.
-  iIntros (?) "PROPH ?". iInv uniqN as (S) "> Auth".
-  set Ap := pval_to_pt vπ. set I := dom (gset _) (S Ap).
+  iIntros (?) "PROPH ?". iInv uniqN as (S) "> Auth". set I := dom (gset _) (S a).
   iMod (proph_intro _ I with "PROPH") as (i NIn) "Tok"; [by solve_ndisj|].
-  move: NIn=> /not_elem_of_dom ?. set ξ := PVar Ap i.
-  set S' := add_line ξ 1 (vπ,d) S.
+  move: NIn=> /not_elem_of_dom ?.
+  set ξ := prval_to_prvar vπ i. set S' := add_line ξ 1 (vπ,d) S.
   iMod (own_update _ _ (● S' ⋅ ◯ line ξ 1 (vπ,d)) with "Auth") as "[? Vo2]".
   { by apply auth_update_alloc,
       discrete_fun_insert_local_update, alloc_singleton_local_update. }
@@ -127,7 +148,7 @@ Proof.
   iIntros "> Vo [> [Vo' ?]|[>[% Vo2] _]]";
   [|by iDestruct (own_line_agree with "Vo Vo2") as %[? _]].
   iDestruct (own_line_agree with "Vo Vo'") as %[_ ->]. iModIntro.
-  iSplit; [done|]. iFrame "Vo". iLeft. iFrame.
+  iSplit; [done|]. iSplitL "Vo"; [done|]. iLeft. by iSplitL "Vo'".
 Qed.
 
 Lemma uniq_agree ξ vπd vπd' : .VO[ξ] vπd -∗ .PC[ξ] vπd' -∗ ⌜vπd = vπd'⌝.
@@ -179,3 +200,5 @@ Lemma proph_ctrl_eqz ξ vπ d : proph_ctx -∗ .PC[ξ] (vπ,d) -∗ (.$ ξ) :== 
 Proof. iIntros "#? [[_ ?]|[_ ?]]"; by [iApply proph_eqz_token|]. Qed.
 
 End lemmas.
+
+Global Opaque proph_ctrl.

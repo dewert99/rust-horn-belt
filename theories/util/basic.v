@@ -104,6 +104,7 @@ Proof. split; fun_ext=> ?; by apply absurd. Qed.
 (** * OFE *)
 
 Notation "(≡{ n }≡)" := (dist n) (only parsing).
+Notation "(≡{ n }≡@{ A } )" := (@dist A _ n) (only parsing).
 
 (** * Monoid *)
 

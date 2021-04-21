@@ -3,7 +3,7 @@ From lrust.typing Require Import programs.
 Set Default Proof Using "Type".
 
 Section shr_bor.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Program Definition shr_bor {A} (κ: lft) (ty: type A) : type A := {|
     st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlv_E ty κ;
@@ -35,9 +35,9 @@ End shr_bor.
 Notation "&shr{ κ }" := (shr_bor κ) (format "&shr{ κ }") : lrust_type_scope.
 
 Section typing.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
-  Global Instance shr_type_contractive {A} κ : TypeContractive (@shr_bor _ _ A κ).
+  Global Instance shr_type_contractive {A} κ : TypeContractive (@shr_bor _ _ _ _ A κ).
   Proof. split; [by apply (type_lft_morphism_add_one κ)|done| |].
     - move=>/= *. by do 4 f_equiv.
     - move=>/= *. do 8 (f_contractive || f_equiv). by simpl in *.
@@ -59,8 +59,8 @@ Section typing.
     lctx_lft_incl E L κ' κ → subtype E L f ty ty' →
     subtype E L f (&shr{κ} ty) (&shr{κ'} ty').
   Proof.
-    move=> Lft Ty ?. iIntros "L". iDestruct (Lft with "L") as "#Lft".
-    iDestruct (Ty with "L") as "#Ty". iIntros "!> #?".
+    move=> Lft Sub ?. iIntros "L". iDestruct (Lft with "L") as "#Lft".
+    iDestruct (Sub with "L") as "#Ty". iIntros "!> #?".
     iApply shr_type_incl; by [iApply "Lft"|iApply "Ty"].
   Qed.
 

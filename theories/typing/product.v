@@ -4,7 +4,7 @@ From lrust.typing Require Import uninit mod_ty.
 Set Default Proof Using "Type".
 
 Section product.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Lemma split_prod_mt {A B} (vπ: _ → A) d (vπ': _ → B) d' tid ty ty' q l :
     (l ↦∗{q}: λ vl, ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
@@ -113,7 +113,7 @@ Notation "ty :* ty'" := (cons_prod_ty ty%T ty'%T) : lrust_type_scope.
 Notation "Π!" := xprod_ty : lrust_type_scope.
 
 Section typing.
-  Context `{!typeG Σ}.
+  Context `{!typeG TYPE Ty Σ}.
 
   Global Instance prod_lft_morphism {A B C} (T: _ A → _ B) (T': _ → _ C):
     TypeLftMorphism T → TypeLftMorphism T' → TypeLftMorphism (λ ty, T ty * T' ty)%T.
@@ -265,7 +265,7 @@ Section typing.
   Lemma prod_ty_assoc {A B C} E L (ty1: _ A) (ty2: _ B) (ty3: _ C) :
     eqtype E L prod_assoc prod_assoc' (ty1 * (ty2 * ty3)) ((ty1 * ty2) * ty3).
   Proof.
-    have Eq: ∀vπ: proph (A * (B * C)),
+    have Eq: ∀vπ: @proph _ Ty (A * (B * C)),
       fst ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ vπ ∧
       snd ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ (snd ∘ vπ) ∧
       snd ∘ (prod_assoc ∘ vπ) = snd ∘ (snd ∘ vπ).
@@ -285,7 +285,7 @@ Section typing.
   Proof.
     apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=". iSplit; [done|].
     iSplit; [by iApply lft_equiv_refl|].
-    have Eq: ∀vπ: proph (() * A), prod_left_id ∘ vπ = snd ∘ vπ.
+    have Eq: ∀vπ: @proph _ Ty (_ * A), prod_left_id ∘ vπ = snd ∘ vπ.
     { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [[]?]. }
     iSplit; iIntros "!> *"; rewrite Eq.
     - iSplit; [by iDestruct 1 as ([|]?->?) "?"|]. iIntros. iExists [], _. by iFrame.
@@ -297,7 +297,7 @@ Section typing.
   Proof.
     apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=".
     rewrite !right_id. iSplit; [done|]. iSplit; [by iApply lft_equiv_refl|].
-    have Eq: ∀vπ: proph (A * ()), prod_right_id ∘ vπ = fst ∘ vπ.
+    have Eq: ∀vπ: @proph _ Ty (A * _), prod_right_id ∘ vπ = fst ∘ vπ.
     { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [?[]]. }
     iSplit; iIntros "!>*"; rewrite Eq; [iSplit|].
     - iDestruct 1 as (?[|]->) "[?%]"; by [rewrite right_id|].
