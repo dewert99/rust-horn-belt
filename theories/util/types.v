@@ -279,7 +279,7 @@ Proof. split; fun_ext.
   - move=>/= ?. by rewrite pvsep_app.
 Qed.
 
-Program Global Instance pvec_unique `{Unique A} n
+Program Global Instance pvec_unique `{!Unique A} n
   : Unique (pvec A n) := {| unique := prepeat unique n |}.
 Next Obligation.
   move=> ?? n. elim n; [by case|]=> ? IH [x xl]. by rewrite (eq_unique x) (IH xl).
@@ -365,7 +365,7 @@ Proof.
 move=> ? All. move: i. elim All=>/= [|> ???]; by [|case].
 Qed.
 
-Lemma HForallTwo_forall `{Inhabited B} {F G As}
+Lemma HForallTwo_forall `{!Inhabited B} {F G As}
   (Φ: ∀A, B → F A → G A → Prop) (xl yl: _ As) :
   (∀z, HForallTwo (λ A, Φ A z) xl yl) ↔ HForallTwo (λ A x y, ∀z, Φ _ z x y) xl yl.
 Proof.
@@ -477,7 +477,7 @@ Notation "[∗ hlist] x ; y ;- z ∈ xl ; yl ;- zl , P" :=
     format "[∗  hlist]  x ;  y ;-  z  ∈  xl ;  yl ;-  zl ,  P") : bi_scope.
 
 Section lemmas.
-Context `{BiAffine PROP}.
+Context `{!BiAffine PROP}.
 
 Global Instance big_sepTL_persistent {X} (Φ: X → PROP) xl :
   (∀x, Persistent (Φ x)) → Persistent (big_sepTL Φ xl).

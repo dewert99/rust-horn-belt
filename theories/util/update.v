@@ -5,7 +5,7 @@ From lrust.util Require Import basic.
 (** * Utility for Multi-Step-Taking Updates *)
 
 Section lemmas.
-Context `{BiFUpd PROP}.
+Context `{!BiFUpd PROP}.
 Implicit Type P Q: PROP.
 
 Global Instance step_fupdN_proper E n : Proper ((⊣⊢) ==> (⊣⊢)) (λ P, |={E}▷=>^n P)%I.

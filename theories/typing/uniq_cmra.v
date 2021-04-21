@@ -5,7 +5,7 @@ From lrust.util Require Import discrete_fun.
 From lrust.prophecy Require Import prophecy.
 
 Section basic.
-Context `{!invG Σ, !prophG TYPE Ty Σ, !EqDecision TYPE}.
+Context `{!invG Σ, !prophG TYPE Ty Σ}.
 Coercion Ty: TYPE >-> Sortclass.
 Implicit Type (a b: TYPE) (ξ ζ: @proph_var _ Ty).
 
@@ -41,7 +41,7 @@ Arguments uniqPreG: clear implicits.
 (** * Iris Propositions *)
 
 Section defs.
-Context `{!invG Σ, !prophG TYPE Ty Σ, uniqG TYPE Ty Σ, !EqDecision TYPE}.
+Context `{!invG Σ, !prophG TYPE Ty Σ, uniqG TYPE Ty Σ}.
 Coercion Ty: TYPE >-> Sortclass.
 Implicit Type (a b: TYPE) (ξ ζ: @proph_var _ Ty).
 
@@ -70,7 +70,7 @@ Notation ".PC[ ξ ]" := (proph_ctrl ξ)
 (** * Lemmas *)
 
 Section lemmas.
-Context `{!invG Σ, !prophG TYPE Ty Σ, uniqG TYPE Ty Σ, !EqDecision TYPE}.
+Context `{!invG Σ, !prophG TYPE Ty Σ, uniqG TYPE Ty Σ}.
 Coercion Ty: TYPE >-> Sortclass.
 Implicit Type (a b: TYPE) (ξ ζ: @proph_var _ Ty).
 

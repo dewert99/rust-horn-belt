@@ -11,7 +11,7 @@ Ltac proof_subst x y :=
   (have ?: x = y by apply proof_irrelevance); subst x.
 
 Section basic.
-Context `{EqDecision TYPE} {Ty: TYPE → Type}.
+Context `{!EqDecision TYPE} {Ty: TYPE → Type}.
 Coercion Ty: TYPE >-> Sortclass.
 Implicit Type a b: TYPE.
 
@@ -72,17 +72,17 @@ Proof.
   move: (Eqv) (Eqv) => /Dep ? /Dep' ?. by apply (f_equal2 f).
 Qed.
 
-Lemma proph_dep_destr {A B} f `{Inj A B (=) (=) f} vπ ξs :
+Lemma proph_dep_destr {A B} f `{!@Inj A B (=) (=) f} vπ ξs :
   f ∘ vπ ./ ξs → vπ ./ ξs.
 Proof. by move=> Dep ?? /Dep/(inj f) ?. Qed.
 
-Lemma proph_dep_destr2 {A B C} f `{Inj2 A B C (=) (=) (=) f} vπ wπ ξs :
+Lemma proph_dep_destr2 {A B C} f `{!@Inj2 A B C (=) (=) (=) f} vπ wπ ξs :
   f ∘ vπ ⊛ wπ ./ ξs → vπ ./ ξs ∧ wπ ./ ξs.
 Proof.
   move=> Dep. split; move=> ?? /Dep Eq; apply (inj2 f) in Eq; by inversion Eq.
 Qed.
 
-Lemma proph_dep_unique `{Unique A} (vπ: _ → A) : vπ ./ [].
+Lemma proph_dep_unique `{!Unique A} (vπ: _ → A) : vπ ./ [].
 Proof. by rewrite (eq_unique vπ). Qed.
 
 Lemma proph_dep_pair {A B} (vπ: _ → A * B) ξs ζs :
@@ -170,7 +170,8 @@ Local Definition add_line ξ it S : proph_smryUR :=
   .<[ξ.(pv_ty) := <[ξ.(pv_bd).1 := it]> (S ξ.(pv_ty))]> S.
 
 Definition prophΣ := #[GFunctor prophUR].
-Class prophPreG Σ := ProphPreG { proph_preG_inG:> inG Σ prophUR }.
+Class prophPreG Σ := ProphPreG
+  { proph_preG_inG:> inG Σ prophUR; proph_pre_type_eq_dec:> EqDecision TYPE }.
 Class prophG Σ := ProphG { proph_inG:> prophPreG Σ; proph_name: gname }.
 Instance subG_prophPreG {Σ} : subG prophΣ Σ → prophPreG Σ.
 Proof. solve_inG. Qed.
@@ -226,7 +227,7 @@ Local Notation "S :~ L" := (proph_sim S L) (at level 70, format "S  :~  L").
 (** * Iris Lemmas *)
 
 Section lemmas.
-Context `{!invG Σ, !prophG TYPE Ty Σ, !EqDecision TYPE}.
+Context `{!invG Σ, !prophG TYPE Ty Σ}.
 Coercion Ty: TYPE >-> Sortclass.
 Implicit Type a b: TYPE.
 
@@ -419,7 +420,7 @@ Global Opaque proph_ctx proph_tok proph_obs.
 (** * Prophecy Equalizer *)
 
 Section def.
-Context `{!invG Σ, !prophG TYPE Ty Σ, !EqDecision TYPE}.
+Context `{!invG Σ, !prophG TYPE Ty Σ}.
 
 Definition proph_eqz {A} (uπ vπ: _ → A) : iProp Σ :=
   ∀E ξs q, ⌜↑prophN ⊆ E ∧ vπ ./ ξs⌝ -∗ q:+[ξs] ={E}=∗ ⟨π, uπ π = vπ π⟩ ∗ q:+[ξs].
@@ -429,7 +430,7 @@ End def.
 Notation "uπ :== vπ" := (proph_eqz uπ vπ) (at level 70, format "uπ  :==  vπ") : bi_scope.
 
 Section lemmas.
-Context `{!invG Σ, !prophG TYPE Ty Σ, !EqDecision TYPE}.
+Context `{!invG Σ, !prophG TYPE Ty Σ}.
 
 (** ** Constructing Prophecy Equalizers *)
 
@@ -453,7 +454,7 @@ Proof.
   by iApply proph_obs_impl; [|by iApply "Obs''"]=> ?[->?].
 Qed.
 
-Lemma proph_eqz_constr {A B} f `{Inj A B (=) (=) f} uπ vπ :
+Lemma proph_eqz_constr {A B} f `{!@Inj A B (=) (=) f} uπ vπ :
   uπ :== vπ -∗ f ∘ uπ :== f ∘ vπ.
 Proof.
   iIntros "Eqz" (???[? Dep]) "Ptoks". move/proph_dep_destr in Dep.
@@ -461,7 +462,7 @@ Proof.
   iApply proph_obs_impl; [|by iApply "Obs"]=> ??/=. by f_equal.
 Qed.
 
-Lemma proph_eqz_constr2 {A B C} f `{Inj2 A B C (=) (=) (=) f} uπ uπ' vπ vπ' :
+Lemma proph_eqz_constr2 {A B C} f `{!@Inj2 A B C (=) (=) (=) f} uπ uπ' vπ vπ' :
   uπ :== vπ -∗ uπ' :== vπ' -∗ f ∘ uπ ⊛ uπ' :== f ∘ vπ ⊛ vπ'.
 Proof.
   iIntros "Eqz Eqz'" (???[? Dep]) "Ptoks". move: Dep=> /proph_dep_destr2 [??].

@@ -255,7 +255,7 @@ Section lemmas.
     do 2 (iSplit; [done|]). by iApply "InOwn".
   Qed.
 
-  Lemma subtype_tctx_incl_blocked {A B As} ty ty' `{@Inj A B (=) (=) f}
+  Lemma subtype_tctx_incl_blocked {A B As} ty ty' `{!@Inj A B (=) (=) f}
     κ κ' (T: _ As) p E L :
     subtype E L f ty ty' → lctx_lft_incl E L κ κ' →
     tctx_incl E L (p ◁{κ} ty +:: T) (p ◁{κ'} ty' +:: T)

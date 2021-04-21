@@ -13,7 +13,6 @@ Class typeG TYPE Ty Σ := TypeG {
   type_lrustG:> lrustG Σ;
   type_prophG:> prophG TYPE Ty Σ;  type_uniqG:> uniqG TYPE Ty Σ;
   type_lftG:> lftG Σ;  type_na_invG:> na_invG Σ;  type_frac_borG:> frac_borG Σ;
-  type_type_eq_dec:> EqDecision TYPE;
 }.
 
 Definition lrustN := nroot .@ "lrust".
@@ -706,7 +705,7 @@ Section subtyping.
 
   (** Subtyping *)
 
-  Lemma eqtype_unfold {A B} E L f g `{@Iso A B f g} ty ty' :
+  Lemma eqtype_unfold {A B} E L f g `{!@Iso A B f g} ty ty' :
     eqtype E L f g ty ty' ↔
     ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
       ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ ty.(ty_lft) ≡ₗ ty'.(ty_lft) ∗

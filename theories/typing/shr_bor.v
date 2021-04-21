@@ -59,9 +59,9 @@ Section typing.
     lctx_lft_incl E L κ' κ → subtype E L f ty ty' →
     subtype E L f (&shr{κ} ty) (&shr{κ'} ty').
   Proof.
-    move=> Lft Sub ?. iIntros "L". iDestruct (Lft with "L") as "#Lft".
-    iDestruct (Sub with "L") as "#Ty". iIntros "!> #?".
-    iApply shr_type_incl; by [iApply "Lft"|iApply "Ty"].
+    move=> In Sub ?. iIntros "L". iDestruct (In with "L") as "#In".
+    iDestruct (Sub with "L") as "#Sub". iIntros "!> #?".
+    iApply shr_type_incl; by [iApply "In"|iApply "Sub"].
   Qed.
 
   Lemma shr_eqtype {A B} E L κ κ' (f: A → B) g ty ty' :

@@ -84,13 +84,13 @@ Section typing.
   Global Instance mod_ty_sync {A B} (f: A → B) ty : Sync ty → Sync (<{f}> ty).
   Proof. move=> ??*/=. by do 3 f_equiv. Qed.
 
-  Lemma mod_ty_own {A B} g f `{@Iso A B f g} ty vπ d tid vl :
+  Lemma mod_ty_own {A B} g f `{!@Iso A B f g} ty vπ d tid vl :
     (<{f}> ty).(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) (g ∘ vπ) d tid vl.
   Proof. iSplit=>/=.
     - iIntros "[%[->?]]". by rewrite compose_assoc semi_iso.
     - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
   Qed.
-  Lemma mod_ty_shr {A B} g f `{@Iso A B f g} ty vπ d κ tid l :
+  Lemma mod_ty_shr {A B} g f `{!@Iso A B f g} ty vπ d κ tid l :
     (<{f}> ty).(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) (g ∘ vπ) d κ tid l.
   Proof. iSplit=>/=.
     - iIntros "[%[->?]]". by rewrite compose_assoc semi_iso.
@@ -115,21 +115,21 @@ Section typing.
     iSplit; iIntros "!>" (vπ) "*?"; iExists vπ; by iSplit.
   Qed.
 
-  Lemma mod_ty_out {A B} E L f g `{@SemiIso A B f g} ty :
+  Lemma mod_ty_out {A B} E L f g `{!@SemiIso A B f g} ty :
     subtype E L g (<{f}> ty) ty.
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*/=[%[->?]]"; by rewrite compose_assoc semi_iso.
   Qed.
 
-  Lemma mod_ty_inout {A B} E L f g `{@SemiIso A B f g} ty :
+  Lemma mod_ty_inout {A B} E L f g `{!@SemiIso A B f g} ty :
     eqtype E L f g ty (<{f}> ty).
   Proof. by split; [apply mod_ty_in|apply mod_ty_out]. Qed.
-  Lemma mod_ty_outin {A B} E L f g `{@SemiIso A B f g} ty :
+  Lemma mod_ty_outin {A B} E L f g `{!@SemiIso A B f g} ty :
     eqtype E L g f (<{f}> ty) ty.
   Proof. by apply eqtype_symm, mod_ty_inout. Qed.
 
-  Lemma mod_ty_subtype {A B A' B'} E L h f (f': A' → B') g `{SemiIso A B f g} ty ty' :
+  Lemma mod_ty_subtype {A B A' B'} E L h f (f': A' → B') g `{!@SemiIso A B f g} ty ty' :
     subtype E L h ty ty' → subtype E L (f' ∘ h ∘ g) (<{f}> ty) (<{f'}> ty').
   Proof.
     move=> ??. eapply subtype_trans; [by apply mod_ty_out|].
@@ -137,7 +137,7 @@ Section typing.
   Qed.
 
   Lemma mod_ty_eqtype {A B A' B'} E L h h' f f' g g'
-    `{SemiIso A B f g} `{SemiIso A' B' f' g'} ty ty' :
+    `{!@SemiIso A B f g} `{!@SemiIso A' B' f' g'} ty ty' :
     eqtype E L h h' ty ty' →
     eqtype E L (f' ∘ h ∘ g) (f ∘ h' ∘ g') (<{f}> ty) (<{f'}> ty').
   Proof. move=> [??]. split; by apply mod_ty_subtype. Qed.

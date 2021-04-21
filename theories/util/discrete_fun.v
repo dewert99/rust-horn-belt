@@ -8,7 +8,7 @@ Notation ".{[ x := a ]}" := (discrete_fun_singleton x a)
   (at level 1, format ".{[ x  :=  a ]}").
 
 Section ucmra.
-Context `{EqDecision A} {B: A → ucmra}.
+Context `{!EqDecision A} {B: A → ucmra}.
 Implicit Type (f g: discrete_fun B) (x y: A).
 
 Lemma discrete_fun_insert_insert f x a b :
