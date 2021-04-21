@@ -7,18 +7,18 @@ From lrust.prophecy Require Import prophecy.
 Section basic.
 Context `{!invG Σ, !prophG TYPE Ty Σ}.
 Coercion Ty: TYPE >-> Sortclass.
-Implicit Type (a b: TYPE) (ξ ζ: @proph_var _ Ty).
+Implicit Type (𝔄 𝔅: TYPE) (ξ ζ: @proph_var _ Ty).
 
 (** * Camera for Unique Borrowing *)
 
-Local Definition uniq_itemR a := frac_agreeR (leibnizO (@proph _ Ty a * nat)).
-Local Definition uniq_gmapUR a := gmapUR positive (uniq_itemR a).
+Local Definition uniq_itemR 𝔄 := frac_agreeR (leibnizO (@proph _ Ty 𝔄 * nat)).
+Local Definition uniq_gmapUR 𝔄 := gmapUR positive (uniq_itemR 𝔄).
 Local Definition uniq_smryUR := discrete_funUR uniq_gmapUR.
 Definition uniqUR := authUR uniq_smryUR.
 
 Implicit Type S: uniq_smryUR.
 
-Local Definition item {a} q (vπd: proph a * nat) : uniq_itemR a :=
+Local Definition item {𝔄} q (vπd: proph 𝔄 * nat) : uniq_itemR 𝔄 :=
   @to_frac_agree (leibnizO _) q vπd.
 Local Definition line ξ q vπd : uniq_smryUR :=
   .{[ξ.(pv_ty) := {[ξ.(pv_bd).1 := item q vπd]}]}.
@@ -43,7 +43,7 @@ Arguments uniqPreG: clear implicits.
 Section defs.
 Context `{!invG Σ, !prophG TYPE Ty Σ, uniqG TYPE Ty Σ}.
 Coercion Ty: TYPE >-> Sortclass.
-Implicit Type (a b: TYPE) (ξ ζ: @proph_var _ Ty).
+Implicit Type ξ ζ: @proph_var _ Ty.
 
 (** Unique Reference Context *)
 Definition uniq_inv: iProp Σ := ∃S, own uniq_name (● S).
@@ -67,22 +67,22 @@ Local Notation ".VO2[ ξ ]" := (val_obs2 ξ)
 Notation ".PC[ ξ ]" := (proph_ctrl ξ)
   (at level 5, format ".PC[ ξ ]") : bi_scope.
 
+
 (** * Lemmas *)
 
 Section lemmas.
 Context `{!invG Σ, !prophG TYPE Ty Σ, uniqG TYPE Ty Σ}.
 Coercion Ty: TYPE >-> Sortclass.
-Implicit Type (a b: TYPE) (ξ ζ: @proph_var _ Ty).
+Implicit Type (𝔄 𝔅: TYPE) (ξ ζ: @proph_var _ Ty).
 
 Global Instance uniq_ctx_persistent : Persistent uniq_ctx := _.
-
 (* these timeless checks take some time *)
 Global Instance uniq_inv_body_timeless S : Timeless (own uniq_name (● S)).
-Proof. apply _. Qed.
+Proof. apply own_timeless, _. Qed.
 Global Instance val_obs_timeless ξ vπd : Timeless (.VO[ξ] vπd).
-Proof. apply _. Qed.
+Proof. apply own_timeless, _. Qed.
 Global Instance val_obs2_timeless ξ vπd : Timeless (.VO2[ξ] vπd).
-Proof. apply _. Qed.
+Proof. apply own_timeless, _. Qed.
 
 (* this speeds up proofs a lot *)
 Global Opaque val_obs val_obs2.
@@ -122,16 +122,16 @@ Proof.
   iMod (inv_alloc _ _ uniq_inv with "[Auth]") as "?"; by [iExists ε|].
 Qed.
 
-Lemma prval_to_inh {a} (vπ: @proph _ Ty a) : inhabited a.
+Lemma prval_to_inh {𝔄} (vπ: @proph _ Ty 𝔄) : inhabited 𝔄.
 Proof. move: (@proph_asn_inhabited _ Ty)=> [π]. exists. apply (vπ π). Qed.
 
-Definition prval_to_prvar {a} vπ i := PrVar a (i, (prval_to_inh vπ)).
+Definition prval_to_prvar {𝔄} vπ i := PrVar 𝔄 (i, (prval_to_inh vπ)).
 
-Lemma uniq_intro {a} E (vπ: _ → a) d :
+Lemma uniq_intro {𝔄} E (vπ: _ → 𝔄) d :
   ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗
     ∃i, let ξ := prval_to_prvar vπ i in .VO[ξ] (vπ,d) ∗ .PC[ξ] (vπ,d).
 Proof.
-  iIntros (?) "PROPH ?". iInv uniqN as (S) "> Auth". set I := dom (gset _) (S a).
+  iIntros (?) "PROPH ?". iInv uniqN as (S) "> Auth". set I := dom (gset _) (S 𝔄).
   iMod (proph_intro _ I with "PROPH") as (i NIn) "Tok"; [by solve_ndisj|].
   move: NIn=> /not_elem_of_dom ?.
   set ξ := prval_to_prvar vπ i. set S' := add_line ξ 1 (vπ,d) S.
@@ -201,4 +201,4 @@ Proof. iIntros "#? [[_ ?]|[_ ?]]"; by [iApply proph_eqz_token|]. Qed.
 
 End lemmas.
 
-Global Opaque proph_ctrl.
+Global Opaque uniq_ctx proph_ctrl.
