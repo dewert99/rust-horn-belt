@@ -4,27 +4,83 @@ From iris.algebra Require Import ofe.
 From iris.proofmode Require Import tactics.
 From lrust.util Require Import basic.
 
-(** * List of Types *)
-(** We avoid using [list Type] because that can cause universe inconsistency *)
+(** * List for a higher universe *)
+(** We use tlist X for X that contains Type *)
 
-Inductive Types := tnil: Types | tcons: Type → Types → Types.
-Implicit Type (A B C D: Type) (As Bs: Types).
+Inductive tlist X := tnil: tlist X | tcons: X → tlist X → tlist X.
 
-Notation "^[ ]" := tnil (at level 5, format "^[ ]").
-Infix "^::" := tcons (at level 60, right associativity).
-Notation "^[ A ; .. ; B ]" := (A ^:: .. (B ^:: ^[]) ..)
-  (at level 5, format "^[ A ;  .. ;  B ]").
+Notation "^[ ]" := (tnil _) (at level 5, format "^[ ]").
+Infix "^::" := (tcons _) (at level 60, right associativity).
+Notation "^[ x ; .. ; y ]" := (x ^:: .. (y ^:: ^[]) ..)
+  (at level 5, format "^[ x ;  .. ;  y ]").
 
-Fixpoint tapp As Bs :=
-  match As with ^[] => Bs | A ^:: As' => A ^:: tapp As' Bs end.
+Fixpoint tapp {X} (xl yl: tlist X) : tlist X :=
+  match xl with ^[] => yl | x ^:: xl' => x ^:: tapp xl' yl end.
 Infix "^++" := tapp (at level 60, right associativity).
 
-Fixpoint tnth B As (i: nat) := match As with
-  ^[] => B | A ^:: As' => match i with 0 => A | S j => tnth B As' j end end.
+Fixpoint tmap {X Y} (F: X → Y) (xl: tlist X) : tlist Y :=
+  match xl with ^[] => ^[] | x ^:: xl' => F x ^:: tmap F xl' end.
+Infix "^<$>" := tmap (at level 61, left associativity).
 
+Fixpoint tnth {X} (B: X) (xl: tlist X) (i: nat) : X := match xl with
+  ^[] => B | x ^:: xl' => match i with 0 => x | S j => tnth B xl' j end end.
 Notation tnthe := (tnth ∅).
 
-Fixpoint trepeat A n : Types := match n with 0 => ^[] | S m => A ^:: trepeat A m end.
+Fixpoint trepeat {X} (x: X) (n: nat) : tlist X :=
+  match n with 0 => ^[] | S m => x ^:: trepeat x m end.
+
+Inductive elem_of_tlist {X} : ElemOf X (tlist X) :=
+| elem_of_tlist_here x xl : x ∈ x ^:: xl
+| elem_of_tlist_further x y xl : x ∈ xl → x ∈ y ^:: xl.
+Existing Instance elem_of_tlist.
+
+Lemma elem_of_tnil {X} (x: X) : x ∈ ^[] ↔ False.
+Proof. split; [|done]. move=> H. inversion H. Qed.
+Lemma elem_of_tcons {X} (y: X) x xl : y ∈ x ^:: xl ↔ y = x ∨ y ∈ xl.
+Proof. split=> H.
+  - inversion H; by [left|right].
+  - case H; [move=> ->|]; by constructor.
+Qed.
+Lemma not_elem_of_tcons {X} (y: X) x xl : y ∉ x ^:: xl ↔ y ≠ x ∧ y ∉ xl.
+Proof. rewrite elem_of_tcons. tauto. Qed.
+
+Lemma elem_of_tapp {X} (x: X) xl xl' : x ∈ xl ^++ xl' ↔ x ∈ xl ∨ x ∈ xl'.
+Proof.
+  elim xl; [rewrite elem_of_tnil; tauto|]=>/= ?? IH. rewrite !elem_of_tcons IH. tauto.
+Qed.
+
+Lemma elem_of_tmap {X Y} (f: X → Y) y xl :
+  y ∈ f ^<$> xl ↔ ∃ x, y = f x ∧ x ∈ xl.
+Proof. elim xl=> /=[|x ? IH].
+  - setoid_rewrite elem_of_tnil. split; [done|]. move=> [?[?[]]].
+  - rewrite elem_of_tcons IH. split.
+    + move=> [->|[x'[->?]]]; [exists x|exists x']; split; by constructor.
+    + move=> [x'[? /elem_of_tcons[<-|?]]]; [by left|]. right. by exists x'.
+Qed.
+Lemma elem_of_tmap_1 {X Y} (f: X → Y) x xl : x ∈ xl → f x ∈ f ^<$> xl.
+Proof. move=> ?. apply elem_of_tmap. by exists x. Qed.
+
+Definition tlist_elem_equiv {X} (xl xl': tlist X) := ∀x, x ∈ xl ↔ x ∈ xl'.
+Infix "≡ₜₑ" := tlist_elem_equiv (at level 70, no associativity).
+Notation "(≡ₜₑ)" := tlist_elem_equiv (only parsing).
+
+Fixpoint tforall {X} (Φ: X → Prop) (xl: tlist X) : Prop :=
+  match xl with ^[] => True | x ^:: xl' => Φ x ∧ tforall Φ xl' end.
+
+Lemma tforall_app {X} Φ (xl yl: _ X) :
+  tforall Φ (xl ^++ yl) ↔ tforall Φ xl ∧ tforall Φ yl.
+Proof. elim xl=> /=[|?? IH]; by [rewrite left_id|rewrite IH assoc]. Qed.
+
+Lemma tforall_elem_of {X} (Φ: X → Prop) (xl: tlist X) :
+  tforall Φ xl ↔ ∀x, x ∈ xl → Φ x.
+Proof.
+  elim xl=>/=; [by setoid_rewrite elem_of_tnil|]=> ??->.
+  setoid_rewrite elem_of_tcons. split. { move=> [? To]?[->|?]; by [|apply To]. }
+  move=> To. split; [|move=> ??]; apply To; by [left|right].
+Qed.
+
+Notation Types := (tlist Type).
+Implicit Type (A B C D: Type) (As Bs: Types).
 
 (** * Heterogeneous List *)
 
@@ -385,6 +441,9 @@ End lemmas.
 Section def.
 Context {PROP: bi}.
 
+Fixpoint big_sepTL {X} (Φ: X → PROP) (xl: tlist X) : PROP :=
+  match xl with ^[] => True | x ^:: xl' => Φ x ∗ big_sepTL Φ xl' end%I.
+
 Fixpoint big_sepHL {F As} (Φ: ∀A, F A → PROP) (xl: hlist F As) : PROP :=
   match xl with +[] => True | x +:: xl' => Φ _ x ∗ big_sepHL Φ xl' end%I.
 
@@ -399,6 +458,10 @@ Fixpoint big_sepHL2_1 {F G H As Bs} (Φ: ∀A B, F A → G B → H A B → PROP)
   | _, _, _ => False end%I.
 
 End def.
+
+Notation "[∗ tlist] x ∈ xl , P" := (big_sepTL (λ x, P%I) xl)
+  (at level 200, xl at level 10, x at level 1, right associativity,
+    format "[∗  tlist]  x  ∈  xl ,  P") : bi_scope.
 
 Notation "[∗ hlist] x ∈ xl , P" := (big_sepHL (λ _ x, P%I) xl)
   (at level 200, xl at level 10, x at level 1, right associativity,
@@ -416,13 +479,13 @@ Notation "[∗ hlist] x ; y ;- z ∈ xl ; yl ;- zl , P" :=
 Section lemmas.
 Context `{BiAffine PROP}.
 
-Lemma big_sepHL_singleton {F A} (x: F A) (Φ: ∀B, _ → PROP) :
-  big_sepHL Φ +[x] ⊣⊢ Φ _ x.
-Proof. by rewrite /= right_id. Qed.
+Global Instance big_sepTL_persistent {X} (Φ: X → PROP) xl :
+  (∀x, Persistent (Φ x)) → Persistent (big_sepTL Φ xl).
+Proof. move=> ?. elim xl; apply _. Qed.
 
-Lemma big_sepHL_1_singleton {F G A} (x: F A) (y: G _) (Φ: ∀B, _ → _ → PROP) :
-  big_sepHL_1 Φ +[x] -[y] ⊣⊢ Φ _ x y.
-Proof. by rewrite /= right_id. Qed.
+Lemma big_sepTL_app {X} xl xl' (Φ: X → PROP) :
+  big_sepTL Φ (xl ^++ xl') ⊣⊢ big_sepTL Φ xl ∗ big_sepTL Φ xl'.
+Proof. elim xl; [by rewrite left_id|]=>/= > ->. by rewrite assoc. Qed.
 
 Lemma big_sepHL_app {F As Bs} (xl: _ F As) (xl': _ Bs) (Φ: ∀C, _ → PROP) :
   big_sepHL Φ (xl h++ xl') ⊣⊢ big_sepHL Φ xl ∗ big_sepHL Φ xl'.
@@ -435,6 +498,10 @@ Proof.
   dependent induction xl; case yl=>/= >; by [rewrite left_id|rewrite IHxl assoc].
 Qed.
 
+Global Instance into_from_sep_big_sepTL_app {X} xl xl' (Φ: X → PROP) :
+  IntoFromSep (big_sepTL Φ (xl ^++ xl')) (big_sepTL Φ xl) (big_sepTL Φ xl').
+Proof. by apply get_into_from_sep, big_sepTL_app. Qed.
+
 Global Instance into_from_sep_big_sepHL_app {F As Bs}
   (xl: _ F As) (xl': _ Bs) (Φ: ∀C, _ → PROP) :
   IntoFromSep (big_sepHL Φ (xl h++ xl')) (big_sepHL Φ xl) (big_sepHL Φ xl').
@@ -445,5 +512,22 @@ Global Instance into_from_sep_big_sepHL_1_app {F G As Bs}
   IntoFromSep (big_sepHL_1 Φ (xl h++ xl') (yl -++ yl'))
     (big_sepHL_1 Φ xl yl) (big_sepHL_1 Φ xl' yl').
 Proof. by apply get_into_from_sep, big_sepHL_1_app. Qed.
+
+Lemma big_sepTL_elem_of {X} x xl (Φ: X → PROP) :
+  x ∈ xl → big_sepTL Φ xl ⊢ Φ x.
+Proof.
+  elim xl; [by rewrite elem_of_tnil|]=>/= ?? IH. rewrite elem_of_tcons.
+  case=> [->|?]; iIntros "[??]"; [iFrame|by iApply IH].
+Qed.
+
+Lemma big_sepTL_forall {X} xl (Φ: X → PROP) :
+  (∀ x, Persistent (Φ x)) → big_sepTL Φ xl ⊣⊢ ∀x, ⌜x ∈ xl⌝ → Φ x.
+Proof.
+  move=> ?. elim xl=>/= [|??->].
+  - iSplit; [|by iIntros]. setoid_rewrite elem_of_tnil. by iIntros.
+  - setoid_rewrite elem_of_tcons. iSplit.
+    + iIntros "[? To]" (?[->|?]); [done|]. by iApply "To".
+    + iIntros "To". iSplit; [|iIntros (??)]; iApply "To"; by [iLeft|iRight].
+Qed.
 
 End lemmas.

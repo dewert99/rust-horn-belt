@@ -24,7 +24,7 @@ Local Definition add_line ξ q vπd S : uniq_smryUR :=
 
 Definition uniqΣ := #[GFunctor uniqUR].
 Class uniqPreG Σ := UniqPreG { uniq_preG_inG:> inG Σ uniqUR }.
-Class uniqG Σ := UniqG { uniq_inG:> uniqPreG Σ; uniq_name : gname }.
+Class uniqG Σ := UniqG { uniq_inG:> uniqPreG Σ; uniq_name: gname }.
 Instance subG_uniqPreG {Σ} : subG uniqΣ Σ → uniqPreG Σ.
 Proof. solve_inG. Qed.
 
