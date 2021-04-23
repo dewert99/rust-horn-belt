@@ -1,12 +1,11 @@
 From iris.proofmode Require Import tactics.
 From lrust.lang Require Import notation.
 From lrust.typing Require Export type_context.
-
 Set Default Proof Using "Type".
 
 Notation valpl := (plist (const val)).
 
-Fixpoint valpl_to_exprs {As} (vl: valpl As) : list expr :=
+Fixpoint valpl_to_exprs {As: Types} (vl: valpl As) : list expr :=
   match As, vl with ^[], _ => [] |
     _ ^:: _, v -:: vl' => (v: expr) :: valpl_to_exprs vl' end.
 

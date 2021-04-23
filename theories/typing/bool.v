@@ -1,8 +1,5 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import programs.
-From lrust.util Require Import types.
-
-(* From lrust.util Require Import types. *)
 
 Set Default Proof Using "Type".
 

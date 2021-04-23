@@ -177,13 +177,13 @@ Section typing.
     ListTypeNonExpansive T → TypeNonExpansive (Π! ∘ T)%T.
   Proof.
     move=> [Tl[->All]]. clear T. dependent induction All.
-    { rewrite /happly /hmap /compose. apply _. } by apply cons_prod_type_ne.
+    { rewrite /happly /compose. apply _. } by apply cons_prod_type_ne.
   Qed.
   Global Instance xprod_type_contractive {A Bs} (T: _ A → _ Bs) :
     ListTypeContractive T → TypeContractive (Π! ∘ T)%T.
   Proof.
     move=> [Tl[->All]]. clear T. dependent induction All.
-    { rewrite /happly /hmap /compose. apply _. } by apply cons_prod_type_contractive.
+    { rewrite /happly /compose. apply _. } by apply cons_prod_type_contractive.
   Qed.
 
   Global Instance prod_copy {A B} (ty: _ A) (ty': _ B) :

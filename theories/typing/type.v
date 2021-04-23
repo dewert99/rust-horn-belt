@@ -1,7 +1,7 @@
 Require Import Equality.
 From iris.algebra Require Import numbers list.
 From iris.base_logic Require Export na_invariants.
-From lrust.util Require Export basic update types.
+From lrust.util Require Export basic update fancy_lists.
 From lrust.prophecy Require Export prophecy.
 From lrust.lifetime Require Export frac_borrow.
 From lrust.lang Require Export proofmode notation.
@@ -249,8 +249,8 @@ Section ofe.
   Qed.
   Canonical Structure typeO A : ofe := Ofe (type A) type_ofe_mixin.
 
-  Global Instance typel_equiv {As} : Equiv (typel As) := @hlist_equiv type _ _.
-  Global Instance typel_dist {As} : Dist (typel As) := @hlist_dist typeO _.
+  Global Instance typel_equiv {As} : Equiv (typel As) := @hlist_equiv _ type _ _.
+  Global Instance typel_dist {As} : Dist (typel As) := @hlist_dist _ typeO _.
 
   Global Instance ty_size_ne {A} n : Proper ((≡{n}≡@{_ A}) ==> (=)) ty_size.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
