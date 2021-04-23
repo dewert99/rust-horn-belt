@@ -201,47 +201,56 @@ Section typing.
     intros. apply (tctx_incl_frame_r _ [_] [_;_]). rewrite tctx_reborrow_uniq //.
     by apply (tctx_incl_frame_r _ [_] [_]), subtype_tctx_incl, uniq_subtype.
   Qed.
+  *)
 
-  Lemma read_uniq E L κ ty :
-    Copy ty → lctx_lft_alive E L κ → ⊢ typed_read E L (&uniq{κ}ty) ty (&uniq{κ}ty).
+  Lemma read_uniq {𝔄} E L κ (ty : type 𝔄):
+    Copy ty → lctx_lft_alive E L κ → typed_read E L (&uniq{κ}ty) ty (&uniq{κ}ty) fst id.
   Proof.
-    rewrite typed_read_eq. iIntros (Hcopy Halive) "!>".
-    iIntros ([[]|] [|depth1] tid F qL ?) "#LFT #HE Htl HL [Hout Hown] //".
-    iDestruct "Hown" as (depth2 γ) "(% & H◯ & Hown)".
+    iIntros (Hcopy Halive vπ [|depth1] [[]|] tid qL) "#LFT #HE Htl HL Hown //".
+    { iDestruct "Hown" as (? ?) "([% %] & _ & _)". lia. }
+    iDestruct "Hown" as (depth2 pb) "([% %] & HVO & Hown)".
     iMod (Halive with "HE HL") as (q) "[Hκ Hclose]"; first solve_ndisj.
     iMod (bor_acc with "LFT Hown Hκ") as "[H Hclose']"; first solve_ndisj.
-    iDestruct "H" as (depth2') "(>H● & >#Hdepth2' & H↦)".
-    iDestruct "H↦" as (vl) "[>H↦ #Hown]".
+    iMod (bi.later_exist_except_0 with "H") as (vπ' d') "(Hvl & >#Tok & PC)".
+    iMod (uniq_strip_later with "HVO PC") as "(%Hag & HVO & PC)".
+    inversion Hag; subst; clear Hag.
+    iDestruct "Hvl" as (vl) "[> H↦ #Hown]".
     iDestruct (ty_size_eq with "Hown") as "#>%". iIntros "!>".
-    iExists _, _, _. iSplit; first done. iFrame "H↦ Htl Hout".
-    iDestruct (own_valid_2 with "H● H◯") as %->%excl_auth_agree_L.
-    iDestruct (ty_own_depth_mono with "Hown") as "$"; [lia|].
-    iIntros "H↦". iMod ("Hclose'" with "[H↦ H●]") as "[Hb Htok]".
+    iExists _, _, _. iSplit; first done. iFrame "H↦ Htl".
+    iSplitR.
+    {  iApply ty_own_depth_mono; [| iAssumption]; lia. }
+    iIntros "H↦".  iMod ("Hclose'" with "[H↦ PC]") as "[Hb Htok]".
     { eauto 10 with iFrame. }
-    iMod ("Hclose" with "Htok") as "$". eauto with iFrame.
+    iMod ("Hclose" with "Htok") as "$". rewrite (_ :id ∘ vπ = vπ) //=. eauto with iFrame.
   Qed.
 
-  Lemma write_uniq E L κ ty :
-    lctx_lft_alive E L κ → ⊢ typed_write E L (&uniq{κ}ty) ty (&uniq{κ}ty).
+  Lemma write_uniq {𝔄} E L κ (ty : type 𝔄):
+    lctx_lft_alive E L κ → typed_write E L (&uniq{κ}ty) ty (&uniq{κ}ty) (λ vπ wπ, (wπ, vπ.2)).
   Proof.
-    rewrite typed_write_eq. iIntros (Halive) "!>".
-    iIntros ([[]|] [|depth1] tid F qL ?) "#LFT HE HL [Hout Hown] //".
-    iDestruct "Hown" as (depth2 γ) "(% & H◯ & Hown)".
+    iIntros (Halive).
+    iIntros (vπ [|depth1] [[]|] tid qL) "#LFT #UNIQ HE HL Hown //".
+    { iDestruct "Hown" as (? ?) "([% %] & _ & _)". lia.  }
+    iDestruct "Hown" as (depth2 pb) "([% %] & HVO & Hown)".
     iMod (Halive with "HE HL") as (q) "[Htok Hclose]"; first solve_ndisj.
     iMod (bor_acc with "LFT Hown Htok") as "[H Hclose']"; first solve_ndisj.
-    iDestruct "H" as (depth2') "(>H● & _ & H↦)".
-    iDestruct "H↦" as (vl) "[>H↦ Hown]". rewrite ty.(ty_size_eq).
+    iMod (bi.later_exist_except_0 with "H") as (vπ' d') "(Hvl & >#Tok & PC)".
+    iMod (uniq_strip_later with "HVO PC") as "(%Hag & HVO & PC)".
+    inversion Hag; subst; clear Hag.
+    iDestruct "Hvl" as (vl) "[> H↦ Hown]". rewrite ty.(ty_size_eq).
     iDestruct "Hown" as ">%". iModIntro. iExists _, _. iSplit; first done.
-    iFrame. iIntros "Hown #Hdepth1". iDestruct "Hown" as (vl') "[H↦ Hown]".
-    iMod (own_update_2 with "H● H◯") as "[H● H◯]"; [by apply excl_auth_update|].
-    iMod ("Hclose'" with "[> H↦ Hown H●]") as "[Hb Htok]".
-    { iExists _. iFrame "Hdepth1". auto with iFrame. }
-    iMod ("Hclose" with "Htok") as "$". auto with iFrame.
+    iFrame. iIntros (wπ db) "Hown #Hdepth1".
+    iMod (uniq_update _ (PrVar 𝔄 pb) _ _ (wπ, _) with "UNIQ HVO PC") as "[HVO PC]"; first solve_ndisj.
+    iDestruct "Hown" as (vl') "[H↦ Hown]".
+    iMod ("Hclose'" with "[H↦ PC Hown]") as "[Hb Htok]".
+    { iNext. iExists _, _. iFrame "Hdepth1 PC". iExists _. iFrame. }
+    iMod ("Hclose" with "Htok") as "$". 
+    iExists _, _.
+    auto with iFrame. 
   Qed.
-*)
+
 End typing.
 
-Global Hint Resolve uniq_subtype uniq_eqtype (* write_uniq read_uniq *) : lrust_typing.
+Global Hint Resolve uniq_subtype uniq_eqtype write_uniq read_uniq : lrust_typing.
 (*
 Global Hint Resolve tctx_extract_hasty_reborrow | 10 : lrust_typing.
 *)

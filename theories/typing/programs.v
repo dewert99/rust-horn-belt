@@ -47,7 +47,7 @@ Section typing.
 
   Definition typed_write {A B A'} (E: elctx) (L: llctx) (ty: type A) (tyb: type B)
     (ty': type A') (st: A → B → A') : Prop := ∀vπ d v tid qL,
-    lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗ ty.(ty_own) vπ d tid [v] ={⊤}=∗
+    lft_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗ ty.(ty_own) vπ d tid [v] ={⊤}=∗
       ∃(l: loc) vl, ⌜v = #l ∧ length vl = tyb.(ty_size)⌝ ∗ l ↦∗ vl ∗
         ∀wπ db, ▷ l ↦∗: tyb.(ty_own) wπ db tid -∗ ⧖(S db) ={⊤}=∗
           llctx_interp L qL ∗ ty'.(ty_own) (st ∘ vπ ⊛ wπ) (S db) tid [v].
@@ -180,10 +180,10 @@ Section typing.
     ⊢ typed_instr E L +[p ◁ ty; pb ◁ tyb] (p <- pb) (λ _, +[p ◁ ty'])
       (λ post '(-[a; b]), post -[st a b]).
   Proof.
-    iIntros (Wrt ?? (vπ & wπ &[])) "LFT TIME _ _ E $ L (p & pb & _) Obs".
+    iIntros (Wrt ?? (vπ & wπ &[])) "LFT TIME _ UNIQ E $ L (p & pb & _) Obs".
     wp_bind p. iApply (wp_hasty with "p"). iIntros (???) "_ ty".
     wp_bind pb. iApply (wp_hasty with "pb"). iIntros (vb db ?) "#time tyb".
-    iApply wp_fupd. iMod (Wrt with "LFT E L ty") as (? vl (->&Sz)) "[Mt Close]".
+    iApply wp_fupd. iMod (Wrt with "LFT UNIQ E L ty") as (? vl (->&Sz)) "[Mt Close]".
     iApply (wp_persist_time_rcpt with "TIME time")=>//.
     iDestruct (ty_size_eq with "tyb") as "%Sz'". move: Sz. rewrite -Sz' /=.
     case vl=> [|?[|]]=>// ?. rewrite heap_mapsto_vec_singleton. wp_write.
@@ -234,16 +234,16 @@ Section typing.
     (tyr': _ B') (tyb: _ C) stw gtr str (n: Z) pw pr vπw vπr E L qL tid :
     n = tyb.(ty_size) →
     typed_write E L tyw tyb tyw' stw → typed_read E L tyr tyb tyr' gtr str →
-    {{{ lft_ctx ∗ time_ctx ∗ elctx_interp E ∗ na_own tid ⊤ ∗ llctx_interp L qL ∗
+    {{{ lft_ctx ∗ time_ctx ∗ uniq_ctx ∗ elctx_interp E ∗ na_own tid ⊤ ∗ llctx_interp L qL ∗
         tctx_interp tid +[pw ◁ tyw; pr ◁ tyr] -[vπw; vπr] }}}
       (pw <-{n} !pr)
     {{{ RET #☠; na_own tid ⊤ ∗ llctx_interp L qL ∗ tctx_interp tid
         +[pw ◁ tyw'; pr ◁ tyr'] -[stw ∘ vπw ⊛ (gtr ∘ vπr); str ∘ vπr] }}}.
   Proof.
-    iIntros (-> Wrt Read ?) "(#LFT & #TIME & #E & Na & [L L'] & (pw & pr &_)) ToΦ".
+    iIntros (-> Wrt Read ?) "(#LFT & #TIME & #UNIQ & #E & Na & [L L'] & (pw & pr &_)) ToΦ".
     wp_bind pw. iApply (wp_hasty with "pw"). iIntros (???) "_ tyw".
     wp_bind pr. iApply (wp_hasty with "pr"). iIntros (???) "#time tyr".
-    iApply wp_fupd. iMod (Wrt with "LFT E L tyw") as (??[->?]) "[Mtw Closew]".
+    iApply wp_fupd. iMod (Wrt with "LFT UNIQ E L tyw") as (??[->?]) "[Mtw Closew]".
     iMod (Read with "LFT E Na L' tyr") as (? vlb ?->) "(Mtr & tyb & Closer)".
     iApply (wp_persist_time_rcpt with "TIME time"); [done|].
     iDestruct (ty_size_eq with "tyb") as "#>%".
@@ -261,8 +261,8 @@ Section typing.
     ⊢ typed_instr E L +[pw ◁ tyw; pr ◁ tyr] (pw <-{n} !pr)
       (λ _, +[pw ◁ tyw'; pr ◁ tyr']) (λ post '(-[a; b]), post -[stw a (gtr b); str b]).
   Proof.
-    iIntros (?????(?&?&[])) "LFT TIME _ _ E Na L T ?".
-    iApply (type_memcpy_iris with "[$LFT $TIME $Na $E $L $T]")=>//. iNext.
+    iIntros (?????(?&?&[])) "LFT TIME _ UNIQ E Na L T ?".
+    iApply (type_memcpy_iris with "[$LFT $TIME $UNIQ $Na $E $L $T]")=>//. iNext.
     iIntros "($&$&?&?&_)". iExists -[_; _]. iFrame.
   Qed.
 

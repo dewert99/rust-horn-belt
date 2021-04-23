@@ -175,7 +175,7 @@ Section typing.
     ty.(ty_size) = ty'.(ty_size) →
     typed_write E L (own_ptr n ty') ty (own_ptr n ty) (λ _ a, a).
   Proof.
-    iIntros (Sz ?[|?]???) "_ _ $ own"; [done|]. setoid_rewrite by_just_loc_ex at 1.
+    iIntros (Sz ?[|?]???) "_ _ _ $ own"; [done|]. setoid_rewrite by_just_loc_ex at 1.
     iDestruct "own" as (l[=->]) "[(%vl & >Mt & ty') Fr]". rewrite Sz.
     iDestruct (ty_size_eq with "ty'") as ">%". iModIntro. iExists l, vl.
     iSplit; [done|]. iFrame "Mt". iIntros (??) "$ ? !>". by rewrite Sz.
