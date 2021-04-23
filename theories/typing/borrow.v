@@ -11,27 +11,36 @@ Set Default Proof Using "Type".
 Section borrow.
   Context `{!typeG TYPE Ty Σ}.
 
-  Lemma tctx_borrow E L p n ty κ :
+  Lemma tctx_borrow {A} E L p n (ty : _ (Ty A)) κ:
     elctx_sat E L (ty_outlv_E ty κ) →
-    tctx_incl E L [p ◁ own_ptr n ty] [p ◁ &uniq{κ}ty; p ◁{κ} own_ptr n ty].
+    tctx_incl E L +[p ◁ own_ptr n ty] +[p ◁ &uniq{κ}ty; p ◁{κ} own_ptr n ty] (λ post '-[a], ∀ a', post -[@pair (Ty A) (Ty A) a a'; a']).
   Proof.
-    iIntros (Houtlv tid ?)  "#LFT #HE HL [H _]".
-    iDestruct "H" as ([[]|] [|depth]) "(#Hdepth & % & Hown)"=>//=.
+    iIntros (Houtlv tid ? [vπ []] ?) "#LFT #PROPH #UNIQ #HE HL [H _] Hproph".
+    iDestruct "H" as ([[]|] [|depth]) "(% & #Hdepth & Hown)"=>//=.
     iDestruct "Hown" as "[Hmt ?]".
     iDestruct (Houtlv with "HL HE") as "#Hout0".
     iDestruct (elctx_interp_ty_outlv_E with "Hout0") as "Hout".
-    iMod (own_alloc (●E depth ⋅ ◯E depth)) as (γ) "[H● H◯]";
-      [by apply excl_auth_valid|].
-    iMod (bor_create ⊤ κ (∃ depth, own γ (●E depth) ∗ ⧖S depth ∗
-                                   l ↦∗: ty.(ty_own) depth tid)%I with "LFT [H● Hmt]")
-      as "[Hbor Hext]"; [done|by auto with iFrame|].
-    iFrame "HL". rewrite /tctx_interp /= right_id. iSplitL "H◯ Hbor".
-    - iExists _, _. iFrame "#%". auto with iFrame.
-    - iExists _. iIntros "{$%} !> #H†". iMod ("Hext" with "H†") as (?) "(_ & >? & ?)".
-      eauto with iFrame.
+    iMod (uniq_intro _ vπ with "PROPH UNIQ") as (ξ) "[HVo HPC]"; first solve_ndisj.
+    iMod (bor_create ⊤ κ (∃ wπ depth, l ↦∗: ty.(ty_own) wπ depth tid ∗  
+      ⧖(S depth) ∗ .PC[PrVar A (ξ, prval_to_inh vπ)] (wπ, depth))%I with "LFT [HPC Hmt]")
+      as "[Hbor Hext]";[done |  |].
+    { iExists _, _. by iFrame. } 
+    iExists -[_; λ π, π (prval_to_prvar vπ ξ)]; rewrite right_id; iFrame "HL".
+    iSplitL "Hproph".
+    { iApply proph_obs_impl; [|done]; naive_solver. }
+    iSplitL "HVo Hbor".
+    - iExists _, _. iFrame "#%". 
+      iExists _, _. by iFrame. 
+    - iExists _. iIntros "{$%} !> #H†". 
+      iMod ("Hext" with "H†") as "Hext".
+      iMod (bi.later_exist_except_0 with "Hext") as (??) "(? & >? & PC)".
+      iExists _, _.
+      iSplitL "PC".
+      by iDestruct (proph_ctrl_eqz with "PROPH PC") as "?".
+      by iFrame.
   Qed.
 
-  Lemma type_share_instr E L p κ ty :
+  (* Lemma type_share_instr E L p κ ty :
     lctx_lft_alive E L κ →
     ⊢ typed_instr E L [p ◁ &uniq{κ}ty] Share (λ _, [p ◁ &shr{κ} ty]).
   Proof.
@@ -57,17 +66,17 @@ Section borrow.
     wp_seq. iIntros "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
     rewrite /tctx_interp /= right_id. iExists _, _. iFrame "% Hshr".
     iApply persist_time_rcpt_0.
-  Qed.
+  Qed. *)
 
-  Lemma type_share {E L} p e κ ty C T T' :
+  (* Lemma type_share {E L} p e κ ty C T T' :
     Closed [] e →
     tctx_extract_hasty E L p (&uniq{κ} ty) T T' →
     lctx_lft_alive E L κ →
     typed_body E L C ((p ◁ &shr{κ} ty) :: T') e -∗
     typed_body E L C T (Share ;; e).
-  Proof. iIntros. iApply type_seq; [by apply type_share_instr|solve_typing|done]. Qed.
+  Proof. iIntros. iApply type_seq; [by apply type_share_instr|solve_typing|done]. Qed. *)
 
-  Lemma tctx_extract_hasty_borrow E L p n ty ty' κ T :
+  (* Lemma tctx_extract_hasty_borrow E L p n ty ty' κ T :
     subtype E L ty' ty →
     elctx_sat E L (ty_outlv_E ty κ) →
     tctx_extract_hasty E L p (&uniq{κ}ty) ((p ◁ own_ptr n ty')::T)
@@ -76,9 +85,9 @@ Section borrow.
     intros. apply (tctx_incl_frame_r _ [_] [_;_]). rewrite subtype_tctx_incl.
     - by eapply tctx_borrow.
     - by f_equiv.
-  Qed.
+  Qed. *)
 
-  Lemma type_deref_uniq_own_instr {E L} κ p n ty :
+  (* Lemma type_deref_uniq_own_instr {E L} κ p n ty :
     lctx_lft_alive E L κ →
     ⊢ typed_instr_ty E L [p ◁ &uniq{κ}(own_ptr n ty)] (!p) (&uniq{κ} ty).
   Proof.
@@ -110,17 +119,17 @@ Section borrow.
       iMod (own_update_2 with "H● H◯") as "[$ _]"; [by apply excl_auth_update|].
       iExists [_]. rewrite heap_mapsto_vec_singleton. iFrame. simpl. by iFrame.
     - iFrame. iExists _. iFrame. iApply persist_time_rcpt_mono; [|done]. lia.
-  Qed.
+  Qed. *)
 
-  Lemma type_deref_uniq_own {E L} κ x p e n ty C T T' :
+  (* Lemma type_deref_uniq_own {E L} κ x p e n ty C T T' :
     Closed (x :b: []) e →
     tctx_extract_hasty E L p (&uniq{κ}(own_ptr n ty)) T T' →
     lctx_lft_alive E L κ →
     (∀ (v:val), typed_body E L C ((v ◁ &uniq{κ}ty) :: T') (subst' x v e)) -∗
     typed_body E L C T (let: x := !p in e).
-  Proof. iIntros. iApply type_let; [by apply type_deref_uniq_own_instr|solve_typing|done]. Qed.
+  Proof. iIntros. iApply type_let; [by apply type_deref_uniq_own_instr|solve_typing|done]. Qed. *)
 
-  Lemma type_deref_shr_own_instr {E L} κ p n ty :
+  (* Lemma type_deref_shr_own_instr {E L} κ p n ty :
     lctx_lft_alive E L κ →
     ⊢ typed_instr_ty E L [p ◁ &shr{κ}(own_ptr n ty)] (!p) (&shr{κ} ty).
   Proof.
@@ -134,17 +143,17 @@ Section borrow.
     iMod ("Hclose" with "[Htok1 Htok2]") as "($ & $)"; first by iFrame.
     rewrite tctx_interp_singleton tctx_hasty_val' //. iFrame "#".
     iExists 0%nat. iApply persist_time_rcpt_0.
-  Qed.
+  Qed. *)
 
-  Lemma type_deref_shr_own {E L} κ x p e n ty C T T' :
+  (* Lemma type_deref_shr_own {E L} κ x p e n ty C T T' :
     Closed (x :b: []) e →
     tctx_extract_hasty E L p (&shr{κ}(own_ptr n ty)) T T' →
     lctx_lft_alive E L κ →
     (∀ (v:val), typed_body E L C ((v ◁ &shr{κ} ty) :: T') (subst' x v e)) -∗
     typed_body E L C T (let: x := !p in e).
-  Proof. iIntros. iApply type_let; [by apply type_deref_shr_own_instr|solve_typing|done]. Qed.
+  Proof. iIntros. iApply type_let; [by apply type_deref_shr_own_instr|solve_typing|done]. Qed. *)
 
-  Lemma type_deref_uniq_uniq_instr {E L} κ κ' p ty :
+  (* Lemma type_deref_uniq_uniq_instr {E L} κ κ' p ty :
     lctx_lft_alive E L κ →
     ⊢ typed_instr_ty E L [p ◁ &uniq{κ}(&uniq{κ'}ty)] (!p) (&uniq{κ} ty).
   Proof.
@@ -208,17 +217,17 @@ Section borrow.
     rewrite tctx_interp_singleton /tctx_elt_interp /=.
     iMod ("Hclose" with "Htok") as "$". iExists _, _. iFrame "#".
     iSplitR; [done|]. auto with iFrame.
-  Qed.
+  Qed. *)
 
-  Lemma type_deref_uniq_uniq {E L} κ κ' x p e ty C T T' :
+  (* Lemma type_deref_uniq_uniq {E L} κ κ' x p e ty C T T' :
     Closed (x :b: []) e →
     tctx_extract_hasty E L p (&uniq{κ}(&uniq{κ'}ty))%T T T' →
     lctx_lft_alive E L κ → lctx_lft_incl E L κ κ' →
     (∀ (v:val), typed_body E L C ((v ◁ &uniq{κ}ty) :: T') (subst' x v e)) -∗
     typed_body E L C T (let: x := !p in e).
-  Proof. iIntros. iApply type_let; [by apply type_deref_uniq_uniq_instr|solve_typing|done]. Qed.
+  Proof. iIntros. iApply type_let; [by apply type_deref_uniq_uniq_instr|solve_typing|done]. Qed. *)
 
-  Lemma type_deref_shr_uniq_instr {E L} κ κ' p ty :
+  (* Lemma type_deref_shr_uniq_instr {E L} κ κ' p ty :
     lctx_lft_alive E L κ →
     ⊢ typed_instr_ty E L [p ◁ &shr{κ}(&uniq{κ'}ty)] (!p) (&shr{κ}ty).
   Proof.
@@ -231,15 +240,15 @@ Section borrow.
     iMod ("Hclose'" with "[H↦]") as "Htok"; first by auto.
     iMod ("Hclose" with "Htok") as "$".
     rewrite tctx_interp_singleton tctx_hasty_val' //. auto.
-  Qed.
+  Qed. *)
 
-  Lemma type_deref_shr_uniq {E L} κ κ' x p e ty C T T' :
+  (* Lemma type_deref_shr_uniq {E L} κ κ' x p e ty C T T' :
     Closed (x :b: []) e →
     tctx_extract_hasty E L p (&shr{κ}(&uniq{κ'}ty))%T T T' →
     lctx_lft_alive E L κ → lctx_lft_incl E L κ κ' →
     (∀ (v:val), typed_body E L C ((v ◁ &shr{κ}ty) :: T') (subst' x v e)) -∗
     typed_body E L C T (let: x := !p in e).
-  Proof. iIntros. iApply type_let; [by apply type_deref_shr_uniq_instr|solve_typing|done]. Qed.
+  Proof. iIntros. iApply type_let; [by apply type_deref_shr_uniq_instr|solve_typing|done]. Qed. *)
 End borrow.
 
-Global Hint Resolve tctx_extract_hasty_borrow | 10 : lrust_typing.
+(* Global Hint Resolve tctx_extract_hasty_borrow | 10 : lrust_typing. *)
