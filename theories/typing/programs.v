@@ -66,19 +66,14 @@ Section typing.
         na_own tid ⊤ ∗ llctx_interp L qL ∗ ty'.(ty_own) (st ∘ vπ) d tid [v]).
   Global Arguments typed_read {_ _ _} _ _ _%T _%T _%T _ _.
 
-End typing.
+  Definition typed_instr_ty {As B} (E: elctx) (L: llctx)
+    (T: tctx As) (e: expr) (ty: type B) (tr: pred B → predl As) : iProp Σ :=
+    typed_instr E L T e (λ v, +[v ◁ ty]) (λ post al, tr (λ b, post -[b]) al).
+  Global Arguments typed_instr_ty {_ _} _ _ _ _%E _%T _.
 
-Definition typed_instr_ty `{!typeG TYPE Ty Σ} {As B} (E: elctx) (L: llctx)
-  (T: tctx As) (e: expr) (ty: type B) (tr: pred B → predl As) : iProp Σ :=
-  typed_instr E L T e (λ v, +[v ◁ ty]) (λ post al, tr (λ b, post -[b]) al).
-Global Arguments typed_instr_ty {_ _ _ _ _ _} _ _ _ _%E _%T _.
-
-Definition typed_val `{!typeG TYPE Ty Σ} {A} (v: val) (ty: type A) (tr: pred (pred A)) : Prop :=
-  ∀E L, ⊢ typed_instr_ty E L +[] (of_val v) ty (λ post _, tr post).
-Global Arguments typed_val {_ _ _ _ _} _%V _%T _.
-
-Section typing_rules.
-  Context `{!typeG TYPE Ty Σ}.
+  Definition typed_val {A} (v: val) (ty: type A) (tr: pred (pred A)) : Prop :=
+    ∀E L, ⊢ typed_instr_ty E L +[] (of_val v) ty (λ post _, tr post).
+  Global Arguments typed_val {_} _%V _%T _.
 
   (* This lemma is helpful when switching from proving unsafe code in Iris
      back to proving it in the type system. *)
@@ -283,4 +278,4 @@ Section typing_rules.
     f_equal. fun_ext. by case=> [?[??]].
   Qed.
 
-End typing_rules.
+End typing.

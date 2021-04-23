@@ -12,10 +12,10 @@ Section maybe_uninit.
     ⌜vπ = const None⌝ ∗ l ↦∗{q}: (λ vl, ⌜length vl = ty.(ty_size)⌝) ∨
     ∃vπ', ⌜vπ = Some ∘ vπ'⌝ ∗ l ↦∗{q}: ty.(ty_own) vπ' d tid.
   Proof. iSplit.
-    - iIntros "(%vl&?&[[%%]|(%vπ'&%&?)])". { iLeft. iSplit; [done|]. iExists vl.
+    - iIntros "(%vl &?&[[%%]|(%vπ' &%&?)])". { iLeft. iSplit; [done|]. iExists vl.
       by iFrame. } iRight. iExists vπ'. iSplit; [done|]. iExists vl. iFrame.
-    - iIntros "[(%&%vl&Mt&%)|(%vπ'&%&%vl&Mt&?)]". { iExists vl. iFrame "Mt". by iLeft. }
-      iExists vl. iFrame "Mt". iRight. iExists vπ'. by iSplit.
+    - iIntros "[(%& %vl & Mt &%)|(%vπ' &%& %vl & Mt &?)]"; iExists vl; iFrame "Mt";
+      [by iLeft|]. iRight. iExists vπ'. by iSplit.
   Qed.
 
   Program Definition maybe_uninit {A} (ty: type A) : type (option A) := {|
@@ -28,15 +28,15 @@ Section maybe_uninit.
   |}%I.
   Next Obligation. iIntros "* [[_$]|(%&_&?)]". by rewrite ty_size_eq. Qed.
   Next Obligation.
-    move=> *. iIntros "[?|(%vπ&?&?)]"; [by iLeft|iRight]. iExists vπ.
+    move=> *. iIntros "[?|(%vπ &?&?)]"; [by iLeft|iRight]. iExists vπ.
     iSplit; [done|]. by iApply ty_own_depth_mono.
   Qed.
   Next Obligation.
-    move=> *. iIntros "[?|(%vπ&?&?)]"; [by iLeft|iRight]. iExists vπ.
+    move=> *. iIntros "[?|(%vπ &?&?)]"; [by iLeft|iRight]. iExists vπ.
     iSplit; [done|]. by iApply ty_shr_depth_mono.
   Qed.
   Next Obligation.
-    move=> *. iIntros "#? [?|(%vπ&?&?)]"; [by iLeft|iRight]. iExists vπ.
+    move=> *. iIntros "#? [?|(%vπ &?&?)]"; [by iLeft|iRight]. iExists vπ.
     iSplit; [done|]. by iApply ty_shr_lft_mono.
   Qed.
   Next Obligation.
@@ -55,13 +55,13 @@ Section maybe_uninit.
     { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
       do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Tok". by iLeft. }
     iMod (ty_own_proph with "LFT In Own Tok") as "Upd"; [done|].
-    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%ξs&%q&%& PTok & Close) !>".
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%ξs & %q &%& PTok & Close) !>".
     iExists ξs, q. iSplit; [iPureIntro; by apply proph_dep_constr|].
     iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[?$]".
     iRight. iExists vπ. by iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "LFT In In' [->|(%vπ&->& Shr)] Tok".
+    move=> *. iIntros "LFT In In' [->|(%vπ &->& Shr)] Tok".
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
       do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Tok". by iLeft. }
     iMod (ty_shr_proph with "LFT In In' Shr Tok") as "Upd"; [done|].
@@ -98,9 +98,9 @@ Section typing.
     move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Sub".
     iIntros "!> E". iDestruct ("Sub" with "E") as "(%&?& #InOwn & #InShr)".
     do 2 (iSplit; [done|]). iSplit; iIntros "!>*/=".
-    - iIntros "[[->->]|(%vπ'&->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
+    - iIntros "[[->->]|(%vπ' &->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
       iSplit; [done|]. by iApply "InOwn".
-    - iIntros "[->|(%vπ'&->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
+    - iIntros "[->|(%vπ' &->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
       iSplit; [done|]. by iApply "InShr".
   Qed.
   Lemma maybe_uninit_eqtype {A B} (f: A → B) g ty ty' E L :
@@ -125,9 +125,9 @@ Section typing.
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*/=".
-    - iIntros "[[->->]|(%&->&[[->->]|(%vπ''&->&?)])]"; [by iLeft|by iLeft|].
+    - iIntros "[[->->]|(%&->&[[->->]|(%vπ'' &->&?)])]"; [by iLeft|by iLeft|].
       iRight. iExists vπ''. by iFrame.
-    - iIntros "[->|(%&->&[->|(%vπ''&->&?)])]"; [by iLeft|by iLeft|].
+    - iIntros "[->|(%&->&[->|(%vπ'' &->&?)])]"; [by iLeft|by iLeft|].
       iRight. iExists vπ''. by iFrame.
   Qed.
 

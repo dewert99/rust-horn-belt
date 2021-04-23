@@ -87,7 +87,7 @@ Section uniq_bor.
   Qed.
   Next Obligation.
     move=> ?????[|?]*; [by iIntros|].
-    iIntros "#LFT #In #? (%l & %ξ &%& ? & #Bor & Shr) [Tok Tok'] !>!>".
+    iIntros "#LFT #In #? (%l & %ξ &%&?& #Bor & Shr) [Tok Tok'] !>!>".
     iDestruct (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
     iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξs q' ?) "[PTok Close]".

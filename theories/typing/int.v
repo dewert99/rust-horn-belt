@@ -37,9 +37,9 @@ Section int.
     ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 + p2) int
       (λ post '(-[z; z']), post (z + z')).
   Proof.
-    iIntros (??(?&?&[])) "_ _ _ _ _ $$ (P1 & P2 &_) Obs".
-    wp_apply (wp_hasty with "P1"). iIntros (? d _) "time". iIntros ((z&->&[=->])).
-    wp_apply (wp_hasty with "P2"). iIntros (?? _) "_". iIntros ((z'&->&[=->])).
+    iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
+    wp_apply (wp_hasty with "p1"). iIntros (? d _) "time". iIntros ((z &->&[=->])).
+    wp_apply (wp_hasty with "p2"). iIntros (?? _) "_". iIntros ((z' &->&[=->])).
     wp_op. iExists -[const (z + z')]. iFrame "Obs". rewrite right_id
     tctx_hasty_val'; [|done]. iExists d. iFrame "time". by iExists (z + z').
   Qed.
@@ -58,9 +58,9 @@ Section int.
     ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 - p2) int
       (λ post '(-[z; z']), post (z - z')).
   Proof.
-    iIntros (??(?&?&[])) "_ _ _ _ _ $$ (P1 & P2 &_) Obs".
-    wp_apply (wp_hasty with "P1"). iIntros (? d _) "time". iIntros ((z&->&[=->])).
-    wp_apply (wp_hasty with "P2"). iIntros (?? _) "_". iIntros ((z'&->&[=->])).
+    iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
+    wp_apply (wp_hasty with "p1"). iIntros (? d _) "time". iIntros ((z &->&[=->])).
+    wp_apply (wp_hasty with "p2"). iIntros (?? _) "_". iIntros ((z' &->&[=->])).
     wp_op. iExists -[const (z - z')]. iFrame "Obs". rewrite right_id
     tctx_hasty_val'; [|done]. iExists d. iFrame "time". by iExists (z - z').
   Qed.
@@ -79,9 +79,9 @@ Section int.
     ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 ≤ p2) bool_ty
       (λ post '(-[z; z']), post (bool_decide (z ≤ z'))).
   Proof.
-    iIntros (??(?&?&[])) "_ _ _ _ _ $$ (P1 & P2 &_) Obs".
-    wp_apply (wp_hasty with "P1"). iIntros (? d _) "time". iIntros ((z&->&[=->])).
-    wp_apply (wp_hasty with "P2"). iIntros (?? _) "_". iIntros ((z'&->&[=->])).
+    iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
+    wp_apply (wp_hasty with "p1"). iIntros (? d _) "time". iIntros ((z &->&[=->])).
+    wp_apply (wp_hasty with "p2"). iIntros (?? _) "_". iIntros ((z' &->&[=->])).
     wp_op. iExists -[const (bool_decide (z <= z'))]. iFrame "Obs".
     rewrite right_id tctx_hasty_val'; [|done]. iExists d.
     iFrame "time". by iExists (bool_decide (z <= z')).
