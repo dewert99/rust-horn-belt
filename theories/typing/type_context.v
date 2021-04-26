@@ -21,20 +21,20 @@ Definition pred A := A → Prop.
 Definition predl Al := pred (Π! Al).
 Definition predl_trans Al Bl := predl Bl → predl Al.
 
-Definition trans_app {Al Bl Cs Ds} (tr: predl_trans Al Bl) (tr': predl_trans Cs Ds)
-  : predl_trans (Al ^++ Cs) (Bl ^++ Ds) :=
+Definition trans_app {Al Bl Cl Dl} (tr: predl_trans Al Bl) (tr': predl_trans Cl Dl)
+  : predl_trans (Al ^++ Cl) (Bl ^++ Dl) :=
   λ post bdl, tr (λ al, tr' (λ cl, post (al -++ cl)) (psepr bdl)) (psepl bdl).
 
-Definition trans_lower {Al Bl Cs} (tr: predl_trans Al Bl)
-  : predl_trans (Cs ^++ Al) (Cs ^++ Bl) :=
+Definition trans_lower {Al Bl Cl} (tr: predl_trans Al Bl)
+  : predl_trans (Cl ^++ Al) (Cl ^++ Bl) :=
   λ post cal, tr (λ bl, post (psepl cal -++ bl)) (psepr cal).
 
-Definition trans_upper {Al Bl Cs} (tr: predl_trans Al Bl)
-  : predl_trans (Al ^++ Cs) (Bl ^++ Cs) :=
+Definition trans_upper {Al Bl Cl} (tr: predl_trans Al Bl)
+  : predl_trans (Al ^++ Cl) (Bl ^++ Cl) :=
   λ post acl, tr (λ bl, post (bl -++ psepr acl)) (psepl acl).
 
-Definition trans_tail {A Bl Cs} (tr: predl_trans Bl Cs)
-  : predl_trans (A ^:: Bl) (A ^:: Cs) :=
+Definition trans_tail {A Bl Cl} (tr: predl_trans Bl Cl)
+  : predl_trans (A ^:: Bl) (A ^:: Cl) :=
   λ post '(a -:: cl), tr (λ bl, post (a -:: bl)) cl.
 
 Section type_context.
@@ -177,7 +177,7 @@ Section lemmas.
   Lemma tctx_incl_refl {Al} (T: _ Al) E L : tctx_incl E L T T id.
   Proof. move=> ?? vπl ?. iIntros. iExists vπl. by iFrame. Qed.
 
-  Lemma tctx_incl_trans {Al Bl Cs} (T1: _ Al) (T2: _ Bl) (T3: _ Cs) tr tr' E L :
+  Lemma tctx_incl_trans {Al Bl Cl} (T1: _ Al) (T2: _ Bl) (T3: _ Cl) tr tr' E L :
     tctx_incl E L T1 T2 tr → tctx_incl E L T2 T3 tr' → tctx_incl E L T1 T3 (tr ∘ tr').
   Proof.
     move=> In In' >. iIntros "#LFT #PROPH #UNIQ #E L T Obs".
@@ -186,8 +186,8 @@ Section lemmas.
     iExists vπl''. by iFrame.
   Qed.
 
-  Lemma tctx_incl_app {Al Bl Cs Ds}
-    (T1: _ Al) (T1': _ Bl) (T2: _ Cs) (T2': _ Ds) tr tr' E L :
+  Lemma tctx_incl_app {Al Bl Cl Dl}
+    (T1: _ Al) (T1': _ Bl) (T2: _ Cl) (T2': _ Dl) tr tr' E L :
     tctx_incl E L T1 T1' tr → tctx_incl E L T2 T2' tr' →
     tctx_incl E L (T1 h++ T2) (T1' h++ T2') (trans_app tr tr').
   Proof.
@@ -201,13 +201,13 @@ Section lemmas.
     iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app.
   Qed.
 
-  Lemma tctx_incl_frame_l {Al Bl Cs} (T: _ Al) (T': _ Bl) (Tf: _ Cs) tr E L :
+  Lemma tctx_incl_frame_l {Al Bl Cl} (T: _ Al) (T': _ Bl) (Tf: _ Cl) tr E L :
     tctx_incl E L T T' tr → tctx_incl E L (Tf h++ T) (Tf h++ T') (trans_lower tr).
   Proof.
     move=> ?. eapply tctx_incl_eq; last first.
     { apply tctx_incl_app=>//. apply tctx_incl_refl. } done.
   Qed.
-  Lemma tctx_incl_frame_r {Al Bl Cs} (T: _ Al) (T': _ Bl) (Tf: _ Cs) tr E L :
+  Lemma tctx_incl_frame_r {Al Bl Cl} (T: _ Al) (T': _ Bl) (Tf: _ Cl) tr E L :
     tctx_incl E L T T' tr → tctx_incl E L (T h++ Tf) (T' h++ Tf) (trans_upper tr).
   Proof.
     move=> ?. eapply tctx_incl_eq; last first.
@@ -319,20 +319,20 @@ Section lemmas.
     by move=> ?[??].
   Qed.
 
-  Definition tctx_extract_ctx {Al Bl Cs} E L (T: tctx Al)
-    (T1: tctx Bl) (T2: tctx Cs) (tr: predl_trans Bl (Al ^++ Cs)) : Prop :=
+  Definition tctx_extract_ctx {Al Bl Cl} E L (T: tctx Al)
+    (T1: tctx Bl) (T2: tctx Cl) (tr: predl_trans Bl (Al ^++ Cl)) : Prop :=
     tctx_incl E L T1 (T h++ T2) tr.
 
   Lemma tctx_extract_ctx_nil {Al} (T: _ Al) E L : tctx_extract_ctx E L +[] T T id.
   Proof. apply tctx_incl_refl. Qed.
 
-  Lemma tctx_extract_ctx_elt {A Al Bl Cs Ds}
-    (t: _ A) (T: _ Al) (T1: _ Bl) (T2: _ Cs) (T3: _ Ds) tr tr' E L :
+  Lemma tctx_extract_ctx_elt {A Al Bl Cl Dl}
+    (t: _ A) (T: _ Al) (T1: _ Bl) (T2: _ Cl) (T3: _ Dl) tr tr' E L :
     tctx_extract_elt E L t T1 T2 tr → tctx_extract_ctx E L T T2 T3 tr' →
     tctx_extract_ctx E L (t +:: T) T1 T3 (tr ∘ trans_tail tr').
   Proof. move=> ??. eapply tctx_incl_trans; by [|apply tctx_incl_tail]. Qed.
 
-  Lemma tctx_extract_ctx_incl {Al Bl Cs} (T: _ Al) (T': _ Bl) (Tx: _ Cs) tr E L :
+  Lemma tctx_extract_ctx_incl {Al Bl Cl} (T: _ Al) (T': _ Bl) (Tx: _ Cl) tr E L :
     tctx_extract_ctx E L T' T Tx tr →
     tctx_incl E L T T' (λ post, tr (λ bcl, post (psepl bcl))).
   Proof.

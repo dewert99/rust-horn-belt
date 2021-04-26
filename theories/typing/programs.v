@@ -93,7 +93,7 @@ Section typing.
     iApply ("e" with "LFT TIME PROPH UNIQ [$E $In $In'] Na L C T").
   Qed.
 
-  Lemma type_let' {Al Bl Cs} E L (T1: _ Al) (T2: _ → _ Bl) (T: _ Cs) C xb e e' tr pre:
+  Lemma type_let' {Al Bl Cl} E L (T1: _ Al) (T2: _ → _ Bl) (T: _ Cl) C xb e e' tr pre:
     Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr -∗
     (∀v: val, typed_body E L C (T2 v h++ T) (subst' xb v e') pre) -∗
     typed_body E L C (T1 h++ T) (let: xb := e in e') (trans_upper tr pre).
@@ -113,8 +113,8 @@ Section typing.
      hypotheses. The is important, since proving [typed_instr]
      will instantiate [T1] and [T2], and hence we know what to search
      for the following hypothesis. *)
-  Lemma type_let {Al Bl Cs Ds} (T1: _ Al) (T2: _ → _ Bl)
-    (T: _ Cs) (T': _ Ds) E L C xb e e' tr tr' pre (tr_res: predl _) :
+  Lemma type_let {Al Bl Cl Dl} (T1: _ Al) (T2: _ → _ Bl)
+    (T: _ Cl) (T': _ Dl) E L C xb e e' tr tr' pre (tr_res: predl _) :
     Closed (xb :b: []) e' → (⊢ typed_instr E L T1 e T2 tr) →
     tctx_extract_ctx E L T1 T T' tr' → tr_res = tr' (trans_upper tr pre) →
     (∀v: val, typed_body E L C (T2 v h++ T') (subst' xb v e') pre) -∗
@@ -124,8 +124,8 @@ Section typing.
     rewrite -typed_body_tctx_incl; [|done]. by iApply type_let'.
   Qed.
 
-  Lemma type_seq {Al Bl Cs Ds} (T1: _ Al) (T2: _ Bl)
-    (T: _ Cs) (T': _ Ds) E L C e e' tr tr' pre (tr_res: predl _) :
+  Lemma type_seq {Al Bl Cl Dl} (T1: _ Al) (T2: _ Bl)
+    (T: _ Cl) (T': _ Dl) E L C e e' tr tr' pre (tr_res: predl _) :
     Closed [] e' → (⊢ typed_instr E L T1 e (const T2) tr) →
     tctx_extract_ctx E L T1 T T' tr' → tr_res = tr' (trans_upper tr pre) →
     typed_body E L C (T2 h++ T') e' pre -∗ typed_body E L C T (e;; e') tr_res.
@@ -167,7 +167,7 @@ Section typing.
     rewrite eval_path_of_val. by iFrame.
   Qed.
 
-  Lemma type_letpath {A Bl Cs} E L (ty: _ A) C (T: _ Bl) (T': _ Cs) x p e tr pre :
+  Lemma type_letpath {A Bl Cl} E L (ty: _ A) C (T: _ Bl) (T': _ Cl) x p e tr pre :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p ◁ ty] T T' tr →
     (∀v: val, typed_body E L C (v ◁ ty +:: T') (subst' x v e) pre) -∗
     typed_body E L C T (let: x := p in e) (tr pre).

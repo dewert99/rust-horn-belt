@@ -32,7 +32,7 @@ Section uniq_bor.
     by iApply ty_shr_lft_mono.
   Qed.
   Next Obligation.
-    move=> 𝔄 ??? vπ *. have ?: Inhabited 𝔄 := populate ((fst ∘ vπ) inhabitant).
+    move=> 𝔄 ??? vπ *. have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
     iIntros "#LFT #? Bor Tok".
     iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
     iMod (bor_sep with "LFT Bor") as "[BorMt Bor]"; [done|].
@@ -57,7 +57,7 @@ Section uniq_bor.
     iDestruct (uniq_proph_tok with "Vo Pc") as "(Vo & PTok & ToPc)".
     iMod ("Close" with "[Vo ToPc] PTok") as "[BorPTok Tok]".
     { iIntros "!> >PTok !>!>". iFrame "Vo". by iApply "ToPc". }
-    iMod (ty_share with "LFT [] BorOwn Tok") as "Upd"; first done.
+    iMod (ty_share with "LFT [] BorOwn Tok") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
     iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Upd").
     rewrite heap_mapsto_vec_singleton.
@@ -75,7 +75,7 @@ Section uniq_bor.
     iDestruct "Big" as (??) "((%vl & Mt & Own) & #Time & Pc)".
     iDestruct (uniq_agree with "Vo Pc") as %[=<-<-].
     iDestruct (uniq_proph_tok with "Vo Pc") as "(Vo & PTok' & ToPc)".
-    iMod (ty_own_proph with "LFT [] Own Tok'") as "Upd"; first done.
+    iMod (ty_own_proph with "LFT [] Own Tok'") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
     iApply step_fupdN_nmono; [apply Le|]. iApply (step_fupdN_wand with "Upd").
     iMod 1 as (ξl ??) "[PTok Close]". iModIntro. rewrite proph_tok_singleton.
@@ -92,7 +92,7 @@ Section uniq_bor.
   Next Obligation.
     move=> ?????[|?]*; [by iIntros|].
     iIntros "#LFT #In #? (%l & %ξ &%&?& #Bor & Shr) [Tok Tok'] !>!>".
-    iDestruct (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; first done.
+    iDestruct (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
     iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξl q' ?) "[PTok Close]".
     iMod (lft_incl_acc with "In Tok'") as (?) "[Tok ToTok]"; [done|].
@@ -210,7 +210,7 @@ Section typing.
   Proof.
     iIntros (? Alv ?[|?][[]|]??) "#LFT E Na L uniq//".
     { iDestruct "uniq" as (??[??]) "_". lia. }
-    have ?: Inhabited 𝔄 := populate ((fst ∘ vπ) inhabitant).
+    have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
     iDestruct "uniq" as (??[??]) "[Vo Bor]".
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
     iMod (bor_acc with "LFT Bor κ") as
@@ -230,7 +230,7 @@ Section typing.
   Proof.
     iIntros (Alv vπ [|?][[]|]??) "#LFT #UNIQ E L uniq //".
     { iDestruct "uniq" as (??[??]) "_". lia. }
-    have ?: Inhabited 𝔄 := populate ((fst ∘ vπ) inhabitant).
+    have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
     iDestruct "uniq" as (??[??]) "[Vo Bor]".
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
     iMod (bor_acc with "LFT Bor κ") as "[(%&%&(%& >Mt & ty)& _ & Pc) ToBor]"; [done|].
