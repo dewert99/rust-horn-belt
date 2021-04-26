@@ -10,6 +10,7 @@ theories/util/update.v
 theories/util/discrete_fun.v
 theories/util/fancy_lists.v
 theories/util/functional_choice.v
+theories/prophecy/syn_type.v
 theories/prophecy/prophecy.v
 theories/lifetime/lifetime_sig.v
 theories/lifetime/model/definitions.v

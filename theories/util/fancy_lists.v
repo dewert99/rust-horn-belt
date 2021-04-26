@@ -18,9 +18,12 @@ Fixpoint tapp {𝒯} (Xl Yl: tlist 𝒯) : tlist 𝒯 :=
   match Xl with ^[] => Yl | X ^:: Xl' => X ^:: tapp Xl' Yl end.
 Infix "^++" := tapp (at level 60, right associativity).
 
-Fixpoint tmap {𝒯 Y} (F: 𝒯 → Y) (Xl: tlist 𝒯) : tlist Y :=
+Fixpoint tmap {𝒯 𝒰} (F: 𝒯 → 𝒰) (Xl: tlist 𝒯) : tlist 𝒰 :=
   match Xl with ^[] => ^[] | X ^:: Xl' => F X ^:: tmap F Xl' end.
 Infix "^<$>" := tmap (at level 61, left associativity).
+
+Fixpoint tmap' {A 𝒯} (f: A → 𝒯) (xl: list A) : tlist 𝒯 :=
+  match xl with [] => ^[] | x :: xl' => f x ^:: tmap' f xl' end.
 
 Fixpoint tnth {𝒯} (Y: 𝒯) (Xl: tlist 𝒯) (i: nat) : 𝒯 := match Xl with
   ^[] => Y | X ^:: Xl' => match i with 0 => X | S j => tnth Y Xl' j end end.

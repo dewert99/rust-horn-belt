@@ -1,5 +1,3 @@
-From lrust.prophecy Require Import prophecy.
-From lrust.lifetime Require Import frac_borrow.
 From lrust.lang Require Import proofmode.
 
 (* Last, so that we make sure we shadow the defintion of delete for
