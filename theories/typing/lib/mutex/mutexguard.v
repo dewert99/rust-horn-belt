@@ -16,7 +16,7 @@ Set Default Proof Using "Type".
 *)
 
 Section mguard.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   (*
     pub struct MutexGuard<'a, T: ?Sized + 'a> {
@@ -152,7 +152,7 @@ Section mguard.
 End mguard.
 
 Section code.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Lemma mutex_acc E l ty tid q α κ :
     ↑lftN ⊆ E → ↑mutexN ⊆ E →

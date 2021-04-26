@@ -8,7 +8,7 @@ From lrust.typing.lib Require Export rc.
 Set Default Proof Using "Type".
 
 Section weak.
-  Context `{!typeG TYPE Ty Σ, !rcG Σ}.
+  Context `{!typeG Σ, !rcG Σ}.
 
   Program Definition weak (ty : type) :=
     {| ty_size := 1; ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
@@ -127,7 +127,7 @@ Section weak.
 End weak.
 
 Section code.
-  Context `{!typeG TYPE Ty Σ, !rcG Σ}.
+  Context `{!typeG Σ, !rcG Σ}.
 
   Definition rc_upgrade : val :=
     funrec: <> ["w"] :=

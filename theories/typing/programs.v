@@ -3,7 +3,7 @@ From lrust.typing Require Export type_context cont_context.
 Set Default Proof Using "Type".
 
 Section typing.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   (** Function Body *)
   (* This is an iProp because it is also used by the function type. *)
@@ -47,7 +47,8 @@ Section typing.
 
   Definition typed_write {A B A'} (E: elctx) (L: llctx) (ty: type A) (tyb: type B)
     (ty': type A') (st: A → B → A') : Prop := ∀vπ d v tid qL,
-    lft_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗ ty.(ty_own) vπ d tid [v] ={⊤}=∗
+    lft_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
+    ty.(ty_own) vπ d tid [v] ={⊤}=∗
       ∃(l: loc) vl, ⌜v = #l ∧ length vl = tyb.(ty_size)⌝ ∗ l ↦∗ vl ∗
         ∀wπ db, ▷ l ↦∗: tyb.(ty_own) wπ db tid -∗ ⧖(S db) ={⊤}=∗
           llctx_interp L qL ∗ ty'.(ty_own) (st ∘ vπ ⊛ wπ) (S db) tid [v].
@@ -100,8 +101,8 @@ Section typing.
     iIntros (?) "e e'". iIntros (tid vπl2). move: (papp_ex vπl2)=> [vπl[vπl'->]].
     iIntros "#LFT #TIME #PROPH #UNIQ #E Na L C [T1 T] Obs". wp_bind e.
     iApply (wp_wand with "[e L T1 Na Obs]").
-    { iApply ("e" with "LFT TIME PROPH UNIQ E Na L T1"). iApply proph_obs_eq; [|done]=> ?.
-      by rewrite /trans_upper papply_app papp_sepl. }
+    { iApply ("e" with "LFT TIME PROPH UNIQ E Na L T1").
+      iApply proph_obs_eq; [|done]=> ?. by rewrite /trans_upper papply_app papp_sepl. }
     iIntros (v). iIntros "(%vπ & Na & L & T2 & ?)". wp_let. iCombine "T2 T" as "T2T".
     iApply ("e'" $! v tid (vπ -++ vπl') with "LFT TIME PROPH UNIQ E Na L C T2T").
     iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app papp_sepr.
@@ -234,13 +235,13 @@ Section typing.
     (tyr': _ B') (tyb: _ C) stw gtr str (n: Z) pw pr vπw vπr E L qL tid :
     n = tyb.(ty_size) →
     typed_write E L tyw tyb tyw' stw → typed_read E L tyr tyb tyr' gtr str →
-    {{{ lft_ctx ∗ time_ctx ∗ uniq_ctx ∗ elctx_interp E ∗ na_own tid ⊤ ∗ llctx_interp L qL ∗
-        tctx_interp tid +[pw ◁ tyw; pr ◁ tyr] -[vπw; vπr] }}}
+    {{{ lft_ctx ∗ time_ctx ∗ uniq_ctx ∗ elctx_interp E ∗ na_own tid ⊤ ∗
+        llctx_interp L qL ∗ tctx_interp tid +[pw ◁ tyw; pr ◁ tyr] -[vπw; vπr] }}}
       (pw <-{n} !pr)
     {{{ RET #☠; na_own tid ⊤ ∗ llctx_interp L qL ∗ tctx_interp tid
         +[pw ◁ tyw'; pr ◁ tyr'] -[stw ∘ vπw ⊛ (gtr ∘ vπr); str ∘ vπr] }}}.
   Proof.
-    iIntros (-> Wrt Read ?) "(#LFT & #TIME & #UNIQ & #E & Na & [L L'] & (pw & pr &_)) ToΦ".
+    iIntros (-> Wrt Read ?) "(#LFT & TIME & UNIQ & #E & Na & [L L'] & (pw & pr &_)) ToΦ".
     wp_bind pw. iApply (wp_hasty with "pw"). iIntros (???) "_ tyw".
     wp_bind pr. iApply (wp_hasty with "pr"). iIntros (???) "#time tyr".
     iApply wp_fupd. iMod (Wrt with "LFT UNIQ E L tyw") as (??[->?]) "[Mtw Closew]".

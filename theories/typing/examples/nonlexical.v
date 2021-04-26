@@ -13,7 +13,7 @@ From lrust.typing Require Import typing lib.option.
 *)
 
 Section non_lexical.
-  Context `{!typeG TYPE Ty Σ} (HashMap K V : type) `{!Copy K}
+  Context `{!typeG Σ} (HashMap K V : type) `{!Copy K}
           (defaultv get_mut insert: val).
 
   Hypothesis defaultv_type :

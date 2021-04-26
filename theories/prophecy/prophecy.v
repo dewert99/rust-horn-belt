@@ -1,24 +1,19 @@
 Import EqNotations.
-Require Import ProofIrrelevance Equality FunctionalExtensionality.
+Require Import Equality FunctionalExtensionality.
 From stdpp Require Import strings.
 From iris.algebra Require Import auth cmra functions gmap csum frac agree.
 From iris.bi Require Import fractional.
 From iris.proofmode Require Import tactics.
 From iris.base_logic Require Import invariants.
-From lrust.util Require Import basic discrete_fun functional_choice.
+From lrust.util Require Import basic discrete_fun proof_irrelevance functional_choice.
+From lrust.prophecy Require Export syn_type.
 
-Ltac proof_subst x y :=
-  (have ?: x = y by apply proof_irrelevance); subst x.
-
-Section basic.
-Context `{!EqDecision TYPE} {Ty: TYPE → Type}.
-Coercion Ty: TYPE >-> Sortclass.
-Implicit Type 𝔄 𝔅: TYPE.
+Implicit Type 𝔄 𝔅: syn_type.
 
 (** * Basic Notions *)
 
 Definition proph_var_body 𝔄 : Type := positive * inhabited 𝔄.
-Record proph_var := PrVar { pv_ty: TYPE; pv_bd: proph_var_body pv_ty }.
+Record proph_var := PrVar { pv_ty: syn_type; pv_bd: proph_var_body pv_ty }.
 Add Printing Constructor proph_var.
 
 Global Instance proph_var_eq_dec: EqDecision proph_var.
@@ -44,7 +39,7 @@ Local Notation "π .≡{ ξs }≡ π'" := (proph_asn_eqv ξs π π')
   (at level 70, format "π  .≡{ ξs }≡  π'").
 
 Definition proph_dep {A} (vπ: _ → A) ξs := ∀π π', π .≡{ξs}≡ π' → vπ π = vπ π'.
-Local Notation "vπ ./ ξs" := (proph_dep vπ ξs) (at level 70, format "vπ  ./  ξs").
+Notation "vπ ./ ξs" := (proph_dep vπ ξs) (at level 70, format "vπ  ./  ξs").
 
 (** ** Lemmas *)
 
@@ -170,8 +165,7 @@ Local Definition add_line ξ it S : proph_smryUR :=
   .<[ξ.(pv_ty) := <[ξ.(pv_bd).1 := it]> (S ξ.(pv_ty))]> S.
 
 Definition prophΣ := #[GFunctor prophUR].
-Class prophPreG Σ := ProphPreG
-  { proph_preG_inG:> inG Σ prophUR; proph_pre_type_eq_dec:> EqDecision TYPE }.
+Class prophPreG Σ := ProphPreG { proph_preG_inG:> inG Σ prophUR }.
 Class prophG Σ := ProphG { proph_inG:> prophPreG Σ; proph_name: gname }.
 Instance subG_prophPreG {Σ} : subG prophΣ Σ → prophPreG Σ.
 Proof. solve_inG. Qed.
@@ -202,10 +196,6 @@ Definition proph_obs (φπ: proph Prop) : iProp Σ :=
   ∃L, ⌜∀π, π ◁ L → φπ π⌝ ∗ [∗ list] pli ∈ L, proph_atom pli.
 
 End defs.
-End basic.
-
-Arguments prophG: clear implicits.
-Arguments prophPreG: clear implicits.
 
 Notation "q :[ ξ ]" := (proph_tok ξ q)
   (at level 2, left associativity, format "q :[ ξ ]") : bi_scope.
@@ -216,20 +206,12 @@ Notation ".⟨ φπ ⟩" := (proph_obs φπ%type%stdpp)
 Notation "⟨ π , φ ⟩" := (proph_obs (λ π, φ%type%stdpp))
   (at level 1, format "⟨ π ,  φ ⟩") : bi_scope.
 
-Notation "vπ ./ ξs" := (proph_dep vπ ξs) (at level 70, format "vπ  ./  ξs").
-
 Add Printing Constructor proph_var.
-Local Notation ".{ ξ := vπ }" := (ProphLogItem ξ vπ)
-  (at level 1, format ".{ ξ  :=  vπ }").
-Local Notation "π ◁ L" := (proph_sat π L) (at level 70, format "π  ◁  L").
-Local Notation "S :~ L" := (proph_sim S L) (at level 70, format "S  :~  L").
 
 (** * Iris Lemmas *)
 
 Section lemmas.
-Context `{!invG Σ, !prophG TYPE Ty Σ}.
-Coercion Ty: TYPE >-> Sortclass.
-Implicit Type 𝔄 𝔅: TYPE.
+Context `{!invG Σ, !prophG Σ}.
 
 (** Instances *)
 
@@ -276,8 +258,8 @@ Qed.
 
 (** Initialization *)
 
-Lemma proph_init `{!prophPreG TYPE Ty Σ} E :
-  ↑prophN ⊆ E → ⊢ |={E}=> ∃ _: prophG TYPE Ty Σ, proph_ctx.
+Lemma proph_init `{!prophPreG Σ} E :
+  ↑prophN ⊆ E → ⊢ |={E}=> ∃ _: prophG Σ, proph_ctx.
 Proof.
   move=> ?. iMod (own_alloc (● ε)) as (γ) "Own"; [by apply auth_auth_valid|].
   set IProphG := ProphG Σ _ γ. iExists IProphG.
@@ -374,7 +356,7 @@ Qed.
 
 (** Manipulating Prophecy Observations *)
 
-Implicit Type φπ ψπ: @proph _ Ty Prop.
+Implicit Type φπ ψπ: proph Prop.
 
 Lemma proph_obs_true φπ : (∀π, φπ π) → ⊢ ⟨π, φπ π⟩.
 Proof. move=> ?. iExists []. by iSplit. Qed.
@@ -419,13 +401,13 @@ Global Opaque proph_ctx proph_tok proph_obs.
 
 (** * Prophecy Equalizer *)
 
-Definition proph_eqz `{!invG Σ, !prophG TYPE Ty Σ} {A} (uπ vπ: _ → A) : iProp Σ :=
+Definition proph_eqz `{!invG Σ, !prophG Σ} {A} (uπ vπ: _ → A) : iProp Σ :=
   ∀E ξs q, ⌜↑prophN ⊆ E ∧ vπ ./ ξs⌝ -∗ q:+[ξs] ={E}=∗ ⟨π, uπ π = vπ π⟩ ∗ q:+[ξs].
 
 Notation "uπ :== vπ" := (proph_eqz uπ vπ) (at level 70, format "uπ  :==  vπ") : bi_scope.
 
 Section lemmas.
-Context `{!invG Σ, !prophG TYPE Ty Σ}.
+Context `{!invG Σ, !prophG Σ}.
 
 (** ** Constructing Prophecy Equalizers *)
 

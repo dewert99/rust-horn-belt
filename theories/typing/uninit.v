@@ -3,7 +3,7 @@ From lrust.typing Require Export type.
 Set Default Proof Using "Type".
 
 Section uninit.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Program Definition uninit n : type unit := {|
     ty_size := n;  ty_lfts := [];  ty_E := [];
@@ -28,7 +28,7 @@ Notation unit_ty := (uninit 0).
 Notation "()" := unit_ty : lrust_type_scope.
 
 Section typing.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Global Instance uninit_send n : Send (uninit n). Proof. done. Qed.
   Global Instance uninit_sync n : Sync (uninit n). Proof. done. Qed.

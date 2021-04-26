@@ -4,7 +4,7 @@ From lrust.typing Require Import uninit.
 Set Default Proof Using "Type".
 
 Section maybe_uninit.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Local Lemma maybe_uninit_mt {A} (ty: _ A) vπ d tid l q :
     (l ↦∗{q}: λ vl, ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
@@ -79,9 +79,9 @@ End maybe_uninit.
 Notation "?" := maybe_uninit : lrust_type_scope.
 
 Section typing.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
-  Global Instance maybe_uninit_type_ne {A} : TypeNonExpansive (@maybe_uninit _ _ _ _ A).
+  Global Instance maybe_uninit_type_ne {A} : TypeNonExpansive (@maybe_uninit _ _ A).
   Proof.
     constructor; [by apply type_lft_morphism_id_like|done| |];
     [move=>/= > ->*|move=>/= >*]; by do 4 f_equiv.

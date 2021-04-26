@@ -28,7 +28,7 @@ Definition writing_st : rwlock_stR :=
 Definition rwlockN := lrustN .@ "rwlock".
 
 Section rwlock_inv.
-  Context `{!typeG TYPE Ty Σ, !rwlockG Σ}.
+  Context `{!typeG Σ, !rwlockG Σ}.
 
   Definition rwlock_inv tid_own tid_shr (l : loc) (γ : gname) (α : lft) ty
     : iProp Σ :=
@@ -90,7 +90,7 @@ Section rwlock_inv.
 End rwlock_inv.
 
 Section rwlock.
-  Context `{!typeG TYPE Ty Σ, !rwlockG Σ}.
+  Context `{!typeG Σ, !rwlockG Σ}.
 
   (* Original Rust type (we ignore poisoning):
      pub struct RwLock<T: ?Sized> {

@@ -6,7 +6,7 @@ Open Scope Z_scope.
 Implicit Type z: Z.
 
 Section int.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Program Definition int: type Z :=
     {| pt_size := 1;  pt_own z _ vl := ⌜vl = [ #z]⌝; |}%I.

@@ -3,7 +3,7 @@ From lrust.typing Require Import programs.
 Set Default Proof Using "Type".
 
 Section shr_bor.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Program Definition shr_bor {A} (κ: lft) (ty: type A) : type A := {|
     st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlv_E ty κ;
@@ -35,9 +35,9 @@ End shr_bor.
 Notation "&shr{ κ }" := (shr_bor κ) (format "&shr{ κ }") : lrust_type_scope.
 
 Section typing.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
-  Global Instance shr_type_contractive {A} κ : TypeContractive (@shr_bor _ _ _ _ A κ).
+  Global Instance shr_type_contractive {A} κ : TypeContractive (@shr_bor _ _ A κ).
   Proof. split; [by apply (type_lft_morphism_add_one κ)|done| |].
     - move=>/= *. by do 4 f_equiv.
     - move=>/= *. do 8 (f_contractive || f_equiv). by simpl in *.

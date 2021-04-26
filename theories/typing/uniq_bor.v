@@ -4,10 +4,10 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import type_context programs.
 Set Default Proof Using "Type".
 
+Implicit Type 𝔄 𝔅: syn_type.
+
 Section uniq_bor.
-  Context `{!typeG TYPE Ty Σ}.
-  Coercion Ty: TYPE >-> Sortclass.
-  Implicit Type 𝔄 𝔅: TYPE.
+  Context `{!typeG Σ}.
 
   Program Definition uniq_bor {𝔄} (κ: lft) (ty: type 𝔄) : type (𝔄 * 𝔄) := {|
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlv_E ty κ;
@@ -109,11 +109,9 @@ End uniq_bor.
 Notation "&uniq{ κ }" := (uniq_bor κ) (format "&uniq{ κ }") : lrust_type_scope.
 
 Section typing.
-  Context `{!typeG TYPE Ty Σ}.
-  Coercion Ty: TYPE >-> Sortclass.
-  Implicit Type 𝔄 𝔅: TYPE.
+  Context `{!typeG Σ}.
 
-  Global Instance uniq_type_contractive {𝔄} κ : TypeContractive (@uniq_bor _ _ _ _ 𝔄 κ).
+  Global Instance uniq_type_contractive {𝔄} κ : TypeContractive (@uniq_bor _ _ 𝔄 κ).
   Proof. split; [by apply (type_lft_morphism_add_one κ)|done| |].
     - move=> */=. do 17 (f_contractive || f_equiv). by simpl in *.
     - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
@@ -225,7 +223,7 @@ Section typing.
   Qed.
 
   Lemma write_uniq {𝔄} E L κ (ty : type 𝔄):
-    lctx_lft_alive E L κ → typed_write E L (&uniq{κ}ty) ty (&uniq{κ}ty) (λ vπ wπ, (wπ, vπ.2)).
+    lctx_lft_alive E L κ → typed_write E L (&uniq{κ}ty) ty (&uniq{κ}ty) (λ v w, (w, v.2)).
   Proof.
     iIntros (Halive).
     iIntros (vπ [|depth1] [[]|] tid qL) "#LFT #UNIQ HE HL Hown //".
@@ -243,9 +241,9 @@ Section typing.
     iDestruct "Hown" as (vl') "[H↦ Hown]".
     iMod ("Hclose'" with "[H↦ PC Hown]") as "[Hb Htok]".
     { iNext. iExists _, _. iFrame "Hdepth1 PC". iExists _. iFrame. }
-    iMod ("Hclose" with "Htok") as "$". 
+    iMod ("Hclose" with "Htok") as "$".
     iExists _, _.
-    auto with iFrame. 
+    auto with iFrame.
   Qed.
 
 End typing.

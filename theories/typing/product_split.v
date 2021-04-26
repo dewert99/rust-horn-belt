@@ -5,7 +5,7 @@ From lrust.typing Require Import type_context product own uniq_bor shr_bor.
 Set Default Proof Using "Type".
 
 Section product_split.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
 (*
   (** General splitting / merging for pointer types *)

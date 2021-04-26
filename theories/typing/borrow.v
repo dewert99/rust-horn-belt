@@ -4,16 +4,19 @@ From lrust.typing Require Export uniq_bor shr_bor own.
 From lrust.typing Require Import lft_contexts type_context programs.
 Set Default Proof Using "Type".
 
+Implicit Type 𝔄 𝔅: syn_type.
+
 (** The rules for borrowing and derferencing borrowed non-Copy pointers are in
   a separate file so make sure that own.v and uniq_bor.v can be compiled
   concurrently. *)
 
 Section borrow.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
-  Lemma tctx_borrow {A} E L p n (ty : _ (Ty A)) κ:
+  Lemma tctx_borrow {𝔄} E L p n (ty : type 𝔄) κ:
     elctx_sat E L (ty_outlv_E ty κ) →
-    tctx_incl E L +[p ◁ own_ptr n ty] +[p ◁ &uniq{κ}ty; p ◁{κ} own_ptr n ty] (λ post '-[a], ∀ a', post -[@pair (Ty A) (Ty A) a a'; a']).
+    tctx_incl E L +[p ◁ own_ptr n ty] +[p ◁ &uniq{κ}ty; p ◁{κ} own_ptr n ty]
+      (λ post '-[a], ∀ a', post -[@pair 𝔄 𝔄 a a'; a']).
   Proof.
     iIntros (Houtlv tid ? [vπ []] ?) "#LFT #PROPH #UNIQ #HE HL [H _] Hproph".
     iDestruct "H" as ([[]|] [|depth]) "(% & #Hdepth & Hown)"=>//=.
@@ -21,17 +24,17 @@ Section borrow.
     iDestruct (Houtlv with "HL HE") as "#Hout0".
     iDestruct (elctx_interp_ty_outlv_E with "Hout0") as "Hout".
     iMod (uniq_intro _ vπ with "PROPH UNIQ") as (ξ) "[HVo HPC]"; first solve_ndisj.
-    iMod (bor_create ⊤ κ (∃ wπ depth, l ↦∗: ty.(ty_own) wπ depth tid ∗  
-      ⧖(S depth) ∗ .PC[PrVar A (ξ, prval_to_inh vπ)] (wπ, depth))%I with "LFT [HPC Hmt]")
+    iMod (bor_create ⊤ κ (∃ wπ depth, l ↦∗: ty.(ty_own) wπ depth tid ∗
+      ⧖(S depth) ∗ .PC[prval_to_prvar vπ ξ] (wπ, depth))%I with "LFT [HPC Hmt]")
       as "[Hbor Hext]";[done |  |].
-    { iExists _, _. by iFrame. } 
+    { iExists _, _. by iFrame. }
     iExists -[_; λ π, π (prval_to_prvar vπ ξ)]; rewrite right_id; iFrame "HL".
     iSplitL "Hproph".
     { iApply proph_obs_impl; [|done]; naive_solver. }
     iSplitL "HVo Hbor".
-    - iExists _, _. iFrame "#%". 
-      iExists _, _. by iFrame. 
-    - iExists _. iIntros "{$%} !> #H†". 
+    - iExists _, _. iFrame "#%".
+      iExists _, _. by iFrame.
+    - iExists _. iIntros "{$%} !> #H†".
       iMod ("Hext" with "H†") as "Hext".
       iMod (bi.later_exist_except_0 with "Hext") as (??) "(? & >? & PC)".
       iExists _, _.

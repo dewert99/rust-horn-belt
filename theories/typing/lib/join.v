@@ -7,7 +7,7 @@ Set Default Proof Using "Type".
 Definition joinN := lrustN .@ "join".
 
 Section join.
-  Context `{!typeG TYPE Ty Σ, !spawnG Σ}.
+  Context `{!typeG Σ, !spawnG Σ}.
 
   (* This model is very far from rayon::join, which uses a persistent
      work-stealing thread-pool.  Still, the important bits are right:

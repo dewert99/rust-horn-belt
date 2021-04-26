@@ -3,7 +3,7 @@ From lrust.typing Require Export type.
 Set Default Proof Using "Type".
 
 Section mod_ty.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Local Lemma mod_ty_mt {A B} (f: A → B) ty vπ' d tid l q :
     (l ↦∗{q}: λ vl, ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ ty.(ty_own) vπ d tid vl)%I ⊣⊢
@@ -64,7 +64,7 @@ End mod_ty.
 Notation "<{ f }>" := (mod_ty f) (format "<{ f }>"): lrust_type_scope.
 
 Section typing.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Global Instance mod_ty_type_ne {A B} (f: A → B) : TypeNonExpansive <{f}>%T.
   Proof.

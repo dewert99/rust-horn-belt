@@ -23,10 +23,10 @@ Proof. solve_inG. Qed.
 Section type_soundness.
   Definition exit_cont : val := λ: [<>], #☠.
 
-  Definition main_type `{!typeG TYPE Ty Σ} := (fn(∅) → unit)%T.
+  Definition main_type `{!typeG Σ} := (fn(∅) → unit)%T.
 
   Theorem type_soundness `{!typePreG Σ} (main : val) σ t :
-    (∀ `{!typeG TYPE Ty Σ}, typed_val main main_type) →
+    (∀ `{!typeG Σ}, typed_val main main_type) →
     rtc erased_step ([main [exit_cont]%E], ∅) (t, σ) →
     nonracing_threadpool t σ ∧
     (∀ e, e ∈ t → is_Some (to_val e) ∨ reducible e σ).

@@ -10,7 +10,7 @@ Fixpoint valpl_to_exprs {As: Types} (vl: valpl As) : list expr :=
     _ ^:: _, v -:: vl' => (v: expr) :: valpl_to_exprs vl' end.
 
 Section cont_context.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Definition cont_postcondition: iProp Σ := True%I.
 
@@ -35,7 +35,7 @@ Notation "k ◁cont{ L , T } pre" := (CCtxe k L _ T pre)
 Notation cctx_interp tid := (big_sepTL (cctx_elt_interp tid)).
 
 Section cont_context.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Lemma cctx_interp_forall tid C :
     cctx_interp tid C ⊣⊢ ∀ c, ⌜c ∈ C⌝ → cctx_elt_interp tid c.

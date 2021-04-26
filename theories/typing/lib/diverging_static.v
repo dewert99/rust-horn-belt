@@ -4,7 +4,7 @@ From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
 Section diverging_static.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   (* Show that we can convert any live borrow to 'static with an infinite
      loop. *)

@@ -5,7 +5,7 @@ From lrust.typing Require Import own programs cont.
 Set Default Proof Using "Type".
 
 Section fn.
-  Context `{!typeG TYPE Ty Σ} {A : Type} {n : nat}.
+  Context `{!typeG Σ} {A : Type} {n : nat}.
 
   Record fn_params := FP {
     fp_E_explicit : lft → elctx;
@@ -160,7 +160,7 @@ Notation "'fn(' E ')' '→' R" :=
 Instance elctx_empty : Empty (lft → elctx) := λ ϝ, [].
 
 Section typing.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Lemma fn_subtype {A n} E0 L0 (fp fp' : A → fn_params n) :
     (∀ x ϝ, let EE := E0 ++ fp_E (fp' x) ϝ in

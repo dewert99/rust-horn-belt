@@ -6,7 +6,7 @@ Set Default Proof Using "Type".
 Implicit Type b: bool.
 
 Section bool.
-  Context `{!typeG TYPE Ty Σ}.
+  Context `{!typeG Σ}.
 
   Program Definition bool_ty: type bool :=
     {| pt_size := 1;  pt_own b _ vl := ⌜vl = [ #b]⌝; |}%I.
