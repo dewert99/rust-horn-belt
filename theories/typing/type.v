@@ -55,12 +55,12 @@ Record type `{!typeG Σ} A := {
 
   ty_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
     κ ⊑ lft_intersect_list ty_lfts -∗ ty_own vπ d tid vl -∗ q.[κ]
-    ={E}=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗
-      q':+[ξs] ∗ (q':+[ξs] ={E}=∗ ty_own vπ d tid vl ∗ q.[κ]);
+    ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vπ ./ ξl⌝ ∗
+      q':+[ξl] ∗ (q':+[ξl] ={E}=∗ ty_own vπ d tid vl ∗ q.[κ]);
   ty_shr_proph E vπ d κ tid l κ' q : ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
     κ' ⊑ lft_intersect_list ty_lfts -∗ ty_shr vπ d κ tid l -∗ q.[κ']
-    ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗
-      q':+[ξs] ∗ (q':+[ξs] ={E}=∗ ty_shr vπ d κ tid l ∗ q.[κ']);
+    ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vπ ./ ξl⌝ ∗
+      q':+[ξl] ∗ (q':+[ξl] ={E}=∗ ty_shr vπ d κ tid l ∗ q.[κ']);
 }.
 Existing Instance ty_shr_persistent.
 Instance: Params (@ty_size) 3 := {}.  Instance: Params (@ty_lfts) 3 := {}.
@@ -117,7 +117,7 @@ Notation tyl_lft tyl := (lft_intersect_list (tyl_lfts tyl)).
 Notation tyl_E tyl := (concat ((λ _, ty_E) +c<$> tyl)).
 Notation tyl_outlv_E tyl κ := (concat ((λ _ ty, ty_outlv_E ty κ) +c<$> tyl)).
 
-Lemma tyl_outlv_E_elctx_sat `{!typeG Σ} {As} E L (tyl: typel As) α β :
+Lemma tyl_outlv_E_elctx_sat `{!typeG Σ} {Al} E L (tyl: typel Al) α β :
   tyl_outlv_E tyl β ⊆+ E → lctx_lft_incl E L α β →
   elctx_sat E L (tyl_outlv_E tyl α).
 Proof.
@@ -142,8 +142,8 @@ Record simple_type `{!typeG Σ} A := {
     d ≤ d' → st_own vπ d tid vl -∗ st_own vπ d' tid vl;
   st_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
     κ ⊑ lft_intersect_list st_lfts -∗ st_own vπ d tid vl -∗ q.[κ]
-    ={E}=∗ |={E}▷=>^d |={E}=> ∃ξs q', ⌜vπ ./ ξs⌝ ∗
-      q':+[ξs] ∗ (q':+[ξs] ={E}=∗ st_own vπ d tid vl ∗ q.[κ]);
+    ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vπ ./ ξl⌝ ∗
+      q':+[ξl] ∗ (q':+[ξl] ={E}=∗ st_own vπ d tid vl ∗ q.[κ]);
 }.
 Existing Instance st_own_persistent.
 Instance: Params (@st_size) 3 := {}.  Instance: Params (@st_lfts) 3 := {}.
@@ -180,8 +180,8 @@ Next Obligation. move=> >. apply st_own_proph. Qed.
 Next Obligation.
   move=> *. iIntros "#LFT _ Incl [%vl[? Own]]". iIntros "Tok !>!>".
   iMod (st_own_proph with "LFT Incl Own Tok") as "Upd"; [done|].
-  iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q' ?) "[Ptoks Upd]".
-  iModIntro. iExists ξs, q'. iSplit; [done|]. iFrame "Ptoks". iIntros "Tok".
+  iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[Ptoks Upd]".
+  iModIntro. iExists ξl, q'. iSplit; [done|]. iFrame "Ptoks". iIntros "Tok".
   iMod ("Upd" with "Tok") as "[?$]". iModIntro. iExists vl. iFrame.
 Qed.
 
@@ -248,8 +248,8 @@ Section ofe.
   Qed.
   Canonical Structure typeO A : ofe := Ofe (type A) type_ofe_mixin.
 
-  Global Instance typel_equiv {As} : Equiv (typel As) := @hlist_equiv _ type _ _.
-  Global Instance typel_dist {As} : Dist (typel As) := @hlist_dist _ typeO _.
+  Global Instance typel_equiv {Al} : Equiv (typel Al) := @hlist_equiv _ type _ _.
+  Global Instance typel_dist {Al} : Dist (typel Al) := @hlist_dist _ typeO _.
 
   Global Instance ty_size_ne {A} n : Proper ((≡{n}≡@{_ A}) ==> (=)) ty_size.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
@@ -492,10 +492,10 @@ Class TypeContractive `{!typeG Σ} {A B} (T: type A → type B) : Prop := {
     (∀vπ d κ tid l, (T ty).(ty_shr) vπ d κ tid l ≡{n}≡ (T ty').(ty_shr) vπ d κ tid l);
 }.
 
-Class ListTypeNonExpansive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
+Class ListTypeNonExpansive `{!typeG Σ} {A Bl} (T: type A → typel Bl) : Prop :=
   type_list_non_expansive: ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeNonExpansive) Tl.
 
-Class ListTypeContractive `{!typeG Σ} {A Bs} (T: type A → typel Bs) : Prop :=
+Class ListTypeContractive `{!typeG Σ} {A Bl} (T: type A → typel Bl) : Prop :=
   type_list_contractive: ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeContractive) Tl.
 
 Section type_contractive.
@@ -550,11 +550,11 @@ Section type_contractive.
   Proof. exists +[]. split; by [|constructor]. Qed.
   Global Instance type_list_contractive_nil {A} : ListTypeContractive (λ _: _ A, +[]).
   Proof. exists +[]. split; by [|constructor]. Qed.
-  Global Instance type_list_non_expansive_cons {A B Bs} (T: _ A → _ B) (T': _ → _ Bs) :
+  Global Instance type_list_non_expansive_cons {A B Bl} (T: _ A → _ B) (T': _ → _ Bl) :
     TypeNonExpansive T → ListTypeNonExpansive T' →
     ListTypeNonExpansive (λ ty, T ty +:: T' ty).
   Proof. move=> ? [Tl[->?]]. exists (T +:: Tl). split; by [|constructor]. Qed.
-  Global Instance type_list_contractive_cons {A B Bs} (T: _ A → _ B) (T': _ → _ Bs) :
+  Global Instance type_list_contractive_cons {A B Bl} (T: _ A → _ B) (T': _ → _ Bl) :
     TypeContractive T → ListTypeContractive T' →
     ListTypeContractive (λ ty, T ty +:: T' ty).
   Proof. move=> ? [Tl[->?]]. exists (T +:: Tl). split; by [|constructor]. Qed.
@@ -579,11 +579,11 @@ Class Copy `{!typeG Σ} {A} (ty: type A) := {
 Existing Instances copy_persistent.
 Instance: Params (@Copy) 3 := {}.
 
-Class ListCopy `{!typeG Σ} {As} (tyl: typel As) := list_copy: HForall (λ _, Copy) tyl.
+Class ListCopy `{!typeG Σ} {Al} (tyl: typel Al) := list_copy: HForall (λ _, Copy) tyl.
 Instance: Params (@ListCopy) 3 := {}.
 Global Instance list_copy_nil `{!typeG Σ} : ListCopy +[].
 Proof. constructor. Qed.
-Global Instance list_copy_cons `{!typeG Σ} {A As} (ty: _ A) (tyl: _ As) :
+Global Instance list_copy_cons `{!typeG Σ} {A Al} (ty: _ A) (tyl: _ Al) :
   Copy ty → ListCopy tyl → ListCopy (ty +:: tyl).
 Proof. by constructor. Qed.
 
@@ -592,11 +592,11 @@ Class Send `{!typeG Σ} {A} (ty: type A) :=
     ty.(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) vπ d tid' vl.
 Instance: Params (@Send) 3 := {}.
 
-Class ListSend `{!typeG Σ} {As} (tyl: typel As) := list_send: HForall (λ _, Send) tyl.
+Class ListSend `{!typeG Σ} {Al} (tyl: typel Al) := list_send: HForall (λ _, Send) tyl.
 Instance: Params (@ListSend) 3 := {}.
 Global Instance list_send_nil `{!typeG Σ} : ListSend +[].
 Proof. constructor. Qed.
-Global Instance list_send_cons `{!typeG Σ} {A As} (ty: _ A) (tyl: _ As) :
+Global Instance list_send_cons `{!typeG Σ} {A Al} (ty: _ A) (tyl: _ Al) :
   Send ty → ListSend tyl → ListSend (ty +:: tyl).
 Proof. by constructor. Qed.
 
@@ -605,11 +605,11 @@ Class Sync `{!typeG Σ} {A} (ty: type A) :=
     ty.(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) vπ d κ tid' l.
 Instance: Params (@Sync) 3 := {}.
 
-Class ListSync `{!typeG Σ} {As} (tyl: typel As) := list_sync: HForall (λ _, Sync) tyl.
+Class ListSync `{!typeG Σ} {Al} (tyl: typel Al) := list_sync: HForall (λ _, Sync) tyl.
 Instance: Params (@ListSync) 3 := {}.
 Global Instance list_sync_nil `{!typeG Σ} : ListSync +[].
 Proof. constructor. Qed.
-Global Instance list_sync_cons `{!typeG Σ} {A As} (ty: _ A) (tyl: _ As) :
+Global Instance list_sync_cons `{!typeG Σ} {A Al} (ty: _ A) (tyl: _ Al) :
   Sync ty → ListSync tyl → ListSync (ty +:: tyl).
 Proof. by constructor. Qed.
 
@@ -823,11 +823,11 @@ Section subtyping.
 
   (** List *)
 
-  Definition subtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
-    (fl: plist2 (→) As Bs) : Prop :=
+  Definition subtypel {Al Bl} E L (tyl: typel Al) (tyl': typel Bl)
+    (fl: plist2 (→) Al Bl) : Prop :=
     HForall2_1 (λ _ _ ty ty' f, subtype E L f ty ty') tyl tyl' fl.
-  Definition eqtypel {As Bs} E L (tyl: typel As) (tyl': typel Bs)
-    (fl: plist2 (→) As Bs) (gl: plist2 (→) Bs As) : Prop :=
+  Definition eqtypel {Al Bl} E L (tyl: typel Al) (tyl': typel Bl)
+    (fl: plist2 (→) Al Bl) (gl: plist2 (→) Bl Al) : Prop :=
     HForall2_2flip (λ _ _ ty ty' f g, eqtype E L f g ty ty') tyl tyl' fl gl.
 
   Lemma subtypel_nil E L : subtypel E L +[] +[] -[].
@@ -836,24 +836,24 @@ Section subtyping.
   Lemma eqtypel_nil E L : eqtypel E L +[] +[] -[] -[].
   Proof. constructor. Qed.
 
-  Lemma subtypel_cons {A B As Bs} (f: A → B) (fl: _ As Bs) ty ty' tyl tyl' E L :
+  Lemma subtypel_cons {A B Al Bl} (f: A → B) (fl: _ Al Bl) ty ty' tyl tyl' E L :
     subtype E L f ty ty' → subtypel E L tyl tyl' fl →
     subtypel E L (ty +:: tyl) (ty' +:: tyl') (f -:: fl).
   Proof. by constructor. Qed.
 
-  Lemma eqtypel_cons {A B As Bs} (f: A → B) g (fl: _ As Bs) gl ty ty' tyl tyl' E L :
+  Lemma eqtypel_cons {A B Al Bl} (f: A → B) g (fl: _ Al Bl) gl ty ty' tyl tyl' E L :
     eqtype E L f g ty ty' → eqtypel E L tyl tyl' fl gl →
     eqtypel E L (ty +:: tyl) (ty' +:: tyl') (f -:: fl) (g -:: gl).
   Proof. by constructor. Qed.
 
-  Lemma eqtypel_subtypel {As Bs} (fl: _ As Bs) gl tyl tyl' E L :
+  Lemma eqtypel_subtypel {Al Bl} (fl: _ Al Bl) gl tyl tyl' E L :
     eqtypel E L tyl tyl' fl gl →
     subtypel E L tyl tyl' fl ∧ subtypel E L tyl' tyl gl.
   Proof.
     elim; [split; by constructor|]=>/= > [??] _ [??]; split; by constructor.
   Qed.
 
-  Lemma subtypel_llctx_nth {C As Bs} (ty: _ C) (tyl: _ As) (tyl': _ Bs) fl q E L :
+  Lemma subtypel_llctx_nth {C Al Bl} (ty: _ C) (tyl: _ Al) (tyl': _ Bl) fl q E L :
     subtypel E L tyl tyl' fl → llctx_interp L q -∗ □ (elctx_interp E -∗
       ∀i, type_incl (p2nth id fl i) (hnth ty tyl i) (hnth ty tyl' i)).
   Proof.
@@ -863,7 +863,7 @@ Section subtyping.
     iDestruct ("IH" with "E") as "IH'". by case i=> [|j].
   Qed.
 
-  Lemma subtypel_llctx_bigsep {As Bs} (tyl: _ As) (tyl': _ Bs) fl q E L :
+  Lemma subtypel_llctx_bigsep {Al Bl} (tyl: _ Al) (tyl': _ Bl) fl q E L :
     subtypel E L tyl tyl' fl → llctx_interp L q -∗ □ (elctx_interp E -∗
       [∗ hlist] ty; ty';- f ∈ tyl; tyl';- fl, type_incl f ty ty').
   Proof.

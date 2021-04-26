@@ -42,16 +42,16 @@ Section mod_ty.
   Next Obligation.
     move=> */=. iIntros "#LFT In [%vπ[->Own]] Tok".
     iMod (ty_own_proph with "LFT In Own Tok") as "Upd"; [done|]. iModIntro.
-    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q ?) "[PTok Close]".
-    iModIntro. iExists ξs, q. iSplit; [iPureIntro; by apply (proph_dep_constr _)|].
+    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q ?) "[PTok Close]".
+    iModIntro. iExists ξl, q. iSplit; [iPureIntro; by apply (proph_dep_constr _)|].
     iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[Own $]".
     iModIntro. iExists vπ. by iSplit.
   Qed.
   Next Obligation.
     move=> */=. iIntros "#LFT In In' [%vπ[->Shr]] Tok".
     iMod (ty_shr_proph with "LFT In In' Shr Tok") as "Upd"; [done|]. iIntros "!>!>".
-    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξs q ?) "[PTok Close]".
-    iModIntro. iExists ξs, q. iSplit; [iPureIntro; by apply (proph_dep_constr _)|].
+    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q ?) "[PTok Close]".
+    iModIntro. iExists ξl, q. iSplit; [iPureIntro; by apply (proph_dep_constr _)|].
     iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[Own $]".
     iModIntro. iExists vπ. by iSplit.
   Qed.

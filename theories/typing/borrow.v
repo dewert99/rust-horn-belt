@@ -13,7 +13,7 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section borrow.
   Context `{!typeG Σ}.
 
-  Lemma tctx_borrow {𝔄} E L p n (ty : type 𝔄) κ:
+  Lemma tctx_borrow {𝔄} E L p n (ty: type 𝔄) κ:
     elctx_sat E L (ty_outlv_E ty κ) →
     tctx_incl E L +[p ◁ own_ptr n ty] +[p ◁ &uniq{κ} ty; p ◁{κ} own_ptr n ty]
       (λ post '-[a], ∀ a', post -[(a, a'); a']).

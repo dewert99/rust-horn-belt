@@ -64,9 +64,9 @@ Section product.
       iApply lft_intersect_incl_r. }
     iDestruct (step_fupdN_combine with "Close Close'") as "Close".
     iApply (step_fupdN_wand with "Close"). iIntros "!> [Close Close']".
-    iMod "Close" as (ξs q ?) "[PTok Close]". iMod "Close'" as (ξs' q' ?) "[PTok' Close']".
+    iMod "Close" as (ξl q ?) "[PTok Close]". iMod "Close'" as (ξl' q' ?) "[PTok' Close']".
     iDestruct (proph_tok_combine with "PTok PTok'") as (q0) "[PTok ToPTok]".
-    iExists (ξs ++ ξs'), q0. iModIntro. iSplit. { iPureIntro. by apply proph_dep_pair. }
+    iExists (ξl ++ ξl'), q0. iModIntro. iSplit. { iPureIntro. by apply proph_dep_pair. }
     iFrame "PTok". iIntros "PTok". iDestruct ("ToPTok" with "PTok") as "[PTok PTok']".
     iMod ("Close" with "PTok") as "[?$]". iMod ("Close'" with "PTok'") as "[?$]".
     iModIntro. iExists wl, wl'. iSplit; [done|]. iFrame.
@@ -81,9 +81,9 @@ Section product.
       iApply lft_intersect_incl_r. }
     iIntros "!>!>". iMod (step_fupdN_combine with "Close Close'") as ">Close".
     iApply (step_fupdN_wand with "Close"). iIntros "!> [Close Close']".
-    iMod "Close" as (ξs q ?) "[PTok Close]". iMod "Close'" as (ξs' q' ?) "[PTok' Close']".
+    iMod "Close" as (ξl q ?) "[PTok Close]". iMod "Close'" as (ξl' q' ?) "[PTok' Close']".
     iDestruct (proph_tok_combine with "PTok PTok'") as (q0) "[PTok ToPTok]".
-    iExists (ξs ++ ξs'), q0. iModIntro. iSplit. { iPureIntro. by apply proph_dep_pair. }
+    iExists (ξl ++ ξl'), q0. iModIntro. iSplit. { iPureIntro. by apply proph_dep_pair. }
     iFrame "PTok". iIntros "PTok". iDestruct ("ToPTok" with "PTok") as "[PTok PTok']".
     iMod ("Close" with "PTok") as "[$$]". by iMod ("Close'" with "PTok'") as "[$$]".
   Qed.
@@ -99,10 +99,10 @@ Section product.
   Global Instance cons_prod_ty_ne {A B} : NonExpansive2 (@cons_prod_ty A B).
   Proof. move=> ???????. rewrite /cons_prod_ty. by do 2 f_equiv. Qed.
 
-  Fixpoint xprod_ty {As} (tyl: typel As) : type (Π! As) :=
+  Fixpoint xprod_ty {Al} (tyl: typel Al) : type (Π! Al) :=
     match tyl with +[] => nil_unit_ty | ty +:: tyl' => cons_prod_ty ty (xprod_ty tyl') end.
 
-  Global Instance product_ne {As} : NonExpansive (@xprod_ty As).
+  Global Instance product_ne {Al} : NonExpansive (@xprod_ty Al).
   Proof. move=> ???. elim; [done|]=> */=. by f_equiv. Qed.
 
 End product.
@@ -173,13 +173,13 @@ Section typing.
     by done. move=> ??. apply type_contractive_compose_left; apply _.
   Qed.
 
-  Global Instance xprod_type_ne {A Bs} (T: _ A → _ Bs) :
+  Global Instance xprod_type_ne {A Bl} (T: _ A → _ Bl) :
     ListTypeNonExpansive T → TypeNonExpansive (Π! ∘ T)%T.
   Proof.
     move=> [Tl[->All]]. clear T. dependent induction All.
     { rewrite /happly /compose. apply _. } by apply cons_prod_type_ne.
   Qed.
-  Global Instance xprod_type_contractive {A Bs} (T: _ A → _ Bs) :
+  Global Instance xprod_type_contractive {A Bl} (T: _ A → _ Bl) :
     ListTypeContractive T → TypeContractive (Π! ∘ T)%T.
   Proof.
     move=> [Tl[->All]]. clear T. dependent induction All.
@@ -214,11 +214,11 @@ Section typing.
     Sync ty → Sync ty' → Sync (ty * ty').
   Proof. move=> >/=. by f_equiv. Qed.
 
-  Global Instance xprod_copy {As} (tyl: _ As) : ListCopy tyl → Copy (Π! tyl).
+  Global Instance xprod_copy {Al} (tyl: _ Al) : ListCopy tyl → Copy (Π! tyl).
   Proof. elim; apply _. Qed.
-  Global Instance xprod_send {As} (tyl: _ As) : ListSend tyl → Send (Π! tyl).
+  Global Instance xprod_send {Al} (tyl: _ Al) : ListSend tyl → Send (Π! tyl).
   Proof. elim; apply _. Qed.
-  Global Instance xprod_sync {As} (tyl: _ As) : ListSync tyl → Sync (Π! tyl).
+  Global Instance xprod_sync {Al} (tyl: _ Al) : ListSync tyl → Sync (Π! tyl).
   Proof. elim; apply _. Qed.
 
   Lemma prod_subtype {A B A' B'} E L (f: A → A') (g: B → B') ty1 ty2 ty1' ty2' :
@@ -249,13 +249,13 @@ Section typing.
     [apply _|by apply prod_subtype]. } { fun_ext. by case. }
   Qed.
 
-  Lemma xprod_subtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl :
+  Lemma xprod_subtype {Al Bl} E L (tyl: _ Al) (tyl': _ Bl) fl :
     subtypel E L tyl tyl' fl → subtype E L (xprod_map fl) (Π! tyl) (Π! tyl').
   Proof.
     move=> Subs. dependent induction Subs; by [|apply cons_prod_subtype].
   Qed.
 
-  Lemma xprod_eqtype {As Bs} E L (tyl: _ As) (tyl': _ Bs) fl gl :
+  Lemma xprod_eqtype {Al Bl} E L (tyl: _ Al) (tyl': _ Bl) fl gl :
     eqtypel E L tyl tyl' fl gl →
     eqtype E L (xprod_map fl) (xprod_map gl) (Π! tyl) (Π! tyl').
   Proof.
@@ -305,7 +305,7 @@ Section typing.
     - rewrite right_id. by iApply (bi.iff_refl True%I).
   Qed.
 
-  Lemma xprod_app_prod {As Bs} E L (tyl: _ As) (tyl': _ Bs) :
+  Lemma xprod_app_prod {Al Bl} E L (tyl: _ Al) (tyl': _ Bl) :
     eqtype E L psep (curry papp) (Π! (tyl h++ tyl')) (Π! tyl * Π! tyl').
   Proof. elim: tyl=> [|> Eq].
     - eapply eqtype_eq. { eapply eqtype_trans;
@@ -332,7 +332,7 @@ Section typing.
     ty_outlv_E (ty * ty') κ = ty_outlv_E ty κ ++ ty_outlv_E ty' κ.
   Proof. by rewrite /ty_outlv_E /= fmap_app. Qed.
 
-  Lemma xprod_outlv_E_elctx_sat {As} E L (tyl: _ As) κ:
+  Lemma xprod_outlv_E_elctx_sat {Al} E L (tyl: _ Al) κ:
     elctx_sat E L (tyl_outlv_E tyl κ) → elctx_sat E L (ty_outlv_E (Π! tyl) κ).
   Proof.
     move=> ?. eapply eq_ind; [done|]. rewrite /ty_outlv_E /=.

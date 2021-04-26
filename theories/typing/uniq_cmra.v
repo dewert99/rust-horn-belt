@@ -158,9 +158,9 @@ Proof.
   iDestruct (vo_vo2 with "Vo2") as "[$?]". iLeft. iFrame.
 Qed.
 
-Lemma uniq_resolve E ξ vπ d vπd' ζs q : ↑prophN ⊆ E → vπ ./ ζs →
-  proph_ctx -∗ .VO[ξ] (vπ,d) -∗ .PC[ξ] vπd' -∗ q:+[ζs] ={E}=∗
-    ⟨π, π ξ = vπ π⟩ ∗ .PC[ξ] (vπ,d) ∗ q:+[ζs].
+Lemma uniq_resolve E ξ vπ d vπd' ζl q : ↑prophN ⊆ E → vπ ./ ζl →
+  proph_ctx -∗ .VO[ξ] (vπ,d) -∗ .PC[ξ] vπd' -∗ q:+[ζl] ={E}=∗
+    ⟨π, π ξ = vπ π⟩ ∗ .PC[ξ] (vπ,d) ∗ q:+[ζl].
 Proof.
   iIntros (??) "PROPH Vo Pc Ptoks". iDestruct (vo_pc with "Vo Pc") as (<-) "[? Tok]".
   iMod (proph_resolve with "PROPH Tok Ptoks") as "[#? $]"; [done|done|].
@@ -168,9 +168,9 @@ Proof.
   by iApply proph_eqz_obs.
 Qed.
 
-Lemma uniq_preresolve E ξ u vπ d vπd' ζs q : ↑prophN ⊆ E → u ./ ζs →
-  proph_ctx -∗ .VO[ξ] (vπ,d) -∗ .PC[ξ] vπd' -∗ q:+[ζs] ={E}=∗
-    ⟨π, π ξ = u π⟩ ∗ q:+[ζs] ∗ (∀vπ' d', u :== vπ' -∗ .PC[ξ] (vπ',d')).
+Lemma uniq_preresolve E ξ u vπ d vπd' ζl q : ↑prophN ⊆ E → u ./ ζl →
+  proph_ctx -∗ .VO[ξ] (vπ,d) -∗ .PC[ξ] vπd' -∗ q:+[ζl] ={E}=∗
+    ⟨π, π ξ = u π⟩ ∗ q:+[ζl] ∗ (∀vπ' d', u :== vπ' -∗ .PC[ξ] (vπ',d')).
 Proof.
   iIntros (??) "PROPH Vo Pc Ptoks". iDestruct (vo_pc with "Vo Pc") as (<-) "[? Tok]".
   iMod (proph_resolve with "PROPH Tok Ptoks") as "[#Obs $]"; [done|done|].

@@ -21,52 +21,52 @@ Proof. solve_decision. Qed.
 Definition proph_asn := ∀ξ, ξ.(pv_ty).
 Definition proph A := proph_asn → A.
 
-Implicit Type (ξ ζ: proph_var) (ξs ζs: list proph_var) (π: proph_asn).
+Implicit Type (ξ ζ: proph_var) (ξl ζl: list proph_var) (π: proph_asn).
 
 Global Instance proph_asn_inhabited: Inhabited proph_asn.
 Proof. apply populate. case=> ??. apply inhabitant. Qed.
 
 (** * Prophecy Dependency *)
 
-Local Definition proph_asn_eqv ξs π π' := ∀ξ, ξ ∈ ξs → π ξ = π' ξ.
-Local Notation "π .≡{ ξs }≡ π'" := (proph_asn_eqv ξs π π')
-  (at level 70, format "π  .≡{ ξs }≡  π'").
+Local Definition proph_asn_eqv ξl π π' := ∀ξ, ξ ∈ ξl → π ξ = π' ξ.
+Local Notation "π .≡{ ξl }≡ π'" := (proph_asn_eqv ξl π π')
+  (at level 70, format "π  .≡{ ξl }≡  π'").
 
-Definition proph_dep {A} (vπ: _ → A) ξs := ∀π π', π .≡{ξs}≡ π' → vπ π = vπ π'.
-Notation "vπ ./ ξs" := (proph_dep vπ ξs) (at level 70, format "vπ  ./  ξs").
+Definition proph_dep {A} (vπ: _ → A) ξl := ∀π π', π .≡{ξl}≡ π' → vπ π = vπ π'.
+Notation "vπ ./ ξl" := (proph_dep vπ ξl) (at level 70, format "vπ  ./  ξl").
 
 (** ** Lemmas *)
 
 Lemma proph_dep_one ξ : (.$ ξ) ./ [ξ].
 Proof. move=> ?? Eqv. apply Eqv. constructor. Qed.
 
-Lemma proph_dep_constr {A B} (f: A → B) vπ ξs : vπ ./ ξs → f ∘ vπ ./ ξs.
+Lemma proph_dep_constr {A B} (f: A → B) vπ ξl : vπ ./ ξl → f ∘ vπ ./ ξl.
 Proof. move=> Dep ?? /Dep ?. by apply (f_equal f). Qed.
 
-Local Lemma proph_dep_mono {A} ξs ζs (vπ: _ → A) :
-  ξs ⊆ ζs → vπ ./ ξs → vπ ./ ζs.
+Local Lemma proph_dep_mono {A} ξl ζl (vπ: _ → A) :
+  ξl ⊆ ζl → vπ ./ ξl → vπ ./ ζl.
 Proof. move=> In Dep ?? Eqv. apply Dep => ??. by apply Eqv, In. Qed.
 
-Local Lemma subseteq_app_l ξs ζs : ξs ⊆ ξs ++ ζs.
+Local Lemma subseteq_app_l ξl ζl : ξl ⊆ ξl ++ ζl.
 Proof. move=> ??. rewrite elem_of_app. by left. Qed.
 
-Local Lemma subseteq_app_r ξs ζs : ζs ⊆ ξs ++ ζs.
+Local Lemma subseteq_app_r ξl ζl : ζl ⊆ ξl ++ ζl.
 Proof. move=> ??. rewrite elem_of_app. by right. Qed.
 
-Lemma proph_dep_constr2 {A B C} (f: A → B → C) vπ wπ ξs ζs :
-  vπ ./ ξs → wπ ./ ζs → f ∘ vπ ⊛ wπ ./ ξs ++ ζs.
+Lemma proph_dep_constr2 {A B C} (f: A → B → C) vπ wπ ξl ζl :
+  vπ ./ ξl → wπ ./ ζl → f ∘ vπ ⊛ wπ ./ ξl ++ ζl.
 Proof.
   move=> Dep Dep' ?? Eqv. eapply proph_dep_mono in Dep, Dep';
     [|apply subseteq_app_r|apply subseteq_app_l].
   move: (Eqv) (Eqv) => /Dep ? /Dep' ?. by apply (f_equal2 f).
 Qed.
 
-Lemma proph_dep_destr {A B} f `{!@Inj A B (=) (=) f} vπ ξs :
-  f ∘ vπ ./ ξs → vπ ./ ξs.
+Lemma proph_dep_destr {A B} f `{!@Inj A B (=) (=) f} vπ ξl :
+  f ∘ vπ ./ ξl → vπ ./ ξl.
 Proof. by move=> Dep ?? /Dep/(inj f) ?. Qed.
 
-Lemma proph_dep_destr2 {A B C} f `{!@Inj2 A B C (=) (=) (=) f} vπ wπ ξs :
-  f ∘ vπ ⊛ wπ ./ ξs → vπ ./ ξs ∧ wπ ./ ξs.
+Lemma proph_dep_destr2 {A B C} f `{!@Inj2 A B C (=) (=) (=) f} vπ wπ ξl :
+  f ∘ vπ ⊛ wπ ./ ξl → vπ ./ ξl ∧ wπ ./ ξl.
 Proof.
   move=> Dep. split; move=> ?? /Dep Eq; apply (inj2 f) in Eq; by inversion Eq.
 Qed.
@@ -74,8 +74,8 @@ Qed.
 Lemma proph_dep_unique `{!Unique A} (vπ: _ → A) : vπ ./ [].
 Proof. by rewrite (eq_unique vπ). Qed.
 
-Lemma proph_dep_pair {A B} (vπ: _ → A * B) ξs ζs :
-  fst ∘ vπ ./ ξs → snd ∘ vπ ./ ζs → vπ ./ ξs ++ ζs.
+Lemma proph_dep_pair {A B} (vπ: _ → A * B) ξl ζl :
+  fst ∘ vπ ./ ξl → snd ∘ vπ ./ ζl → vπ ./ ξl ++ ζl.
 Proof.
   move=> ??. rewrite (surjective_pairing_fun vπ). by apply proph_dep_constr2.
 Qed.
@@ -93,13 +93,13 @@ Implicit Type L: proph_log.
 
 Local Definition res L := pli_pv <$> L.
 
-Local Definition proph_asn_eqv_out ξs π π' := ∀ξ, ξ ∉ ξs → π ξ = π' ξ.
-Local Notation "π .≡~{ ξs }≡ π'" := (proph_asn_eqv_out ξs π π')
-  (at level 70, format "π  .≡~{ ξs }≡  π'").
-Local Definition proph_dep_out {A} (vπ: _ → A) ξs :=
-  ∀ π π', π .≡~{ ξs }≡ π' → vπ π = vπ π'.
-Local Notation "vπ ./~ ξs" := (proph_dep_out vπ ξs)
-  (at level 70, format "vπ  ./~  ξs").
+Local Definition proph_asn_eqv_out ξl π π' := ∀ξ, ξ ∉ ξl → π ξ = π' ξ.
+Local Notation "π .≡~{ ξl }≡ π'" := (proph_asn_eqv_out ξl π π')
+  (at level 70, format "π  .≡~{ ξl }≡  π'").
+Local Definition proph_dep_out {A} (vπ: _ → A) ξl :=
+  ∀ π π', π .≡~{ ξl }≡ π' → vπ π = vπ π'.
+Local Notation "vπ ./~ ξl" := (proph_dep_out vπ ξl)
+  (at level 70, format "vπ  ./~  ξl").
 
 Local Fixpoint proph_log_ok L := match L with [] => True |
   .{ξ := vπ} :: L' => ξ ∉ res L' ∧ vπ ./~ res L ∧ proph_log_ok L' end.
@@ -191,8 +191,8 @@ End defs.
 
 Notation "q :[ ξ ]" := (proph_tok ξ q)
   (at level 2, left associativity, format "q :[ ξ ]") : bi_scope.
-Notation "q :+[ ξs ]" := ([∗ list] ξ ∈ ξs, q:[ξ])%I
-  (at level 2, left associativity, format "q :+[ ξs ]") : bi_scope.
+Notation "q :+[ ξl ]" := ([∗ list] ξ ∈ ξl, q:[ξ])%I
+  (at level 2, left associativity, format "q :+[ ξl ]") : bi_scope.
 Notation ".⟨ φπ ⟩" := (proph_obs φπ%type%stdpp)
   (at level 1, format ".⟨ φπ ⟩") : bi_scope.
 Notation "⟨ π , φ ⟩" := (proph_obs (λ π, φ%type%stdpp))
@@ -216,7 +216,7 @@ Qed.
 Global Instance proph_tok_as_fractional q ξ : AsFractional q:[ξ] (λ q, q:[ξ]%I) q.
 Proof. split; by [|apply _]. Qed.
 
-Global Instance proph_toks_as_fractional q ξs : AsFractional q:+[ξs] (λ q, q:+[ξs]%I) q.
+Global Instance proph_toks_as_fractional q ξl : AsFractional q:+[ξl] (λ q, q:+[ξl]%I) q.
 Proof. split; by [|apply _]. Qed.
 
 Global Instance proph_obs_persistent φπ : Persistent .⟨φπ⟩ := _.
@@ -238,9 +238,9 @@ Qed.
 Lemma proph_tok_singleton ξ q : q:[ξ] ⊣⊢ q:+[[ξ]].
 Proof. by rewrite /= right_id. Qed.
 
-Lemma proph_tok_combine ξs ζs q q' :
-  q:+[ξs] -∗ q':+[ζs] -∗
-    ∃q'', q'':+[ξs ++ ζs] ∗ (q'':+[ξs ++ ζs] -∗ q:+[ξs] ∗ q':+[ζs]).
+Lemma proph_tok_combine ξl ζl q q' :
+  q:+[ξl] -∗ q':+[ζl] -∗
+    ∃q'', q'':+[ξl ++ ζl] ∗ (q'':+[ξl ++ ζl] -∗ q:+[ξl] ∗ q':+[ζl]).
 Proof.
   case (Qp_lower_bound q q')=> [q''[?[?[->->]]]]. iIntros "[??][??]".
   iExists q''. iFrame. iIntros "[$$]".
@@ -303,13 +303,13 @@ Proof.
     Cinl_valid. apply exclusive_l, _.
 Qed.
 
-Lemma proph_resolve E ξ vπ ζs q : ↑prophN ⊆ E → vπ ./ ζs →
-  proph_ctx -∗ 1:[ξ] -∗ q:+[ζs] ={E}=∗ ⟨π, π ξ = vπ π⟩ ∗ q:+[ζs].
+Lemma proph_resolve E ξ vπ ζl q : ↑prophN ⊆ E → vπ ./ ζl →
+  proph_ctx -∗ 1:[ξ] -∗ q:+[ζl] ={E}=∗ ⟨π, π ξ = vπ π⟩ ∗ q:+[ζl].
 Proof.
   move: ξ vπ => [𝔄i i] vπ. set ξ := PrVar 𝔄i i.
   iIntros (? Dep) "? Tok Ptoks". iInv prophN as (S) "> [(%L & %Ok & %Sim) Auth]".
   iDestruct (proph_tok_out with "Auth Tok") as %Outξ; [done|].
-  set L' := .{ξ := vπ} :: L. iAssert ⌜∀ζ, ζ ∈ ζs → ζ ∉ res L'⌝%I as %Outζs.
+  set L' := .{ξ := vπ} :: L. iAssert ⌜∀ζ, ζ ∈ ζl → ζ ∉ res L'⌝%I as %Outζl.
   { iIntros (? In).
     iDestruct (big_sepL_elem_of with "Ptoks") as "Ptok"; [apply In|].
     iDestruct (proph_tok_ne with "Tok Ptok") as %?.
@@ -324,7 +324,7 @@ Proof.
   { iModIntro. iFrame. iExists [.{ξ := vπ}]. rewrite big_sepL_singleton.
     iSplitR; [|done]. iPureIntro=> ? Sat. by inversion Sat. }
   iModIntro. iExists S'. iFrame. iPureIntro. exists L'. split.
-  { split; [done| split; [|done]] => ?? Eqv. apply Dep => ? /Outζs ?.
+  { split; [done| split; [|done]] => ?? Eqv. apply Dep => ? /Outζl ?.
     by apply Eqv. }
   have InLNe ζ wπ : .{ζ := wπ} ∈ L → ξ ≠ ζ.
   { move=> /(elem_of_list_fmap_1 pli_pv) ??. by subst. }
@@ -390,7 +390,7 @@ Global Opaque proph_ctx proph_tok proph_obs.
 (** * Prophecy Equalizer *)
 
 Definition proph_eqz `{!invG Σ, !prophG Σ} {A} (uπ vπ: _ → A) : iProp Σ :=
-  ∀E ξs q, ⌜↑prophN ⊆ E ∧ vπ ./ ξs⌝ -∗ q:+[ξs] ={E}=∗ ⟨π, uπ π = vπ π⟩ ∗ q:+[ξs].
+  ∀E ξl q, ⌜↑prophN ⊆ E ∧ vπ ./ ξl⌝ -∗ q:+[ξl] ={E}=∗ ⟨π, uπ π = vπ π⟩ ∗ q:+[ξl].
 
 Notation "uπ :== vπ" := (proph_eqz uπ vπ) (at level 70, format "uπ  :==  vπ") : bi_scope.
 

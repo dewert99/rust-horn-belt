@@ -27,7 +27,7 @@ Section int.
     rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "time". by iExists z.
   Qed.
 
-  Lemma type_int {As} z E L C (T: _ As) x e tr :
+  Lemma type_int {Al} z E L C (T: _ Al) x e tr :
     Closed (x :b: []) e →
     (∀v: val, typed_body E L C (v ◁ int +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := #z in e) (λ al, tr (z -:: al)).
@@ -44,7 +44,7 @@ Section int.
     tctx_hasty_val'; [|done]. iExists d. iFrame "time". by iExists (z + z').
   Qed.
 
-  Lemma type_plus {As Bs} E L C (T: _ As) (T': _ Bs) p1 p2 x e tr pre :
+  Lemma type_plus {Al Bl} E L C (T: _ Al) (T': _ Bl) p1 p2 x e tr pre :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' tr →
     (∀v: val, typed_body E L C (v ◁ int +:: T') (subst' x v e) pre) -∗
     typed_body E L C T (let: x := p1 + p2 in e)
@@ -65,7 +65,7 @@ Section int.
     tctx_hasty_val'; [|done]. iExists d. iFrame "time". by iExists (z - z').
   Qed.
 
-  Lemma type_minus {As Bs} E L C (T: _ As) (T': _ Bs) p1 p2 x e tr pre :
+  Lemma type_minus {Al Bl} E L C (T: _ Al) (T': _ Bl) p1 p2 x e tr pre :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' tr →
     (∀v: val, typed_body E L C (v ◁ int +:: T') (subst' x v e) pre) -∗
     typed_body E L C T (let: x := p1 - p2 in e)
@@ -87,7 +87,7 @@ Section int.
     iFrame "time". by iExists (bool_decide (z <= z')).
   Qed.
 
-  Lemma type_le {As Bs} E L C (T: _ As) (T': _ Bs) p1 p2 x e tr pre :
+  Lemma type_le {Al Bl} E L C (T: _ Al) (T': _ Bl) p1 p2 x e tr pre :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' tr →
     (∀v: val, typed_body E L C (v ◁ bool_ty +:: T') (subst' x v e) pre) -∗
     typed_body E L C T (let: x := p1 ≤ p2 in e)

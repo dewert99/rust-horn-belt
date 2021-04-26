@@ -5,8 +5,8 @@ Set Default Proof Using "Type".
 
 Notation valpl := (plist (const val)).
 
-Fixpoint valpl_to_exprs {As: Types} (vl: valpl As) : list expr :=
-  match As, vl with ^[], _ => [] |
+Fixpoint valpl_to_exprs {Al: Types} (vl: valpl Al) : list expr :=
+  match Al, vl with ^[], _ => [] |
     _ ^:: _, v -:: vl' => (v: expr) :: valpl_to_exprs vl' end.
 
 Section cont_context.
@@ -65,7 +65,7 @@ Section cont_context.
   Lemma cctx_incl_nil E C : cctx_incl E C ^[].
   Proof. by iIntros. Qed.
 
-  Lemma cctx_incl_cons {As} E k L (T T': valpl As → tctx As) tr C C' pre :
+  Lemma cctx_incl_cons {Al} E k L (T T': valpl Al → tctx Al) tr C C' pre :
     cctx_incl E C C' → (∀vl, tctx_incl E L (T' vl) (T vl) tr) →
     cctx_incl E (k ◁cont{L, T} pre ^:: C) (k ◁cont{L, T'} (tr pre) ^:: C').
   Proof.

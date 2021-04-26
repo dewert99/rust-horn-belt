@@ -55,8 +55,8 @@ Section maybe_uninit.
     { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
       do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Tok". by iLeft. }
     iMod (ty_own_proph with "LFT In Own Tok") as "Upd"; [done|].
-    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%ξs & %q &%& PTok & Close) !>".
-    iExists ξs, q. iSplit; [iPureIntro; by apply proph_dep_constr|].
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%ξl & %q &%& PTok & Close) !>".
+    iExists ξl, q. iSplit; [iPureIntro; by apply proph_dep_constr|].
     iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[?$]".
     iRight. iExists vπ. by iFrame.
   Qed.
@@ -66,7 +66,7 @@ Section maybe_uninit.
       do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Tok". by iLeft. }
     iMod (ty_shr_proph with "LFT In In' Shr Tok") as "Upd"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
-    iIntros ">(%ξs&%q&%& PTok & Close) !>". iExists ξs, q.
+    iIntros ">(%ξl&%q&%& PTok & Close) !>". iExists ξl, q.
     iSplit; [iPureIntro; by apply proph_dep_constr|]. iFrame "PTok". iIntros "PTok".
     iMod ("Close" with "PTok") as "[?$]". iRight. iExists vπ. by iFrame.
   Qed.

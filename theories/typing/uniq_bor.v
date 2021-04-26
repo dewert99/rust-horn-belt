@@ -78,9 +78,9 @@ Section uniq_bor.
     iMod (ty_own_proph with "LFT [] Own Tok'") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
     iApply step_fupdN_nmono; [apply Le|]. iApply (step_fupdN_wand with "Upd").
-    iMod 1 as (ξs ??) "[PTok Close]". iModIntro. rewrite proph_tok_singleton.
+    iMod 1 as (ξl ??) "[PTok Close]". iModIntro. rewrite proph_tok_singleton.
     iDestruct (proph_tok_combine with "PTok PTok'") as (q) "[PTok ToPToks]".
-    set ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i. iExists (ξs ++ [ξ]), q. iSplit.
+    set ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i. iExists (ξl ++ [ξ]), q. iSplit.
     { iPureIntro. apply proph_dep_pair; [done|]. rewrite Eq. apply proph_dep_one. }
     iFrame "PTok". iIntros "PTok". iDestruct ("ToPToks" with "PTok") as "[PTok PTok']".
     iMod ("Close" with "PTok") as "[Own $]". iDestruct ("ToPc" with "PTok'") as "Pc".
@@ -94,12 +94,12 @@ Section uniq_bor.
     iIntros "#LFT #In #? (%l & %ξ &%&?& #Bor & Shr) [Tok Tok'] !>!>".
     iDestruct (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
-    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξs q' ?) "[PTok Close]".
+    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξl q' ?) "[PTok Close]".
     iMod (lft_incl_acc with "In Tok'") as (?) "[Tok ToTok]"; [done|].
     iMod (frac_bor_acc with "LFT Bor Tok") as (?) "[>PTok' Close']"; [done|].
     rewrite proph_tok_singleton.
     iDestruct (proph_tok_combine with "PTok PTok'") as (q) "[PTok ToPToks]". iModIntro.
-    iExists (ξs ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_pair|].
+    iExists (ξl ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_pair|].
     iFrame "PTok". iIntros "PTok". iDestruct ("ToPToks" with "PTok") as "[PTok PTok']".
     iMod ("Close" with "PTok") as "[?$]". iMod ("Close'" with "PTok'") as "Tok".
     iMod ("ToTok" with "Tok") as "$". iModIntro. iExists l, ξ. by do 3 (iSplit; [done|]).

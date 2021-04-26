@@ -101,7 +101,7 @@ Proof.
     + rewrite negb_andb. case Eq: (inh_syn_type 𝔄)=>/= ?[a?]; [by eapply FIX|].
       eapply FIX; [|apply a]. by rewrite Eq.
     + rewrite negb_orb=> /andb_True[??] [x|x]; eapply FIX; [|apply x| |apply x]=>//.
-    + rewrite negb_negb_orb=> /andb_True[N N'] f. eapply FIX; [done|]. by apply f, FIX.
+    + rewrite negb_negb_orb=> /andb_True[??] f. eapply FIX; [done|]. by apply f, FIX.
     + elim 𝔄l; [done|]=> 𝔄 ? IH. rewrite negb_andb. case Eq: (inh_syn_type 𝔄)
       =>/= ?[??]; [by apply IH|]. eapply FIX; [|done]. by rewrite Eq.
     + elim 𝔄l; [move=> ?; by apply absurd|]=> ?? IH. rewrite negb_orb

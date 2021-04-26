@@ -22,8 +22,8 @@ Section shr_bor.
     iDestruct (ty_shr_proph with "LFT [] [] Shr Tok") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
-    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξs q ?) "[PTok Upd]".
-    iModIntro. iExists ξs, q. iSplit; [done|]. iFrame "PTok". iIntros "PTok".
+    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξl q ?) "[PTok Upd]".
+    iModIntro. iExists ξl, q. iSplit; [done|]. iFrame "PTok". iIntros "PTok".
     by iMod ("Upd" with "PTok") as "$".
   Qed.
 
