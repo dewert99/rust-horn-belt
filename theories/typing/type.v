@@ -514,7 +514,7 @@ Section type_contractive.
     TypeNonExpansive T → TypeNonExpansive T' → TypeNonExpansive (T ∘ T').
   Proof.
     move=> HT HT'. split; [by apply _|move=> *; by apply HT, HT'| |];
-    (move=> n *; apply HT; (try by apply HT');
+    (move=> n *; apply HT; try (by apply HT');
       first (by iApply type_lft_morphism_lft_equiv_proper);
       first (apply type_lft_morphism_elctx_interp_proper=>//; apply _)).
     move=> *. case n as [|]=>//. by apply HT'.
@@ -524,7 +524,7 @@ Section type_contractive.
     TypeContractive T → TypeNonExpansive T' → TypeContractive (T ∘ T').
   Proof.
     move=> HT HT'. split; [by apply _|move=> *; by apply HT| |];
-    (move=> n *; apply HT; (try by apply HT');
+    (move=> n *; apply HT; try (by apply HT');
       first (by iApply type_lft_morphism_lft_equiv_proper);
       first (apply type_lft_morphism_elctx_interp_proper=>//; apply _));
     move=> *; case n as [|[|]]=>//; by apply HT'.
@@ -534,7 +534,7 @@ Section type_contractive.
     TypeNonExpansive T → TypeContractive T' → TypeContractive (T ∘ T').
   Proof.
     move=> HT HT'. split; [by apply _|move=> *; by apply HT, HT'| |];
-    (move=> n *; apply HT; (try by apply HT');
+    (move=> n *; apply HT; try (by apply HT');
       first (by iApply type_lft_morphism_lft_equiv_proper);
       first (apply type_lft_morphism_elctx_interp_proper=>//; apply _));
     move=> *; case n as [|]=>//; by apply HT'.

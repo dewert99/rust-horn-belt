@@ -4,26 +4,26 @@ From iris.base_logic Require Import invariants.
 From lrust.util Require Import discrete_fun.
 From lrust.prophecy Require Import prophecy.
 
-Implicit Type 𝔄 𝔅: syn_type.
+Implicit Type (𝔄i: syn_typei) (𝔄: syn_type).
 
 Section basic.
 Context `{!invG Σ, !prophG Σ}.
 
 (** * Camera for Unique Borrowing *)
 
-Local Definition uniq_itemR 𝔄 := frac_agreeR (leibnizO (proph 𝔄 * nat)).
-Local Definition uniq_gmapUR 𝔄 := gmapUR positive (uniq_itemR 𝔄).
+Local Definition uniq_itemR 𝔄i := frac_agreeR (leibnizO (proph 𝔄i * nat)).
+Local Definition uniq_gmapUR 𝔄i := gmapUR positive (uniq_itemR 𝔄i).
 Local Definition uniq_smryUR := discrete_funUR uniq_gmapUR.
 Definition uniqUR := authUR uniq_smryUR.
 
 Implicit Type S: uniq_smryUR.
 
-Local Definition item {𝔄} q (vπd: proph 𝔄 * nat) : uniq_itemR 𝔄 :=
+Local Definition item {𝔄i} q (vπd: proph 𝔄i * nat) : uniq_itemR 𝔄i :=
   @to_frac_agree (leibnizO _) q vπd.
 Local Definition line ξ q vπd : uniq_smryUR :=
-  .{[ξ.(pv_ty) := {[ξ.(pv_bd).1 := item q vπd]}]}.
+  .{[ξ.(pv_ty) := {[ξ.(pv_id) := item q vπd]}]}.
 Local Definition add_line ξ q vπd S : uniq_smryUR :=
-  .<[ξ.(pv_ty) := <[ξ.(pv_bd).1 := item q vπd]> (S ξ.(pv_ty))]> S.
+  .<[ξ.(pv_ty) := <[ξ.(pv_id) := item q vπd]> (S ξ.(pv_ty))]> S.
 
 Definition uniqΣ := #[GFunctor uniqUR].
 Class uniqPreG Σ := UniqPreG { uniq_preG_inG:> inG Σ uniqUR }.
@@ -106,19 +106,18 @@ Proof.
   iMod (inv_alloc _ _ uniq_inv with "[Auth]") as "?"; by [iExists ε|].
 Qed.
 
-Lemma prval_to_inh {𝔄} (vπ: proph 𝔄) : inhabited 𝔄.
-Proof. move: proph_asn_inhabited=> [π]. exists. apply (vπ π). Qed.
+Definition prval_to_inh {𝔄} (vπ: proph 𝔄)
+  : inh_syn_type 𝔄 := to_inh_syn_type (vπ inhabitant).
 
-Definition prval_to_prvar {𝔄} vπ i := PrVar 𝔄 (i, (prval_to_inh vπ)).
-
-Lemma uniq_intro {𝔄} E (vπ: _ → 𝔄) d :
-  ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗
-    ∃i, let ξ := prval_to_prvar vπ i in .VO[ξ] (vπ,d) ∗ .PC[ξ] (vπ,d).
+Lemma uniq_intro {𝔄} (vπ: _ → 𝔄) d E :
+  ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗ ∃i,
+    let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i in .VO[ξ] (vπ,d) ∗ .PC[ξ] (vπ,d).
 Proof.
-  iIntros (?) "PROPH ?". iInv uniqN as (S) "> Auth". set I := dom (gset _) (S 𝔄).
+  iIntros (?) "PROPH ?". iInv uniqN as (S) "> Auth".
+  set 𝔄i := 𝔄 ↾ prval_to_inh vπ. set I := dom (gset _) (S 𝔄i).
   iMod (proph_intro _ I with "PROPH") as (i NIn) "Tok"; [by solve_ndisj|].
   move: NIn=> /not_elem_of_dom ?.
-  set ξ := prval_to_prvar vπ i. set S' := add_line ξ 1 (vπ,d) S.
+  set ξ := PrVar 𝔄i i. set S' := add_line ξ 1 (vπ,d) S.
   iMod (own_update _ _ (● S' ⋅ ◯ line ξ 1 (vπ,d)) with "Auth") as "[? Vo2]".
   { by apply auth_update_alloc,
       discrete_fun_insert_local_update, alloc_singleton_local_update. }

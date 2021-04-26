@@ -53,11 +53,11 @@ Section own.
     move=> ????[|?]*; [by iIntros|]. rewrite/= by_just_loc_ex. by iIntros "[%[->?]]".
   Qed.
   Next Obligation.
-    move=> ???[|?][|?] */=; (try by iIntros); [lia|]. do 7 f_equiv.
+    move=> ???[|?][|?] */=; try (by iIntros); [lia|]. do 7 f_equiv.
     apply ty_own_depth_mono. lia.
   Qed.
   Next Obligation.
-    move=> ???[|?][|?] */=; (try by iIntros); [lia|]. do 4 f_equiv.
+    move=> ???[|?][|?] */=; try (by iIntros); [lia|]. do 4 f_equiv.
     apply ty_shr_depth_mono. lia.
   Qed.
   Next Obligation.

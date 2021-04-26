@@ -302,14 +302,25 @@ Definition xsum_map {Al Bl} (fl: plist2 (→) Al Bl) (xl: Σ! Al) : Σ! Bl :=
 Lemma xsum_map_id {Al} : xsum_map (@p2ids Al) = id.
 Proof. fun_ext. case=>/= *. by rewrite p2ids_nth. Qed.
 
-Global Instance xsum_nil_void : Void (Σ! ^[]). Proof. move=> ?. by case. Qed.
+Definition xinhd {A Al} (a: A) : Σ! (A ^:: Al) := @xinj (A ^:: Al) 0 a.
+Definition xintl {A Al} (s: Σ! Al) : Σ! (A ^:: Al) :=
+  match s with xinj i x => @xinj (A ^:: Al) (S i) x end.
 
-Definition sum_to_xsum {A B} (s: A + B) : Σ! ^[A; B] := match s with
+Global Instance xsum_0_void : Void (Σ! ^[]). Proof. move=> ?. by case. Qed.
+
+Definition sum_to_xsum_2 {A B} (s: A + B) : Σ! ^[A; B] := match s with
   inl x => @xinj ^[A; B] 0 x | inr y => @xinj ^[A; B] 1 y end.
-Definition xsum_to_sum {A B} (s: Σ! ^[A; B]) : A + B := match s with
+Definition xsum_2_to_sum {A B} (s: Σ! ^[A; B]) : A + B := match s with
   xinj 0 x => inl x | xinj 1 y => inr y | xinj (S (S _)) z => absurd z end.
-Global Instance sum_xsum_iso {A B} : Iso (@sum_to_xsum A B) xsum_to_sum.
+Global Instance sum_xsum_2_iso {A B} : Iso (@sum_to_xsum_2 A B) xsum_2_to_sum.
 Proof. split; fun_ext; case; by [| |case=> [|[|]]]. Qed.
+
+Definition sum_to_xsum_cons {A Al} (s: A + Σ! Al) : Σ! (A ^:: Al) :=
+  match s with inl x => xinhd x | inr s' => xintl s' end.
+Definition xsum_cons_to_sum {A Al} (s: Σ! (A ^:: Al)) : A + Σ! Al :=
+  match s with xinj 0 x => inl x | xinj (S i) x => inr (xinj i x) end.
+Global Instance sum_xsum_cons_iso {A Al} : Iso (@sum_to_xsum_cons A Al) xsum_cons_to_sum.
+Proof. split; fun_ext. { case; [done|]. by case. } { case. by case. } Qed.
 
 (** * Forall *)
 

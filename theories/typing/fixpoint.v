@@ -200,7 +200,7 @@ Proof. move=> Eq.
     { rewrite /Tn. elim (S (3 + n)); [done|]=> ? IH. by rewrite !Nat_iter_S IH Eq. }
     etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
     split; repeat move=> ? /=; apply Eq''. }
-  split=>/=; (try apply Eq); try apply Eq'. by rewrite /Tn /= (Eq base) Eq.
+  split=>/=; try apply Eq; try apply Eq'. by rewrite /Tn /= (Eq base) Eq.
 Qed.
 
 Lemma fix_type_ne `{!typeG Σ} {A B} (T : _ A → _ → _ B)

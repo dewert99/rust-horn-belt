@@ -15,32 +15,27 @@ Section borrow.
 
   Lemma tctx_borrow {𝔄} E L p n (ty : type 𝔄) κ:
     elctx_sat E L (ty_outlv_E ty κ) →
-    tctx_incl E L +[p ◁ own_ptr n ty] +[p ◁ &uniq{κ}ty; p ◁{κ} own_ptr n ty]
-      (λ post '-[a], ∀ a', post -[@pair 𝔄 𝔄 a a'; a']).
+    tctx_incl E L +[p ◁ own_ptr n ty] +[p ◁ &uniq{κ} ty; p ◁{κ} own_ptr n ty]
+      (λ post '-[a], ∀ a', post -[(a, a'); a']).
   Proof.
-    iIntros (Houtlv tid ? [vπ []] ?) "#LFT #PROPH #UNIQ #HE HL [H _] Hproph".
-    iDestruct "H" as ([[]|] [|depth]) "(% & #Hdepth & Hown)"=>//=.
-    iDestruct "Hown" as "[Hmt ?]".
-    iDestruct (Houtlv with "HL HE") as "#Hout0".
-    iDestruct (elctx_interp_ty_outlv_E with "Hout0") as "Hout".
-    iMod (uniq_intro _ vπ with "PROPH UNIQ") as (ξ) "[HVo HPC]"; first solve_ndisj.
-    iMod (bor_create ⊤ κ (∃ wπ depth, l ↦∗: ty.(ty_own) wπ depth tid ∗
-      ⧖(S depth) ∗ .PC[prval_to_prvar vπ ξ] (wπ, depth))%I with "LFT [HPC Hmt]")
-      as "[Hbor Hext]";[done |  |].
-    { iExists _, _. by iFrame. }
-    iExists -[_; λ π, π (prval_to_prvar vπ ξ)]; rewrite right_id; iFrame "HL".
-    iSplitL "Hproph".
-    { iApply proph_obs_impl; [|done]; naive_solver. }
-    iSplitL "HVo Hbor".
-    - iExists _, _. iFrame "#%".
-      iExists _, _. by iFrame.
-    - iExists _. iIntros "{$%} !> #H†".
-      iMod ("Hext" with "H†") as "Hext".
-      iMod (bi.later_exist_except_0 with "Hext") as (??) "(? & >? & PC)".
-      iExists _, _.
-      iSplitL "PC".
-      by iDestruct (proph_ctrl_eqz with "PROPH PC") as "?".
-      by iFrame.
+    iIntros (Outlv ??[vπ[]]?) "#LFT #PROPH #UNIQ #E L [p _] Obs".
+    have ?: Inhabited 𝔄 := populate (vπ inhabitant).
+    iDestruct "p" as ([[]|][|]?) "[#Time Own]"=>//=.
+    iDestruct "Own" as "[(%& >Mt & ty) Free]".
+    iDestruct (Outlv with "L E") as "#Out'".
+    iDestruct (elctx_interp_ty_outlv_E with "Out'") as "Out".
+    iMod (uniq_intro vπ with "PROPH UNIQ") as (i) "[Vo Pc]"; [done|].
+    set ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i.
+    iMod (bor_create ⊤ κ (∃vπ' d, _ ↦∗: ty.(ty_own) vπ' d _ ∗
+      ⧖(S d) ∗ .PC[ξ] (vπ', d))%I with "LFT [Mt ty Pc]") as "[Bor Close]"; [done| |].
+    { iExists _, _. iFrame "Pc Time". iExists _. iFrame. }
+    iExists -[pair ∘ vπ ⊛ (.$ ξ); (.$ ξ)]. rewrite right_id. iFrame "L". iModIntro.
+    iSplitL "Obs"; [by iApply proph_obs_impl; [|done]=>/=|]. iSplitL "Vo Bor".
+    - iExists _, _. do 2 (iSplit; [done|]). iExists _, _. by iFrame.
+    - iExists _. iSplit; [done|]. iIntros "†κ".
+      iMod ("Close" with "†κ") as (??) "(Mtty & >Time' & Pc)".
+      iExists _, _. iFrame "Time' Mtty Free". iIntros "!>!>".
+      iDestruct (proph_ctrl_eqz with "PROPH Pc") as "$".
   Qed.
 
   (* Lemma type_share_instr E L p κ ty :

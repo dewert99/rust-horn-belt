@@ -5,32 +5,26 @@ From iris.algebra Require Import auth cmra functions gmap csum frac agree.
 From iris.bi Require Import fractional.
 From iris.proofmode Require Import tactics.
 From iris.base_logic Require Import invariants.
-From lrust.util Require Import basic discrete_fun proof_irrelevance functional_choice.
+From lrust.util Require Import basic discrete_fun.
 From lrust.prophecy Require Export syn_type.
 
-Implicit Type 𝔄 𝔅: syn_type.
+Implicit Type 𝔄i 𝔅i: syn_typei.
 
 (** * Basic Notions *)
 
-Definition proph_var_body 𝔄 : Type := positive * inhabited 𝔄.
-Record proph_var := PrVar { pv_ty: syn_type; pv_bd: proph_var_body pv_ty }.
+Record proph_var := PrVar { pv_ty: syn_typei; pv_id: positive }.
 Add Printing Constructor proph_var.
 
 Global Instance proph_var_eq_dec: EqDecision proph_var.
-Proof.
-  move=> [𝔄[i inh]][𝔅[j inh']]. case (decide (𝔄 = 𝔅))=> [?|?];
-  [|by apply right=> [=]]. subst. case (decide (i = j))=> [?|?].
-  - subst. apply left. by proof_subst inh inh'.
-  - apply right=> Eq. by dependent destruction Eq.
-Qed.
+Proof. solve_decision. Qed.
 
 Definition proph_asn := ∀ξ, ξ.(pv_ty).
 Definition proph A := proph_asn → A.
 
 Implicit Type (ξ ζ: proph_var) (ξs ζs: list proph_var) (π: proph_asn).
 
-Lemma proph_asn_inhabited: inhabited proph_asn.
-Proof. apply inhabited_forall_commute. by move=> [?[??]]. Qed.
+Global Instance proph_asn_inhabited: Inhabited proph_asn.
+Proof. apply populate. case=> ??. apply inhabitant. Qed.
 
 (** * Prophecy Dependency *)
 
@@ -145,24 +139,22 @@ Proof.
 Qed.
 
 Local Lemma proph_ok_sat L : .✓ L → ∃π, π ◁ L.
-Proof.
-  move: proph_asn_inhabited=> [π]?. exists (π ! L). by apply proph_ok_modify_sat.
-Qed.
+Proof. exists (inhabitant ! L). by apply proph_ok_modify_sat. Qed.
 
 (** * Prophecy Camera *)
 
-Local Definition proph_itemR 𝔄 := csumR fracR (agreeR (leibnizO (proph 𝔄))).
-Local Definition proph_gmapUR 𝔄 := gmapUR positive (proph_itemR 𝔄).
+Local Definition proph_itemR 𝔄i := csumR fracR (agreeR (leibnizO (proph 𝔄i))).
+Local Definition proph_gmapUR 𝔄i := gmapUR positive (proph_itemR 𝔄i).
 Local Definition proph_smryUR := discrete_funUR proph_gmapUR.
 Definition prophUR := authUR proph_smryUR.
 
 Implicit Type (S: proph_smryUR) (q: Qp).
 
-Local Definition aitem {𝔄} vπ : proph_itemR 𝔄 := Cinr (to_agree vπ).
-Local Definition fitem {𝔄} q : proph_itemR 𝔄 := Cinl q.
-Local Definition line ξ it : proph_smryUR := .{[ξ.(pv_ty) := {[ξ.(pv_bd).1 := it]}]}.
+Local Definition aitem {𝔄i} vπ : proph_itemR 𝔄i := Cinr (to_agree vπ).
+Local Definition fitem {𝔄i} q : proph_itemR 𝔄i := Cinl q.
+Local Definition line ξ it : proph_smryUR := .{[ξ.(pv_ty) := {[ξ.(pv_id) := it]}]}.
 Local Definition add_line ξ it S : proph_smryUR :=
-  .<[ξ.(pv_ty) := <[ξ.(pv_bd).1 := it]> (S ξ.(pv_ty))]> S.
+  .<[ξ.(pv_ty) := <[ξ.(pv_id) := it]> (S ξ.(pv_ty))]> S.
 
 Definition prophΣ := #[GFunctor prophUR].
 Class prophPreG Σ := ProphPreG { proph_preG_inG:> inG Σ prophUR }.
@@ -175,7 +167,7 @@ Definition prophN := nroot .@ "proph".
 (** * Iris Propositions *)
 
 Local Definition proph_sim S L :=
-  ∀ξ vπ, S ξ.(pv_ty) !! ξ.(pv_bd).1 ≡ Some (aitem vπ) ↔ .{ξ := vπ} ∈ L.
+  ∀ξ vπ, S ξ.(pv_ty) !! ξ.(pv_id) ≡ Some (aitem vπ) ↔ .{ξ := vπ} ∈ L.
 Local Notation "S :~ L" := (proph_sim S L) (at level 70, format "S  :~  L").
 
 Section defs.
@@ -205,8 +197,6 @@ Notation ".⟨ φπ ⟩" := (proph_obs φπ%type%stdpp)
   (at level 1, format ".⟨ φπ ⟩") : bi_scope.
 Notation "⟨ π , φ ⟩" := (proph_obs (λ π, φ%type%stdpp))
   (at level 1, format "⟨ π ,  φ ⟩") : bi_scope.
-
-Add Printing Constructor proph_var.
 
 (** * Iris Lemmas *)
 
@@ -268,22 +258,22 @@ Proof.
   rewrite lookup_empty. split=> Hyp; inversion Hyp.
 Qed.
 
-(** Taking 𝔄 Fresh Prophecy Variable *)
+(** Taking 𝔄i Fresh Prophecy Variable *)
 
-Lemma proph_intro 𝔄 (I: gset positive) E (inh: inhabited 𝔄) :
-  ↑prophN ⊆ E → proph_ctx ={E}=∗ ∃i, ⌜i ∉ I⌝ ∗ 1:[PrVar 𝔄 (i, inh)].
+Lemma proph_intro 𝔄i (I: gset positive) E :
+  ↑prophN ⊆ E → proph_ctx ={E}=∗ ∃i, ⌜i ∉ I⌝ ∗ 1:[PrVar 𝔄i i].
 Proof.
   iIntros (?) "?". iInv prophN as (S) "> [(%L & %Ok & %Sim) Auth]".
-  case (exist_fresh (I ∪ dom _ (S 𝔄)))
+  case (exist_fresh (I ∪ dom _ (S 𝔄i)))
     => [i /not_elem_of_union [? /not_elem_of_dom EqNone]].
-  set ξ := PrVar 𝔄 (i, inh). set S' := add_line ξ (fitem 1) S.
+  set ξ := PrVar 𝔄i i. set S' := add_line ξ (fitem 1) S.
   iMod (own_update _ _ (● S' ⋅ ◯ line ξ (fitem 1)) with "Auth") as "[Auth ?]".
   { by apply auth_update_alloc,
       discrete_fun_insert_local_update, alloc_singleton_local_update. }
   iModIntro. iSplitL "Auth"; last first. { iModIntro. iExists i. by iFrame. }
   iModIntro. iExists S'. iFrame. iPureIntro. exists L.
-  split; [done|]. case=> [𝔅[j ?]]?. rewrite /S' /add_line /discrete_fun_insert -Sim.
-  case (decide (𝔄 = 𝔅))=> [?|?]; [|done]. subst=>/=.
+  split; [done|]. case=> [𝔅i j]?. rewrite /S' /add_line /discrete_fun_insert -Sim.
+  case (decide (𝔄i = 𝔅i))=> [?|?]; [|done]. subst=>/=.
   case (decide (i = j))=> [<-|?]; [|by rewrite lookup_insert_ne].
   rewrite lookup_insert EqNone. split=> Eqv; [apply (inj Some) in Eqv|]; inversion Eqv.
 Qed.
@@ -295,9 +285,9 @@ Local Lemma proph_tok_out S L ξ q :
 Proof.
   move=> Sim. iIntros "Auth Tok".
   iDestruct (own_valid_2 with "Auth Tok") as %ValBoth. iPureIntro.
-  move=> /(elem_of_list_fmap_2 pli_pv) [[[𝔄[i ?]]?][? /Sim Eqv]]. simpl in *.
+  move=> /(elem_of_list_fmap_2 pli_pv) [[[𝔄i i]?][? /Sim Eqv]]. simpl in *.
   subst. move: ValBoth=> /auth_both_valid_discrete [Inc _].
-  move/(discrete_fun_included_spec_1 _ _ 𝔄) in Inc.
+  move/(discrete_fun_included_spec_1 _ _ 𝔄i) in Inc.
   rewrite /line discrete_fun_lookup_singleton /= in Inc.
   move: Eqv. move: Inc=> /singleton_included_l [?[-> Inc]]. move=> Eqv.
   apply (inj Some) in Eqv. move: Inc. rewrite Eqv.
@@ -316,7 +306,7 @@ Qed.
 Lemma proph_resolve E ξ vπ ζs q : ↑prophN ⊆ E → vπ ./ ζs →
   proph_ctx -∗ 1:[ξ] -∗ q:+[ζs] ={E}=∗ ⟨π, π ξ = vπ π⟩ ∗ q:+[ζs].
 Proof.
-  move: ξ vπ => [𝔄[i inh]] vπ. set ξ := PrVar 𝔄 (i, inh).
+  move: ξ vπ => [𝔄i i] vπ. set ξ := PrVar 𝔄i i.
   iIntros (? Dep) "? Tok Ptoks". iInv prophN as (S) "> [(%L & %Ok & %Sim) Auth]".
   iDestruct (proph_tok_out with "Auth Tok") as %Outξ; [done|].
   set L' := .{ξ := vπ} :: L. iAssert ⌜∀ζ, ζ ∈ ζs → ζ ∉ res L'⌝%I as %Outζs.
@@ -338,20 +328,18 @@ Proof.
     by apply Eqv. }
   have InLNe ζ wπ : .{ζ := wπ} ∈ L → ξ ≠ ζ.
   { move=> /(elem_of_list_fmap_1 pli_pv) ??. by subst. }
-  move=> [𝔅[j inh']] ?. rewrite elem_of_cons.
-  case (decide (ξ = PrVar 𝔅 (j, inh')))=> [Eq|Ne].
+  move=> [𝔅i j] ?. rewrite elem_of_cons.
+  case (decide (ξ = PrVar 𝔅i j))=> [Eq|Ne].
   { move: (Eq)=> ?. dependent destruction Eq.
     rewrite /S' /add_line discrete_fun_lookup_insert lookup_insert. split.
-    - move=> /(inj (Some ∘ aitem)) ->. left. by proof_subst inh' inh.
-    - move=> [Eq'|/InLNe ?]; [|done]. proof_subst inh' inh.
-      by dependent destruction Eq'. }
-  have Eqv : S' 𝔅 !! j ≡ S 𝔅 !! j.
+    - move=> /(inj (Some ∘ aitem)) ->. by left.
+    - move=> [Eq'|/InLNe ?]; [|done]. by dependent destruction Eq'. }
+  have Eqv : S' 𝔅i !! j ≡ S 𝔅i !! j.
   { rewrite /S' /add_line /discrete_fun_insert.
-    case (decide (𝔄 = 𝔅))=> [?|?]; [|done]. simpl_eq.
-    case (decide (i = j))=> [?|?]; [|by rewrite lookup_insert_ne]. subst.
-    by proof_subst inh' inh. }
+    case (decide (𝔄i = 𝔅i))=> [?|?]; [|done]. simpl_eq.
+    case (decide (i = j))=> [?|?]; [|by rewrite lookup_insert_ne]. by subst. }
   rewrite Eqv Sim. split; [by right|]. move=> [Eq|?]; [|done].
-  dependent destruction Eq. by proof_subst inh' inh.
+  by dependent destruction Eq.
 Qed.
 
 (** Manipulating Prophecy Observations *)
@@ -381,12 +369,12 @@ Proof.
   iAssert ⌜π ◁ L'⌝%I as %?; last first.
   { iSplitL; last first. { iPureIntro. exists π. by apply SatTo. }
     iModIntro. iExists S. iFrame. iPureIntro. by exists L. }
-  rewrite /proph_sat Forall_forall. iIntros ([[𝔄[i inh]] vπ] In)=>/=.
-  set ξ := PrVar 𝔄 (i, inh). iAssert (proph_atom .{ξ := vπ}) with "[Atoms]" as "Atom".
+  rewrite /proph_sat Forall_forall. iIntros ([[𝔄i i] vπ] In)=>/=.
+  set ξ := PrVar 𝔄i i. iAssert (proph_atom .{ξ := vπ}) with "[Atoms]" as "Atom".
   { iApply big_sepL_elem_of; by [apply In|]. }
   iDestruct (own_valid_2 with "Auth Atom") as %ValBoth. iPureIntro.
   move: ValBoth=> /auth_both_valid_discrete [Inc Val]. apply (Sat .{ξ := vπ}), Sim.
-  move/(discrete_fun_included_spec_1 _ _ 𝔄) in Inc.
+  move/(discrete_fun_included_spec_1 _ _ 𝔄i) in Inc.
   rewrite /line discrete_fun_lookup_singleton in Inc.
   move: Inc=> /singleton_included_l [it [Eqv /Some_included [->|Inc]]]; [done|].
   rewrite Eqv. constructor. apply (lookup_valid_Some _ i it) in Val; [|done]. move: Val.

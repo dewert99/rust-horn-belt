@@ -1,5 +1,3 @@
-Import EqNotations.
-Require Import Equality.
 From lrust.typing Require Export type.
 From lrust.typing Require Import type_context programs.
 Set Default Proof Using "Type".
@@ -9,10 +7,14 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section uniq_bor.
   Context `{!typeG Σ}.
 
+  Definition prval_to_inh' {𝔄} (vπ: proph (𝔄 * 𝔄))
+    : inh_syn_type 𝔄 := prval_to_inh (fst ∘ vπ).
+
   Program Definition uniq_bor {𝔄} (κ: lft) (ty: type 𝔄) : type (𝔄 * 𝔄) := {|
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlv_E ty κ;
-    ty_own vπ d tid vl := [loc[l] := vl] ∃d' (pb: proph_var_body 𝔄),
-      let ξ := PrVar 𝔄 pb in ⌜S d' ≤ d ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ, d') ∗
+    ty_own vπ d tid vl := [loc[l] := vl] ∃d' i,
+      let ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i in
+      ⌜S d' ≤ d ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ, d') ∗
       &{κ} (∃vπ' d', l ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ξ] (vπ', d'));
     ty_shr vπ d κ' tid l := [S d' := d] ∃(l': loc) ξ, ⌜snd ∘ vπ ./ [ξ]⌝ ∗
       &frac{κ'}(λ q', l ↦{q'} #l') ∗ &frac{κ'} (λ q, q:[ξ]) ∗
@@ -21,7 +23,7 @@ Section uniq_bor.
   Next Obligation. move=>/= *. rewrite by_just_loc_ex. by iIntros "[%[->?]]". Qed.
   Next Obligation. move=>/= > H. by setoid_rewrite H. Qed.
   Next Obligation.
-    move=> ???[|?][|?]*/=; (try by iIntros); [lia|]. do 8 f_equiv.
+    move=> ???[|?][|?]*/=; try (by iIntros); [lia|]. do 8 f_equiv.
     apply ty_shr_depth_mono. lia.
   Qed.
   Next Obligation.
@@ -30,21 +32,23 @@ Section uniq_bor.
     by iApply ty_shr_lft_mono.
   Qed.
   Next Obligation.
-    move=> 𝔄 *. iIntros "#LFT #? Bor Tok".
+    move=> 𝔄 ??? vπ *. have ?: Inhabited 𝔄 := populate ((fst ∘ vπ) inhabitant).
+    iIntros "#LFT #? Bor Tok".
     iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
     iMod (bor_sep with "LFT Bor") as "[BorMt Bor]"; [done|].
     rewrite by_just_loc_ex. iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
     iMod (bor_sep_persistent with "LFT Bor Tok") as "(>->& Bor & Tok)"; [done|].
     iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
-    iMod (bor_exists_tok with "LFT Bor Tok") as (pb) "[Bor Tok]"; [done|].
-    set ξ := PrVar 𝔄 pb. iMod (bor_sep_persistent with "LFT Bor Tok")
-    as "(>%H & Bor & Tok)"; [done|]. move: H=> [/succ_le [d[->Le]]->]/=.
+    iMod (bor_exists with "LFT Bor") as (i) "Bor"; [done|].
+    set ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i.
+    iMod (bor_sep_persistent with "LFT Bor Tok") as
+    "(>%H & Bor & Tok)"; [done|]. move: H=> [/succ_le [d[->Le]]->]/=.
     iMod (bor_sep with "LFT Bor") as "[BorVo Bor]"; [done|].
     iMod (bor_unnest with "LFT Bor") as "Bor"; [done|]. iIntros "!>!>!>".
     iMod (bor_shorten with "[] Bor") as "Bor".
     { iApply lft_incl_glb; [|iApply lft_incl_refl].
       iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
-    do 2 (iMod (bor_exists_tok with "LFT Bor Tok") as (?) "[Bor Tok]"; [done|]).
+    do 2 (iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|]).
     iMod (bor_sep with "LFT Bor") as "[BorOwn Bor]"; [done|].
     iMod (bor_sep with "LFT Bor") as "[_ BorPc]"; [done|].
     iMod (bor_combine with "LFT BorVo BorPc") as "Bor"; [done|].
@@ -64,7 +68,7 @@ Section uniq_bor.
   Qed.
   Next Obligation.
     move=> 𝔄 ??? vπ *. iIntros "#LFT #?". setoid_rewrite by_just_loc_ex at 1.
-    iDestruct 1 as (?->d pb [Le Eq]) "[Vo Bor]". move: Le=> /succ_le [?[->Le]].
+    iDestruct 1 as (?->d i [Le Eq]) "[Vo Bor]". move: Le=> /succ_le [?[->Le]].
     iIntros "[Tok Tok']". iMod (lft_incl_acc with "[] Tok") as (?) "[Tok ToTok]";
     first done. { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     iMod (bor_acc with "LFT Bor Tok") as "[Big Close']"; [done|]. iIntros "!>!>!>".
@@ -76,13 +80,13 @@ Section uniq_bor.
     iApply step_fupdN_nmono; [apply Le|]. iApply (step_fupdN_wand with "Upd").
     iMod 1 as (ξs ??) "[PTok Close]". iModIntro. rewrite proph_tok_singleton.
     iDestruct (proph_tok_combine with "PTok PTok'") as (q) "[PTok ToPToks]".
-    set ξ := PrVar 𝔄 pb. iExists (ξs ++ [ξ]), q. iSplit.
+    set ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i. iExists (ξs ++ [ξ]), q. iSplit.
     { iPureIntro. apply proph_dep_pair; [done|]. rewrite Eq. apply proph_dep_one. }
     iFrame "PTok". iIntros "PTok". iDestruct ("ToPToks" with "PTok") as "[PTok PTok']".
     iMod ("Close" with "PTok") as "[Own $]". iDestruct ("ToPc" with "PTok'") as "Pc".
     iMod ("Close'" with "[Mt Own Pc]") as "[Bor Tok]".
     { iModIntro. iExists (fst ∘ vπ), d. iFrame "Pc Time". iExists vl. iFrame. }
-    iMod ("ToTok" with "Tok") as "$". iModIntro. iExists d, pb.
+    iMod ("ToTok" with "Tok") as "$". iModIntro. iExists d, i.
     iFrame "Vo Bor". iPureIntro. split; [lia|done].
   Qed.
   Next Obligation.
@@ -118,10 +122,10 @@ Section typing.
   Qed.
 
   Global Instance uniq_send {𝔄} κ (ty: type 𝔄) : Send ty → Send (&uniq{κ} ty).
-  Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
+  Proof. move=> >/=. by do 17 f_equiv. Qed.
 
   Global Instance uniq_sync {𝔄} κ (ty: type 𝔄) : Sync ty → Sync (&uniq{κ} ty).
-  Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
+  Proof. move=> >/=. by do 10 f_equiv. Qed.
 
   Lemma uniq_subtype {𝔄} E L κ κ' (ty ty': type 𝔄) :
     lctx_lft_incl E L κ' κ → eqtype E L id id ty ty' →
@@ -201,49 +205,44 @@ Section typing.
   Qed.
   *)
 
-  Lemma read_uniq {𝔄} E L κ (ty : type 𝔄):
-    Copy ty → lctx_lft_alive E L κ → typed_read E L (&uniq{κ}ty) ty (&uniq{κ}ty) fst id.
+  Lemma read_uniq {𝔄} E L κ (ty: type 𝔄):
+    Copy ty → lctx_lft_alive E L κ → typed_read E L (&uniq{κ} ty) ty (&uniq{κ} ty) fst id.
   Proof.
-    iIntros (Hcopy Halive vπ [|depth1] [[]|] tid qL) "#LFT #HE Htl HL Hown //".
-    { iDestruct "Hown" as (? ?) "([% %] & _ & _)". lia. }
-    iDestruct "Hown" as (depth2 pb) "([% %] & HVO & Hown)".
-    iMod (Halive with "HE HL") as (q) "[Hκ Hclose]"; first solve_ndisj.
-    iMod (bor_acc with "LFT Hown Hκ") as "[H Hclose']"; first solve_ndisj.
-    iMod (bi.later_exist_except_0 with "H") as (vπ' d') "(Hvl & >#Tok & PC)".
-    iMod (uniq_strip_later with "HVO PC") as "(%Hag & HVO & PC)".
-    inversion Hag; subst; clear Hag.
-    iDestruct "Hvl" as (vl) "[> H↦ #Hown]".
-    iDestruct (ty_size_eq with "Hown") as "#>%". iIntros "!>".
-    iExists _, _, _. iSplit; first done. iFrame "H↦ Htl".
-    iSplitR.
-    {  iApply ty_own_depth_mono; [| iAssumption]; lia. }
-    iIntros "H↦".  iMod ("Hclose'" with "[H↦ PC]") as "[Hb Htok]".
-    { eauto 10 with iFrame. }
-    iMod ("Hclose" with "Htok") as "$". rewrite (_ :id ∘ vπ = vπ) //=. eauto with iFrame.
+    iIntros (? Alv ?[|?][[]|]??) "#LFT E Na L uniq//".
+    { iDestruct "uniq" as (??[??]) "_". lia. }
+    have ?: Inhabited 𝔄 := populate ((fst ∘ vπ) inhabitant).
+    iDestruct "uniq" as (??[??]) "[Vo Bor]".
+    iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
+    iMod (bor_acc with "LFT Bor κ") as
+      "[(%&%&(%& >Mt & #ty)& #>Time & Pc) ToBor]"; [done|].
+    iMod (uniq_strip_later with "Vo Pc") as ([=<-<-]) "[Vo Pc]".
+    iDestruct (ty_size_eq with "ty") as "#>%". iIntros "!>".
+    iExists _, _, _. iSplit; [done|]. iFrame "Mt Na". iSplitR.
+    { iApply ty_own_depth_mono; [|done]. lia. }
+    iIntros "Mt". iMod ("ToBor" with "[Mt Pc]") as "[? κ]".
+    { iNext. iExists _, _. iFrame "Pc Time". iExists _. by iFrame. }
+    iMod ("ToL" with "κ") as "$". iModIntro. iExists _, _. by iFrame.
   Qed.
 
-  Lemma write_uniq {𝔄} E L κ (ty : type 𝔄):
-    lctx_lft_alive E L κ → typed_write E L (&uniq{κ}ty) ty (&uniq{κ}ty) (λ v w, (w, v.2)).
+  Lemma write_uniq {𝔄} E L κ (ty: type 𝔄):
+    lctx_lft_alive E L κ →
+    typed_write E L (&uniq{κ} ty) ty (&uniq{κ} ty) (λ v w, (w, v.2)).
   Proof.
-    iIntros (Halive).
-    iIntros (vπ [|depth1] [[]|] tid qL) "#LFT #UNIQ HE HL Hown //".
-    { iDestruct "Hown" as (? ?) "([% %] & _ & _)". lia.  }
-    iDestruct "Hown" as (depth2 pb) "([% %] & HVO & Hown)".
-    iMod (Halive with "HE HL") as (q) "[Htok Hclose]"; first solve_ndisj.
-    iMod (bor_acc with "LFT Hown Htok") as "[H Hclose']"; first solve_ndisj.
-    iMod (bi.later_exist_except_0 with "H") as (vπ' d') "(Hvl & >#Tok & PC)".
-    iMod (uniq_strip_later with "HVO PC") as "(%Hag & HVO & PC)".
-    inversion Hag; subst; clear Hag.
-    iDestruct "Hvl" as (vl) "[> H↦ Hown]". rewrite ty.(ty_size_eq).
-    iDestruct "Hown" as ">%". iModIntro. iExists _, _. iSplit; first done.
-    iFrame. iIntros (wπ db) "Hown #Hdepth1".
-    iMod (uniq_update _ (PrVar 𝔄 pb) _ _ (wπ, _) with "UNIQ HVO PC") as "[HVO PC]"; first solve_ndisj.
-    iDestruct "Hown" as (vl') "[H↦ Hown]".
-    iMod ("Hclose'" with "[H↦ PC Hown]") as "[Hb Htok]".
-    { iNext. iExists _, _. iFrame "Hdepth1 PC". iExists _. iFrame. }
-    iMod ("Hclose" with "Htok") as "$".
-    iExists _, _.
-    auto with iFrame.
+    iIntros (Alv vπ [|?][[]|]??) "#LFT #UNIQ E L uniq //".
+    { iDestruct "uniq" as (??[??]) "_". lia. }
+    have ?: Inhabited 𝔄 := populate ((fst ∘ vπ) inhabitant).
+    iDestruct "uniq" as (??[??]) "[Vo Bor]".
+    iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
+    iMod (bor_acc with "LFT Bor κ") as "[(%&%&(%& >Mt & ty)& _ & Pc) ToBor]"; [done|].
+    iMod (uniq_strip_later with "Vo Pc") as ([=<-<-]) "[Vo Pc]".
+    rewrite ty_size_eq. iDestruct "ty" as ">%".
+    iModIntro. iExists _, _. iSplit; [done|]. iFrame "Mt".
+    iIntros (wπ ?) "(% & >Mt & ty) #Time /=". set vπ' := pair ∘ wπ ⊛ (snd ∘ vπ).
+    iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
+    iMod ("ToBor" with "[Mt Pc ty]") as "[Bor κ]".
+    { iNext. iExists _, _. iFrame "Time Pc". iExists _. iFrame. }
+    iMod ("ToL" with "κ") as "$". iModIntro. iExists _, _.
+    rewrite (proof_irrel (prval_to_inh' vπ') (prval_to_inh' vπ)). by iFrame.
   Qed.
 
 End typing.

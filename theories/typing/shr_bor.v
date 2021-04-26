@@ -13,7 +13,7 @@ Section shr_bor.
     move=> ????[|?]*/=; [by iIntros|]. rewrite by_just_loc_ex. by iIntros "[%[->?]]".
   Qed.
   Next Obligation.
-    move=> ???[|?][|?]*; (try by iIntros); [lia|]. rewrite/= !by_just_loc_ex.
+    move=> ???[|?][|?]*; try (by iIntros); [lia|]. rewrite/= !by_just_loc_ex.
     do 3 f_equiv. apply ty_shr_depth_mono. lia.
   Qed.
   Next Obligation.
