@@ -2,8 +2,6 @@ From lrust.lang Require Import memcpy.
 From lrust.typing Require Export type_context cont_context.
 Set Default Proof Using "Type".
 
-Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l ℭl 𝔇l: list syn_type).
-
 Section typing.
   Context `{!typeG Σ}.
 
@@ -32,7 +30,7 @@ Section typing.
     typed_body E L C T' e pre -∗ typed_body E L C T e (tr pre).
   Proof.
     iIntros (In) "e". iIntros (??) "#LFT TIME #PROPH #UNIQ #E Na L C T Obs".
-    iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & Obs & T')".
+    iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & T' & Obs)".
     iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T' Obs").
   Qed.
 

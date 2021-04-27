@@ -2,7 +2,7 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import uninit mod_ty.
 Set Default Proof Using "Type".
 
-Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l: list syn_type).
+Implicit Type 𝔄 𝔅 ℭ: syn_type.
 
 Section product.
   Context `{!typeG Σ}.
@@ -37,9 +37,7 @@ Section product.
     iIntros "*% (%&%&->& Own &?)". iExists wl, wl'. iSplit; [done|].
     by iSplitL "Own"; iApply ty_own_depth_mono.
   Qed.
-  Next Obligation.
-    iIntros "*%[??]". iSplit; by iApply ty_shr_depth_mono.
-  Qed.
+  Next Obligation. iIntros "*%[??]". iSplit; by iApply ty_shr_depth_mono. Qed.
   Next Obligation.
     iIntros "* In [??]". iSplit; by iApply (ty_shr_lft_mono with "In").
   Qed.

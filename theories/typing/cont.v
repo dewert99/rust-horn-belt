@@ -7,53 +7,29 @@ Section typing.
   Context `{!typeG Σ}.
 
   (** Jumping to and defining a continuation. *)
-  Lemma type_jump args argsv E L C T k T' :
-    (* We use this rather complicated way to state that
-         args = of_val <$> argsv, only because then solve_typing
-         is able to prove it easily. *)
-    Forall2 (λ a av, to_val a = Some av ∨ a = of_val av) args argsv →
-    k ◁cont(L, T') ∈ C →
-    tctx_incl E L T (T' (list_to_vec argsv)) →
-    ⊢ typed_body E L C T (k args).
+  Lemma type_jump {𝔄l 𝔅l} E (T: _ 𝔄l) C k L n (T': _ → _ 𝔅l) pre vl (vl': vec _ n) tr :
+    k ◁cont{L, T'} pre ∈ C →
+    vl = map of_val vl' → tctx_incl E L T (T' vl') tr →
+    ⊢ typed_body E L C T (k vl) (tr pre).
   Proof.
-    iIntros (Hargs HC Hincl tid) "#LFT #TIME #HE Hna HL HC HT".
-    iMod (Hincl with "LFT HE HL HT") as "(HL & HT)".
-    iSpecialize ("HC" with "[]"); first done.
-    assert (args = of_val <$> argsv) as ->.
-    { clear -Hargs. induction Hargs as [|a av ?? [<-%of_to_val| ->] _ ->]=>//=. }
-    rewrite -{3}(vec_to_list_to_vec argsv). iApply ("HC" with "Hna HL HT").
+    iIntros (InC -> TT' ??) "LFT _ PROPH UNIQ E Na L C T Obs".
+    iMod (TT' with "LFT PROPH UNIQ E L T Obs") as (?) "(L & T & Obs)".
+    rewrite cctx_interp_forall. iSpecialize ("C" with "[%//]").
+    iApply ("C" with "Na L T Obs").
   Qed.
 
-  Lemma type_cont argsb L1 (T' : vec val (length argsb) → _) E L2 C T econt e2 kb :
-    Closed (kb :b: argsb +b+ []) econt → Closed (kb :b: []) e2 →
-    (∀ k, typed_body E L2 (k ◁cont(L1, T') :: C) T (subst' kb k e2)) -∗
-    □ (∀ k (args : vec val (length argsb)),
-          typed_body E L1 (k ◁cont(L1, T') :: C) (T' args)
-                     (subst_v (kb::argsb) (k:::args) econt)) -∗
-    typed_body E L2 C T (letcont: kb argsb := econt in e2).
+  Lemma type_cont {𝔄l 𝔅l} E L C (T: tctx 𝔄l) kb bl ec e L' (T': _ → _ 𝔅l) prec pre :
+    Closed (kb :b: bl +b+ []) ec → Closed (kb :b: []) e →
+    (∀k, typed_body E L (k ◁cont{L', T'} prec :: C) T (subst' kb k e) pre) -∗
+    □(∀k (vl: vec val (length bl)), typed_body E L' (k ◁cont{L', T'} prec :: C)
+        (T' vl) (subst_v (kb :: bl) (k ::: vl) ec) prec) -∗
+    typed_body E L C T (letcont: kb bl := ec in e) pre.
   Proof.
-    iIntros (Hc1 Hc2) "He2 #Hecont". iIntros (tid) "#LFT #TIME #HE Htl HL HC HT".
-    rewrite (_ : (rec: kb argsb := econt)%E = of_val (rec: kb argsb := econt)%V); last by unlock.
-    wp_let. iApply ("He2" with "LFT TIME HE Htl HL [HC] HT").
-    iLöb as "IH". iIntros (x) "H".
-    iDestruct "H" as %[->|?]%elem_of_cons; last by iApply "HC".
-    iIntros (args) "Htl HL HT". wp_rec.
-    iApply ("Hecont" with "LFT TIME HE Htl HL [HC] HT"). by iApply "IH".
+    iIntros (??) "e #ec". iIntros (??) "#LFT #TIME #PROPH #UNIQ #E Na L #C T Obs".
+    rewrite (_ : (rec: kb bl := ec)%E = of_val (rec: kb bl := ec)%V); [|by unlock].
+    wp_let. iApply ("e" with "LFT TIME PROPH UNIQ E Na L [$C] T Obs").
+    iLöb as "IH". iIntros "!>" (??) "Na L' T' Obs". wp_rec.
+    iApply ("ec" with "LFT TIME PROPH UNIQ E Na L' [$C] T' Obs"). by iApply "IH".
   Qed.
 
-  Lemma type_cont_norec argsb L1 (T' : vec val (length argsb) → _) E L2 C T econt e2 kb :
-    Closed (kb :b: argsb +b+ []) econt → Closed (kb :b: []) e2 →
-    (∀ k, typed_body E L2 (k ◁cont(L1, T') :: C) T (subst' kb k e2)) -∗
-    (∀ k (args : vec val (length argsb)),
-          typed_body E L1 C (T' args) (subst_v (kb :: argsb) (k:::args) econt)) -∗
-    typed_body E L2 C T (letcont: kb argsb := econt in e2).
-  Proof.
-    iIntros (Hc1 Hc2) "He2 Hecont". iIntros (tid) "#LFT #TIME #HE Htl HL HC HT".
-    rewrite (_ : (rec: kb argsb := econt)%E = of_val (rec: kb argsb := econt)%V); last by unlock.
-    wp_let. iApply ("He2" with "LFT TIME HE Htl HL [HC Hecont] HT").
-    iIntros (x) "H".
-    iDestruct "H" as %[->|?]%elem_of_cons; last by iApply "HC".
-    iIntros (args) "Htl HL HT". wp_rec.
-    iApply ("Hecont" with "LFT TIME HE Htl HL HC HT").
-  Qed.
 End typing.

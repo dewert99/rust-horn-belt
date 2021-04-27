@@ -2,8 +2,6 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import product mod_ty.
 Set Default Proof Using "Type".
 
-Implicit Type 𝔄 𝔅: syn_type.
-
 Section array.
   Context `{!typeG Σ}.
 

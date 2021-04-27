@@ -8,8 +8,6 @@ From iris.base_logic Require Import invariants.
 From lrust.util Require Import basic discrete_fun.
 From lrust.prophecy Require Export syn_type.
 
-Implicit Type 𝔄i 𝔅i: syn_typei.
-
 (** * Basic Notions *)
 
 Record proph_var := PrVar { pv_ty: syn_typei; pv_id: positive }.
@@ -89,9 +87,7 @@ Local Notation ".{ ξ := vπ }" := (ProphLogItem ξ vπ)
 
 Local Definition proph_log := list proph_log_item.
 
-Implicit Type L: proph_log.
-
-Local Definition res L := pli_pv <$> L.
+Local Definition res (L: proph_log) := pli_pv <$> L.
 
 Local Definition proph_asn_eqv_out ξl π π' := ∀ξ, ξ ∉ ξl → π ξ = π' ξ.
 Local Notation "π .≡~{ ξl }≡ π'" := (proph_asn_eqv_out ξl π π')
@@ -143,17 +139,16 @@ Proof. exists (inhabitant ! L). by apply proph_ok_modify_sat. Qed.
 
 (** * Prophecy Camera *)
 
-Local Definition proph_itemR 𝔄i := csumR fracR (agreeR (leibnizO (proph 𝔄i))).
+Local Definition proph_itemR (𝔄i: syn_typei) :=
+  csumR fracR (agreeR (leibnizO (proph 𝔄i))).
 Local Definition proph_gmapUR 𝔄i := gmapUR positive (proph_itemR 𝔄i).
 Local Definition proph_smryUR := discrete_funUR proph_gmapUR.
 Definition prophUR := authUR proph_smryUR.
 
-Implicit Type (S: proph_smryUR) (q: Qp).
-
 Local Definition aitem {𝔄i} vπ : proph_itemR 𝔄i := Cinr (to_agree vπ).
-Local Definition fitem {𝔄i} q : proph_itemR 𝔄i := Cinl q.
+Local Definition fitem {𝔄i} (q: Qp) : proph_itemR 𝔄i := Cinl q.
 Local Definition line ξ it : proph_smryUR := .{[ξ.(pv_ty) := {[ξ.(pv_id) := it]}]}.
-Local Definition add_line ξ it S : proph_smryUR :=
+Local Definition add_line ξ it (S: proph_smryUR) : proph_smryUR :=
   .<[ξ.(pv_ty) := <[ξ.(pv_id) := it]> (S ξ.(pv_ty))]> S.
 
 Definition prophΣ := #[GFunctor prophUR].
@@ -166,7 +161,7 @@ Definition prophN := nroot .@ "proph".
 
 (** * Iris Propositions *)
 
-Local Definition proph_sim S L :=
+Local Definition proph_sim (S: proph_smryUR) (L: proph_log) :=
   ∀ξ vπ, S ξ.(pv_ty) !! ξ.(pv_id) ≡ Some (aitem vπ) ↔ .{ξ := vπ} ∈ L.
 Local Notation "S :~ L" := (proph_sim S L) (at level 70, format "S  :~  L").
 

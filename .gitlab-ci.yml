@@ -32,6 +32,7 @@ build-coq.dev:
   <<: *template
   variables:
     OPAM_PINS: "coq version dev"
+  only: [] # disabled
 
 build-coq.8.13.0:
   <<: *template

@@ -47,6 +47,7 @@ theories/typing/type.v
 theories/typing/cont_context.v
 theories/typing/type_context.v
 theories/typing/programs.v
+theories/typing/cont.v
 theories/typing/empty.v
 theories/typing/uninit.v
 theories/typing/maybe_uninit.v
@@ -63,7 +64,6 @@ theories/typing/shr_bor.v
 theories/typing/uniq_bor.v
 # theories/typing/function.v
 theories/typing/borrow.v
-# theories/typing/cont.v
 # theories/typing/type_sum.v
 # theories/typing/typing.v
 # theories/typing/soundness.v

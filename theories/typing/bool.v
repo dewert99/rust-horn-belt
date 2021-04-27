@@ -21,13 +21,13 @@ Section bool.
     rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "Time". by iExists b.
   Qed.
 
-  Lemma type_bool {Al} b E L C (T: _ Al) x e tr:
+  Lemma type_bool {𝔄l} b E L C (T: _ 𝔄l) x e tr:
     Closed (x :b: []) e →
     (∀v: val, typed_body E L C (v ◁ bool_ty +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := #b in e) (λ al, tr (b -:: al)).
   Proof. iIntros. iApply type_let; by [apply type_bool_instr|solve_typing]. Qed.
 
-  Lemma type_if {Al Bl} p (T: _ Al) (T': _ Bl) e1 e2 pre1 pre2 tr E L C :
+  Lemma type_if {𝔄l 𝔅l} p (T: _ 𝔄l) (T': _ 𝔅l) e1 e2 pre1 pre2 tr E L C :
     tctx_extract_ctx E L +[p ◁ bool_ty] T T' tr →
     typed_body E L C T' e1 pre1 -∗ typed_body E L C T' e2 pre2 -∗
     typed_body E L C T (if: p then e1 else e2)

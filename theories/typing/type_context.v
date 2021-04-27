@@ -142,8 +142,8 @@ Section lemmas.
   Proof. rewrite /CopyC=> ???[??]. apply _. Qed.
 
   (** Send typing contexts *)
-  Class SendC {𝔄l} (T: tctx 𝔄l) := sendc_change_tid tid1 tid2 vπl :
-    tctx_interp tid1 T vπl ⊣⊢ tctx_interp tid2 T vπl.
+  Class SendC {𝔄l} (T: tctx 𝔄l) := sendc_change_tid tid tid' vπl :
+    tctx_interp tid T vπl ⊣⊢ tctx_interp tid' T vπl.
 
   Global Instance tctx_nil_send: SendC +[].
   Proof. done. Qed.
@@ -160,7 +160,7 @@ Section lemmas.
     (tr: predl_trans 𝔄l 𝔅l) : Prop := ∀tid q vπl postπ,
       lft_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
       tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩ ={⊤}=∗ ∃vπl',
-      llctx_interp L q ∗ ⟨π, postπ π (vπl' -$ π)⟩ ∗ tctx_interp tid T' vπl'.
+      llctx_interp L q ∗ tctx_interp tid T' vπl' ∗ ⟨π, postπ π (vπl' -$ π)⟩.
 
   Lemma tctx_incl_impl {𝔄l 𝔅l} (T: _ 𝔄l) (T': _ 𝔅l) (tr tr': _ → _ → Prop) E L :
     (∀post vl, tr post vl → tr' post vl) →
@@ -183,7 +183,7 @@ Section lemmas.
     tctx_incl E L T1 T2 tr → tctx_incl E L T2 T3 tr' → tctx_incl E L T1 T3 (tr ∘ tr').
   Proof.
     move=> In In' >. iIntros "#LFT #PROPH #UNIQ #E L T Obs".
-    iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & Obs & T)".
+    iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & T & Obs)".
     iMod (In' with "LFT PROPH UNIQ E L T Obs") as (vπl'') "(?&?&?)".
     iExists vπl''. by iFrame.
   Qed.
@@ -195,10 +195,10 @@ Section lemmas.
   Proof.
     move=> Hincl1 Hincl2 ?? vπl ?. move: (papp_ex vπl)=> [?[?->]].
     iIntros "#LFT #PROPH #UNIQ #E L [T1 T2] Obs".
-    iMod (Hincl1 with "LFT PROPH UNIQ E L T1 [Obs]")  as (wπl) "(L & Obs & T1')".
+    iMod (Hincl1 with "LFT PROPH UNIQ E L T1 [Obs]")  as (wπl) "(L & T1' & Obs)".
     { iApply proph_obs_eq; [|done]=> ?.
       by rewrite /trans_app papply_app papp_sepl papp_sepr. }
-    iMod (Hincl2 with "LFT PROPH UNIQ E L T2 Obs") as (wπl') "(L &?& T2')".
+    iMod (Hincl2 with "LFT PROPH UNIQ E L T2 Obs") as (wπl') "(L & T2' &?)".
     iExists (wπl -++ wπl'). iCombine "T1' T2'" as "$". iFrame "L".
     iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app.
   Qed.
@@ -253,7 +253,7 @@ Section lemmas.
   Proof.
     iIntros (Sub ??[vπ wπl]?) "#LFT _ _ E L /=[(%v & %d &%&?& ty) T] Obs /=".
     iDestruct (Sub with "L E") as "#(_ & _ & #InOwn & _)". iModIntro.
-    iExists (f ∘ vπ -:: wπl). iFrame "L Obs T". iExists v, d.
+    iExists (f ∘ vπ -:: wπl). iFrame "L T Obs". iExists v, d.
     do 2 (iSplit; [done|]). by iApply "InOwn".
   Qed.
 
@@ -289,7 +289,7 @@ Section lemmas.
     by [eapply tctx_incl_tail|apply tctx_incl_swap]. } move=> ?[??]/=. f_equal.
   Qed.
 
-  Lemma tctx_extract_elt_here_copy {𝔄 𝔅 𝔄l} ty ty' (f: 𝔄 → 𝔅) (T: _ 𝔄l) p p' E L :
+  Lemma tctx_extract_elt_here_copy {𝔄 𝔅 𝔄l} ty ty' (f: 𝔅 → 𝔄) (T: _ 𝔄l) p p' E L :
     p = p' → Copy ty' → subtype E L ty' ty f →
     tctx_extract_elt E L (p ◁ ty) (p' ◁ ty' +:: T) (p' ◁ ty' +:: T)
       (λ post '(b -:: al), post (f b -:: b -:: al)).
