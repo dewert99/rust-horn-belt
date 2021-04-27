@@ -3,10 +3,12 @@ From lrust.lang Require Import notation.
 From lrust.typing Require Export type_context.
 Set Default Proof Using "Type".
 
+Implicit Type 𝔄l: tlist syn_type.
+
 Notation valpl := (plist (const val)).
 
-Fixpoint valpl_to_exprs {Al: Types} (vl: valpl Al) : list expr :=
-  match Al, vl with ^[], _ => [] |
+Fixpoint valpl_to_exprs {𝔄l} (vl: valpl 𝔄l) : list expr :=
+  match 𝔄l, vl with ^[], _ => [] |
     _ ^:: _, v -:: vl' => (v: expr) :: valpl_to_exprs vl' end.
 
 Section cont_context.
@@ -15,7 +17,7 @@ Section cont_context.
   Definition cont_postcondition: iProp Σ := True%I.
 
   Record cctx_elt := CCtxe {
-    cctxe_k: val;  cctxe_L: llctx;  cctxe_As: Types;
+    cctxe_k: val;  cctxe_L: llctx;  cctxe_As: tlist syn_type;
     cctxe_T: valpl cctxe_As → tctx cctxe_As;  cctxe_pre: predl cctxe_As;
   }.
 
@@ -65,7 +67,7 @@ Section cont_context.
   Lemma cctx_incl_nil E C : cctx_incl E C ^[].
   Proof. by iIntros. Qed.
 
-  Lemma cctx_incl_cons {Al} E k L (T T': valpl Al → tctx Al) tr C C' pre :
+  Lemma cctx_incl_cons {𝔄l} E k L (T T': valpl 𝔄l → tctx 𝔄l) tr C C' pre :
     cctx_incl E C C' → (∀vl, tctx_incl E L (T' vl) (T vl) tr) →
     cctx_incl E (k ◁cont{L, T} pre ^:: C) (k ◁cont{L, T'} (tr pre) ^:: C').
   Proof.

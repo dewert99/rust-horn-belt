@@ -52,10 +52,10 @@ Section join_handle.
     Proper (eqtype E L ==> eqtype E L) join_handle.
   Proof. intros ??[]. by split; apply join_handle_mono. Qed.
 
-  Global Instance join_handle_type_contractive : TypeContractive join_handle.
+  Global Instance join_handle_type_contr : TypeContractive join_handle.
   Proof.
     split=>//.
-    - apply (type_lft_morphism_add _ static [] [])=>?.
+    - apply (type_lft_morph_add _ static [] [])=>?.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /elctx_interp /= left_id right_id.
     - move=> ??? Hsz ?? Ho ??? [|[[|l|]|] []] //=.

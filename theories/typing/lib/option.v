@@ -3,21 +3,23 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import mod_ty uninit sum (* typing lib.panic *).
 Set Default Proof Using "Type".
 
+Implicit Type 𝔄 𝔅: syn_type.
+
 Section option.
   Context `{!typeG Σ}.
 
-  Definition option_ty {A} (ty: type A) : type (option A) :=
-    <{sum_to_option}> (unit_ty + ty).
+  Definition option_ty {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
+    <{sum_to_option: (() + 𝔄)%ST → optionₛ 𝔄}> (unit_ty + ty).
 
-  Lemma option_subtype {A B} E L (f: A → B) ty ty' :
-    subtype E L f ty ty' → subtype E L (option_map f) (option_ty ty) (option_ty ty').
+  Lemma option_subtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty ty' :
+    subtype E L ty ty' f → subtype E L (option_ty ty) (option_ty ty') (option_map f).
   Proof.
-    move=> ?. eapply subtype_eq. { apply mod_ty_subtype; [apply _|].
-    apply sum_subtype; [reflexivity|done]. } { fun_ext. by case. }
+    move=> ?. eapply subtype_eq; [solve_typing|]. fun_ext. by case.
   Qed.
 
-  Lemma option_eqtype {A B} E L (f: A → B) g ty ty' : eqtype E L f g ty ty' →
-    eqtype E L (option_map f) (option_map g) (option_ty ty) (option_ty ty').
+  Lemma option_eqtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) g ty ty' :
+    eqtype E L ty ty' f g →
+    eqtype E L (option_ty ty) (option_ty ty') (option_map f) (option_map g).
   Proof. move=> [??]. split; by apply option_subtype. Qed.
 
 (*

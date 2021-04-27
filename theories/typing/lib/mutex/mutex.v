@@ -78,7 +78,7 @@ Section mutex.
   Global Instance mutex_type_ne : TypeNonExpansive mutex.
   Proof.
     split.
-    - apply (type_lft_morphism_add _ static [] []) => ?.
+    - apply (type_lft_morph_add _ static [] []) => ?.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /elctx_interp /= left_id right_id.
     - by move=>/= ?? ->.

@@ -1,5 +1,5 @@
 Import EqNotations.
-Require Import Equality FunctionalExtensionality.
+Require Import Equality.
 From stdpp Require Import strings.
 From iris.algebra Require Import auth cmra functions gmap csum frac agree.
 From iris.bi Require Import fractional.

@@ -189,9 +189,9 @@ Section rc.
     - by iApply na_bor_shorten.
   Qed.
 
-  Global Instance rc_type_contractive : TypeContractive rc.
+  Global Instance rc_type_contr : TypeContractive rc.
     split.
-    - apply (type_lft_morphism_add _ static [] []).
+    - apply (type_lft_morph_add _ static [] []).
       + intros. rewrite left_id. iApply lft_equiv_refl.
       + intros. by rewrite /= /elctx_interp /= left_id right_id.
     - done.

@@ -1,12 +1,13 @@
-Require Import FunctionalExtensionality Equality.
 From lrust.typing Require Export type.
 From lrust.typing Require Import uninit.
 Set Default Proof Using "Type".
 
+Implicit Type 𝔄 𝔅: syn_type.
+
 Section maybe_uninit.
   Context `{!typeG Σ}.
 
-  Local Lemma maybe_uninit_mt {A} (ty: _ A) vπ d tid l q :
+  Local Lemma maybe_uninit_mt {𝔄} (ty: _ 𝔄) vπ d tid l q :
     (l ↦∗{q}: λ vl, ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
       ∃vπ', ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl)%I ⊣⊢
     ⌜vπ = const None⌝ ∗ l ↦∗{q}: (λ vl, ⌜length vl = ty.(ty_size)⌝) ∨
@@ -18,7 +19,7 @@ Section maybe_uninit.
       [by iLeft|]. iRight. iExists vπ'. by iSplit.
   Qed.
 
-  Program Definition maybe_uninit {A} (ty: type A) : type (option A) := {|
+  Program Definition maybe_uninit {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) := {|
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own vπ d tid vl :=
       ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
@@ -71,7 +72,7 @@ Section maybe_uninit.
     iMod ("Close" with "PTok") as "[?$]". iRight. iExists vπ. by iFrame.
   Qed.
 
-  Global Instance maybe_uninit_ne {A} : NonExpansive (@maybe_uninit A).
+  Global Instance maybe_uninit_ne {𝔄} : NonExpansive (@maybe_uninit 𝔄).
   Proof. solve_ne_type. Qed.
 
 End maybe_uninit.
@@ -81,19 +82,19 @@ Notation "?" := maybe_uninit : lrust_type_scope.
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance maybe_uninit_type_ne {A} : TypeNonExpansive (@maybe_uninit _ _ A).
+  Global Instance maybe_uninit_type_ne {𝔄} : TypeNonExpansive (@maybe_uninit _ _ 𝔄).
   Proof.
-    constructor; [by apply type_lft_morphism_id_like|done| |];
+    constructor; [by apply type_lft_morph_id_like|done| |];
     [move=>/= > ->*|move=>/= >*]; by do 4 f_equiv.
   Qed.
 
-  Global Instance maybe_uninit_send {A} (ty: _ A) : Send ty → Send (? ty).
+  Global Instance maybe_uninit_send {𝔄} (ty: _ 𝔄) : Send ty → Send (? ty).
   Proof. move=> >/=. by do 4 f_equiv. Qed.
-  Global Instance maybe_uninit_sync {A} (ty: _ A) : Sync ty → Sync (? ty).
+  Global Instance maybe_uninit_sync {𝔄} (ty: _ 𝔄) : Sync ty → Sync (? ty).
   Proof. move=> >/=. by do 4 f_equiv. Qed.
 
-  Lemma maybe_uninit_subtype {A B} (f: A → B) ty ty' E L :
-    subtype E L f ty ty' → subtype E L (option_map f) (? ty) (? ty').
+  Lemma maybe_uninit_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty' E L :
+    subtype E L ty ty' f → subtype E L (? ty) (? ty') (option_map f).
   Proof.
     move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Sub".
     iIntros "!> E". iDestruct ("Sub" with "E") as "(%&?& #InOwn & #InShr)".
@@ -103,25 +104,25 @@ Section typing.
     - iIntros "[->|(%vπ' &->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
       iSplit; [done|]. by iApply "InShr".
   Qed.
-  Lemma maybe_uninit_eqtype {A B} (f: A → B) g ty ty' E L :
-    eqtype E L f g ty ty' → eqtype E L (option_map f) (option_map g) (? ty) (? ty').
+  Lemma maybe_uninit_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' E L :
+    eqtype E L ty ty' f g → eqtype E L (? ty) (? ty') (option_map f) (option_map g).
   Proof. move=> [??]. split; by apply maybe_uninit_subtype. Qed.
 
-  Lemma uninit_to_maybe_uninit {A} (ty: _ A) E L :
-    subtype E L (const None) (↯ ty.(ty_size)) (? ty).
+  Lemma uninit_to_maybe_uninit {𝔄} (ty: _ 𝔄) E L :
+    subtype E L (↯ ty.(ty_size)) (? ty) (const None).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_static|].
     by iSplit; iIntros "!>*%/="; iLeft.
   Qed.
 
-  Lemma into_maybe_uninit {A} (ty: _ A) E L : subtype E L Some ty (? ty).
+  Lemma into_maybe_uninit {𝔄} (ty: _ 𝔄) E L : subtype E L ty (? ty) Some.
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*?/="; iRight; iExists vπ; by iFrame.
   Qed.
 
-  Lemma maybe_uninit_join {A} (ty: _ A) E L :
-    subtype E L (option_join _) (? (? ty)) (? ty).
+  Lemma maybe_uninit_join {𝔄} (ty: _ 𝔄) E L :
+    subtype E L (? (? ty)) (? ty) (option_join _).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*/=".

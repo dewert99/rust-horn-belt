@@ -56,7 +56,7 @@ Section fn.
   Global Instance fn_send fp : Send (fn fp).
   Proof. iIntros (tid1 tid2 vl). done. Qed.
 
-  Global Instance fn_type_contractive E (Tl : A → type → vec type n) T :
+  Global Instance fn_type_contr E (Tl : A → type → vec type n) T :
     (∀ x, TypeListNonExpansive (Tl x)) →
     (∀ x, TypeNonExpansive (T x)) →
     TypeContractive (λ ty, fn (λ x, FP (E x) (Tl x ty) (T x ty))).
@@ -77,21 +77,21 @@ Section fn.
         rewrite /fp_E /= !elctx_interp_app !EQTl /tyl_E /tyl_outlv_E.
         clear Tl HTl EQTl. (do 2 f_equiv); [|f_equiv; [|f_equiv]].
         * induction HTl' as [|T' Tl' HT' _ IH]=>//=.
-          rewrite !elctx_interp_app IH type_lft_morphism_elctx_interp_proper //.
+          rewrite !elctx_interp_app IH type_lft_morph_elctx_interp_proper //.
         * induction HTl' as [|T' Tl' HT' _ IH]=>//=.
           rewrite !elctx_interp_app IH !elctx_interp_ty_outlv_E
                   lft_incl_equiv_proper_r //.
-          by iApply type_lft_morphism_lft_equiv_proper.
-        * apply type_lft_morphism_elctx_interp_proper=>//. apply _.
+          by iApply type_lft_morph_lft_equiv_proper.
+        * apply type_lft_morph_elctx_interp_proper=>//. apply _.
         * rewrite !elctx_interp_ty_outlv_E.
           apply lft_incl_equiv_proper_r.
-          by iApply type_lft_morphism_lft_equiv_proper.
+          by iApply type_lft_morph_lft_equiv_proper.
       + rewrite !cctx_interp_singleton /=. do 5 f_equiv.
         rewrite !tctx_interp_singleton /tctx_elt_interp.
-        do 6 f_equiv. apply box_type_contractive.
+        do 6 f_equiv. apply box_type_contr.
         * by apply HT.
-        * by iApply type_lft_morphism_lft_equiv_proper.
-        * apply type_lft_morphism_elctx_interp_proper=>//. apply _.
+        * by iApply type_lft_morph_lft_equiv_proper.
+        * apply type_lft_morph_elctx_interp_proper=>//. apply _.
         * intros. by apply dist_dist_later, HT.
         * intros. by apply dist_S, HT.
       + rewrite /tctx_interp !big_sepL_zip_with /=. do 2 f_equiv. intros k v.
@@ -103,7 +103,7 @@ Section fn.
         * do 3 f_equiv. by eapply HTl'.
         * by f_equiv; apply HTl'. }
     split.
-    - eapply type_lft_morphism_const=>? //=. apply lft_equiv_refl.
+    - eapply type_lft_morph_const=>? //=. apply lft_equiv_refl.
     - done.
     - intros. by apply Hown.
     - intros. simpl. do 4 (f_contractive || f_equiv). by eapply Hown.

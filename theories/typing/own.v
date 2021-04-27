@@ -4,6 +4,8 @@ From lrust.typing Require Import uninit type_context programs.
 Set Default Proof Using "Type".
 Open Scope nat_scope.
 
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: tlist syn_type).
+
 Section own.
   Context `{!typeG Σ}.
 
@@ -42,7 +44,7 @@ Section own.
   (* Make sure 'simpl' doesn't unfold. *)
   Global Opaque freeable_sz.
 
-  Program Definition own_ptr {A} (n: nat) (ty: type A) : type A := {|
+  Program Definition own_ptr {𝔄} (n: nat) (ty: type 𝔄) : type 𝔄 := {|
     ty_size := 1;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own vπ d tid vl := [S d' := d] [loc[l] := vl]
       ▷ l ↦∗: ty.(ty_own) vπ d' tid ∗ freeable_sz n ty.(ty_size) l;
@@ -96,23 +98,23 @@ Section own.
     iExists l. by iFrame.
   Qed.
 
-  Global Instance own_type_contractive A n : TypeContractive (@own_ptr A n).
+  Global Instance own_type_contr 𝔄 n : TypeContractive (@own_ptr 𝔄 n).
   Proof.
-    split; [by apply type_lft_morphism_id_like|done| |].
+    split; [by apply type_lft_morph_id_like|done| |].
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= > *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
-  Global Instance own_ne A n : NonExpansive (@own_ptr A n).
+  Global Instance own_ne 𝔄 n : NonExpansive (@own_ptr 𝔄 n).
   Proof. solve_ne_type. Qed.
 
-  Global Instance own_send A n ty : Send ty → Send (@own_ptr A n ty).
+  Global Instance own_send 𝔄 n ty : Send ty → Send (@own_ptr 𝔄 n ty).
   Proof. move=> >/=. by do 9 f_equiv. Qed.
 
-  Global Instance own_sync A n ty : Sync ty → Sync (@own_ptr A n ty).
+  Global Instance own_sync 𝔄 n ty : Sync ty → Sync (@own_ptr 𝔄 n ty).
   Proof. move=> >/=. by do 6 f_equiv. Qed.
 
-  Lemma own_type_incl {A B} n (f: A → B) ty1 ty2 :
-    type_incl f ty1 ty2 -∗ type_incl f (own_ptr n ty1) (own_ptr n ty2).
+  Lemma own_type_incl {𝔄 𝔅} n (f: 𝔄 → 𝔅) ty1 ty2 :
+    type_incl ty1 ty2 f -∗ type_incl (own_ptr n ty1) (own_ptr n ty2) f.
   Proof.
     iIntros "#(%Eq &?& InOwn & InShr)". do 2 (iSplit; [done|]). iSplit; iModIntro.
     - iIntros (?[|?]??); [done|]. rewrite/= {1}by_just_loc_ex Eq.
@@ -121,15 +123,15 @@ Section own.
       iSplit; [done|]. by iApply "InShr".
   Qed.
 
-  Lemma own_subtype {A B} E L n (f: A → B) ty ty' :
-    subtype E L f ty ty' → subtype E L f (own_ptr n ty) (own_ptr n ty').
+  Lemma own_subtype {𝔄 𝔅} E L n (f: 𝔄 → 𝔅) ty ty' :
+    subtype E L ty ty' f → subtype E L (own_ptr n ty) (own_ptr n ty') f.
   Proof.
     move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Incl".
     iIntros "!> #E". iApply own_type_incl; by [|iApply "Incl"].
   Qed.
 
-  Lemma own_eqtype {A B} E L n (f: A → B) g ty ty' :
-    eqtype E L f g ty ty' → eqtype E L f g (own_ptr n ty) (own_ptr n ty').
+  Lemma own_eqtype {𝔄 𝔅} E L n (f: 𝔄 → 𝔅) g ty ty' :
+    eqtype E L ty ty' f g → eqtype E L (own_ptr n ty) (own_ptr n ty') f g.
   Proof. move=> [??]. split; by apply own_subtype. Qed.
 
 End own.
@@ -137,33 +139,33 @@ End own.
 Section box.
   Context `{!typeG Σ}.
 
-  Definition box {A} (ty: type A) : type A := own_ptr ty.(ty_size) ty.
+  Definition box {𝔄} (ty: type 𝔄) : type 𝔄 := own_ptr ty.(ty_size) ty.
 
-  Global Instance box_ne A : NonExpansive (@box A).
+  Global Instance box_ne 𝔄 : NonExpansive (@box 𝔄).
   Proof. solve_ne_type. Qed.
 
-  Global Instance box_type_contractive A : TypeContractive (@box A).
+  Global Instance box_type_contr 𝔄 : TypeContractive (@box 𝔄).
   Proof.
-    split; [by apply type_lft_morphism_id_like|done| |].
+    split; [by apply type_lft_morph_id_like|done| |].
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
-  Lemma box_type_incl {A B} (f: A → B) ty ty':
-    type_incl f ty ty' -∗ type_incl f (box ty) (box ty').
+  Lemma box_type_incl {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty':
+    type_incl ty ty' f -∗ type_incl (box ty) (box ty') f.
   Proof.
     iIntros "[%Eq ?]". rewrite /box Eq. iApply own_type_incl. by iSplit.
   Qed.
 
-  Lemma box_subtype {A B} E L (f: A → B) ty ty' :
-    subtype E L f ty ty' → subtype E L f (box ty) (box ty').
+  Lemma box_subtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty ty' :
+    subtype E L ty ty' f → subtype E L (box ty) (box ty') f.
   Proof.
     move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Incl".
     iIntros "!> #?". iApply box_type_incl. by iApply "Incl".
   Qed.
 
-  Lemma box_eqtype {A B} E L (f: A → B) g ty ty' :
-    eqtype E L f g ty ty' → eqtype E L f g (box ty) (box ty').
+  Lemma box_eqtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) g ty ty' :
+    eqtype E L ty ty' f g → eqtype E L (box ty) (box ty') f g.
   Proof. move=> [??]. split; by apply box_subtype. Qed.
 
 End box.
@@ -171,7 +173,7 @@ End box.
 Section typing.
   Context `{!typeG Σ}.
 
-  Lemma write_own {A B} (ty: _ A) (ty': _ B) n E L :
+  Lemma write_own {𝔄 𝔅} (ty: _ 𝔄) (ty': _ 𝔅) n E L :
     ty.(ty_size) = ty'.(ty_size) →
     typed_write E L (own_ptr n ty') ty (own_ptr n ty) (λ _ a, a).
   Proof.
@@ -181,7 +183,7 @@ Section typing.
     iSplit; [done|]. iFrame "Mt". iIntros (??) "$ ? !>". by rewrite Sz.
   Qed.
 
-  Lemma read_own_copy {A} (ty: _ A) n E L :
+  Lemma read_own_copy {𝔄} (ty: _ 𝔄) n E L :
     Copy ty → typed_read E L (own_ptr n ty) ty (own_ptr n ty) id id.
   Proof.
     move=> ??[|?]???; iIntros "_ _ $$ own"=>//=. setoid_rewrite by_just_loc_ex at 1.
@@ -190,7 +192,7 @@ Section typing.
     { iApply ty_own_depth_mono; [|done]. lia. } iIntros "? !>!>". iExists vl. iFrame.
   Qed.
 
-  Lemma read_own_move {A} (ty: _ A) n E L :
+  Lemma read_own_move {𝔄} (ty: _ 𝔄) n E L :
     typed_read E L (own_ptr n ty) ty (own_ptr n (↯ ty.(ty_size))) id unique.
   Proof.
     move=> ?[|?]???; iIntros "_ _ $$ own"=>//. setoid_rewrite by_just_loc_ex at 1.
@@ -212,14 +214,14 @@ Section typing.
     iFrame "Fr". iNext. iExists _. iFrame "Mt". by rewrite repeat_length.
   Qed.
 
-  Lemma type_new {Al} (n: Z) n' x e pre E L C (T: _ Al) :
+  Lemma type_new {𝔄l} (n: Z) n' x e pre E L C (T: _ 𝔄l) :
     Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n →
     (∀v: val, typed_body E L C (v ◁ own_ptr n' (↯ n') +:: T) (subst' x v e) pre) -∗
     typed_body E L C T (let: x := new [ #n] in e) (λ al, pre (() -:: al)).
   Proof. iIntros. subst. iApply type_let; by [apply type_new_instr|solve_typing]. Qed.
 
-  Lemma type_new_subtype {A Al} (ty: _ A) n' (n: Z) (T: _ Al) f e pre x E L C :
-    Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n → subtype E L f (↯ n') ty →
+  Lemma type_new_subtype {𝔄 𝔄l} (ty: _ 𝔄) n' (n: Z) (T: _ 𝔄l) f e pre x E L C :
+    Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n → subtype E L (↯ n') ty f →
     (∀v: val, typed_body E L C (v ◁ own_ptr n' ty +:: T) (subst' x v e) pre) -∗
     typed_body E L C T (let: x := new [ #n] in e) (λ al, pre (f () -:: al)).
   Proof.
@@ -228,7 +230,7 @@ Section typing.
     [eapply subtype_tctx_incl, own_subtype, Sub|done]. } done.
   Qed.
 
-  Lemma type_delete_instr {A} (ty: _ A) (n: Z) p E L :
+  Lemma type_delete_instr {𝔄} (ty: _ 𝔄) (n: Z) p E L :
     let n' := ty.(ty_size) in n = Z.of_nat n' →
     ⊢ typed_instr E L +[p ◁ own_ptr n' ty] (delete [ #n; p])%E (λ _, +[])
       (λ post _, post -[]).
@@ -241,7 +243,7 @@ Section typing.
     { iIntros "!>_". iExists -[]. by iSplit. }
   Qed.
 
-  Lemma type_delete {A Al Bl} (ty: _ A) n' (n: Z) p e E L C (T: _ Al) (T': _ Bl) tr pre :
+  Lemma type_delete {𝔄 𝔄l 𝔅l} (ty: _ 𝔄) n' (n: Z) p e E L C (T: _ 𝔄l) (T': _ 𝔅l) tr pre :
     Closed [] e → tctx_extract_ctx E L +[p ◁ own_ptr n' ty] T T' tr →
     n' = ty.(ty_size) → n = n' → typed_body E L C T' e pre -∗
     typed_body E L C T (delete [ #n; p ];; e) (tr (λ '(_ -:: al), pre al)).
@@ -250,8 +252,8 @@ Section typing.
     f_equal. fun_ext. by case.
   Qed.
 
-  Lemma type_letalloc_1 {A Al Bl} (ty: _ A) (x: string) p e
-    (T: _ Al) (T': _ Bl) tr pre E L C :
+  Lemma type_letalloc_1 {𝔄 𝔄l 𝔅l} (ty: _ 𝔄) (x: string) p e
+    (T: _ 𝔄l) (T': _ 𝔅l) tr pre E L C :
     Closed [] p → Closed [x] e →
     tctx_extract_ctx E L +[p ◁ ty] T T' tr → ty.(ty_size) = 1 →
     (∀v: val, typed_body E L C (v ◁ own_ptr 1 ty +:: T') (subst x v e) pre) -∗
@@ -270,8 +272,8 @@ Section typing.
     f_equal. fun_ext. by case.
   Qed.
 
-  Lemma type_letalloc_n {A B B' Al Bl} (ty: _ A) (tyr: _ B) (tyr': _ B')
-    gt st (T: _ Al) (T': _ Bl) tr pre (x: string) p e E L C :
+  Lemma type_letalloc_n {𝔄 𝔅 𝔅' 𝔄l 𝔅l} (ty: _ 𝔄) (tyr: _ 𝔅) (tyr': _ 𝔅')
+    gt st (T: _ 𝔄l) (T': _ 𝔅l) tr pre (x: string) p e E L C :
     Closed [] p → Closed [x] e → tctx_extract_ctx E L +[p ◁ tyr] T T' tr →
     typed_read E L tyr ty tyr' gt st →
     (∀v: val, typed_body E L C

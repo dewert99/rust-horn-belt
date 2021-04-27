@@ -3,12 +3,12 @@ From lrust.typing Require Import programs.
 
 Set Default Proof Using "Type".
 
-Implicit Type b: bool.
+Implicit Type b: boolₛ.
 
 Section bool.
   Context `{!typeG Σ}.
 
-  Program Definition bool_ty: type bool :=
+  Program Definition bool_ty: type boolₛ :=
     {| pt_size := 1;  pt_own b _ vl := ⌜vl = [ #b]⌝; |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 

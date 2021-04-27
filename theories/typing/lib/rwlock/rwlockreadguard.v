@@ -63,10 +63,10 @@ Section rwlockreadguard.
     iApply lft_incl_refl.
   Qed.
 
-  Global Instance rwlockreadguard_type_contractive α : TypeContractive (rwlockreadguard α).
+  Global Instance rwlockreadguard_type_contr α : TypeContractive (rwlockreadguard α).
   Proof.
     split.
-    - apply (type_lft_morphism_add _ α [α] []) => ?.
+    - apply (type_lft_morph_add _ α [α] []) => ?.
       + iApply lft_equiv_refl.
       + by rewrite elctx_interp_app elctx_interp_ty_outlv_E
                    /elctx_interp /= left_id right_id.

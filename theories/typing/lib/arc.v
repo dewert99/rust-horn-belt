@@ -163,10 +163,10 @@ Section arc.
     - by iApply at_bor_shorten.
   Qed.
 
-  Global Instance arc_type_contractive : TypeContractive arc.
+  Global Instance arc_type_contr : TypeContractive arc.
   Proof.
     split.
-    - apply (type_lft_morphism_add _ static [] [])=>?.
+    - apply (type_lft_morph_add _ static [] [])=>?.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /elctx_interp /= left_id right_id.
     - done.
@@ -298,10 +298,10 @@ Section arc.
     iExists _, _. iModIntro. iFrame. by iApply at_bor_shorten.
   Qed.
 
-  Global Instance weak_type_contractive : TypeContractive weak.
+  Global Instance weak_type_contr : TypeContractive weak.
   Proof.
     split.
-    - apply (type_lft_morphism_add _ static [] [])=>?.
+    - apply (type_lft_morph_add _ static [] [])=>?.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /elctx_interp /= left_id right_id.
     - done.

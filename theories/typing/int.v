@@ -3,18 +3,18 @@ From lrust.typing Require Import bool programs.
 Set Default Proof Using "Type".
 Open Scope Z_scope.
 
-Implicit Type z: Z.
+Implicit Type z: Zₛ.
 
 Section int.
   Context `{!typeG Σ}.
 
-  Program Definition int: type Z :=
+  Program Definition int: type Zₛ :=
     {| pt_size := 1;  pt_own z _ vl := ⌜vl = [ #z]⌝; |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
   Global Instance int_send: Send int. Proof. done. Qed.
 
-  Lemma bool_ty_to_int E L : subtype E L Z_of_bool bool_ty int.
+  Lemma bool_ty_to_int E L : subtype E L bool_ty int Z_of_bool.
   Proof.
     apply subtype_plain_type. iIntros "*_!>_/=". iSplit; [done|].
     iSplit; [iApply lft_incl_refl|]. by iIntros.

@@ -70,10 +70,10 @@ Section ref.
     - by iApply na_bor_shorten.
   Qed.
 
-  Global Instance ref_type_contractive α : TypeContractive (ref α).
+  Global Instance ref_type_contr α : TypeContractive (ref α).
   Proof.
     split.
-    - apply (type_lft_morphism_add _ α [α] []) => ?.
+    - apply (type_lft_morph_add _ α [α] []) => ?.
       + iApply lft_equiv_refl.
       + by rewrite elctx_interp_app /= elctx_interp_ty_outlv_E
                    /= /elctx_interp /= left_id right_id.

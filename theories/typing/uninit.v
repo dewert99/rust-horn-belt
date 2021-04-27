@@ -1,11 +1,10 @@
-Require Import FunctionalExtensionality Equality.
 From lrust.typing Require Export type.
 Set Default Proof Using "Type".
 
 Section uninit.
   Context `{!typeG Σ}.
 
-  Program Definition uninit n : type unit := {|
+  Program Definition uninit n : type () := {|
     ty_size := n;  ty_lfts := [];  ty_E := [];
     ty_own _ _ _ vl := ⌜length vl = n⌝;  ty_shr _ _ _ _ _ := True;
   |}%I.

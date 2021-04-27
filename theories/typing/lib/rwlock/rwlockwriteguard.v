@@ -65,11 +65,11 @@ Section rwlockwriteguard.
       iApply ty_shr_mono; try done. iApply lft_intersect_mono. iApply lft_incl_refl. done.
   Qed.
 
-  Global Instance rwlockwriteguard_type_contractive α :
+  Global Instance rwlockwriteguard_type_contr α :
     TypeContractive (rwlockwriteguard α).
   Proof.
     split.
-    - apply (type_lft_morphism_add _ α [α] []) => ?.
+    - apply (type_lft_morph_add _ α [α] []) => ?.
       + iApply lft_equiv_refl.
       + by rewrite elctx_interp_app elctx_interp_ty_outlv_E
                    /elctx_interp /= left_id right_id.

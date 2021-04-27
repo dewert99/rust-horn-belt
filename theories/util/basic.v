@@ -85,7 +85,8 @@ Proof. split; fun_ext=>/= ?; symmetry; apply eq_unique. Qed.
 
 (** * Utility for voidness *)
 
-Global Instance Empty_set_empty: Empty Type := Empty_set.
+Global Instance Empty_set_empty: Empty Set := Empty_set.
+Global Instance Empty_set_empty': Empty Type := Empty_set.
 
 Class Void A := absurd: ∀{B}, A → B.
 

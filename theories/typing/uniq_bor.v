@@ -105,7 +105,7 @@ Section uniq_bor.
     iMod ("ToTok" with "Tok") as "$". iModIntro. iExists l, ξ. by do 3 (iSplit; [done|]).
   Qed.
 
-  Global Instance uniq_ne {𝔄} κ : NonExpansive (@uniq_bor 𝔄 κ).
+  Global Instance uniq_bor_ne {𝔄} κ : NonExpansive (@uniq_bor 𝔄 κ).
   Proof. solve_ne_type. Qed.
 
 End uniq_bor.
@@ -115,21 +115,21 @@ Notation "&uniq{ κ }" := (uniq_bor κ) (format "&uniq{ κ }") : lrust_type_scop
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance uniq_type_contractive {𝔄} κ : TypeContractive (@uniq_bor _ _ 𝔄 κ).
-  Proof. split; [by apply (type_lft_morphism_add_one κ)|done| |].
+  Global Instance uniq_type_contr {𝔄} κ : TypeContractive (@uniq_bor _ _ 𝔄 κ).
+  Proof. split; [by apply (type_lft_morph_add_one κ)|done| |].
     - move=> */=. do 17 (f_contractive || f_equiv). by simpl in *.
     - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
-  Global Instance uniq_send {𝔄} κ (ty: type 𝔄) : Send ty → Send (&uniq{κ} ty).
+  Global Instance uniq_send {𝔄} κ (ty: _ 𝔄) : Send ty → Send (&uniq{κ} ty).
   Proof. move=> >/=. by do 17 f_equiv. Qed.
 
-  Global Instance uniq_sync {𝔄} κ (ty: type 𝔄) : Sync ty → Sync (&uniq{κ} ty).
+  Global Instance uniq_sync {𝔄} κ (ty: _ 𝔄) : Sync ty → Sync (&uniq{κ} ty).
   Proof. move=> >/=. by do 10 f_equiv. Qed.
 
-  Lemma uniq_subtype {𝔄} E L κ κ' (ty ty': type 𝔄) :
-    lctx_lft_incl E L κ' κ → eqtype E L id id ty ty' →
-    subtype E L id (&uniq{κ} ty) (&uniq{κ'} ty').
+  Lemma uniq_subtype {𝔄} E L κ κ' (ty ty': _ 𝔄) :
+    lctx_lft_incl E L κ' κ → eqtype E L ty ty' id id →
+    subtype E L (&uniq{κ} ty) (&uniq{κ'} ty') id.
   Proof.
     move=> In /eqtype_id_unfold Eqt ?. iIntros "L".
     iDestruct (Eqt with "L") as "#Eqt". iDestruct (In with "L") as "#In". iIntros "!> #E".
@@ -144,9 +144,9 @@ Section typing.
     - iIntros (?[|?]???); [by iIntros|]. iDestruct 1 as (l' ξ ?) "(?&?&?)".
       iExists l', ξ. do 3 (iSplit; [done|]). by iApply "EqShr".
   Qed.
-  Lemma uniq_eqtype {𝔄} E L κ κ' (ty ty': type 𝔄) :
-    lctx_lft_eq E L κ κ' → eqtype E L id id ty ty' →
-    eqtype E L id id (&uniq{κ} ty) (&uniq{κ} ty').
+  Lemma uniq_eqtype {𝔄} E L κ κ' (ty ty': _ 𝔄) :
+    lctx_lft_eq E L κ κ' → eqtype E L ty ty' id id →
+    eqtype E L (&uniq{κ} ty) (&uniq{κ} ty') id id.
   Proof. move=> [??][??]. by split; apply uniq_subtype. Qed.
 
 (*
@@ -205,8 +205,9 @@ Section typing.
   Qed.
   *)
 
-  Lemma read_uniq {𝔄} E L κ (ty: type 𝔄):
-    Copy ty → lctx_lft_alive E L κ → typed_read E L (&uniq{κ} ty) ty (&uniq{κ} ty) fst id.
+  Lemma read_uniq {𝔄} E L κ (ty: _ 𝔄):
+    Copy ty → lctx_lft_alive E L κ →
+    typed_read E L (&uniq{κ} ty) ty (&uniq{κ} ty) fst id.
   Proof.
     iIntros (? Alv ?[|?][[]|]??) "#LFT E Na L uniq//".
     { iDestruct "uniq" as (??[??]) "_". lia. }
@@ -224,7 +225,7 @@ Section typing.
     iMod ("ToL" with "κ") as "$". iModIntro. iExists _, _. by iFrame.
   Qed.
 
-  Lemma write_uniq {𝔄} E L κ (ty: type 𝔄):
+  Lemma write_uniq {𝔄} E L κ (ty: _ 𝔄):
     lctx_lft_alive E L κ →
     typed_write E L (&uniq{κ} ty) ty (&uniq{κ} ty) (λ v w, (w, v.2)).
   Proof.
