@@ -83,7 +83,7 @@ Section borrow.
     - by f_equiv.
   Qed. *)
 
-  Lemma type_deref_uniq_own_instr {𝔄 E L} κ p n (ty : _ (Ty 𝔄)) :
+  Lemma type_deref_uniq_own_instr {𝔄 E L} κ p n (ty : type 𝔄) :
     lctx_lft_alive E L κ →
     ⊢ typed_instr_ty E L +[p ◁ &uniq{κ}(own_ptr n ty)] (!p) (&uniq{κ} ty) (λ post '-[a], post a).
   Proof.
@@ -101,8 +101,8 @@ Section borrow.
     iDestruct "Hown" as "[Hown H†]". rewrite heap_mapsto_vec_singleton -wp_fupd.
     iApply wp_cumul_time_rcpt=>//. wp_read. iIntros "Ht".
     iDestruct (uniq_agree with "ξvo HPC") as "%Hag". inversion Hag; subst; clear Hag. 
-    iMod (uniq_intro _ (fst ∘ vπ) depth3 with "PROPH UNIQ") as (ζid) "[ζVo ζPc]"; first solve_ndisj.
-    set (ζ := prval_to_prvar _ ζid).
+    iMod (uniq_intro (fst ∘ vπ) depth3 with "PROPH UNIQ") as (ζid) "[ζVo ζPc]"; first solve_ndisj.
+    set (ζ := PrVar _ ζid).
     iDestruct (uniq_proph_tok with "ζVo ζPc") as "(ζVo & ζTok & ζClose)". 
     rewrite proph_tok_singleton.
     iMod (uniq_preresolve with "PROPH ξvo HPC [$ζTok]") as "(#ξobs & ζTok & ξeqz)"; first solve_ndisj.
@@ -134,13 +134,13 @@ Section borrow.
       iApply persist_time_rcpt_mono; last done;lia. 
   Qed.
 
-  (* Lemma type_deref_uniq_own {E L} κ x p e n ty C T T' :
+  (* Lemma type_deref_uniq_own {E L} κ x p e n ty C T T' f pre:
     Closed (x :b: []) e →
-    tctx_extract_hasty E L p (&uniq{κ}(own_ptr n ty)) T T' →
+    tctx_extract_hasty E L p (&uniq{κ}(own_ptr n ty)) T T' f →
     lctx_lft_alive E L κ →
-    (∀ (v:val), typed_body E L C ((v ◁ &uniq{κ}ty) :: T') (subst' x v e)) -∗
-    typed_body E L C T (let: x := !p in e).
-  Proof. iIntros. iApply type_let; [by apply type_deref_uniq_own_instr|solve_typing|done]. Qed. *)
+    (∀ (v:val), typed_body E L C ((v ◁ &uniq{κ}ty) :: T') (subst' x v e) pre) -∗
+    typed_body E L C T (let: x := !p in e) _.
+  Proof. iIntros. iApply type_let; [by apply type_deref_uniq_own_instr|solve_typing|done]. Qed. *) 
 
   (* Lemma type_deref_shr_own_instr {E L} κ p n ty :
     lctx_lft_alive E L κ →
