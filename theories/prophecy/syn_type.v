@@ -8,9 +8,9 @@ Set Default Proof Using "Type".
 Inductive syn_type := Zₛ | boolₛ | unitₛ | Empty_setₛ | Propₛ
 | optionₛ (_: syn_type) | listₛ (_: syn_type)
 | prodₛ (_ _: syn_type) | sumₛ (_ _: syn_type) | funₛ (_ _: syn_type)
-| xprodₛ (_: tlist syn_type) | xsumₛ (_: tlist syn_type).
+| xprodₛ (_: list syn_type) | xsumₛ (_: list syn_type).
 
-Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: tlist syn_type).
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: list syn_type).
 
 Global Instance Empty_setₛ_empty: Empty syn_type := Empty_setₛ.
 
@@ -23,7 +23,7 @@ Infix "→" := funₛ : syn_type_scope.
 Notation "Π!" := xprodₛ : syn_type_scope. Notation "Σ!" := xsumₛ : syn_type_scope.
 
 Local Notation tmap f := (fix tmap xl :=
-  match xl with ^[] => ^[] | x ^:: xl' => f x ^:: tmap xl' end).
+  match xl with [] => [] | x :: xl' => f x :: tmap xl' end).
 
 Fixpoint of_syn_type (𝔄: syn_type) : Type := match 𝔄 with
   | Zₛ => Z | boolₛ => bool | unitₛ => () | Empty_setₛ => ∅ | Propₛ => Prop
@@ -36,12 +36,10 @@ Fixpoint of_syn_type (𝔄: syn_type) : Type := match 𝔄 with
   end.
 Coercion of_syn_type: syn_type >-> Sortclass.
 
-Arguments of_syn_type _ / : assert.
-
 (** Decidable Equality *)
 
-Local Notation all2 f := (fix all2 xl yl := match xl, yl with ^[], ^[] => true
-  | x ^:: xl', y ^:: yl' => f x y && all2 xl' yl' | _, _ => false end).
+Local Notation all2 f := (fix all2 xl yl := match xl, yl with [], [] => true
+  | x :: xl', y :: yl' => f x y && all2 xl' yl' | _, _ => false end).
 
 Fixpoint syn_type_beq (𝔄 𝔅: syn_type) : bool := match 𝔄, 𝔅 with
   | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Empty_setₛ, Empty_setₛ | Propₛ, Propₛ => true
@@ -71,9 +69,9 @@ Qed.
 (** Decidable Inhabitedness *)
 
 Local Notation all f := (fix all xl := match xl with
-  ^[] => true | x ^:: xl' => f x && all xl' end).
+  [] => true | x :: xl' => f x && all xl' end).
 Local Notation some f := (fix all xl := match xl with
-  ^[] => false | x ^:: xl' => f x || all xl' end).
+  [] => false | x :: xl' => f x || all xl' end).
 
 Fixpoint inh_syn_type (𝔄: syn_type) : bool := match 𝔄 with
   | prodₛ 𝔄₀ 𝔄₁ => inh_syn_type 𝔄₀ && inh_syn_type 𝔄₁

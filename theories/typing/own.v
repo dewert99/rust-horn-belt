@@ -4,7 +4,7 @@ From lrust.typing Require Import uninit type_context programs.
 Set Default Proof Using "Type".
 Open Scope nat_scope.
 
-Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: tlist syn_type).
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: list syn_type).
 
 Section own.
   Context `{!typeG Σ}.

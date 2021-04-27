@@ -2,7 +2,7 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import uninit mod_ty.
 Set Default Proof Using "Type".
 
-Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l: tlist syn_type).
+Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l: list syn_type).
 
 Section product.
   Context `{!typeG Σ}.
@@ -93,7 +93,7 @@ Section product.
   Proof. solve_ne_type. Qed.
 
   Definition to_cons_prod' {𝔄 𝔄l}
-    : (𝔄 * Π! 𝔄l)%ST → (Π! (𝔄 ^:: 𝔄l))%ST := to_cons_prod.
+    : (𝔄 * Π! 𝔄l)%ST → (Π! (𝔄 :: 𝔄l))%ST := to_cons_prod.
 
   Fixpoint xprod_ty {𝔄l} (tyl: typel 𝔄l) : type (Π! 𝔄l) :=
     match tyl with +[] => <{unique}> unit_ty |

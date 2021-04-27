@@ -113,12 +113,22 @@ Global Instance and_monoid: Monoid and := {| monoid_unit := True |}.
 
 (** * Iris *)
 
-Notation big_sepL := (big_opL bi_sep) (only parsing).
-
 Class IntoFromSep {PROP: bi} (P Q Q': PROP) :=
   { into_from_sep_into:> IntoSep P Q Q'; into_from_sep_from:> FromSep P Q Q' }.
 Lemma get_into_from_sep {PROP: bi} (P Q Q': PROP) : P ⊣⊢ Q ∗ Q' → IntoFromSep P Q Q'.
 Proof. move=> Eq. split; [rewrite /IntoSep|rewrite /FromSep]; by rewrite Eq. Qed.
+
+Notation big_sepL := (big_opL bi_sep) (only parsing).
+
+Lemma big_sepL_forall' `{!BiAffine PROP} {A} (Φ: A → PROP) l :
+  (∀x, Persistent (Φ x)) →
+  ([∗ list] x ∈ l, Φ x) ⊣⊢ ∀x, ⌜x ∈ l⌝ → Φ x.
+Proof.
+  move=> ?. elim l. { iSplit; [|by iIntros]. iIntros "_" (? In). inversion In. }
+  move=>/= ?? ->. setoid_rewrite elem_of_cons. iSplit.
+  - iIntros "[? To]" (?[->|?]); by [|iApply "To"].
+  - iIntros "To". iSplit; [|iIntros (??)]; iApply "To"; by [iLeft|iRight].
+Qed.
 
 (* Applicative Functors *)
 

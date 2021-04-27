@@ -2,7 +2,7 @@ From lrust.lang Require Import memcpy.
 From lrust.typing Require Export type_context cont_context.
 Set Default Proof Using "Type".
 
-Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l ℭl 𝔇l: tlist syn_type).
+Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l ℭl 𝔇l: list syn_type).
 
 Section typing.
   Context `{!typeG Σ}.

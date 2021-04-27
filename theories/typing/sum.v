@@ -2,7 +2,7 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import mod_ty.
 Set Default Proof Using "Type".
 
-Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: tlist syn_type).
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: list syn_type).
 
 Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
 
@@ -13,10 +13,10 @@ Section sum.
     ⌜((hget tyl i).(ty_size) + length vl)%nat = max_ty_size tyl⌝.
 
   Lemma split_sum_mt {𝔄l} (tyl: _ 𝔄l) vπ d l tid q :
-    (l ↦∗{q}: λ vl, ∃i (vπ': proph (tget 𝔄l i)) vl' vl'',
+    (l ↦∗{q}: λ vl, ∃i (vπ': proph (lget 𝔄l i)) vl' vl'',
       ⌜vπ = pinj i ∘ vπ' ∧ vl = #i :: vl' ++ vl'' ∧ length vl = S (max_ty_size tyl)⌝ ∗
       (hget tyl i).(ty_own) vπ' d tid vl')%I ⊣⊢
-    ∃i (vπ': proph (tget 𝔄l i)), ⌜vπ = pinj i ∘ vπ'⌝ ∗
+    ∃i (vπ': proph (lget 𝔄l i)), ⌜vπ = pinj i ∘ vπ'⌝ ∗
       (l ↦{q} #i ∗ (l +ₗ S (hget tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
       (l +ₗ 1) ↦∗{q}: (hget tyl i).(ty_own) vπ' d tid.
   Proof. iSplit.
@@ -45,30 +45,30 @@ Section sum.
   Program Definition xsum_ty {𝔄l} (tyl: typel 𝔄l) : type (Σ! 𝔄l) := {|
     ty_size := S (max_ty_size tyl);
     ty_lfts := tyl_lfts tyl;  ty_E := tyl_E tyl;
-    ty_own vπ d tid vl := ∃i (vπ': proph (tget 𝔄l i)) vl' vl'',
+    ty_own vπ d tid vl := ∃i (vπ': proph (lget 𝔄l i)) vl' vl'',
       ⌜vπ = pinj i ∘ vπ' ∧ vl = #i :: vl' ++ vl'' ∧ length vl = S (max_ty_size tyl)⌝ ∗
       (hget tyl i).(ty_own) vπ' d tid vl';
-    ty_shr vπ d κ tid l := ∃i (vπ': proph (tget 𝔄l i)), ⌜vπ = pinj i ∘ vπ'⌝ ∗
+    ty_shr vπ d κ tid l := ∃i (vπ': proph (lget 𝔄l i)), ⌜vπ = pinj i ∘ vπ'⌝ ∗
       &frac{κ} (λ q, l ↦{q} #i ∗
         (l +ₗ S (hget tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
       (hget tyl i).(ty_shr) vπ' d κ tid (l +ₗ 1)
   |}%I.
   Next Obligation. move=> *. by iDestruct 1 as (????(_&_&?)) "_". Qed.
   Next Obligation.
-    move=> */=. iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "?".
+    move=> *. iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "?".
     iExists i, vπ', vl', vl''. iSplit; [done|]. by iApply ty_own_depth_mono.
   Qed.
   Next Obligation.
-    move=> */=. iDestruct 1 as (i vπ' ->) "[??]". iExists i, vπ'.
+    move=> *. iDestruct 1 as (i vπ' ->) "[??]". iExists i, vπ'.
     do 2 (iSplit; [done|]). by iApply ty_shr_depth_mono.
   Qed.
   Next Obligation.
-    move=> */=. iIntros "In". iDestruct 1 as (i vπ' ->) "[??]". iExists i, vπ'.
+    move=> *. iIntros "In". iDestruct 1 as (i vπ' ->) "[??]". iExists i, vπ'.
     iSplit; [done|]. iSplit;
       by [iApply (frac_bor_shorten with "In")|iApply (ty_shr_lft_mono with "In")].
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT #? Bor Tok". rewrite split_sum_mt.
+    move=> *. iIntros "#LFT #? Bor Tok". rewrite split_sum_mt.
     iMod (bor_exists_tok with "LFT Bor Tok") as (i) "[Bor Tok]"; [done|].
     iMod (bor_exists_tok with "LFT Bor Tok") as (vπ') "[Bor Tok]"; [done|].
     iMod (bor_sep_persistent with "LFT Bor Tok") as "(>-> & Bor & Tok)"; [done|].
@@ -80,7 +80,7 @@ Section sum.
     iModIntro. iExists i, vπ'. iSplit; [done|]. iFrame.
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT #?". iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "Own".
+    move=> *. iIntros "#LFT #?". iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "Own".
     iIntros "Tok". iMod (ty_own_proph with "LFT [] Own Tok") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply ty_lfts_get_incl]. } iModIntro.
     iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[PTok Close]".
@@ -89,7 +89,7 @@ Section sum.
     iModIntro. iExists i, vπ', vl', vl''. by iSplit.
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT #In #? (%i & %vπ' &->& Bor & Shr) Tok".
+    move=> *. iIntros "#LFT #In #? (%i & %vπ' &->& Bor & Shr) Tok".
     iMod (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply ty_lfts_get_incl]. } iIntros "!>!>".
     iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[PTok Close]".
@@ -112,10 +112,8 @@ Section sum.
       repeat (eapply ty_size_ne || f_equiv)=>//. by rewrite Eqv'.
   Qed.
 
-  Definition of_psum_2' {𝔄 𝔅} : Σ!%ST ^[𝔄; 𝔅] → (𝔄 + 𝔅)%ST := of_psum_2.
-
   Definition sum_ty {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) : type (𝔄 + 𝔅) :=
-    <{of_psum_2'}> (xsum_ty +[ty; ty']).
+    <{of_psum_2: Σ!%ST [𝔄; 𝔅] → (𝔄 + 𝔅)%ST}> (xsum_ty +[ty; ty']).
 
   Global Instance sum_ty_ne {𝔄 𝔅} : NonExpansive2 (@sum_ty 𝔄 𝔅).
   Proof.
@@ -181,7 +179,7 @@ Section typing.
       rewrite /is_pad !hget_apply. do 4 f_equiv; [|by apply All].
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
-  (* TODO : get rid of this duplication *)
+  (* TODO : lget rid of this duplication *)
   Global Instance xsum_type_contr {𝔄 𝔅l} (T: _ 𝔄 → _ 𝔅l) :
     ListTypeContractive T → TypeContractive (Σ! ∘ T)%T.
   Proof.
@@ -248,20 +246,20 @@ Section typing.
       iIntros "!> E /=". iDestruct ("Sub" with "E") as (?) "#[?_]".
       iDestruct ("IH'" with "E") as "#?".
       rewrite !lft_intersect_list_app. by iApply lft_intersect_mono. }
-    have Eq: tlength 𝔄l = tlength 𝔅l by eapply subtypel_eq_len.
+    have Eq: length 𝔄l = length 𝔅l by eapply subtypel_eq_len.
     move/subtypel_llctx_get in Subs. iDestruct (Subs with "L") as "#Subs".
     iIntros "!> #E". iDestruct ("Size" with "E") as "%Size".
     iDestruct ("Lft" with "E") as "?". iDestruct ("Subs" with "E") as "Incl".
     iSplit; simpl; [iPureIntro; by f_equal|]. iSplit; [done|].
     iSplit; iModIntro; iIntros "*".
     - iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "?".
-      move: vπ'. move: (ex_p2fin_l _ (tlength 𝔅l) i Eq)=> [j ->] vπ'.
+      move: vπ'. move: (ex_p2fin_l _ (length 𝔅l) i Eq)=> [j ->] vπ'.
       iExists (p2fin_r j), (p2get fl j ∘ vπ'), vl', vl''.
       rewrite Size p2fin_lr_eq. iSplit.
       { iPureIntro. split; [|done]. fun_ext=>/= ?. by rewrite psum_map_pinj. }
       iDestruct ("Incl" $! j) as (_) "[_[InOwn _]]". by iApply "InOwn".
     - iDestruct 1 as (i vπ' ->) "[??]".
-      move: vπ'. move: (ex_p2fin_l _ (tlength 𝔅l) i Eq)=> [j ->] vπ'.
+      move: vπ'. move: (ex_p2fin_l _ (length 𝔅l) i Eq)=> [j ->] vπ'.
       iExists (p2fin_r j), (p2get fl j ∘ vπ'). rewrite /is_pad Size p2fin_lr_eq. iDestruct ("Incl" $! j) as (->) "[_[_ InShr]]". iSplit.
       { iPureIntro. fun_ext=>/= ?. by rewrite psum_map_pinj. }
       iSplit; by [|iApply "InShr"].
@@ -278,9 +276,9 @@ Section typing.
     subtype E L ty1 ty1' f → subtype E L ty2 ty2' g →
     subtype E L (ty1 + ty2) (ty1' + ty2') (sum_map f g).
   Proof.
-    move=> ??. eapply subtype_eq. { apply mod_ty_subtype; [apply _|].
-    apply xsum_subtype. apply subtypel_cons; [done|]. apply subtypel_cons; [done|].
-    apply subtypel_nil. } { fun_ext. by case. }
+    move=> A B. eapply subtype_eq. { apply mod_ty_subtype; [apply _|].
+    apply xsum_subtype. do 2 (apply subtypel_cons; [done|]). solve_typing. }
+    { fun_ext. by case. }
   Qed.
 
   Lemma sum_eqtype {𝔄 𝔅 𝔄' 𝔅'} E L (f: 𝔄 → 𝔄') f' (g: 𝔅 → 𝔅') g' ty1 ty2 ty1' ty2' :

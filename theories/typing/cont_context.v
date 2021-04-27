@@ -3,13 +3,13 @@ From lrust.lang Require Import notation.
 From lrust.typing Require Export type_context.
 Set Default Proof Using "Type".
 
-Implicit Type 𝔄l: tlist syn_type.
+Implicit Type 𝔄l: list syn_type.
 
 Notation valpl := (plist (const val)).
 
 Fixpoint valpl_to_exprs {𝔄l} (vl: valpl 𝔄l) : list expr :=
-  match 𝔄l, vl with ^[], _ => [] |
-    _ ^:: _, v -:: vl' => (v: expr) :: valpl_to_exprs vl' end.
+  match 𝔄l, vl with [], _ => [] |
+    _ :: _, v -:: vl' => (v: expr) :: valpl_to_exprs vl' end.
 
 Section cont_context.
   Context `{!typeG Σ}.
@@ -17,8 +17,8 @@ Section cont_context.
   Definition cont_postcondition: iProp Σ := True%I.
 
   Record cctx_elt := CCtxe {
-    cctxe_k: val;  cctxe_L: llctx;  cctxe_As: tlist syn_type;
-    cctxe_T: valpl cctxe_As → tctx cctxe_As;  cctxe_pre: predl cctxe_As;
+    cctxe_k: val;  cctxe_L: llctx;  cctxe_Al: list syn_type;
+    cctxe_T: valpl cctxe_Al → tctx cctxe_Al;  cctxe_pre: predl cctxe_Al;
   }.
 
   Definition cctx_elt_interp (tid: thread_id) (c: cctx_elt) : iProp Σ :=
@@ -29,23 +29,22 @@ Section cont_context.
 End cont_context.
 Add Printing Constructor cctx_elt.
 
-Notation cctx := (tlist cctx_elt).
+Notation cctx := (list cctx_elt).
 
 Notation "k ◁cont{ L , T } pre" := (CCtxe k L _ T pre)
   (at level 55, format "k  ◁cont{ L ,  T }  pre").
 
-Notation cctx_interp tid := (big_sepTL (cctx_elt_interp tid)).
+Notation cctx_interp tid := (big_sepL (λ _, cctx_elt_interp tid)).
 
 Section cont_context.
   Context `{!typeG Σ}.
 
   Lemma cctx_interp_forall tid C :
-    cctx_interp tid C ⊣⊢ ∀ c, ⌜c ∈ C⌝ → cctx_elt_interp tid c.
-  Proof. by rewrite big_sepTL_forall. Qed.
+    cctx_interp tid C ⊣⊢ ∀c, ⌜c ∈ C⌝ → cctx_elt_interp tid c.
+  Proof. by rewrite big_sepL_forall'. Qed.
 
   Global Instance cctx_interp_permut tid :
-    Proper ((≡ₜₑ) ==> (⊣⊢)) (cctx_interp tid).
-  Proof. move=> *. rewrite !big_sepTL_forall. by do 4 f_equiv. Qed.
+    Proper ((≡ₚ) ==> (⊣⊢)) (cctx_interp tid) := _.
 
   Definition cctx_incl (E: elctx) (C C': cctx) : Prop :=
     ∀tid, lft_ctx -∗ proph_ctx -∗ uniq_ctx -∗
@@ -64,12 +63,12 @@ Section cont_context.
     iIntros (? In). move/Sub in In. by iApply "C".
   Qed.
 
-  Lemma cctx_incl_nil E C : cctx_incl E C ^[].
+  Lemma cctx_incl_nil E C : cctx_incl E C [].
   Proof. by iIntros. Qed.
 
   Lemma cctx_incl_cons {𝔄l} E k L (T T': valpl 𝔄l → tctx 𝔄l) tr C C' pre :
     cctx_incl E C C' → (∀vl, tctx_incl E L (T' vl) (T vl) tr) →
-    cctx_incl E (k ◁cont{L, T} pre ^:: C) (k ◁cont{L, T'} (tr pre) ^:: C').
+    cctx_incl E (k ◁cont{L, T} pre :: C) (k ◁cont{L, T'} (tr pre) :: C').
   Proof.
     iIntros (InC InT ?) "#LFT #PROPH #UNIQ #E /=#[c C]".
     iSplit; [|by iApply InC]. iIntros "!>" (??) "Na L T' Obs".

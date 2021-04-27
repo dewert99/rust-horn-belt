@@ -2,7 +2,7 @@ From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
 Set Default Proof Using "Type".
 
-Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl 𝔇l: tlist syn_type).
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl 𝔇l: list syn_type).
 
 Definition path := expr.
 Bind Scope expr_scope with path.
@@ -24,19 +24,19 @@ Definition predl 𝔄l := pred (plist of_syn_type 𝔄l).
 Definition predl_trans 𝔄l 𝔅l := predl 𝔅l → predl 𝔄l.
 
 Definition trans_app {𝔄l 𝔅l ℭl 𝔇l} (tr: predl_trans 𝔄l 𝔅l) (tr': predl_trans ℭl 𝔇l)
-  : predl_trans (𝔄l ^++ ℭl) (𝔅l ^++ 𝔇l) :=
+  : predl_trans (𝔄l ++ ℭl) (𝔅l ++ 𝔇l) :=
   λ post bdl, tr (λ al, tr' (λ cl, post (al -++ cl)) (psepr bdl)) (psepl bdl).
 
 Definition trans_lower {𝔄l 𝔅l ℭl} (tr: predl_trans 𝔄l 𝔅l)
-  : predl_trans (ℭl ^++ 𝔄l) (ℭl ^++ 𝔅l) :=
+  : predl_trans (ℭl ++ 𝔄l) (ℭl ++ 𝔅l) :=
   λ post cal, tr (λ bl, post (psepl cal -++ bl)) (psepr cal).
 
 Definition trans_upper {𝔄l 𝔅l ℭl} (tr: predl_trans 𝔄l 𝔅l)
-  : predl_trans (𝔄l ^++ ℭl) (𝔅l ^++ ℭl) :=
+  : predl_trans (𝔄l ++ ℭl) (𝔅l ++ ℭl) :=
   λ post acl, tr (λ bl, post (bl -++ psepr acl)) (psepl acl).
 
 Definition trans_tail {𝔄 𝔅l ℭl} (tr: predl_trans 𝔅l ℭl)
-  : predl_trans (𝔄 ^:: 𝔅l) (𝔄 ^:: ℭl) :=
+  : predl_trans (𝔄 :: 𝔅l) (𝔄 :: ℭl) :=
   λ post '(a -:: cl), tr (λ bl, post (a -:: bl)) cl.
 
 Section type_context.
@@ -276,7 +276,7 @@ Section lemmas.
   (* Extracting from a type context. *)
 
   Definition tctx_extract_elt {𝔄 𝔄l 𝔅l} E L (t: tctx_elt 𝔄)
-    (T: tctx 𝔄l) (T': tctx 𝔅l) (tr: predl_trans 𝔄l (𝔄 ^:: 𝔅l)) : Prop :=
+    (T: tctx 𝔄l) (T': tctx 𝔅l) (tr: predl_trans 𝔄l (𝔄 :: 𝔅l)) : Prop :=
     tctx_incl E L T (t +:: T') tr.
 
   Lemma tctx_extract_elt_further {𝔄 𝔅 𝔄l 𝔅l}
@@ -322,7 +322,7 @@ Section lemmas.
   Qed.
 
   Definition tctx_extract_ctx {𝔄l 𝔅l ℭl} E L (T: tctx 𝔄l)
-    (T1: tctx 𝔅l) (T2: tctx ℭl) (tr: predl_trans 𝔅l (𝔄l ^++ ℭl)) : Prop :=
+    (T1: tctx 𝔅l) (T2: tctx ℭl) (tr: predl_trans 𝔅l (𝔄l ++ ℭl)) : Prop :=
     tctx_incl E L T1 (T h++ T2) tr.
 
   Lemma tctx_extract_ctx_nil {𝔄l} (T: _ 𝔄l) E L : tctx_extract_ctx E L +[] T T id.
