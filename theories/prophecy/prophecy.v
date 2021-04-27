@@ -378,6 +378,18 @@ Proof.
   inversion Eq. by move/to_agree_included <-.
 Qed.
 
+Lemma proph_obs_rewrite' {A} (φ ψ: proph_asn → A) P : ⟨π, φ π = ψ π ⟩ -∗ ⟨π, P π (φ π) ⟩ -∗ ⟨π, P π (ψ π) ⟩.
+  iIntros "eq pφ".
+  iDestruct (proph_obs_and with "eq pφ") as "obs".
+  iApply (proph_obs_impl with "obs") => π /= [<- ?] //.
+Qed.
+
+Lemma proph_obs_rewrite {A} (φ ψ: proph_asn → A) P : ⟨π, φ π = ψ π ⟩ -∗ ⟨π, P π (ψ π) ⟩ -∗ ⟨π, P π (φ π) ⟩.
+  iIntros "eq pφ".
+  iDestruct (proph_obs_and with "eq pφ") as "obs".
+  iApply (proph_obs_impl with "obs") => π /= [<- ?] //.
+Qed.
+
 End lemmas.
 
 Global Opaque proph_ctx proph_tok proph_obs.
