@@ -14,7 +14,7 @@ Section borrow.
   Lemma tctx_borrow {𝔄} E L p n (ty: type 𝔄) κ:
     elctx_sat E L (ty_outlv_E ty κ) →
     tctx_incl E L +[p ◁ own_ptr n ty] +[p ◁ &uniq{κ} ty; p ◁{κ} own_ptr n ty]
-      (λ post '-[a], ∀(a': 𝔄), post -[(a, a'); a']).
+      (λ post '-[a], ∀a': 𝔄, post -[(a, a'); a']).
   Proof.
     iIntros (Out ??[vπ[]]?) "#LFT #PROPH #UNIQ #E L [p _] Obs".
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).

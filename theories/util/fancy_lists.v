@@ -214,6 +214,19 @@ Fixpoint plist_map `{F: A → _} {Xl Yl} :
   | _ :: _, _ :: _ => λ '(f -:: fl') '(x -:: xl'), f x -:: plist_map fl' xl'
   | _, _ => absurd end.
 
+Fixpoint hzip_with {A} {F G H: A → Type} {Xl} (f: ∀X, F X → G X → H X)
+  (xl: hlist F Xl) (yl: plist G Xl) : hlist H Xl :=
+  match xl, yl with +[], _ => +[] |
+    x +:: xl', y -:: yl' => f _ x y +:: hzip_with f xl' yl' end.
+
+(** * Uniform plist *)
+
+Definition plistc {B} (A: Type) (Xl: list B) : Type := plist (const A) Xl.
+
+Fixpoint plistc_to_vec {B A} {Xl: _ B} : plistc A Xl → vec A (length Xl) :=
+  match Xl with [] => const [#] | _ :: _ => λ '(x -:: xl), x ::: plistc_to_vec xl end.
+Coercion plistc_to_vec: plistc >-> vec.
+
 (** * Vector *)
 
 Fixpoint pvec A n : Type := match n with 0 => :1 | S m => A :* pvec A m end.

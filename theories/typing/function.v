@@ -1,61 +1,58 @@
-From iris.proofmode Require Import tactics.
 From iris.algebra Require Import vector list.
 From lrust.typing Require Export type.
 From lrust.typing Require Import own programs cont.
 Set Default Proof Using "Type".
 
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: list syn_type).
+
 Section fn.
-  Context `{!typeG Σ} {A : Type} {n : nat}.
+  Context `{!typeG Σ} {A: Type} {𝔄l} {𝔅}.
 
-  Record fn_params := FP {
-    fp_E_explicit : lft → elctx;
-    fp_tys : vec type n;
-    fp_ty : type
-  }.
+  Record fn_params :=
+    FP { fp_E_ex: lft → elctx;  fp_ityl: hlist type 𝔄l;  fp_oty: type 𝔅 }.
 
-  Definition fn_params_dist n' fp1 fp2 : Prop :=
-    Forall2 (dist n') fp1.(fp_tys) fp2.(fp_tys) ∧ fp1.(fp_ty) ≡{n'}≡ fp2.(fp_ty) ∧
-    pointwise_relation lft eq fp1.(fp_E_explicit) fp2.(fp_E_explicit).
+  Definition fn_params_dist n fp fp' : Prop :=
+    (∀κ, fp.(fp_E_ex) κ = fp'.(fp_E_ex) κ) ∧
+    fp.(fp_ityl) ≡{n}≡ fp'.(fp_ityl) ∧ fp.(fp_oty) ≡{n}≡ fp'.(fp_oty).
 
-  Definition fp_E (fp : fn_params) ϝ :=
-    fp.(fp_E_explicit) ϝ ++ tyl_E fp.(fp_tys) ++ tyl_outlv_E fp.(fp_tys) ϝ ++
-                       fp.(fp_ty).(ty_E) ++ ty_outlv_E fp.(fp_ty) ϝ.
+  Definition fp_E (fp: fn_params) ϝ : elctx :=
+    fp.(fp_E_ex) ϝ ++ tyl_E fp.(fp_ityl) ++ tyl_outlv_E fp.(fp_ityl) ϝ ++
+    fp.(fp_oty).(ty_E) ++ ty_outlv_E fp.(fp_oty) ϝ.
 
-  Global Instance fp_E_ne n':
-    Proper (fn_params_dist n' ==> eq ==> eq) fp_E.
-  Proof. unfold fp_E. intros ?? EQ ??->. by destruct EQ as (-> & -> & ->). Qed.
+  Global Instance fp_E_ne n : Proper (fn_params_dist n ==> (=) ==> (=)) fp_E.
+  Proof.
+    rewrite /fp_E. move=> ?? Eq ??->. move: Eq=> [->[Eqi Eqo]].
+    f_equiv. do 2 (f_equiv; [by rewrite Eqi|]). by rewrite Eqo.
+  Qed.
 
   (* The other alternative for defining the fn type would be to state
      that the value applied to its parameters is a typed body whose type
      is the return type.
      That would be slightly simpler, but, unfortunately, we are no longer
      able to prove that this is contractive. *)
-  Program Definition fn (fp : A → fn_params) : type :=
+  Program Definition fn (fp: A → fn_params) : type (predₛ 𝔅 → predₛ (Π! 𝔄l)) :=
     {| (* FIXME : The definition of ty_lfts is less restrictive than the one
           used in Rust. In Rust, the type of parameters are taken into account
           for well-formedness, and all the liftime constrains relating a
           generalized liftime are ignored. For simplicity, we ignore all of
           them, but this is not very faithful. *)
-       st_lfts := []; st_E := [];
+      pt_size := 1;
+      pt_own (tr: (predₛ 𝔅 → predₛ (Π! 𝔄l))%ST) tid vl :=
+        ∃fb kb (bl: plistc binder 𝔄l) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
+        ▷ ∀(x: A) (ϝ: lft) (k: val) (pre: predl [𝔅]) (vl': plistc val 𝔄l),
+          □ typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
+            [k ◁cont{[ϝ ⊑ₗ []], (λ v: vec val 1,
+              +[(v !!! 0%fin : val) ◁ box (fp x).(fp_oty)])} pre]
+            (hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) vl')
+            (subst_v (fb :: kb :: bl) (RecV fb (kb :: bl) e ::: k ::: vl') e)
+            (tr (λ b, pre -[b]))
+    |}%I.
+  Next Obligation. move=> */=. by rewrite vec_to_list_length. Qed.
+  Next Obligation. move=> *. by iDestruct 1 as (?????->) "?". Qed.
 
-       st_own tid vl := tc_opaque (∃ fb kb xb e H,
-         ⌜vl = [@RecV fb (kb::xb) e H]⌝ ∗ ⌜length xb = n⌝ ∗
-         ▷ ∀ (x : A) (ϝ : lft) (k : val) (xl : vec val (length xb)),
-            □ typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
-                         [k◁cont([ϝ ⊑ₗ []], λ v : vec _ 1, [(v!!!0%fin:val) ◁ box (fp x).(fp_ty)])]
-                         (zip_with (TCtx_hasty ∘ of_val) xl
-                                   (box <$> (vec_to_list (fp x).(fp_tys))))
-                         (subst_v (fb::kb::xb) (RecV fb (kb::xb) e:::k:::xl) e))%I |}.
-  Next Obligation.
-    iIntros (fp tid vl) "H". iDestruct "H" as (fb kb xb e ?) "[% _]". by subst.
-  Qed.
-  Next Obligation.
-    unfold tc_opaque. apply _.
-  Qed.
+  Global Instance fn_send fp : Send (fn fp). Proof. done. Qed.
 
-  Global Instance fn_send fp : Send (fn fp).
-  Proof. iIntros (tid1 tid2 vl). done. Qed.
-
+(*
   Global Instance fn_type_contr E (Tl : A → type → vec type n) T :
     (∀ x, TypeListNonExpansive (Tl x)) →
     (∀ x, TypeNonExpansive (T x)) →
@@ -129,10 +126,12 @@ Section fn.
       case _ : (x !! i)=>[tyx|]; case  _ : (y !! i)=>[tyy|];
       inversion_clear 1; [solve_proper|done].
   Qed.
+*)
 End fn.
 
 Arguments fn_params {_ _} _.
 
+(*
 (* We use recursive notation for binders as well, to allow patterns
    like '(a, b) to be used. In practice, only one binder is ever used,
    but using recursive binders is the only way to make Coq accept
@@ -165,16 +164,16 @@ Section typing.
   Lemma fn_subtype {A n} E0 L0 (fp fp' : A → fn_params n) :
     (∀ x ϝ, let EE := E0 ++ fp_E (fp' x) ϝ in
             elctx_sat EE L0 (fp_E (fp x) ϝ) ∧
-            Forall2 (subtype EE L0) (fp' x).(fp_tys) (fp x).(fp_tys) ∧
-            subtype EE L0 (fp x).(fp_ty) (fp' x).(fp_ty)) →
+            Forall2 (subtype EE L0) (fp' x).(fp_ityl) (fp x).(fp_ityl) ∧
+            subtype EE L0 (fp x).(fp_oty) (fp' x).(fp_oty)) →
     subtype E0 L0 (fn fp) (fn fp').
   Proof.
     intros Hcons. apply subtype_simple_type=>//= qL. iIntros "HL0".
     (* We massage things so that we can throw away HL0 before going under the box. *)
     iAssert (∀ x ϝ, let EE := E0 ++ fp_E (fp' x) ϝ in □ (elctx_interp EE -∗
                  elctx_interp (fp_E (fp x) ϝ) ∗
-                 ([∗ list] tys ∈ (zip (fp' x).(fp_tys) (fp x).(fp_tys)), type_incl (tys.1) (tys.2)) ∗
-                 type_incl (fp x).(fp_ty) (fp' x).(fp_ty)))%I as "#Hcons".
+                 ([∗ list] tys ∈ (zip (fp' x).(fp_ityl) (fp x).(fp_ityl)), type_incl (tys.1) (tys.2)) ∗
+                 type_incl (fp x).(fp_oty) (fp' x).(fp_oty)))%I as "#Hcons".
     { iIntros (x ϝ). destruct (Hcons x ϝ) as (HE &Htys &Hty). clear Hcons.
       iDestruct (HE with "HL0") as "#HE".
       iDestruct (subtype_Forall2_llctx with "HL0") as "#Htys"; first done.
@@ -202,8 +201,8 @@ Section typing.
         iDestruct (box_type_incl with "[$Hty]") as "(_ & _ & #Hincl & _)".
           by iApply "Hincl".
       + iClear "Hf". rewrite /tctx_interp
-           -{2}(fst_zip (fp x).(fp_tys) (fp' x).(fp_tys)) ?vec_to_list_length //
-           -{2}(snd_zip (fp x).(fp_tys) (fp' x).(fp_tys)) ?vec_to_list_length //
+           -{2}(fst_zip (fp x).(fp_ityl) (fp' x).(fp_ityl)) ?vec_to_list_length //
+           -{2}(snd_zip (fp x).(fp_ityl) (fp' x).(fp_ityl)) ?vec_to_list_length //
            !zip_with_fmap_r !(zip_with_zip (λ _ _, (_ ∘ _) _ _)) !big_sepL_fmap.
         iApply (big_sepL_impl with "HT"). iIntros "!>".
         iIntros (i [p [ty1' ty2']]) "#Hzip H /=".
@@ -240,22 +239,22 @@ Section typing.
     lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗ llctx_interp L qL -∗
     qκs.[lft_intersect_list κs] -∗
     tctx_elt_interp tid (p ◁ fn fp) -∗
-    ([∗ list] y ∈ zip_with TCtx_hasty ps (box <$> vec_to_list (fp x).(fp_tys)),
+    ([∗ list] y ∈ zip_with TCtx_hasty ps (box <$> vec_to_list (fp x).(fp_ityl)),
                    tctx_elt_interp tid y) -∗
     (∀ ret depth,
         na_own tid ⊤ -∗ llctx_interp L qL -∗ qκs.[lft_intersect_list κs] -∗
-        ⧖depth -∗ (box (fp x).(fp_ty)).(ty_own) depth tid [ret] -∗
+        ⧖depth -∗ (box (fp x).(fp_oty)).(ty_own) depth tid [ret] -∗
         WP k [of_val ret] {{ _, cont_postcondition }}) -∗
     WP (call: p ps → k) {{ _, cont_postcondition }}.
   Proof.
     iIntros (HE [k' <-]) "#LFT #TIME #HE Htl HL Hκs Hf Hargs Hk".
     wp_apply (wp_hasty with "Hf"). iIntros (depth v) "Hdepth % Hf".
     iApply (wp_app_vec _ _ (_::_) ((λ v, ⌜v = (λ: ["_r"], (#☠ ;; #☠) ;; k' ["_r"])%V⌝):::
-               vmap (λ ty (v : val), tctx_elt_interp tid (v ◁ box ty)) (fp x).(fp_tys))%I
+               vmap (λ ty (v : val), tctx_elt_interp tid (v ◁ box ty)) (fp x).(fp_ityl))%I
             with "[Hargs]").
     - rewrite /=. iSplitR "Hargs".
       { simpl. iApply wp_value. by unlock. }
-      remember (fp_tys (fp x)) as tys. clear dependent k' p HE fp x.
+      remember (fp_ityl (fp x)) as tys. clear dependent k' p HE fp x.
       iInduction ps as [|p ps] "IH" forall (tys); first by simpl.
       simpl in tys. inv_vec tys=>ty tys. simpl.
       iDestruct "Hargs" as "[HT Hargs]". iSplitL "HT".
@@ -302,10 +301,10 @@ Section typing.
     lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
     qκs.[lft_intersect_list κs] -∗
     (fn fp).(ty_own) 0 tid [f] -∗
-    ([∗ list] y ∈ zip_with TCtx_hasty ps (box <$> vec_to_list (fp x).(fp_tys)),
+    ([∗ list] y ∈ zip_with TCtx_hasty ps (box <$> vec_to_list (fp x).(fp_ityl)),
                    tctx_elt_interp tid y) -∗
     (∀ ret depth, na_own tid ⊤ -∗ qκs.[lft_intersect_list κs] -∗
-             ⧖depth -∗ (box (fp x).(fp_ty)).(ty_own) depth tid [ret] -∗
+             ⧖depth -∗ (box (fp x).(fp_oty)).(ty_own) depth tid [ret] -∗
              WP k [of_val ret] {{ _, cont_postcondition }}) -∗
     WP (call: f ps → k) {{ _, cont_postcondition }}.
   Proof.
@@ -321,9 +320,9 @@ Section typing.
                    {A} (fp : A → fn_params (length ps)) (k : val) x :
     Forall (lctx_lft_alive E L) κs →
     (∀ ϝ, elctx_sat (((λ κ, ϝ ⊑ₑ κ) <$> κs) ++ E) L (fp_E (fp x) ϝ)) →
-    ⊢ typed_body E L [k ◁cont(L, λ v : vec _ 1, ((v!!!0%fin:val) ◁ box (fp x).(fp_ty)) :: T)]
+    ⊢ typed_body E L [k ◁cont(L, λ v : vec _ 1, ((v!!!0%fin:val) ◁ box (fp x).(fp_oty)) :: T)]
                ((p ◁ fn fp) ::
-                zip_with TCtx_hasty ps (box <$> vec_to_list (fp x).(fp_tys)) ++
+                zip_with TCtx_hasty ps (box <$> vec_to_list (fp x).(fp_ityl)) ++
                 T)
                (call: p ps → k).
   Proof.
@@ -344,9 +343,9 @@ Section typing.
     Forall (lctx_lft_alive E L) (L.*1) →
     (∀ ϝ, elctx_sat (((λ κ, ϝ ⊑ₑ κ) <$> (L.*1)) ++ E) L (fp_E (fp x) ϝ)) →
     tctx_extract E L (zip_with TCtx_hasty ps
-                                   (box <$> vec_to_list (fp x).(fp_tys))) T T' →
+                                   (box <$> vec_to_list (fp x).(fp_ityl))) T T' →
     k ◁cont(L, T'') ∈ C →
-    (∀ ret : val, tctx_incl E L ((ret ◁ box (fp x).(fp_ty))::T') (T'' [# ret])) →
+    (∀ ret : val, tctx_incl E L ((ret ◁ box (fp x).(fp_oty))::T') (T'' [# ret])) →
     ⊢ typed_body E L C T (call: p ps → k).
   Proof.
     intros Hfn HL HE HTT' HC HT'T''.
@@ -364,12 +363,12 @@ Section typing.
     Forall (lctx_lft_alive E L) (L.*1) →
     (∀ ϝ, elctx_sat (((λ κ, ϝ ⊑ₑ κ) <$> (L.*1)) ++ E) L (fp_E (fp x) ϝ)) →
     tctx_extract E L (zip_with TCtx_hasty ps
-                                   (box <$> vec_to_list (fp x).(fp_tys))) T T' →
-    (∀ ret : val, typed_body E L C ((ret ◁ box (fp x).(fp_ty))::T') (subst' b ret e)) -∗
+                                   (box <$> vec_to_list (fp x).(fp_ityl))) T T' →
+    (∀ ret : val, typed_body E L C ((ret ◁ box (fp x).(fp_oty))::T') (subst' b ret e)) -∗
     typed_body E L C T (letcall: b := p ps in e).
   Proof.
     iIntros (?? Hpsc ????) "He".
-    iApply (type_cont_norec [_] _ (λ r, ((r!!!0%fin:val) ◁ box (fp x).(fp_ty)) :: T')).
+    iApply (type_cont_norec [_] _ (λ r, ((r!!!0%fin:val) ◁ box (fp x).(fp_oty)) :: T')).
     - (* TODO : make [solve_closed] work here. *)
       eapply is_closed_weaken; first done. set_solver+.
     - (* TODO : make [solve_closed] work here. *)
@@ -398,10 +397,10 @@ Section typing.
     n = length argsb →
     □ (∀ x ϝ (f : val) k (args : vec val (length argsb)),
           typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
-                     [k ◁cont([ϝ ⊑ₗ []], λ v : vec _ 1, [(v!!!0%fin:val) ◁ box (fp x).(fp_ty)])]
+                     [k ◁cont([ϝ ⊑ₗ []], λ v : vec _ 1, [(v!!!0%fin:val) ◁ box (fp x).(fp_oty)])]
                      ((f ◁ fn fp) ::
                         zip_with (TCtx_hasty ∘ of_val) args
-                                 (box <$> vec_to_list (fp x).(fp_tys)) ++ T)
+                                 (box <$> vec_to_list (fp x).(fp_ityl)) ++ T)
                      (subst_v (fb :: BNamed "return" :: argsb) (f ::: k ::: args) e)) -∗
     typed_instr_ty E L T ef (fn fp).
   Proof.
@@ -422,9 +421,9 @@ Section typing.
     n = length argsb →
     □ (∀ x ϝ k (args : vec val (length argsb)),
         typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
-                   [k ◁cont([ϝ ⊑ₗ []], λ v : vec _ 1, [(v!!!0%fin:val) ◁ box (fp x).(fp_ty)])]
+                   [k ◁cont([ϝ ⊑ₗ []], λ v : vec _ 1, [(v!!!0%fin:val) ◁ box (fp x).(fp_oty)])]
                    (zip_with (TCtx_hasty ∘ of_val) args
-                             (box <$> vec_to_list (fp x).(fp_tys)) ++ T)
+                             (box <$> vec_to_list (fp x).(fp_ityl)) ++ T)
                    (subst_v (BNamed "return" :: argsb) (k ::: args) e)) -∗
     typed_instr_ty E L T ef (fn fp).
   Proof.
@@ -435,3 +434,4 @@ Section typing.
 End typing.
 
 Global Hint Resolve fn_subtype : lrust_typing.
+*)

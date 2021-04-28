@@ -37,7 +37,7 @@ Section sum.
   Local Lemma ty_lfts_get_incl {𝔄l} (tyl: typel 𝔄l) i :
     ⊢ tyl_lft tyl ⊑ ty_lft (hget tyl i).
   Proof.
-    elim: tyl i; [done|]=> ?? ty tyl IH i. rewrite lft_intersect_list_app.
+    elim: tyl i; [done|]=> ?? ty tyl IH i. rewrite /tyl_lft lft_intersect_list_app.
     case i; [iApply lft_intersect_incl_l|]=> ?.
     iApply lft_incl_trans; by [iApply lft_intersect_incl_r|iApply IH].
   Qed.
@@ -104,8 +104,8 @@ Section sum.
     { elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv. }
     split=>/=.
     - by rewrite EqMsz.
-    - elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
-    - elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
+    - rewrite /tyl_lfts. elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
+    - rewrite /tyl_E. elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
     - move=> *. rewrite EqMsz. do 10 f_equiv. by apply @hget_ne.
     - move=> *. f_equiv=> i. rewrite /is_pad EqMsz.
       have Eqv': hget tyl i ≡{n}≡ hget tyl' i by apply @hget_ne.
@@ -245,7 +245,7 @@ Section typing.
       iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
       iIntros "!> E /=". iDestruct ("Sub" with "E") as (?) "#[?_]".
       iDestruct ("IH'" with "E") as "#?".
-      rewrite !lft_intersect_list_app. by iApply lft_intersect_mono. }
+      rewrite /tyl_lft !lft_intersect_list_app. by iApply lft_intersect_mono. }
     have Eq: length 𝔄l = length 𝔅l by eapply subtypel_eq_len.
     move/subtypel_llctx_get in Subs. iDestruct (Subs with "L") as "#Subs".
     iIntros "!> #E". iDestruct ("Size" with "E") as "%Size".

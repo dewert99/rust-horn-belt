@@ -113,10 +113,14 @@ Proof.
       [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
 Qed.
 
-Notation tyl_lfts tyl := (concat ((λ _, ty_lfts) +c<$> tyl)).
-Notation tyl_lft tyl := (lft_intersect_list (tyl_lfts tyl)).
-Notation tyl_E tyl := (concat ((λ _, ty_E) +c<$> tyl)).
-Notation tyl_outlv_E tyl κ := (concat ((λ _ ty, ty_outlv_E ty κ) +c<$> tyl)).
+Definition tyl_lfts `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) : list lft :=
+  concat ((λ _, ty_lfts) +c<$> tyl).
+Definition tyl_lft `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) : lft :=
+  lft_intersect_list (tyl_lfts tyl).
+Definition tyl_E `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) : elctx :=
+  concat ((λ _, ty_E) +c<$> tyl).
+Definition tyl_outlv_E `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) (κ: lft) : elctx :=
+  concat ((λ _ ty, ty_outlv_E ty κ) +c<$> tyl).
 
 Lemma tyl_outlv_E_elctx_sat `{!typeG Σ} {𝔄l} E L (tyl: typel 𝔄l) α β :
   tyl_outlv_E tyl β ⊆+ E → lctx_lft_incl E L α β →
@@ -270,6 +274,43 @@ Section ofe.
   Global Instance ty_outlv_E_proper {𝔄} :
     Proper ((≡@{_ 𝔄}) ==> (=) ==> (=)) ty_outlv_E.
   Proof. rewrite /ty_outlv_E. by move=> ?? [_ -> _ _ _]. Qed.
+
+  Global Instance tyl_lfts_ne {𝔄l} n : Proper ((≡{n}≡@{_ 𝔄l}) ==> (=)) tyl_lfts.
+  Proof.
+    rewrite /tyl_lfts /dist=> tyl tyl' Eq. f_equal.
+    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+  Qed.
+  Global Instance tyl_lfts_proper {𝔄l} : Proper ((≡@{_ 𝔄l}) ==> (=)) tyl_lfts.
+  Proof.
+    rewrite /tyl_lfts /equiv=> tyl tyl' Eq. f_equal.
+    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+  Qed.
+  Global Instance tyl_lft_ne {𝔄l} n : Proper ((≡{n}≡@{_ 𝔄l}) ==> (=)) tyl_lft.
+  Proof. rewrite /tyl_lft. by move=> ??->. Qed.
+  Global Instance tyl_lft_proper {𝔄l} : Proper ((≡@{_ 𝔄l}) ==> (=)) tyl_lft.
+  Proof. rewrite /tyl_lft. by move=> ??->. Qed.
+  Global Instance tyl_E_ne {𝔄l} n : Proper ((≡{n}≡@{_ 𝔄l}) ==> (=)) tyl_E.
+  Proof.
+    rewrite /tyl_E /dist=> tyl tyl' Eq.
+    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+  Qed.
+  Global Instance tyl_E_proper {𝔄l} : Proper ((≡@{_ 𝔄l}) ==> (=)) tyl_E.
+  Proof.
+    rewrite /tyl_E /equiv=> tyl tyl' Eq.
+    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+  Qed.
+  Global Instance tyl_outlv_E_ne {𝔄l} n :
+    Proper ((≡{n}≡@{_ 𝔄l}) ==> (=) ==> (=)) tyl_outlv_E.
+  Proof.
+    rewrite /tyl_outlv_E /dist=> tyl tyl' Eq ??->.
+    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+  Qed.
+  Global Instance tyl_outlv_E_proper {𝔄l} :
+    Proper ((≡@{_ 𝔄l}) ==> (=) ==> (=)) tyl_outlv_E.
+  Proof.
+    rewrite /tyl_outlv_E /equiv=> tyl tyl' Eq ??->.
+    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+  Qed.
 
   Global Instance ty_own_ne {𝔄} n:
     Proper ((≡{n}≡@{_ 𝔄}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) ty_own.

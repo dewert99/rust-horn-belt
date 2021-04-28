@@ -21,6 +21,7 @@ Notation "()" := unitₛ : syn_type_scope.
 Infix "*" := prodₛ : syn_type_scope. Infix "+" := sumₛ : syn_type_scope.
 Infix "→" := funₛ : syn_type_scope.
 Notation "Π!" := xprodₛ : syn_type_scope. Notation "Σ!" := xsumₛ : syn_type_scope.
+Definition predₛ 𝔄 : syn_type := 𝔄 → Propₛ.
 
 Local Notation tmap f := (fix tmap xl :=
   match xl with [] => [] | x :: xl' => f x :: tmap xl' end).
