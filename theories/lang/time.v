@@ -88,6 +88,15 @@ Section time.
   Lemma cumul_time_rcpt_sep n m : ⧗(n + m) ⊣⊢ ⧗n ∗ ⧗m.
   Proof. by rewrite /cumul_time_rcpt -nat_op auth_frag_op own_op. Qed.
 
+  Global Instance persist_time_rcpt_from_sep n m : FromSep ⧖(n `max` m) ⧖n ⧖m.
+  Proof. rewrite /FromSep. by rewrite persist_time_rcpt_sep. Qed.
+  Global Instance persist_time_rcpt_into_sep n m : IntoSep ⧖(n `max` m) ⧖n ⧖m.
+  Proof. rewrite /IntoSep. by rewrite persist_time_rcpt_sep. Qed.
+  Global Instance cumul_time_rcpt_from_sep n m : FromSep ⧗(n + m) ⧗n ⧗m.
+  Proof. rewrite /FromSep. by rewrite cumul_time_rcpt_sep. Qed.
+  Global Instance cumul_time_rcpt_into_sep n m : IntoSep ⧗(n + m) ⧗n ⧗m.
+  Proof. rewrite /IntoSep. by rewrite cumul_time_rcpt_sep. Qed.
+
   Lemma persist_time_rcpt_0 : ⊢ |==> ⧖0.
   Proof. rewrite /persist_time_rcpt. apply own_unit. Qed.
   Lemma cumul_time_rcpt_0 : ⊢ |==> ⧗0.

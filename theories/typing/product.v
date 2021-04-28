@@ -50,20 +50,20 @@ Section product.
     iMod (ty_share with "LFT [] Own' Tok'") as "Own'"; first solve_ndisj.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
-    iDestruct (step_fupdN_combine with "Own Own'") as "Own".
-    iApply (step_fupdN_wand with "Own"). by iIntros "!> [>[$$] >[$$]]".
+    iCombine "Own Own'" as "Own2". iApply (step_fupdN_wand with "Own2").
+    by iIntros "!> [>[$$] >[$$]]".
   Qed.
   Next Obligation.
     move=> *. iIntros "#LFT #? (%wl & %wl' &->& Own & Own') [Tok Tok']".
-    iDestruct (ty_own_proph with "LFT [] Own Tok") as ">Close"; first done.
+    iDestruct (ty_own_proph with "LFT [] Own Tok") as ">Close"; [done| |].
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iDestruct (ty_own_proph with "LFT [] Own' Tok'") as ">Close'"; first done.
+    iDestruct (ty_own_proph with "LFT [] Own' Tok'") as ">Close'"; [done| |].
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
-    iDestruct (step_fupdN_combine with "Close Close'") as "Close".
-    iApply (step_fupdN_wand with "Close"). iIntros "!> [Close Close']".
-    iMod "Close" as (ξl q ?) "[PTok Close]". iMod "Close'" as (ξl' q' ?) "[PTok' Close']".
+    iCombine "Close Close'" as "Close2". iApply (step_fupdN_wand with "Close2").
+    iIntros "!> [Close Close']". iMod "Close" as (ξl q ?) "[PTok Close]".
+    iMod "Close'" as (ξl' q' ?) "[PTok' Close']".
     iDestruct (proph_tok_combine with "PTok PTok'") as (q0) "[PTok ToPTok]".
     iExists (ξl ++ ξl'), q0. iModIntro. iSplit. { iPureIntro. by apply proph_dep_pair. }
     iFrame "PTok". iIntros "PTok". iDestruct ("ToPTok" with "PTok") as "[PTok PTok']".
@@ -78,8 +78,8 @@ Section product.
     iDestruct (ty_shr_proph with "LFT In [] Shr' Tok'") as "> Close'"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
-    iIntros "!>!>". iMod (step_fupdN_combine with "Close Close'") as ">Close".
-    iApply (step_fupdN_wand with "Close"). iIntros "!> [Close Close']".
+    iIntros "!>!>". iCombine "Close Close'" as ">Close2".
+    iApply (step_fupdN_wand with "Close2"). iIntros "!> [Close Close']".
     iMod "Close" as (ξl q ?) "[PTok Close]". iMod "Close'" as (ξl' q' ?) "[PTok' Close']".
     iDestruct (proph_tok_combine with "PTok PTok'") as (q0) "[PTok ToPTok]".
     iExists (ξl ++ ξl'), q0. iModIntro. iSplit. { iPureIntro. by apply proph_dep_pair. }
@@ -246,7 +246,7 @@ Section typing.
       fst ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ vπ ∧
       snd ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ (snd ∘ vπ) ∧
       snd ∘ (prod_assoc ∘ vπ) = snd ∘ (snd ∘ vπ).
-    { move=> vπ. split; [|split]; fun_ext=>/= xyz; by case (vπ xyz)=> [?[??]]. }
+    { move=> vπ. split; [|split]; fun_ext=>/= π; by case (vπ π)=> [?[??]]. }
     apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=". iSplit; [iPureIntro; lia|].
     iSplit; [rewrite (assoc (++)); by iApply lft_equiv_refl|].
     iSplit; iIntros "!>" (vπ) "*"; move: (Eq vπ)=> [->[->->]]; [iSplit|].
@@ -263,7 +263,7 @@ Section typing.
     apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=". iSplit; [done|].
     iSplit; [by iApply lft_equiv_refl|].
     have Eq: ∀vπ: proph (_ * 𝔄), prod_left_id ∘ vπ = snd ∘ vπ.
-    { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [[]?]. }
+    { move=> vπ. fun_ext=>/= π. by case (vπ π)=> [[]?]. }
     iSplit; iIntros "!> *"; rewrite Eq.
     - iSplit; [by iDestruct 1 as ([|]?->?) "?"|]. iIntros. iExists [], _. by iFrame.
     - rewrite left_id shift_loc_0. by iApply (bi.iff_refl True%I).
@@ -275,7 +275,7 @@ Section typing.
     apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=".
     rewrite !right_id. iSplit; [done|]. iSplit; [by iApply lft_equiv_refl|].
     have Eq: ∀vπ: proph (𝔄 * _), prod_right_id ∘ vπ = fst ∘ vπ.
-    { move=> vπ. fun_ext=> π. simpl. by case (vπ π)=> [?[]]. }
+    { move=> vπ. fun_ext=>/= π. by case (vπ π)=> [?[]]. }
     iSplit; iIntros "!>*"; rewrite Eq; [iSplit|].
     - iDestruct 1 as (?[|]->) "[?%]"; by [rewrite right_id|].
     - iIntros. iExists _, []. rewrite right_id. by iFrame.

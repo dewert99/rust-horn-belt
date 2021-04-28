@@ -29,7 +29,7 @@ Section typing.
     rewrite (_ : (rec: kb bl := ec)%E = of_val (rec: kb bl := ec)%V); [|by unlock].
     wp_let. iApply ("e" with "LFT TIME PROPH UNIQ E Na L [$C] T Obs").
     iLöb as "IH". iIntros "!>" (??) "Na L' T' Obs". wp_rec.
-    iApply ("ec" with "LFT TIME PROPH UNIQ E Na L' [$C] T' Obs"). by iApply "IH".
+    by iApply ("ec" with "LFT TIME PROPH UNIQ E Na L' [$C] T' Obs").
   Qed.
 
 End typing.

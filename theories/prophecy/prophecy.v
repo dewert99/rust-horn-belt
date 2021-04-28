@@ -17,7 +17,7 @@ Global Instance proph_var_eq_dec: EqDecision proph_var.
 Proof. solve_decision. Qed.
 
 Definition proph_asn := ∀ξ, ξ.(pv_ty).
-Definition proph A := proph_asn → A.
+Notation proph A := (proph_asn → A).
 
 Implicit Type (ξ ζ: proph_var) (ξl ζl: list proph_var) (π: proph_asn).
 
@@ -356,6 +356,9 @@ Proof.
   iPureIntro=> ? /Forall_app [??]. split; by [apply SatTo|apply SatTo'].
 Qed.
 
+Global Instance proph_obs_from_sep φπ ψπ : FromSep ⟨π, φπ π ∧ ψπ π⟩ .⟨φπ⟩ .⟨ψπ⟩.
+Proof. rewrite /FromSep. iIntros "#[??]". by iApply proph_obs_and. Qed.
+
 Lemma proph_obs_sat E φπ :
   ↑prophN ⊆ E → proph_ctx -∗ .⟨φπ⟩ ={E}=∗ ⌜∃π₀, φπ π₀⌝.
 Proof.
@@ -376,18 +379,6 @@ Proof.
   move: Inc=> /csum_included [->|[[?[?[?]]]|[?[?[Eq[-> Inc]]]]]]; [done|done|].
   move=> Val. move: Inc. move: Val=> /Cinr_valid/to_agree_uninj [?<-].
   inversion Eq. by move/to_agree_included <-.
-Qed.
-
-Lemma proph_obs_rewrite' {A} (φ ψ: proph_asn → A) P : ⟨π, φ π = ψ π ⟩ -∗ ⟨π, P π (φ π) ⟩ -∗ ⟨π, P π (ψ π) ⟩.
-  iIntros "eq pφ".
-  iDestruct (proph_obs_and with "eq pφ") as "obs".
-  iApply (proph_obs_impl with "obs") => π /= [<- ?] //.
-Qed.
-
-Lemma proph_obs_rewrite {A} (φ ψ: proph_asn → A) P : ⟨π, φ π = ψ π ⟩ -∗ ⟨π, P π (ψ π) ⟩ -∗ ⟨π, P π (φ π) ⟩.
-  iIntros "eq pφ".
-  iDestruct (proph_obs_and with "eq pφ") as "obs".
-  iApply (proph_obs_impl with "obs") => π /= [<- ?] //.
 Qed.
 
 End lemmas.
@@ -420,10 +411,8 @@ Proof. iApply proph_eqz_obs. by iApply proph_obs_true. Qed.
 Lemma proph_eqz_modify {A} (uπ uπ' vπ: _ → A) :
   ⟨π, uπ' π = uπ π⟩ -∗ uπ :== vπ -∗ uπ' :== vπ.
 Proof.
-  iIntros "Obs Eqz" (???[??]) "Ptoks".
-  iMod ("Eqz" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
-  iDestruct (proph_obs_and with "Obs Obs'") as "Obs''".
-  by iApply proph_obs_impl; [|by iApply "Obs''"]=> ?[->?].
+  iIntros "Obs Eqz" (???[??]) "Ptoks". iMod ("Eqz" with "[%//] Ptoks") as "[Obs' $]".
+  iModIntro. iCombine "Obs Obs'" as "?". by iApply proph_obs_impl; [|done]=> ?[->].
 Qed.
 
 Lemma proph_eqz_constr {A B} f `{!@Inj A B (=) (=) f} uπ vπ :
@@ -440,8 +429,7 @@ Proof.
   iIntros "Eqz Eqz'" (???[? Dep]) "Ptoks". move: Dep=> /proph_dep_destr2 [??].
   iMod ("Eqz" with "[%//] Ptoks") as "[Obs Ptoks]".
   iMod ("Eqz'" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
-  iDestruct (proph_obs_and with "Obs Obs'") as "Obs''".
-  iApply proph_obs_impl; [|by iApply "Obs''"]=> ?[??]/=. by f_equal.
+  iCombine "Obs Obs'" as "?". by iApply proph_obs_impl; [|done]=>/= ?[->->].
 Qed.
 
 Lemma proph_eqz_pair {A B} (uπ vπ: _ → A * B) :

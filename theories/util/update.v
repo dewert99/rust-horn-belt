@@ -31,11 +31,23 @@ Proof.
   by iMod (IH with "UpdP UpdQ").
 Qed.
 
+Global Instance step_fupdN_from_sep n P Q E :
+  FromSep (|={E}▷=>^n (P ∗ Q)) (|={E}▷=>^n P) (|={E}▷=>^n Q).
+Proof.
+  rewrite /FromSep. iIntros "[P Q]". iApply (step_fupdN_combine with "P Q").
+Qed.
+
 Lemma step_fupdN_combine_max m n P Q E :
   (|={E}▷=>^m P) -∗ (|={E}▷=>^n Q) -∗ (|={E}▷=>^(m `max` n) (P ∗ Q)).
 Proof.
   set l := m `max` n. rewrite (step_fupdN_nmono _ l P); [|lia].
   rewrite (step_fupdN_nmono _ l Q); [|lia]. apply step_fupdN_combine.
+Qed.
+
+Global Instance step_fupdN_from_sep_max m n P Q E :
+  FromSep (|={E}▷=>^(m `max` n) (P ∗ Q)) (|={E}▷=>^m P) (|={E}▷=>^n Q) | 100.
+Proof.
+  rewrite /FromSep. iIntros "[P Q]". iApply (step_fupdN_combine_max with "P Q").
 Qed.
 
 Lemma step_fupdN_with_emp n P E :

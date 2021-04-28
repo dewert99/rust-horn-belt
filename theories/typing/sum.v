@@ -278,7 +278,7 @@ Section typing.
   Proof.
     move=> A B. eapply subtype_eq. { apply mod_ty_subtype; [apply _|].
     apply xsum_subtype. do 2 (apply subtypel_cons; [done|]). solve_typing. }
-    { fun_ext. by case. }
+    fun_ext. by case.
   Qed.
 
   Lemma sum_eqtype {𝔄 𝔅 𝔄' 𝔅'} E L (f: 𝔄 → 𝔄') f' (g: 𝔅 → 𝔅') g' ty1 ty2 ty1' ty2' :

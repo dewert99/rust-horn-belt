@@ -48,31 +48,23 @@ Section type_context.
     | e => to_val e end.
 
   Lemma eval_path_of_val (v: val) : eval_path v = Some v.
-  Proof. destruct v. done. simpl. rewrite (decide_left _). done. Qed.
+  Proof. case v; [done|]=>/= *. by rewrite (decide_left _). Qed.
 
   Lemma wp_eval_path E p v : eval_path p = Some v → ⊢ WP p @ E {{ v', ⌜v' = v⌝ }}.
   Proof.
-    revert v; induction p; intros v; try done.
-    { intros [=]. by iApply wp_value. }
-    { move=> /of_to_val=> ?. by iApply wp_value. }
-    simpl. destruct op; try discriminate; [].
-    destruct p2; try (intros ?; by iApply wp_value); [].
-    destruct l; try (intros ?; by iApply wp_value); [].
-    destruct (eval_path p1); try done.
-    destruct v0; try discriminate; [].
-    destruct l; try discriminate; [].
-    intros [=<-]. wp_bind p1. iApply (wp_wand with "[]").
-    { iApply IHp1. done. }
-    iIntros (v) "%". subst v. wp_op. done.
+    move: v. elim: p=>//. { move=> > [=?]. by iApply wp_value. }
+    { move=> > ?? /of_to_val ?. by iApply wp_value. }
+    case=>// e Wp. case=>//. case=>//= ?. move: Wp.
+    case (eval_path e)=>//. case=>//. case=>// ? Wp _ ?[=<-].
+    wp_bind e. iApply wp_wand; [by iApply Wp|]. iIntros. subst. by wp_op.
   Qed.
 
   Lemma eval_path_closed p v : eval_path p = Some v → Closed [] p.
   Proof.
-    intros Hpv. revert v Hpv.
-    induction p as [| | |[] p IH [|[]| | | | | | | | | |] _| | | | | | | |]=>//.
-    - unfold eval_path=>? /of_to_val <-. apply is_closed_of_val.
-    - simpl. destruct (eval_path p) as [[[]|]|]; intros ? [= <-].
-      specialize (IH _ eq_refl). apply _.
+    move: v. elim p=>//.
+    - move=> >. rewrite /eval_path=> /of_to_val <-. apply is_closed_of_val.
+    - case=>// e IH. case=>//. case=>//= ? _. move: IH. case (eval_path e)=>//.
+      case=>//. case=>// ? IH ? _. specialize (IH _ eq_refl). apply _.
   Qed.
 
   (** Type context element *)
@@ -98,15 +90,14 @@ Section lemmas.
     tctx_elt_interp tid (v ◁ ty) vπ ⊣⊢ ∃d, ⧖d ∗ ty.(ty_own) vπ d tid [v].
   Proof.
     rewrite /tctx_elt_interp eval_path_of_val. iSplit.
-    - iIntros "H". iDestruct "H" as (??) "(#EQ & ? & ?)".
-      iDestruct "EQ" as %[=->]. eauto.
-    - iDestruct 1 as (d) "[??]". eauto.
+    - iIntros "H". iDestruct "H" as (??[=->]) "[??]". iExists _. iFrame.
+    - iDestruct 1 as (d) "[??]". iExists _, _. by iFrame.
   Qed.
 
   Lemma tctx_elt_interp_hasty_path {𝔄} p1 p2 (ty: _ 𝔄) tid vπ :
     eval_path p1 = eval_path p2 →
     tctx_elt_interp tid (p1 ◁ ty) vπ ≡ tctx_elt_interp tid (p2 ◁ ty) vπ.
-  Proof. intros Hp. rewrite /tctx_elt_interp /=. setoid_rewrite Hp. done. Qed.
+  Proof. move=> Hp. rewrite /tctx_elt_interp. by setoid_rewrite Hp. Qed.
 
   Lemma tctx_hasty_val' {𝔄} tid p v (ty: _ 𝔄) vπ:
     Some v = eval_path p →
@@ -121,13 +112,13 @@ Section lemmas.
     (∀v d, ⌜Some v = eval_path p⌝ -∗ ⧖d -∗ ty.(ty_own) vπ d tid [v] -∗ Φ v) -∗
     WP p @ E {{ Φ }}.
   Proof.
-    iDestruct 1 as (???) "[#? ?]". iIntros "ToΦ". iApply (wp_wand with "[]");
-    [by iApply wp_eval_path|]. iIntros (?) "->". by iApply "ToΦ".
+    iIntros "(%&%&%&#?&?) ToΦ". iApply (wp_wand with "[]");
+    [by iApply wp_eval_path|]. iIntros (?->). by iApply "ToΦ".
   Qed.
 
   Lemma closed_hasty {𝔄} tid p (ty: _ 𝔄) vπ :
     tctx_elt_interp tid (p ◁ ty) vπ -∗ ⌜Closed [] p⌝.
-  Proof. iDestruct 1 as (???) "(_ & _)". eauto using eval_path_closed. Qed.
+  Proof. iIntros "(%&%&%&_)!%". by eapply eval_path_closed. Qed.
 
   (** Copy typing contexts *)
   Class CopyC {𝔄l} (T: tctx 𝔄l) :=
@@ -145,14 +136,12 @@ Section lemmas.
   Class SendC {𝔄l} (T: tctx 𝔄l) := sendc_change_tid tid tid' vπl :
     tctx_interp tid T vπl ⊣⊢ tctx_interp tid' T vπl.
 
-  Global Instance tctx_nil_send: SendC +[].
-  Proof. done. Qed.
+  Global Instance tctx_nil_send: SendC +[]. Proof. done. Qed.
 
   Global Instance tctx_cons_send {𝔄 𝔄l} p (ty: _ 𝔄) (T: _ 𝔄l) :
     Send ty → SendC T → SendC (p ◁ ty +:: T).
   Proof.
-    move=> Eq Eq' ??[??]/=. rewrite Eq' /tctx_elt_interp. do 7 f_equiv.
-    by rewrite Eq.
+    move=> ? Eq' ??[??]/=. rewrite Eq' /tctx_elt_interp. by do 7 f_equiv.
   Qed.
 
   (** Type context inclusion *)
@@ -263,13 +252,13 @@ Section lemmas.
     tctx_incl E L (p ◁{κ} ty +:: T) (p ◁{κ'} ty' +:: T)
       (λ post '(a -:: al), post (f a -:: al)).
   Proof.
-    iIntros (Sub InLft ??[vπ wπl]?) "#LFT _ _ E L /=[(%v &%& Upd) T] Obs".
+    iIntros (Sub InLft ??[vπ wπl]?) "#LFT _ _ E L /=[(%v &%& Toty) T] Obs".
     iDestruct (Sub with "L E") as "#(_&_& #InOwn &_)".
-    iDestruct (InLft with "L E") as "#InLft". iModIntro. iExists (f ∘ vπ -:: wπl).
+    iDestruct (InLft with "L E") as "#κ⊑κ'". iModIntro. iExists (f ∘ vπ -:: wπl).
     iFrame "L Obs T". iExists v. iSplit; [done|]. iIntros "†κ'".
-    iMod (lft_incl_dead with "InLft †κ'") as "†κ"; [done|].
-    iMod ("Upd" with "†κ") as (vπ' d) "(?& d & ty)". iModIntro.
-    iExists (f ∘ vπ'), d. iFrame "d".
+    iMod (lft_incl_dead with "κ⊑κ' †κ'") as "†κ"; [done|].
+    iMod ("Toty" with "†κ") as (vπ' d) "(?& ⧖d & ty)". iModIntro.
+    iExists (f ∘ vπ'), d. iFrame "⧖d".
     iSplitR "ty"; by [iApply proph_eqz_constr|iApply "InOwn"].
   Qed.
 
@@ -369,23 +358,22 @@ Section lemmas.
     iMod (Un with "LFT E L †κ T") as (dT vπl') "[timeT >ToT']".
     iMod (Alv with "E L'") as (?) "[Tok ToL']"; [done|].
     iMod (ty_own_proph with "LFT [] ty Tok") as "Toty";
-    [done|by iApply lft_incl_refl|]. iExists (dp `max` dT), (vπ' -:: vπl').
-    rewrite persist_time_rcpt_sep. iFrame "timep timeT". iIntros "!>!>!>".
-    iDestruct (step_fupdN_combine_max with "Toty ToT'") as "Big".
-    iApply (step_fupdN_wand with "Big"). iIntros "[>(%&%&%& PTok & Toty) >($& Obs' &$)]".
-    iMod ("Eqz" with "[] PTok") as "[Obs PTok]"; [done|].
+    [done|by iApply lft_incl_refl|]. iExists _, (vπ' -:: vπl').
+    iCombine "timep timeT" as "$". iIntros "!>!>!>". iMod "ToT'" as "ToT'".
+    iModIntro. iCombine "Toty ToT'" as "Big". iApply (step_fupdN_wand with "Big").
+    iIntros "[>(%&%&%& PTok & Toty) >($& Obs' &$)]".
+    iMod ("Eqz" with "[] PTok") as "[Obs PTok]"; [done|]. iCombine "Obs Obs'" as "?".
     iMod ("Toty" with "PTok") as "[ty Tok]". iMod ("ToL'" with "Tok") as "$".
-    iDestruct (proph_obs_and with "Obs Obs'") as "?". iModIntro. iSplit.
-    { by iApply proph_obs_impl; [|done]=> ?[->->]. } iExists v, dp.
-    iSplit; [done|]. by iFrame.
+    iModIntro. iSplit. { by iApply proph_obs_impl; [|done]=> ?[->->]. }
+    iExists v, dp. iSplit; [done|]. by iFrame.
   Qed.
 
   Global Instance unblock_tctx_cons {𝔄 𝔄l} (t: _ 𝔄) (T T': _ 𝔄l) κ E L :
     UnblockTctx E L κ T T' → UnblockTctx E L κ (t +:: T) (t +:: T') | 100.
   Proof.
     iIntros (Un ??[vπ ?]) "LFT E L †κ [t T]".
-    iMod (Un with "LFT E L †κ T") as (d vπl') "[time Upd]". iModIntro.
-    iExists d, (vπ -:: vπl'). iFrame "time". iApply (step_fupdN_wand with "Upd").
+    iMod (Un with "LFT E L †κ T") as (d vπl') "[⧖d Upd]". iModIntro.
+    iExists d, (vπ -:: vπl'). iFrame "⧖d". iApply (step_fupdN_wand with "Upd").
     iIntros "!> >($&?&$) !>". iFrame "t". by iApply proph_obs_impl; [|done]=>/= ?->.
   Qed.
 

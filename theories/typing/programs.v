@@ -154,8 +154,8 @@ Section typing.
     { simpl in *. subst. rewrite -lft_dead_or. by iRight. }
     iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME time [ToT']")=>//.
     { iApply step_fupdN_with_emp. by rewrite difference_empty_L. } wp_seq.
-    iIntros "(L & Obs' & T') !>". iDestruct (proph_obs_and with "Obs Obs'") as "?".
-    wp_seq. iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T'").
+    iIntros "(L & Obs' & T') !>". wp_seq. iCombine "Obs Obs'" as "?".
+    iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T'").
     by iApply proph_obs_impl; [|done]=> ?[?<-].
   Qed.
 
