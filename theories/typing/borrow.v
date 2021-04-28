@@ -24,7 +24,7 @@ Section borrow.
     iMod (uniq_intro vπ with "PROPH UNIQ") as (i) "[Vo Pc]"; [done|].
     set ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i.
     iMod (bor_create ⊤ κ (∃vπ' d, _ ↦∗: ty.(ty_own) vπ' d _ ∗
-      ⧖(S d) ∗ .PC[ξ] (vπ', d))%I with "LFT [↦ ty Pc]") as "[Bor Toty]"; [done| |].
+      ⧖(S d) ∗ .PC[ξ] vπ' d)%I with "LFT [↦ ty Pc]") as "[Bor Toty]"; [done| |].
     { iExists _, _. iFrame "Pc ⧖". iExists _. iFrame. }
     iExists -[pair ∘ vπ ⊛ (.$ ξ); (.$ ξ)]. rewrite/= right_id. iFrame "L". iModIntro.
     iSplitR "Obs"; [|by iApply proph_obs_impl; [|done]=>/=]. iSplitL "Vo Bor".
@@ -96,7 +96,7 @@ Section borrow.
       iDestruct "↦own" as ([|[[| |]|][]]) "[>↦ own]"; try iDestruct "own" as ">[]".
     iDestruct "own" as "[ty †]". rewrite heap_mapsto_vec_singleton -wp_fupd.
     iApply wp_cumul_time_rcpt; [done|done|]. wp_read. iIntros "⧗1".
-    iDestruct (uniq_agree with "ξVo ξPc") as %[=<-->].
+    iDestruct (uniq_agree with "ξVo ξPc") as %[<-->].
     iMod (uniq_intro (fst ∘ vπ) with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].
     set (ζ := PrVar _ ζi).
     iDestruct (uniq_proph_tok with "ζVo ζPc") as "(ζVo & ζ & ToζPc)".
@@ -104,7 +104,7 @@ Section borrow.
     as "(EqObs & ζ & ToξPc)"; [done|apply (proph_dep_one ζ)|].
     iCombine "EqObs Obs" as "Obs". iDestruct ("ToζPc" with "ζ") as "ζPc".
     iMod ("ToBor" $! (∃vπ' d', (∃vl', _ ↦∗ vl' ∗ ty_own ty vπ' d' _ vl') ∗
-      ⧖(S d') ∗ .PC[ζ](vπ', d'))%I with "[↦ ⧗1 † ToξPc] [ty ζPc]") as "[Bor κ]".
+      ⧖(S d') ∗ .PC[ζ] vπ' d')%I with "[↦ ⧗1 † ToξPc] [ty ζPc]") as "[Bor κ]".
     - iIntros "!> (%&%& ? & >⧖' & ζPc)".
       iMod (cumul_persist_time_rcpts with "TIME ⧗1 ⧖'") as "⧖'"; [solve_ndisj|].
       iIntros "!>!>". iDestruct ("ToξPc" with "[ζPc]") as "ξPc".

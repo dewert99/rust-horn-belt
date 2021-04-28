@@ -16,14 +16,12 @@ Local Definition uniq_gmapUR 𝔄i := gmapUR positive (uniq_itemR 𝔄i).
 Local Definition uniq_smryUR := discrete_funUR uniq_gmapUR.
 Definition uniqUR := authUR uniq_smryUR.
 
-Implicit Type S: uniq_smryUR.
-
-Local Definition item {𝔄i} q (vπd: proph 𝔄i * nat) : uniq_itemR 𝔄i :=
-  @to_frac_agree (leibnizO _) q vπd.
-Local Definition line ξ q vπd : uniq_smryUR :=
-  .{[ξ.(pv_ty) := {[ξ.(pv_id) := item q vπd]}]}.
-Local Definition add_line ξ q vπd S : uniq_smryUR :=
-  .<[ξ.(pv_ty) := <[ξ.(pv_id) := item q vπd]> (S ξ.(pv_ty))]> S.
+Local Definition item {𝔄i} q (vπ: proph 𝔄i) (d: nat) : uniq_itemR 𝔄i :=
+  @to_frac_agree (leibnizO _) q (vπ, d).
+Local Definition line ξ q vπ d : uniq_smryUR :=
+  .{[ξ.(pv_ty) := {[ξ.(pv_id) := item q vπ d]}]}.
+Local Definition add_line ξ q vπ d (S: uniq_smryUR) : uniq_smryUR :=
+  .<[ξ.(pv_ty) := <[ξ.(pv_id) := item q vπ d]> (S ξ.(pv_ty))]> S.
 
 Definition uniqΣ := #[GFunctor uniqUR].
 Class uniqPreG Σ := UniqPreG { uniq_preG_inG:> inG Σ uniqUR }.
@@ -44,15 +42,15 @@ Context `{!invG Σ, !prophG Σ, uniqG Σ}.
 Definition uniq_inv: iProp Σ := ∃S, own uniq_name (● S).
 Definition uniq_ctx: iProp Σ := inv uniqN uniq_inv.
 
-Local Definition own_line ξ q vπd := own uniq_name (◯ line ξ q vπd).
+Local Definition own_line ξ q vπ d := own uniq_name (◯ line ξ q vπ d).
 
 (** Value Observer *)
-Definition val_obs ξ vπd : iProp Σ := own_line ξ (1/2) vπd.
+Definition val_obs ξ vπ d : iProp Σ := own_line ξ (1/2) vπ d.
 
 (** Prophecy Control *)
-Local Definition val_obs2 ξ vπd : iProp Σ := own_line ξ 1 vπd.
-Definition proph_ctrl ξ vπd : iProp Σ :=
-  (val_obs ξ vπd ∗ 1:[ξ]) ∨ ((∃vπd', val_obs2 ξ vπd') ∗ (.$ ξ) :== vπd.1).
+Local Definition val_obs2 ξ vπ d : iProp Σ := own_line ξ 1 vπ d.
+Definition proph_ctrl ξ vπ d : iProp Σ :=
+  (val_obs ξ vπ d ∗ 1:[ξ]) ∨ ((∃vπ' d', val_obs2 ξ vπ' d') ∗ (.$ ξ) :== vπ).
 
 End defs.
 
@@ -69,31 +67,31 @@ Section lemmas.
 Context `{!invG Σ, !prophG Σ, uniqG Σ}.
 
 Global Instance uniq_ctx_persistent : Persistent uniq_ctx := _.
-Global Instance val_obs_timeless ξ vπd : Timeless (.VO[ξ] vπd) := _.
+Global Instance val_obs_timeless ξ vπ d : Timeless (.VO[ξ] vπ d) := _.
 
-Local Lemma own_line_agree ξ q q' vπd vπd' :
-  own_line ξ q vπd -∗ own_line ξ q' vπd' -∗ ⌜(q + q' ≤ 1)%Qp ∧ vπd = vπd'⌝.
+Local Lemma own_line_agree ξ q q' vπ d vπ' d' :
+  own_line ξ q vπ d -∗ own_line ξ q' vπ' d' -∗ ⌜(q + q' ≤ 1)%Qp ∧ vπ = vπ' ∧ d = d'⌝.
 Proof.
   iIntros "line line'". iDestruct (own_valid_2 with "line line'") as %Val.
   iPureIntro. move: Val.
   rewrite -auth_frag_op auth_frag_valid discrete_fun_singleton_op
     discrete_fun_singleton_valid singleton_op singleton_valid.
-  by move/frac_agree_op_valid.
+  by move/frac_agree_op_valid=> [?[=??]].
 Qed.
 
-Local Lemma vo_vo2 ξ vπd : .VO[ξ] vπd ∗ .VO[ξ] vπd ⊣⊢ .VO2[ξ] vπd.
+Local Lemma vo_vo2 ξ vπ d : .VO[ξ] vπ d ∗ .VO[ξ] vπ d ⊣⊢ .VO2[ξ] vπ d.
 Proof.
   by rewrite -own_op -auth_frag_op discrete_fun_singleton_op singleton_op /item
     -frac_agree_op Qp_half_half.
 Qed.
 
-Local Lemma vo_pc ξ vπd vπd' :
-  .VO[ξ] vπd -∗ .PC[ξ] vπd' -∗ ⌜vπd = vπd'⌝ ∗ .VO2[ξ] vπd ∗ 1:[ξ].
+Local Lemma vo_pc ξ vπ d vπ' d' :
+  .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' -∗ ⌜vπ = vπ'⌝ ∗ ⌜d = d'⌝ ∗ .VO2[ξ] vπ d ∗ 1:[ξ].
 Proof.
-  iIntros "Vo [[Vo' ?]|[[% Vo2] _]]";
+  iIntros "Vo [[Vo' ?]|[(%&%& Vo2) _]]";
   [|by iDestruct (own_line_agree with "Vo Vo2") as %[? _]].
-  iDestruct (own_line_agree with "Vo Vo'") as %[_->]. iSplit; [done|].
-  rewrite -vo_vo2. iFrame.
+  iDestruct (own_line_agree with "Vo Vo'") as %[_[->->]].
+  do 2 (iSplit; [done|]). rewrite -vo_vo2. iFrame.
 Qed.
 
 (** Initialization *)
@@ -111,75 +109,77 @@ Definition prval_to_inh {𝔄} (vπ: proph 𝔄)
 
 Lemma uniq_intro {𝔄} (vπ: _ → 𝔄) d E :
   ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗ ∃i,
-    let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i in .VO[ξ] (vπ,d) ∗ .PC[ξ] (vπ,d).
+    let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i in .VO[ξ] vπ d ∗ .PC[ξ] vπ d.
 Proof.
   iIntros (?) "PROPH ?". iInv uniqN as (S) "> ●S".
   set 𝔄i := 𝔄 ↾ prval_to_inh vπ. set I := dom (gset _) (S 𝔄i).
   iMod (proph_intro 𝔄i I with "PROPH") as (i NIn) "ξ"; [by solve_ndisj|].
-  set ξ := PrVar 𝔄i i. set S' := add_line ξ 1 (vπ,d) S.
+  set ξ := PrVar 𝔄i i. set S' := add_line ξ 1 vπ d S.
   move: NIn=> /not_elem_of_dom ?.
-  iMod (own_update _ _ (● S' ⋅ ◯ line ξ 1 (vπ,d)) with "●S") as "[? Vo2]".
+  iMod (own_update _ _ (● S' ⋅ ◯ line ξ 1 vπ d) with "●S") as "[? Vo2]".
   { by apply auth_update_alloc,
       discrete_fun_insert_local_update, alloc_singleton_local_update. }
   iModIntro. iSplitR "Vo2 ξ"; [by iExists S'|]. iModIntro. iExists i.
   iDestruct (vo_vo2 with "Vo2") as "[$?]". iLeft. iFrame.
 Qed.
 
-Lemma uniq_strip_later ξ vπd vπd' :
-  ▷ .VO[ξ] vπd -∗ ▷ .PC[ξ] vπd' -∗ ◇ (⌜vπd = vπd'⌝ ∗ (.VO[ξ] vπd ∗ .PC[ξ] vπd')).
+Lemma uniq_strip_later ξ vπ d vπ' d' :
+  ▷ .VO[ξ] vπ d -∗ ▷ .PC[ξ] vπ' d' -∗
+    ◇ (⌜vπ = vπ'⌝ ∗ ⌜d = d'⌝ ∗ .VO[ξ] vπ d ∗ .PC[ξ] vπ' d').
 Proof.
-  iIntros "> Vo [> [Vo' ?]|[>[% Vo2] _]]";
+  iIntros "> Vo [> [Vo' ?]|[>(%&%& Vo2) _]]";
   [|by iDestruct (own_line_agree with "Vo Vo2") as %[? _]].
-  iDestruct (own_line_agree with "Vo Vo'") as %[_ ->]. iModIntro.
-  iSplit; [done|]. iSplitL "Vo"; [done|]. iLeft. by iSplitL "Vo'".
+  iDestruct (own_line_agree with "Vo Vo'") as %[_[->->]]. iModIntro.
+  do 2 (iSplit; [done|]). iSplitL "Vo"; [done|]. iLeft. by iSplitL "Vo'".
 Qed.
 
-Lemma uniq_agree ξ vπd vπd' : .VO[ξ] vπd -∗ .PC[ξ] vπd' -∗ ⌜vπd = vπd'⌝.
+Lemma uniq_agree ξ vπ d vπ' d' :
+  .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' -∗ ⌜vπ = vπ' ∧ d = d'⌝.
 Proof.
-  iIntros "Vo Pc". by iDestruct (vo_pc with "Vo Pc") as (->) "?".
+  iIntros "Vo Pc". by iDestruct (vo_pc with "Vo Pc") as (->->) "?".
 Qed.
 
-Lemma uniq_proph_tok ξ vπd vπd' :
-  .VO[ξ] vπd -∗ .PC[ξ] vπd' -∗ .VO[ξ] vπd ∗ 1:[ξ] ∗ (1:[ξ] -∗ .PC[ξ] vπd').
+Lemma uniq_proph_tok ξ vπ d vπ' d' :
+  .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' -∗ .VO[ξ] vπ d ∗ 1:[ξ] ∗ (1:[ξ] -∗ .PC[ξ] vπ' d').
 Proof.
-  iIntros "Vo Pc". iDestruct (vo_pc with "Vo Pc") as (->) "[Vo2 $]".
+  iIntros "Vo Pc". iDestruct (vo_pc with "Vo Pc") as (->->) "[Vo2 $]".
   iDestruct (vo_vo2 with "Vo2") as "[$?]". iIntros "?". iLeft. iFrame.
 Qed.
 
-Lemma uniq_update E ξ vπd vπd' vπd'' : ↑uniqN ⊆ E →
-  uniq_ctx -∗ .VO[ξ] vπd -∗ .PC[ξ] vπd' ={E}=∗ .VO[ξ] vπd'' ∗ .PC[ξ] vπd''.
+Lemma uniq_update E ξ vπ d vπ' d' vπ'' d'' : ↑uniqN ⊆ E →
+  uniq_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' ={E}=∗ .VO[ξ] vπ'' d'' ∗ .PC[ξ] vπ'' d''.
 Proof.
-  iIntros (?) "? Vo Pc". iDestruct (vo_pc with "Vo Pc") as (->) "[Vo2 ξ]".
-  iInv uniqN as (S) "> ●S". set S' := add_line ξ 1 vπd'' S.
-  iMod (own_update_2 _ _ _ (●S' ⋅ ◯line ξ 1 vπd'') with "●S Vo2") as "[? Vo2]".
+  iIntros (?) "? Vo Pc". iDestruct (vo_pc with "Vo Pc") as (->->) "[Vo2 ξ]".
+  iInv uniqN as (S) "> ●S". set S' := add_line ξ 1 vπ'' d'' S.
+  iMod (own_update_2 _ _ _ (●S' ⋅ ◯line ξ 1 vπ'' d'') with "●S Vo2") as "[? Vo2]".
   { apply auth_update, discrete_fun_singleton_local_update_any,
     singleton_local_update_any => ? _. by apply exclusive_local_update. }
   iModIntro. iSplitR "Vo2 ξ"; [by iExists S'|]. iModIntro.
   iDestruct (vo_vo2 with "Vo2") as "[$?]". iLeft. iFrame.
 Qed.
 
-Lemma uniq_resolve E ξ vπ d vπd' ζl q : ↑prophN ⊆ E → vπ ./ ζl →
-  proph_ctx -∗ .VO[ξ] (vπ,d) -∗ .PC[ξ] vπd' -∗ q:+[ζl] ={E}=∗
-    ⟨π, π ξ = vπ π⟩ ∗ .PC[ξ] (vπ,d) ∗ q:+[ζl].
+Lemma uniq_resolve E ξ vπ d vπ' d' ζl q : ↑prophN ⊆ E → vπ ./ ζl →
+  proph_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' -∗ q:+[ζl] ={E}=∗
+    ⟨π, π ξ = vπ π⟩ ∗ .PC[ξ] vπ d ∗ q:+[ζl].
 Proof.
-  iIntros (??) "PROPH Vo Pc ζl". iDestruct (vo_pc with "Vo Pc") as (<-) "[? ξ]".
+  iIntros (??) "PROPH Vo Pc ζl". iDestruct (vo_pc with "Vo Pc") as (<-<-) "[? ξ]".
   iMod (proph_resolve with "PROPH ξ ζl") as "[#? $]"; [done|done|].
-  iModIntro. iSplitR; [done|]. iRight. iSplitL; [by iExists (vπ,d)|].
+  iModIntro. iSplitR; [done|]. iRight. iSplitL; [by iExists vπ, d|].
   by iApply proph_eqz_obs.
 Qed.
 
-Lemma uniq_preresolve E ξ u vπ d vπd' ζl q : ↑prophN ⊆ E → u ./ ζl →
-  proph_ctx -∗ .VO[ξ] (vπ,d) -∗ .PC[ξ] vπd' -∗ q:+[ζl] ={E}=∗
-    ⟨π, π ξ = u π⟩ ∗ q:+[ζl] ∗ (∀vπ' d', u :== vπ' -∗ .PC[ξ] (vπ',d')).
+Lemma uniq_preresolve E ξ u vπ d vπ'' d'' ζl q : ↑prophN ⊆ E → u ./ ζl →
+  proph_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ] vπ'' d'' -∗ q:+[ζl] ={E}=∗
+    ⟨π, π ξ = u π⟩ ∗ q:+[ζl] ∗ (∀vπ' d', u :== vπ' -∗ .PC[ξ] vπ' d').
 Proof.
-  iIntros (??) "PROPH Vo Pc ζl". iDestruct (vo_pc with "Vo Pc") as (<-) "[? ξ]".
+  iIntros (??) "PROPH Vo Pc ζl". iDestruct (vo_pc with "Vo Pc") as (<-<-) "[? ξ]".
   iMod (proph_resolve with "PROPH ξ ζl") as "[#Obs $]"; [done|done|].
   iModIntro. iSplitR; [done|]. iIntros (??) "Eqz". iRight.
-  iSplitR "Eqz"; [by iExists (vπ,d)|].
+  iSplitR "Eqz"; [by iExists vπ, d|].
   by iDestruct (proph_eqz_modify with "Obs Eqz") as "?".
 Qed.
 
-Lemma proph_ctrl_eqz ξ vπ d : proph_ctx -∗ .PC[ξ] (vπ,d) -∗ (.$ ξ) :== vπ.
+Lemma proph_ctrl_eqz ξ vπ d : proph_ctx -∗ .PC[ξ] vπ d -∗ (.$ ξ) :== vπ.
 Proof. iIntros "#? [[_ ?]|[_ ?]]"; by [iApply proph_eqz_token|]. Qed.
 
 End lemmas.

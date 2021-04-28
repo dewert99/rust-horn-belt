@@ -14,8 +14,8 @@ Section uniq_bor.
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlv_E ty κ;
     ty_own vπ d tid vl := [loc[l] := vl] ∃d' i,
       let ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i in
-      ⌜S d' ≤ d ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ, d') ∗
-      &{κ} (∃vπ' d', l ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ξ] (vπ', d'));
+      ⌜S d' ≤ d ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ) d' ∗
+      &{κ} (∃vπ' d', l ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ξ] vπ' d');
     ty_shr vπ d κ' tid l := [S d' := d] ∃(l': loc) ξ, ⌜snd ∘ vπ ./ [ξ]⌝ ∗
       &frac{κ'}(λ q', l ↦{q'} #l') ∗ &frac{κ'} (λ q, q:[ξ]) ∗
       ▷ ty.(ty_shr) (fst ∘ vπ) d' κ' tid l';
@@ -52,7 +52,7 @@ Section uniq_bor.
     iMod (bor_sep with "LFT Bor") as "[_ BorPc]"; [done|].
     iMod (bor_combine with "LFT BorVo BorPc") as "Bor"; [done|].
     iMod (bor_acc_cons with "LFT Bor κ'") as "[[Vo Pc] ToBor]"; [done|].
-    iMod (uniq_strip_later with "Vo Pc") as ([=->->]) "[Vo Pc]".
+    iMod (uniq_strip_later with "Vo Pc") as (->->) "[Vo Pc]".
     iDestruct (uniq_proph_tok with "Vo Pc") as "(Vo & ξ & ToPc)".
     iMod ("ToBor" with "[Vo ToPc] ξ") as "[Borξ κ']".
     { iIntros "!> >ξ !>!>". iFrame "Vo". by iApply "ToPc". }
@@ -73,7 +73,7 @@ Section uniq_bor.
     first done. { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     iMod (bor_acc with "LFT Bor κ1") as "[Big ToBor]"; [done|]. iIntros "!>!>!>".
     iDestruct "Big" as (??) "((%vl & ↦ & ty) & #⧖ & Pc)".
-    iDestruct (uniq_agree with "Vo Pc") as %[=<-<-].
+    iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     iDestruct (uniq_proph_tok with "Vo Pc") as "(Vo & ξ & ToPc)".
     iMod (ty_own_proph with "LFT [] ty κ1'") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
@@ -216,7 +216,7 @@ Section typing.
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
     iMod (bor_acc with "LFT Bor κ") as
       "[(%&%&(%& >↦ & #ty)& #>⧖ & Pc) ToBor]"; [done|].
-    iMod (uniq_strip_later with "Vo Pc") as ([=<-<-]) "[Vo Pc]".
+    iMod (uniq_strip_later with "Vo Pc") as (<-<-) "[Vo Pc]".
     iDestruct (ty_size_eq with "ty") as "#>%". iIntros "!>".
     iExists _, _, _. iSplit; [done|]. iFrame "↦ Na". iSplitR.
     { iApply ty_own_depth_mono; [|done]. lia. }
@@ -235,7 +235,7 @@ Section typing.
     iDestruct "uniq" as (??[??]) "[Vo Bor]".
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
     iMod (bor_acc with "LFT Bor κ") as "[(%&%&(%& >↦ & ty)& _ & Pc) ToBor]"; [done|].
-    iMod (uniq_strip_later with "Vo Pc") as ([=<-<-]) "[Vo Pc]".
+    iMod (uniq_strip_later with "Vo Pc") as (<-<-) "[Vo Pc]".
     rewrite ty_size_eq. iDestruct "ty" as ">%".
     iModIntro. iExists _, _. iSplit; [done|]. iFrame "↦".
     iIntros (wπ ?) "(% & >↦ & ty) #⧖ /=". set vπ' := pair ∘ wπ ⊛ (snd ∘ vπ).
