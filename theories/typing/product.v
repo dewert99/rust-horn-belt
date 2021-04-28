@@ -14,12 +14,12 @@ Section product.
       (l +ₗ ty.(ty_size)) ↦∗{q}: ty'.(ty_own) vπ' d' tid.
   Proof.
     iSplit.
-    - iIntros "(%& Mt &%&%&->& Own & Own')". rewrite heap_mapsto_vec_app.
-      iDestruct "Mt" as "[Mt Mt']". iDestruct (ty_size_eq with "Own") as %->.
-      iSplitL "Mt Own"; iExists _; iFrame.
-    - iIntros "[(%wl & Mt & Own) (%wl' & Mt' & Own')]". iExists (wl ++ wl').
-      rewrite heap_mapsto_vec_app. iDestruct (ty_size_eq with "Own") as %->.
-      iFrame "Mt Mt'". iExists wl, wl'. by iFrame.
+    - iIntros "(%& ↦ &%&%&->& ty & ty')". rewrite heap_mapsto_vec_app.
+      iDestruct "↦" as "[↦ ↦']". iDestruct (ty_size_eq with "ty") as %->.
+      iSplitL "↦ ty"; iExists _; iFrame.
+    - iIntros "[(%wl & ↦ & ty) (%wl' & ↦' & ty')]". iExists (wl ++ wl').
+      rewrite heap_mapsto_vec_app. iDestruct (ty_size_eq with "ty") as %->.
+      iFrame "↦ ↦'". iExists wl, wl'. by iFrame.
   Qed.
 
   Program Definition prod_ty {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) : type (𝔄 * 𝔅) := {|
@@ -34,57 +34,57 @@ Section product.
     iIntros "* (%&%&->& H)". rewrite app_length !ty_size_eq. by iDestruct "H" as "[->->]".
   Qed.
   Next Obligation.
-    iIntros "*% (%&%&->& Own &?)". iExists wl, wl'. iSplit; [done|].
-    by iSplitL "Own"; iApply ty_own_depth_mono.
+    iIntros "*% (%&%&->& ty &?)". iExists wl, wl'. iSplit; [done|].
+    by iSplitL "ty"; iApply ty_own_depth_mono.
   Qed.
   Next Obligation. iIntros "*%[??]". iSplit; by iApply ty_shr_depth_mono. Qed.
   Next Obligation.
     iIntros "* In [??]". iSplit; by iApply (ty_shr_lft_mono with "In").
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT #? Own [Tok Tok']". rewrite split_prod_mt.
-    iMod (bor_sep with "LFT Own") as "[Own Own']"; first done.
-    iMod (ty_share with "LFT [] Own Tok") as "Own"; first done.
+    move=> */=. iIntros "#LFT #? Bor [κ κ']". rewrite split_prod_mt.
+    iMod (bor_sep with "LFT Bor") as "[Bor Bor']"; first done.
+    iMod (ty_share with "LFT [] Bor κ") as "ty"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iMod (ty_share with "LFT [] Own' Tok'") as "Own'"; first solve_ndisj.
+    iMod (ty_share with "LFT [] Bor' κ'") as "ty'"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
-    iCombine "Own Own'" as "Own2". iApply (step_fupdN_wand with "Own2").
+    iCombine "ty ty'" as "ty2". iApply (step_fupdN_wand with "ty2").
     by iIntros "!> [>[$$] >[$$]]".
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #? (%wl & %wl' &->& Own & Own') [Tok Tok']".
-    iDestruct (ty_own_proph with "LFT [] Own Tok") as ">Close"; [done| |].
+    move=> *. iIntros "#LFT #? (%wl & %wl' &->& ty & ty') [κ κ']".
+    iDestruct (ty_own_proph with "LFT [] ty κ") as ">Toty"; [done| |].
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iDestruct (ty_own_proph with "LFT [] Own' Tok'") as ">Close'"; [done| |].
+    iDestruct (ty_own_proph with "LFT [] ty' κ'") as ">Toty'"; [done| |].
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
-    iCombine "Close Close'" as "Close2". iApply (step_fupdN_wand with "Close2").
-    iIntros "!> [Close Close']". iMod "Close" as (ξl q ?) "[PTok Close]".
-    iMod "Close'" as (ξl' q' ?) "[PTok' Close']".
-    iDestruct (proph_tok_combine with "PTok PTok'") as (q0) "[PTok ToPTok]".
-    iExists (ξl ++ ξl'), q0. iModIntro. iSplit. { iPureIntro. by apply proph_dep_pair. }
-    iFrame "PTok". iIntros "PTok". iDestruct ("ToPTok" with "PTok") as "[PTok PTok']".
-    iMod ("Close" with "PTok") as "[?$]". iMod ("Close'" with "PTok'") as "[?$]".
+    iCombine "Toty Toty'" as "Toty2". iApply (step_fupdN_wand with "Toty2").
+    iIntros "!> [Toty Toty']". iMod "Toty" as (???) "[ξl Toty]".
+    iMod "Toty'" as (???) "[ξl' Toty']".
+    iDestruct (proph_tok_combine with "ξl ξl'") as (?) "[ξl Toξl]".
+    iExists _, _. iModIntro. iSplit. { iPureIntro. by apply proph_dep_pair. }
+    iFrame "ξl". iIntros "ξl". iDestruct ("Toξl" with "ξl") as "[ξl ξl']".
+    iMod ("Toty" with "ξl") as "[?$]". iMod ("Toty'" with "ξl'") as "[?$]".
     iModIntro. iExists wl, wl'. iSplit; [done|]. iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #In #? [Shr Shr'] [Tok Tok']".
-    iDestruct (ty_shr_proph with "LFT In [] Shr Tok") as "> Close"; first done.
+    move=> *. iIntros "#LFT #In #? [ty ty'] [κ κ']".
+    iDestruct (ty_shr_proph with "LFT In [] ty κ") as "> Toty"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iDestruct (ty_shr_proph with "LFT In [] Shr' Tok'") as "> Close'"; first done.
+    iDestruct (ty_shr_proph with "LFT In [] ty' κ'") as "> Toty'"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
-    iIntros "!>!>". iCombine "Close Close'" as ">Close2".
-    iApply (step_fupdN_wand with "Close2"). iIntros "!> [Close Close']".
-    iMod "Close" as (ξl q ?) "[PTok Close]". iMod "Close'" as (ξl' q' ?) "[PTok' Close']".
-    iDestruct (proph_tok_combine with "PTok PTok'") as (q0) "[PTok ToPTok]".
+    iIntros "!>!>". iCombine "Toty Toty'" as ">Toty2".
+    iApply (step_fupdN_wand with "Toty2"). iIntros "!> [Toty Toty']".
+    iMod "Toty" as (ξl q ?) "[ξl Toty]". iMod "Toty'" as (ξl' q' ?) "[ξl' Toty']".
+    iDestruct (proph_tok_combine with "ξl ξl'") as (q0) "[ξl Toξl]".
     iExists (ξl ++ ξl'), q0. iModIntro. iSplit. { iPureIntro. by apply proph_dep_pair. }
-    iFrame "PTok". iIntros "PTok". iDestruct ("ToPTok" with "PTok") as "[PTok PTok']".
-    iMod ("Close" with "PTok") as "[$$]". by iMod ("Close'" with "PTok'") as "[$$]".
+    iFrame "ξl". iIntros "ξl". iDestruct ("Toξl" with "ξl") as "[ξl ξl']".
+    iMod ("Toty" with "ξl") as "[$$]". by iMod ("Toty'" with "ξl'") as "[$$]".
   Qed.
 
   Global Instance prod_ty_ne {𝔄 𝔅} : NonExpansive2 (@prod_ty 𝔄 𝔅).
@@ -118,21 +118,21 @@ Section typing.
         rewrite -!assoc (comm (⊓) (ty_lft ty) (α' ⊓ _)) -!assoc.
         repeat iApply lft_intersect_equiv_proper; try iApply lft_equiv_refl.
         iApply lft_intersect_equiv_idemp.
-      + rewrite /= !elctx_interp_app HE HE' big_sepL_app -!assoc.
+      + rewrite/= !elctx_interp_app HE HE' big_sepL_app -!assoc.
         iSplit; iIntros "#H"; repeat iDestruct "H" as "[?H]"; iFrame "#".
     - apply (type_lft_morph_add _ (α ⊓ α') βs (E ++ E'))=>ty.
       + rewrite lft_intersect_list_app -assoc (comm (⊓) α' (ty_lft ty)) assoc.
         iApply lft_intersect_equiv_proper; [iApply Hα|iApply Hα'].
-      + rewrite /= !elctx_interp_app HE HE' -!assoc.
+      + rewrite/= !elctx_interp_app HE HE' -!assoc.
         iSplit; iIntros "#H"; repeat iDestruct "H" as "[?H]"; iFrame "#".
     - apply (type_lft_morph_add _ (α ⊓ α') βs' (E ++ E'))=>ty.
       + rewrite lft_intersect_list_app -assoc.
         iApply lft_intersect_equiv_proper; [iApply Hα|iApply Hα'].
-      + by rewrite /= !elctx_interp_app HE HE' -!assoc.
+      + by rewrite/= !elctx_interp_app HE HE' -!assoc.
     - apply (type_lft_morph_const _ (α ⊓ α') (E ++ E'))=>ty.
       + rewrite lft_intersect_list_app.
         iApply lft_intersect_equiv_proper; [iApply Hα|iApply Hα'].
-      + by rewrite /= !elctx_interp_app HE HE'.
+      + by rewrite/= !elctx_interp_app HE HE'.
   Qed.
 
   Global Instance prod_type_ne {𝔄 𝔅 ℭ} (T: _ 𝔄 → _ 𝔅) (T': _ → _ ℭ) :
@@ -173,22 +173,21 @@ Section typing.
   Global Instance prod_copy {𝔄 𝔅} (ty: _ 𝔄) (ty': _ 𝔅) :
     Copy ty → Copy ty' → Copy (ty * ty').
   Proof.
-    move=> ??. split; [by apply _|]=>/= > ? HF. iIntros "#LFT [Shr Shr'] Na [Tok Tok']".
-    iMod (copy_shr_acc with "LFT Shr Na Tok") as (q wl) "(Na & Mt & #Own & Close)";
+    move=> ??. split; [by apply _|]=>/= > ? HF. iIntros "#LFT [ty ty'] Na [κ κ']".
+    iMod (copy_shr_acc with "LFT ty Na κ") as (q wl) "(Na & ↦ & #ty & Toκ)";
     first done. { rewrite <-HF. apply shr_locsE_subseteq=>/=. lia. }
-    iMod (copy_shr_acc with "LFT Shr' Na Tok'") as (q' wl') "(Na & Mt' & #Own' & Close')";
+    iMod (copy_shr_acc with "LFT ty' Na κ'") as (q' wl') "(Na & ↦' & #ty' & Toκ')";
     first done. { apply subseteq_difference_r. { symmetry. apply shr_locsE_disj. }
       move: HF. rewrite -plus_assoc shr_locsE_shift. set_solver. }
     iDestruct (na_own_acc with "Na") as "[$ ToNa]".
     { rewrite shr_locsE_shift. set_solver. }
-    case (Qp_lower_bound q q')=> [q''[?[?[->->]]]].
-    iExists q'', (wl ++ wl'). rewrite heap_mapsto_vec_app.
-    iDestruct (ty_size_eq with "Own") as ">->".
-    iDestruct "Mt" as "[$ Mtr]". iDestruct "Mt'" as "[$ Mtr']".
-    iSplitR. { iIntros "!>!>". iExists wl, wl'. iSplit; by [|iSplit]. }
-    iIntros "!> Na [Mt Mt']". iDestruct ("ToNa" with "Na") as "Na".
-    iMod ("Close'" with "Na [$Mt' $Mtr']") as "[Na $]".
-    iApply ("Close" with "Na [$Mt $Mtr]").
+    case (Qp_lower_bound q q')=> [q''[?[?[->->]]]]. iExists q'', (wl ++ wl').
+    rewrite heap_mapsto_vec_app. iDestruct (ty_size_eq with "ty") as ">->".
+    iDestruct "↦" as "[$ ↦r]". iDestruct "↦'" as "[$ ↦r']". iSplitR.
+    { iIntros "!>!>". iExists wl, wl'. iSplit; by [|iSplit]. }
+    iIntros "!> Na [↦ ↦']". iDestruct ("ToNa" with "Na") as "Na".
+    iMod ("Toκ'" with "Na [$↦' $↦r']") as "[Na $]".
+    iApply ("Toκ" with "Na [$↦ $↦r]").
   Qed.
 
   Global Instance prod_send {𝔄 𝔅} (ty: _ 𝔄) (ty': _ 𝔅) :
@@ -211,13 +210,13 @@ Section typing.
   Proof.
     move=> Sub Sub' ?. iIntros "L". iDestruct (Sub with "L") as "#Sub".
     iDestruct (Sub' with "L") as "#Sub'". iIntros "!> #E".
-    iDestruct ("Sub" with "E") as (Eq) "(#InLft & #InOwn & #InShr)".
-    iDestruct ("Sub'" with "E") as (?) "(#InLft' & #InOwn' & #InShr')".
+    iDestruct ("Sub" with "E") as (Eq) "(#?& #InOwn & #InShr)".
+    iDestruct ("Sub'" with "E") as (?) "(#?& #InOwn' & #InShr')".
     iSplit=>/=. { iPureIntro. by f_equal. } iSplit.
     { rewrite !lft_intersect_list_app. by iApply lft_intersect_mono. }
     iSplit; iModIntro.
-    - iIntros "* (%wl & %wl' &->& Own & Own')". iExists wl, wl'.
-      iSplit; [done|]. iSplitL "Own"; by [iApply "InOwn"|iApply "InOwn'"].
+    - iIntros "* (%&%&->& ty &?)". iExists _, _. iSplit; [done|].
+      iSplitL "ty"; by [iApply "InOwn"|iApply "InOwn'"].
     - iIntros "* #[??]". rewrite Eq. iSplit; by [iApply "InShr"|iApply "InShr'"].
   Qed.
   Lemma prod_eqtype {𝔄 𝔅 𝔄' 𝔅'} E L (f: 𝔄 → 𝔄') f' (g: 𝔅 → 𝔅') g' ty1 ty2 ty1' ty2' :
@@ -264,7 +263,7 @@ Section typing.
     iSplit; [by iApply lft_equiv_refl|].
     have Eq: ∀vπ: proph (_ * 𝔄), prod_left_id ∘ vπ = snd ∘ vπ.
     { move=> vπ. fun_ext=>/= π. by case (vπ π)=> [[]?]. }
-    iSplit; iIntros "!> *"; rewrite Eq.
+    iSplit; iIntros "!>*"; rewrite Eq.
     - iSplit; [by iDestruct 1 as ([|]?->?) "?"|]. iIntros. iExists [], _. by iFrame.
     - rewrite left_id shift_loc_0. by iApply (bi.iff_refl True%I).
   Qed.

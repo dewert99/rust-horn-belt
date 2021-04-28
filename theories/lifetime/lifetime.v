@@ -107,11 +107,9 @@ Qed.
 Lemma bor_exists_tok {A} (Φ : A → iProp Σ) E κ q :
   ↑lftN ⊆ E → lft_ctx -∗ &{κ}(∃ x, Φ x) -∗ q.[κ] ={E}=∗ ∃ x, &{κ}(Φ x) ∗ q.[κ].
 Proof.
-  iIntros (?) "#LFT Bor Tok".
-  iMod (bor_acc_cons with "LFT Bor Tok") as "[Own Close]"; [done|].
-  iMod (bi.later_exist_except_0 with "Own") as (x) "Own".
-  iMod ("Close" with "[] Own") as "[?$]". { iIntros "!> Own !>!>". by iExists x. }
-  iModIntro. by iExists x.
+  iIntros (?) "#LFT Bor κ". iMod (bor_acc_cons with "LFT Bor κ") as
+  "[Φ ToBor]"; [done|]. iMod (bi.later_exist_except_0 with "Φ") as (x) "Φ".
+  iMod ("ToBor" with "[] Φ") as "[?$]"; [iIntros "!>?!>!>"|iModIntro]; by iExists x.
 Qed.
 
 Lemma bor_or E κ P Q :
@@ -178,8 +176,8 @@ Qed.
 Lemma bor_sep_persistent P `{!Persistent P} Q E κ q :
   ↑lftN ⊆ E → lft_ctx -∗ &{κ} (P ∗ Q) -∗ q.[κ] ={E}=∗ ▷ P ∗ &{κ} Q ∗ q.[κ].
 Proof.
-  iIntros (?) "#LFT Bor Tok". iMod (bor_sep with "LFT Bor") as "[Bor $]"; [done|].
-  by iMod (bor_persistent with "LFT Bor Tok") as "[$$]".
+  iIntros (?) "#LFT Bor κ". iMod (bor_sep with "LFT Bor") as "[Bor $]"; [done|].
+  by iMod (bor_persistent with "LFT Bor κ") as "[$$]".
 Qed.
 
 Lemma later_bor_static E P :

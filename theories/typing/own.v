@@ -67,34 +67,34 @@ Section own.
     iSplit; by [iApply frac_bor_shorten|iApply ty_shr_lft_mono].
   Qed.
   Next Obligation.
-    move=> ????? d *. iIntros "#LFT #In Bor Tok".
+    move=> ????? d *. iIntros "#LFT #In Bor κ".
     iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
-    iMod (bor_sep with "LFT Bor") as "[Mt Bor]"; [done|].
-    move: d=> [|d]; [by iMod (bor_persistent with "LFT Bor Tok") as "[>[]_]"|]=>/=.
+    iMod (bor_sep with "LFT Bor") as "[↦ Bor]"; [done|].
+    move: d=> [|d]; [by iMod (bor_persistent with "LFT Bor κ") as "[>[]_]"|]=>/=.
     rewrite {1}by_just_loc_ex. iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
-    iMod (bor_sep_persistent with "LFT Bor Tok") as "(>-> & Bor & Tok)"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].
     rewrite heap_mapsto_vec_singleton.
     iMod (bor_sep with "LFT Bor") as "[Bor _]"; [done|].
-    iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT Mt") as "Mt"; [done|].
-    iMod (bor_later_tok with "LFT Bor Tok") as "Bor"; [done|].
-    iIntros "!>!>!>". iMod "Bor" as "[Bor Tok]".
-    iMod (ty_share with "LFT In Bor Tok") as "Upd"; [done|]. iModIntro.
+    iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT ↦") as "↦"; [done|].
+    iMod (bor_later_tok with "LFT Bor κ") as "Bor"; [done|].
+    iIntros "!>!>!>". iMod "Bor" as "[Bor κ]".
+    iMod (ty_share with "LFT In Bor κ") as "Upd"; [done|]. iModIntro.
     iApply (step_fupdN_wand with "Upd"). iIntros ">[?$] !>". iExists l. iFrame.
   Qed.
   Next Obligation.
     move=> ?????[|?]*; [by iIntros|]. rewrite/= {1}by_just_loc_ex.
-    iIntros "#LFT #In (%&->& [%[Mt Own]] & Fr) Tok !>!>!>".
-    iDestruct (ty_own_proph with "LFT In Own Tok") as "Upd"; [done|].
-    iApply (step_fupdN_wand with "Upd"). iIntros ">(%ξl & %q &%& PTok & Close) !>".
-    iExists ξl, q. iSplit; [done|]. iFrame "PTok Fr". iIntros "PTok".
-    iMod ("Close" with "PTok") as "[?$]". iExists vl. by iFrame.
+    iIntros "#LFT #In (%&->& [%[↦ ty]] & †) κ !>!>!>".
+    iDestruct (ty_own_proph with "LFT In ty κ") as "Upd"; [done|].
+    iApply (step_fupdN_wand with "Upd"). iIntros ">(%ξl & %q &%& ξl & Toty) !>".
+    iExists ξl, q. iSplit; [done|]. iFrame "ξl †". iIntros "ξl".
+    iMod ("Toty" with "ξl") as "[?$]". iExists vl. by iFrame.
   Qed.
   Next Obligation.
-    move=> ?????[|?]*/=; [by iIntros|]. iIntros "#LFT #In #In' [%l[Mt Shr]] Tok !>!>".
-    iDestruct (ty_shr_proph with "LFT In In' Shr Tok") as "> Upd"; [done|].
+    move=> ?????[|?]*/=; [by iIntros|]. iIntros "#LFT #In #In' [%l[↦ ty]] κ !>!>".
+    iDestruct (ty_shr_proph with "LFT In In' ty κ") as "> Upd"; [done|].
     iIntros "!>!>!>". iApply (step_fupdN_wand with "Upd").
-    iIntros ">(%ξl & %q &%& PTok & Close) !>". iExists ξl, q. iSplit; [done|].
-    iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[Shr $]".
+    iIntros ">(%ξl & %q &%& ξl & Toty) !>". iExists ξl, q. iSplit; [done|].
+    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[? $]".
     iExists l. by iFrame.
   Qed.
 
@@ -118,7 +118,7 @@ Section own.
   Proof.
     iIntros "#(%Eq &?& InOwn & InShr)". do 2 (iSplit; [done|]). iSplit; iModIntro.
     - iIntros (?[|?]??); [done|]. rewrite/= {1}by_just_loc_ex Eq.
-      iIntros "(%&->& Mt &$)". iApply (heap_mapsto_pred_wand with "Mt"). iApply "InOwn".
+      iIntros "(%&->& ↦ &$)". iApply (heap_mapsto_pred_wand with "↦"). iApply "InOwn".
     - iIntros (?[|?]???); [done|]. iIntros "#[%l'[??]]". iExists l'.
       iSplit; [done|]. by iApply "InShr".
   Qed.
@@ -178,17 +178,17 @@ Section typing.
     typed_write E L (own_ptr n ty') ty (own_ptr n ty) (λ _ a, a).
   Proof.
     iIntros (Sz ?[|?]???) "_ _ _ $ own"; [done|]. setoid_rewrite by_just_loc_ex at 1.
-    iDestruct "own" as (l[=->]) "[(%vl & >Mt & ty') Fr]". rewrite Sz.
+    iDestruct "own" as (l[=->]) "[(%vl & >↦ & ty') †]". rewrite Sz.
     iDestruct (ty_size_eq with "ty'") as ">%". iModIntro. iExists l, vl.
-    iSplit; [done|]. iFrame "Mt". iIntros (??) "$ ? !>". by rewrite Sz.
+    iSplit; [done|]. iFrame "↦". iIntros (??) "$ ? !>". by rewrite Sz.
   Qed.
 
   Lemma read_own_copy {𝔄} (ty: _ 𝔄) n E L :
     Copy ty → typed_read E L (own_ptr n ty) ty (own_ptr n ty) id id.
   Proof.
     move=> ??[|?]???; iIntros "_ _ $$ own"=>//=. setoid_rewrite by_just_loc_ex at 1.
-    iDestruct "own" as (l[=->]) "[(%vl & >Mt & ty) Fr]". iModIntro.
-    iExists l, vl, 1%Qp. iSplit; [done|]. iFrame "Mt Fr". iSplit.
+    iDestruct "own" as (l[=->]) "[(%vl & >↦ & ty) †]". iModIntro.
+    iExists l, vl, 1%Qp. iSplit; [done|]. iFrame "↦ †". iSplit.
     { iApply ty_own_depth_mono; [|done]. lia. } iIntros "? !>!>". iExists vl. iFrame.
   Qed.
 
@@ -196,9 +196,9 @@ Section typing.
     typed_read E L (own_ptr n ty) ty (own_ptr n (↯ ty.(ty_size))) id unique.
   Proof.
     move=> ?[|?]???; iIntros "_ _ $$ own"=>//. setoid_rewrite by_just_loc_ex at 1.
-    iDestruct "own" as (l[=->]) "[(%vl & >Mt & ty) Fr]".
+    iDestruct "own" as (l[=->]) "[(%vl & >↦ & ty) †]".
     iDestruct (ty_size_eq with "ty") as "#>%". iModIntro.
-    iExists l, vl, 1%Qp. iSplit; [done|]. iFrame "Mt Fr". iSplitL "ty".
+    iExists l, vl, 1%Qp. iSplit; [done|]. iFrame "↦ †". iSplitL "ty".
     { iApply ty_own_depth_mono; [|done]. lia. } iIntros "?!>!>". iExists vl. by iSplit.
   Qed.
 
@@ -206,12 +206,12 @@ Section typing.
     (0 ≤ n)%Z → let n' := Z.to_nat n in
     ⊢ typed_instr_ty E L +[] (new [ #n])%E (own_ptr n' (↯ n')) (λ post _, post ()).
   Proof.
-    iIntros (?????) "_ TIME _ _ _ $$ _ ?". iMod persist_time_rcpt_0 as "Time".
-    iApply (wp_persist_time_rcpt with "TIME Time"); [done|].
-    iApply wp_new=>//. iIntros "!>" (l) "(Fr & Mt) #Time". iExists -[const ()].
+    iIntros (?????) "_ TIME _ _ _ $$ _ ?". iMod persist_time_rcpt_0 as "⧖".
+    iApply (wp_persist_time_rcpt with "TIME ⧖"); [done|].
+    iApply wp_new=>//. iIntros "!>" (l) "(† & ↦) #⧖". iExists -[const ()].
     iSplit; [|done]. rewrite/= right_id (tctx_hasty_val #l).
-    iExists 1. iFrame "Time". rewrite/= freeable_sz_full Z2Nat.id; [|done].
-    iFrame "Fr". iNext. iExists _. iFrame "Mt". by rewrite repeat_length.
+    iExists 1. iFrame "⧖". rewrite/= freeable_sz_full Z2Nat.id; [|done].
+    iFrame "†". iNext. iExists _. iFrame "↦". by rewrite repeat_length.
   Qed.
 
   Lemma type_new {𝔄l} (n: Z) n' x e pre E L C (T: _ 𝔄l) :
@@ -237,9 +237,9 @@ Section typing.
   Proof.
     iIntros (?->??[?[]]) "_ TIME _ _ E $$ [p _] #Obs". wp_bind p.
     iApply (wp_hasty with "p"). iIntros (?[|?] _) "? own"; [done|].
-    setoid_rewrite by_just_loc_ex. iDestruct "own" as (?[=->]) "[(%& >Mt & ty)?]".
+    setoid_rewrite by_just_loc_ex. iDestruct "own" as (?[=->]) "[(%& >↦ & ty)?]".
     iDestruct (ty_size_eq with "ty") as "#>%Sz". iApply (wp_delete with "[-]").
-    { by rewrite /n' -Sz. } { iFrame "Mt". rewrite Sz. by iApply freeable_sz_full. }
+    { by rewrite /n' -Sz. } { iFrame "↦". rewrite Sz. by iApply freeable_sz_full. }
     { iIntros "!>_". iExists -[]. by iSplit. }
   Qed.
 

@@ -1,5 +1,4 @@
 Import EqNotations.
-Require Import Equality.
 From stdpp Require Import strings.
 From iris.algebra Require Import auth cmra functions gmap csum frac agree.
 From iris.bi Require Import fractional.
@@ -231,7 +230,7 @@ Qed.
 (** Manipulating Tokens *)
 
 Lemma proph_tok_singleton ξ q : q:[ξ] ⊣⊢ q:+[[ξ]].
-Proof. by rewrite /= right_id. Qed.
+Proof. by rewrite/= right_id. Qed.
 
 Lemma proph_tok_combine ξl ζl q q' :
   q:+[ξl] -∗ q':+[ζl] -∗
@@ -246,9 +245,9 @@ Qed.
 Lemma proph_init `{!prophPreG Σ} E :
   ↑prophN ⊆ E → ⊢ |={E}=> ∃ _: prophG Σ, proph_ctx.
 Proof.
-  move=> ?. iMod (own_alloc (● ε)) as (γ) "Own"; [by apply auth_auth_valid|].
+  move=> ?. iMod (own_alloc (● ε)) as (γ) "●ε"; [by apply auth_auth_valid|].
   set IProphG := ProphG Σ _ γ. iExists IProphG.
-  iMod (inv_alloc _ _ proph_inv with "[Own]") as "?"; [|done]. iModIntro.
+  iMod (inv_alloc _ _ proph_inv with "[●ε]") as "?"; [|done]. iModIntro.
   iExists ε. iFrame. iPureIntro. exists []. split; [done|]=> ??.
   rewrite lookup_empty. split=> Hyp; inversion Hyp.
 Qed.
@@ -258,14 +257,14 @@ Qed.
 Lemma proph_intro 𝔄i (I: gset positive) E :
   ↑prophN ⊆ E → proph_ctx ={E}=∗ ∃i, ⌜i ∉ I⌝ ∗ 1:[PrVar 𝔄i i].
 Proof.
-  iIntros (?) "?". iInv prophN as (S) "> [(%L & %Ok & %Sim) Auth]".
+  iIntros (?) "?". iInv prophN as (S) "> [(%L & %Ok & %Sim) ●S]".
   case (exist_fresh (I ∪ dom _ (S 𝔄i)))
     => [i /not_elem_of_union [? /not_elem_of_dom EqNone]].
   set ξ := PrVar 𝔄i i. set S' := add_line ξ (fitem 1) S.
-  iMod (own_update _ _ (● S' ⋅ ◯ line ξ (fitem 1)) with "Auth") as "[Auth ?]".
+  iMod (own_update _ _ (● S' ⋅ ◯ line ξ (fitem 1)) with "●S") as "[●S' ?]".
   { by apply auth_update_alloc,
       discrete_fun_insert_local_update, alloc_singleton_local_update. }
-  iModIntro. iSplitL "Auth"; last first. { iModIntro. iExists i. by iFrame. }
+  iModIntro. iSplitL "●S'"; last first. { iModIntro. iExists i. by iFrame. }
   iModIntro. iExists S'. iFrame. iPureIntro. exists L.
   split; [done|]. case=> [𝔅i j]?. rewrite /S' /add_line /discrete_fun_insert -Sim.
   case (decide (𝔄i = 𝔅i))=> [?|?]; [|done]. subst=>/=.
@@ -278,8 +277,8 @@ Qed.
 Local Lemma proph_tok_out S L ξ q :
   S :~ L → own proph_name (● S) -∗ q:[ξ] -∗ ⌜ξ ∉ res L⌝.
 Proof.
-  move=> Sim. iIntros "Auth Tok".
-  iDestruct (own_valid_2 with "Auth Tok") as %ValBoth. iPureIntro.
+  move=> Sim. iIntros "●S ξ".
+  iDestruct (own_valid_2 with "●S ξ") as %ValBoth. iPureIntro.
   move=> /(elem_of_list_fmap_2 pli_pv) [[[𝔄i i]?][? /Sim Eqv]]. simpl in *.
   subst. move: ValBoth=> /auth_both_valid_discrete [Inc _].
   move/(discrete_fun_included_spec_1 _ _ 𝔄i) in Inc.
@@ -291,7 +290,7 @@ Qed.
 
 Local Lemma proph_tok_ne ξ ζ q : 1:[ξ] -∗ q:[ζ] -∗ ⌜ξ ≠ ζ⌝.
 Proof.
-  iIntros "Tok Ptok". iDestruct (own_valid_2 with "Tok Ptok") as %ValBoth.
+  iIntros "ξ ζ". iDestruct (own_valid_2 with "ξ ζ") as %ValBoth.
   iPureIntro=> ?. subst. move: ValBoth.
   rewrite -auth_frag_op auth_frag_valid discrete_fun_singleton_op
     discrete_fun_singleton_valid singleton_op singleton_valid -Cinl_op
@@ -302,20 +301,20 @@ Lemma proph_resolve E ξ vπ ζl q : ↑prophN ⊆ E → vπ ./ ζl →
   proph_ctx -∗ 1:[ξ] -∗ q:+[ζl] ={E}=∗ ⟨π, π ξ = vπ π⟩ ∗ q:+[ζl].
 Proof.
   move: ξ vπ => [𝔄i i] vπ. set ξ := PrVar 𝔄i i.
-  iIntros (? Dep) "? Tok Ptoks". iInv prophN as (S) "> [(%L & %Ok & %Sim) Auth]".
-  iDestruct (proph_tok_out with "Auth Tok") as %Outξ; [done|].
+  iIntros (? Dep) "? ξ ζl". iInv prophN as (S) "> [(%L & %Ok & %Sim) ●S]".
+  iDestruct (proph_tok_out with "●S ξ") as %Outξ; [done|].
   set L' := .{ξ := vπ} :: L. iAssert ⌜∀ζ, ζ ∈ ζl → ζ ∉ res L'⌝%I as %Outζl.
   { iIntros (? In).
-    iDestruct (big_sepL_elem_of with "Ptoks") as "Ptok"; [apply In|].
-    iDestruct (proph_tok_ne with "Tok Ptok") as %?.
-    iDestruct (proph_tok_out with "Auth Ptok") as %?; [done|].
+    iDestruct (big_sepL_elem_of with "ζl") as "ζ"; [apply In|].
+    iDestruct (proph_tok_ne with "ξ ζ") as %?.
+    iDestruct (proph_tok_out with "●S ζ") as %?; [done|].
     by rewrite not_elem_of_cons. }
   set S' := add_line ξ (aitem vπ) S.
-  iMod (own_update_2 _ _ _ (● S' ⋅ ◯ line ξ (aitem vπ)) with "Auth Tok")
-    as "[Auth #?]".
+  iMod (own_update_2 _ _ _ (● S' ⋅ ◯ line ξ (aitem vπ)) with "●S ξ")
+    as "[●S' #?]".
   { apply auth_update, discrete_fun_singleton_local_update_any,
       singleton_local_update_any => ? _. by apply exclusive_local_update. }
-  iModIntro. iSplitL "Auth"; last first.
+  iModIntro. iSplitL "●S'"; last first.
   { iModIntro. iFrame. iExists [.{ξ := vπ}]. rewrite big_sepL_singleton.
     iSplitR; [|done]. iPureIntro=> ? Sat. by inversion Sat. }
   iModIntro. iExists S'. iFrame. iPureIntro. exists L'. split.
@@ -352,8 +351,8 @@ Proof. move=> Eq. apply proph_obs_impl=> ?. by rewrite Eq. Qed.
 
 Lemma proph_obs_and φπ ψπ : .⟨φπ⟩ -∗ .⟨ψπ⟩ -∗ ⟨π, φπ π ∧ ψπ π⟩.
 Proof.
-  iIntros "(%L & %SatTo &?) (%L' & %SatTo' &?)". iExists (L ++ L'). iFrame.
-  iPureIntro=> ? /Forall_app [??]. split; by [apply SatTo|apply SatTo'].
+  iIntros "(%L & %Toφπ &?) (%L' & %Toψπ &?)". iExists (L ++ L'). iFrame.
+  iPureIntro=> ? /Forall_app[??]. split; by [apply Toφπ|apply Toψπ].
 Qed.
 
 Global Instance proph_obs_from_sep φπ ψπ : FromSep ⟨π, φπ π ∧ ψπ π⟩ .⟨φπ⟩ .⟨ψπ⟩.
@@ -362,15 +361,15 @@ Proof. rewrite /FromSep. iIntros "#[??]". by iApply proph_obs_and. Qed.
 Lemma proph_obs_sat E φπ :
   ↑prophN ⊆ E → proph_ctx -∗ .⟨φπ⟩ ={E}=∗ ⌜∃π₀, φπ π₀⌝.
 Proof.
-  iIntros "% ? (%L' & %SatTo & #Atoms)". iInv prophN as (S) ">[(%L & %Ok & %Sim) Auth]".
+  iIntros "% ? (%L' & %Toφπ & #L')". iInv prophN as (S) ">[(%L & %Ok & %Sim) ●S]".
   move: (Ok)=> /proph_ok_sat [π /Forall_forall Sat]. iModIntro.
   iAssert ⌜π ◁ L'⌝%I as %?; last first.
-  { iSplitL; last first. { iPureIntro. exists π. by apply SatTo. }
+  { iSplitL; last first. { iPureIntro. exists π. by apply Toφπ. }
     iModIntro. iExists S. iFrame. iPureIntro. by exists L. }
   rewrite /proph_sat Forall_forall. iIntros ([[𝔄i i] vπ] In)=>/=.
-  set ξ := PrVar 𝔄i i. iAssert (proph_atom .{ξ := vπ}) with "[Atoms]" as "Atom".
+  set ξ := PrVar 𝔄i i. iAssert (proph_atom .{ξ := vπ}) with "[L']" as "ξvπ".
   { iApply big_sepL_elem_of; by [apply In|]. }
-  iDestruct (own_valid_2 with "Auth Atom") as %ValBoth. iPureIntro.
+  iDestruct (own_valid_2 with "●S ξvπ") as %ValBoth. iPureIntro.
   move: ValBoth=> /auth_both_valid_discrete [Inc Val]. apply (Sat .{ξ := vπ}), Sim.
   move/(discrete_fun_included_spec_1 _ _ 𝔄i) in Inc.
   rewrite /line discrete_fun_lookup_singleton in Inc.
@@ -399,7 +398,7 @@ Context `{!invG Σ, !prophG Σ}.
 
 Lemma proph_eqz_token ξ vπ : proph_ctx -∗ 1:[ξ] -∗ (.$ ξ) :== vπ.
 Proof.
-  iIntros "PROPH Tok" (???[??]) "Ptoks". by iMod (proph_resolve with "PROPH Tok Ptoks").
+  iIntros "PROPH ξ" (???[??]) "ξl". by iMod (proph_resolve with "PROPH ξ ξl").
 Qed.
 
 Lemma proph_eqz_obs {A} (uπ vπ: _ → A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
@@ -411,24 +410,24 @@ Proof. iApply proph_eqz_obs. by iApply proph_obs_true. Qed.
 Lemma proph_eqz_modify {A} (uπ uπ' vπ: _ → A) :
   ⟨π, uπ' π = uπ π⟩ -∗ uπ :== vπ -∗ uπ' :== vπ.
 Proof.
-  iIntros "Obs Eqz" (???[??]) "Ptoks". iMod ("Eqz" with "[%//] Ptoks") as "[Obs' $]".
+  iIntros "Obs Eqz" (???[??]) "ξl". iMod ("Eqz" with "[%//] ξl") as "[Obs' $]".
   iModIntro. iCombine "Obs Obs'" as "?". by iApply proph_obs_impl; [|done]=> ?[->].
 Qed.
 
 Lemma proph_eqz_constr {A B} f `{!@Inj A B (=) (=) f} uπ vπ :
   uπ :== vπ -∗ f ∘ uπ :== f ∘ vπ.
 Proof.
-  iIntros "Eqz" (???[? Dep]) "Ptoks". move/proph_dep_destr in Dep.
-  iMod ("Eqz" with "[%//] Ptoks") as "[Obs $]". iModIntro.
+  iIntros "Eqz" (???[? Dep]) "ξl". move/proph_dep_destr in Dep.
+  iMod ("Eqz" with "[%//] ξl") as "[Obs $]". iModIntro.
   iApply proph_obs_impl; [|by iApply "Obs"]=> ??/=. by f_equal.
 Qed.
 
 Lemma proph_eqz_constr2 {A B C} f `{!@Inj2 A B C (=) (=) (=) f} uπ uπ' vπ vπ' :
   uπ :== vπ -∗ uπ' :== vπ' -∗ f ∘ uπ ⊛ uπ' :== f ∘ vπ ⊛ vπ'.
 Proof.
-  iIntros "Eqz Eqz'" (???[? Dep]) "Ptoks". move: Dep=> /proph_dep_destr2 [??].
-  iMod ("Eqz" with "[%//] Ptoks") as "[Obs Ptoks]".
-  iMod ("Eqz'" with "[%//] Ptoks") as "[Obs' $]". iModIntro.
+  iIntros "Eqz Eqz'" (???[? Dep]) "ξl". move: Dep=> /proph_dep_destr2[??].
+  iMod ("Eqz" with "[%//] ξl") as "[Obs ξl]".
+  iMod ("Eqz'" with "[%//] ξl") as "[Obs' $]". iModIntro.
   iCombine "Obs Obs'" as "?". by iApply proph_obs_impl; [|done]=>/= ?[->->].
 Qed.
 

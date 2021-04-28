@@ -64,7 +64,7 @@ Section type_context.
     move: v. elim p=>//.
     - move=> >. rewrite /eval_path=> /of_to_val <-. apply is_closed_of_val.
     - case=>// e IH. case=>//. case=>//= ? _. move: IH. case (eval_path e)=>//.
-      case=>//. case=>// ? IH ? _. specialize (IH _ eq_refl). apply _.
+      case=>//. case=>// ? IH ? _. move: (IH _ eq_refl). apply _.
   Qed.
 
   (** Type context element *)
@@ -354,16 +354,16 @@ Section lemmas.
     UnblockTctx E L κ (p ◁{κ} ty +:: T) (p ◁ ty +:: T').
   Proof.
     iIntros (Alv Un ??[??]) "#LFT #E [L L'] #†κ /=[(%v &%& Upd) T]".
-    iMod ("Upd" with "†κ") as (vπ' dp) "(Eqz & #timep & ty)".
-    iMod (Un with "LFT E L †κ T") as (dT vπl') "[timeT >ToT']".
-    iMod (Alv with "E L'") as (?) "[Tok ToL']"; [done|].
-    iMod (ty_own_proph with "LFT [] ty Tok") as "Toty";
+    iMod ("Upd" with "†κ") as (vπ' dp) "(Eqz & #⧖dp & ty)".
+    iMod (Un with "LFT E L †κ T") as (dT vπl') "[⧖dT >ToT']".
+    iMod (Alv with "E L'") as (?) "[lft ToL']"; [done|].
+    iMod (ty_own_proph with "LFT [] ty lft") as "Toty";
     [done|by iApply lft_incl_refl|]. iExists _, (vπ' -:: vπl').
-    iCombine "timep timeT" as "$". iIntros "!>!>!>". iMod "ToT'" as "ToT'".
+    iCombine "⧖dp ⧖dT" as "$". iIntros "!>!>!>". iMod "ToT'" as "ToT'".
     iModIntro. iCombine "Toty ToT'" as "Big". iApply (step_fupdN_wand with "Big").
-    iIntros "[>(%&%&%& PTok & Toty) >($& Obs' &$)]".
-    iMod ("Eqz" with "[] PTok") as "[Obs PTok]"; [done|]. iCombine "Obs Obs'" as "?".
-    iMod ("Toty" with "PTok") as "[ty Tok]". iMod ("ToL'" with "Tok") as "$".
+    iIntros "[>(%&%&%& ξl & Toty) >($& Obs' &$)]".
+    iMod ("Eqz" with "[] ξl") as "[Obs ξl]"; [done|]. iCombine "Obs Obs'" as "?".
+    iMod ("Toty" with "ξl") as "[ty lft]". iMod ("ToL'" with "lft") as "$".
     iModIntro. iSplit. { by iApply proph_obs_impl; [|done]=> ?[->->]. }
     iExists v, dp. iSplit; [done|]. by iFrame.
   Qed.

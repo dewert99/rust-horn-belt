@@ -56,7 +56,7 @@ Proof.
   elim: n=> /=[|n IH].
   - iIntros ">>Upd". iApply fupd_mask_intro_subseteq; [set_solver|done].
   - iIntros ">>Upd". iApply fupd_mask_intro; [set_solver|].
-    iIntros "Close !>!>". iDestruct (IH with "Upd") as "?". by iMod "Close".
+    iIntros "ToE !>!>". iDestruct (IH with "Upd") as "?". by iMod "ToE".
 Qed.
 
 End lemmas.

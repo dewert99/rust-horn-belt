@@ -135,11 +135,11 @@ Section typing.
     Closed [] e → (∀κ, typed_body E (κ ⊑ₗ κs :: L) C T e pre) -∗
     typed_body E L C T (Newlft;; e) pre.
   Proof.
-    iIntros (?) "He". iIntros (??) "#LFT TIME PROPH UNIQ E Na L C T Obs".
-    iMod (lft_create with "LFT") as (Λ) "[Tok #Hinh]"; [done|].
+    iIntros (?) "e". iIntros (??) "#LFT TIME PROPH UNIQ E Na L C T Obs".
+    iMod (lft_create with "LFT") as (Λ) "[Λ #Hinh]"; [done|].
     set κ' := lft_intersect_list κs. wp_seq.
-    iApply ("He" $! κ' ⊓ Λ with "LFT TIME PROPH UNIQ E Na [Tok $L] C T Obs").
-    rewrite /llctx_interp. iExists Λ. iFrame "Tok". by iSplit.
+    iApply ("e" $! κ' ⊓ Λ with "LFT TIME PROPH UNIQ E Na [Λ $L] C T Obs").
+    rewrite /llctx_interp. iExists Λ. iFrame "Λ". by iSplit.
   Qed.
 
   Lemma type_endlft {𝔄l} (T T': _ 𝔄l) κ κs pre e E L C :
@@ -147,12 +147,12 @@ Section typing.
     typed_body E L C T' e pre -∗ typed_body E (κ ⊑ₗ κs :: L) C T (Endlft;; e) pre.
   Proof.
     iIntros (? Un) "e". iIntros (??) "#LFT #TIME PROPH UNIQ #E Na
-    [(%&%& Tok & End) L] C T Obs". iSpecialize ("End" with "Tok").
+    [(%&%& κ' & To†) L] C T Obs". iSpecialize ("To†" with "κ'").
     wp_bind Skip. iApply (wp_mask_mono _ (↑lftN ∪ ↑lft_userN)); [done|].
-    iApply (wp_step_fupd with "End"); [set_solver|]. wp_seq. iIntros "#Dead !>".
-    wp_seq. wp_bind Skip. iMod (Un with "LFT E L [] T") as (d vπl') "[time ToT']".
+    iApply (wp_step_fupd with "To†"); [set_solver|]. wp_seq. iIntros "#? !>".
+    wp_seq. wp_bind Skip. iMod (Un with "LFT E L [] T") as (d vπl') "[⧖ ToT']".
     { simpl in *. subst. rewrite -lft_dead_or. by iRight. }
-    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME time [ToT']")=>//.
+    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME ⧖ [ToT']")=>//.
     { iApply step_fupdN_with_emp. by rewrite difference_empty_L. } wp_seq.
     iIntros "(L & Obs' & T') !>". wp_seq. iCombine "Obs Obs'" as "?".
     iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T'").
@@ -183,12 +183,12 @@ Section typing.
   Proof.
     iIntros (Wrt ?? (vπ & wπ &[])) "LFT TIME _ UNIQ E $ L (p & pb & _) Obs".
     wp_bind p. iApply (wp_hasty with "p"). iIntros (???) "_ ty".
-    wp_bind pb. iApply (wp_hasty with "pb"). iIntros (vb db ?) "#time tyb".
-    iApply wp_fupd. iMod (Wrt with "LFT UNIQ E L ty") as (? vl (->&Sz)) "[Mt Close]".
-    iApply (wp_persist_time_rcpt with "TIME time")=>//.
+    wp_bind pb. iApply (wp_hasty with "pb"). iIntros (vb db ?) "#⧖ tyb".
+    iApply wp_fupd. iMod (Wrt with "LFT UNIQ E L ty") as (? vl (->&Sz)) "[↦ Toty']".
+    iApply (wp_persist_time_rcpt with "TIME ⧖")=>//.
     iDestruct (ty_size_eq with "tyb") as "%Sz'". move: Sz. rewrite -Sz' /=.
     case vl=> [|?[|]]=>// ?. rewrite heap_mapsto_vec_singleton. wp_write.
-    iIntros "#timeS". iMod ("Close" with "[Mt tyb] timeS") as "($ & ty')".
+    iIntros "#⧖S". iMod ("Toty'" with "[↦ tyb] ⧖S") as "($ & ty')".
     { iExists [vb]. rewrite -heap_mapsto_vec_singleton. iFrame. }
     iExists (-[st ∘ vπ ⊛ wπ]). iFrame "Obs".
     rewrite right_id tctx_hasty_val'; [|done]. iExists (S db). by iFrame.
@@ -211,10 +211,10 @@ Section typing.
   Proof.
     move=> Sz Read. iIntros (??[vπ[]]) "LFT _ _ _ E Na L [p _] ?".
     wp_bind p. iApply (wp_hasty with "p"). iIntros (???) "#? ty".
-    iMod (Read with "LFT E Na L ty") as (l vl q ->) "(Mt & tyb & Close)".
+    iMod (Read with "LFT E Na L ty") as (l vl q ->) "(↦ & tyb & Toty')".
     iDestruct (ty_size_eq with "tyb") as "#>%Len". rewrite Sz in Len.
     case vl as [|v[|]]=>//. rewrite heap_mapsto_vec_singleton. iApply wp_fupd.
-    wp_read. iMod ("Close" with "Mt") as "($&$& ty')". iModIntro.
+    wp_read. iMod ("Toty'" with "↦") as "($&$& ty')". iModIntro.
     iExists -[gt ∘ vπ; st ∘ vπ]. iSplit; [|done]. rewrite right_id
     tctx_hasty_val tctx_hasty_val'; [|done]. iSplitL "tyb"; iExists d; by iSplit.
   Qed.
@@ -243,14 +243,14 @@ Section typing.
   Proof.
     iIntros (-> Wrt Read ?) "(#LFT & TIME & UNIQ & #E & Na & [L L'] & (pw & pr &_)) ToΦ".
     wp_bind pw. iApply (wp_hasty with "pw"). iIntros (???) "_ tyw".
-    wp_bind pr. iApply (wp_hasty with "pr"). iIntros (???) "#time tyr".
-    iApply wp_fupd. iMod (Wrt with "LFT UNIQ E L tyw") as (??[->?]) "[Mtw Closew]".
-    iMod (Read with "LFT E Na L' tyr") as (? vlb ?->) "(Mtr & tyb & Closer)".
-    iApply (wp_persist_time_rcpt with "TIME time"); [done|].
+    wp_bind pr. iApply (wp_hasty with "pr"). iIntros (???) "#⧖ tyr".
+    iApply wp_fupd. iMod (Wrt with "LFT UNIQ E L tyw") as (??[->?]) "[↦w Closew]".
+    iMod (Read with "LFT E Na L' tyr") as (? vlb ?->) "(↦r & tyb & Closer)".
+    iApply (wp_persist_time_rcpt with "TIME ⧖"); [done|].
     iDestruct (ty_size_eq with "tyb") as "#>%".
-    iApply (wp_memcpy with "[$Mtw $Mtr]"); [congruence|congruence|]. iNext.
-    iIntros "[Mtw Mtr] #timeS". iMod ("Closew" with "[Mtw tyb] timeS") as "[L tyw']".
-    { iExists vlb. iFrame. } iMod ("Closer" with "Mtr") as "(Na & L' & tyr')".
+    iApply (wp_memcpy with "[$↦w $↦r]"); [congruence|congruence|]. iNext.
+    iIntros "[↦w ↦r] #timeS". iMod ("Closew" with "[↦w tyb] timeS") as "[L tyw']".
+    { iExists vlb. iFrame. } iMod ("Closer" with "↦r") as "(Na & L' & tyr')".
     iApply "ToΦ". iFrame "L L' Na". rewrite right_id.
     iSplitL "tyw'"; (rewrite tctx_hasty_val'; [|done]); iExists _; by iFrame.
   Qed.

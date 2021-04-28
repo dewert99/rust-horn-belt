@@ -20,13 +20,13 @@ Section shr_bor.
   Qed.
   Next Obligation.
     move=> ?????[|?]*/=; [by iIntros|]. rewrite {1}by_just_loc_ex.
-    iIntros "#LFT #? (%&->& Shr) Tok !>/=".
-    iDestruct (ty_shr_proph with "LFT [] [] Shr Tok") as "Upd"; first done.
+    iIntros "#LFT #? (%&->& ty) κ' !>/=".
+    iDestruct (ty_shr_proph with "LFT [] [] ty κ'") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
-    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξl q ?) "[PTok Upd]".
-    iModIntro. iExists ξl, q. iSplit; [done|]. iFrame "PTok". iIntros "PTok".
-    by iMod ("Upd" with "PTok") as "$".
+    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξl q ?) "[ξl Upd]".
+    iModIntro. iExists ξl, q. iSplit; [done|]. iFrame "ξl". iIntros "ξl".
+    by iMod ("Upd" with "ξl") as "$".
   Qed.
 
   Global Instance shr_ne {𝔄} κ : NonExpansive (@shr_bor 𝔄 κ).
@@ -51,7 +51,7 @@ Section typing.
   Lemma shr_type_incl {𝔄 𝔅} κ κ' (f: 𝔄 → 𝔅) ty ty' :
     κ' ⊑ κ -∗ type_incl ty ty' f -∗ type_incl (&shr{κ} ty) (&shr{κ'} ty') f.
   Proof.
-    iIntros "#? (_ & #? & _ & #Sub)".
+    iIntros "#? (_&#?&_& #Sub)".
     iApply type_incl_simple_type=>/=; [done|by iApply lft_intersect_mono|].
     iIntros "!>" (?[|?]??); [done|]. rewrite/= by_just_loc_ex.
     iIntros "[%[->?]]". iApply "Sub". by iApply ty_shr_lft_mono.
@@ -78,11 +78,11 @@ Section typing.
     iIntros (? Alv ?[|?]???) "#LFT E Na L shr"; [done|].
     setoid_rewrite by_just_loc_ex at 1. iDestruct "shr" as (l[=->]) "#shr".
     iMod (Alv with "E L") as (q) "[κ ToL]"; [done|].
-    iMod (copy_shr_acc with "LFT shr Na κ") as (q' vl) "(Na & Mt & ty & Toκ)";
+    iMod (copy_shr_acc with "LFT shr Na κ") as (q' vl) "(Na & ↦ & ty & Toκ)";
     [done|by rewrite ->shr_locsE_shrN|]. iExists l, vl, q'. iIntros "!>".
-    iFrame "Mt". iSplit; [done|]. iSplit.
-    { iApply ty_own_depth_mono; [|done]. lia. } iIntros "Mt".
-    iMod ("Toκ" with "Na Mt") as "[$ κ]". by iMod ("ToL" with "κ") as "$".
+    iFrame "↦". iSplit; [done|]. iSplit.
+    { iApply ty_own_depth_mono; [|done]. lia. } iIntros "↦".
+    iMod ("Toκ" with "Na ↦") as "[$ κ]". by iMod ("ToL" with "κ") as "$".
   Qed.
 
 End typing.

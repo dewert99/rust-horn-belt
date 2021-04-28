@@ -1,4 +1,3 @@
-Require Export Equality.
 From iris.algebra Require Import numbers list.
 From iris.base_logic Require Export na_invariants.
 From lrust.util Require Export basic update fancy_lists.
@@ -85,7 +84,7 @@ Notation typel := (hlist type).
 Lemma ty_own_mt_depth_mono `{!typeG Σ} {𝔄} (ty: _ 𝔄) d d' vπ tid l :
   d ≤ d' → l ↦∗: ty.(ty_own) vπ d tid -∗ l ↦∗: ty.(ty_own) vπ d' tid.
 Proof.
-  iIntros (Le) "[%vl[Mt ?]]". iExists vl. iFrame "Mt".
+  iIntros (Le) "[%vl[↦ ?]]". iExists vl. iFrame "↦".
   iApply ty_own_depth_mono; by [apply Le|].
 Qed.
 
@@ -167,24 +166,24 @@ Next Obligation.
   iApply st_own_depth_mono; by [apply Le|].
 Qed.
 Next Obligation.
-  move=> >. iIntros "Incl [%vl[? Own]]". iExists vl. iFrame "Own".
+  move=> >. iIntros "Incl [%vl[? st]]". iExists vl. iFrame "st".
   by iApply (frac_bor_shorten with "Incl").
 Qed.
 Next Obligation.
-  move=> *. iIntros "#LFT ? Bor Tok".
+  move=> *. iIntros "#LFT ? Bor κ".
   iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
-  iMod (bor_sep with "LFT Bor") as "[Bor Own]"; [done|].
-  iMod (bor_persistent with "LFT Own Tok") as "[? Tok]"; [done|].
+  iMod (bor_sep with "LFT Bor") as "[Bor st]"; [done|].
+  iMod (bor_persistent with "LFT st κ") as "[? κ]"; [done|].
   iMod (bor_fracture (λ q, _ ↦∗{q} vl)%I with "LFT Bor") as "?"; [done|]. iModIntro.
-  iApply step_fupdN_full_intro. iModIntro. iFrame "Tok". iExists vl. iFrame.
+  iApply step_fupdN_full_intro. iModIntro. iFrame "κ". iExists vl. iFrame.
 Qed.
 Next Obligation. move=> >. apply st_own_proph. Qed.
 Next Obligation.
-  move=> *. iIntros "#LFT _ Incl [%vl[? Own]]". iIntros "Tok !>!>".
-  iMod (st_own_proph with "LFT Incl Own Tok") as "Upd"; [done|].
-  iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[Ptoks Upd]".
-  iModIntro. iExists ξl, q'. iSplit; [done|]. iFrame "Ptoks". iIntros "Tok".
-  iMod ("Upd" with "Tok") as "[?$]". iModIntro. iExists vl. iFrame.
+  move=> *. iIntros "#LFT _ Incl [%vl[? st]]". iIntros "κ !>!>".
+  iMod (st_own_proph with "LFT Incl st κ") as "Upd"; [done|].
+  iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Tost]".
+  iModIntro. iExists ξl, q'. iSplit; [done|]. iFrame "ξl". iIntros "κ".
+  iMod ("Tost" with "κ") as "[?$]". iModIntro. iExists vl. iFrame.
 Qed.
 
 Coercion ty_of_st: simple_type >-> type.
@@ -208,9 +207,9 @@ Program Definition st_of_pt `{!typeG Σ} {𝔄} (pt: plain_type 𝔄) : simple_t
 Next Obligation. move=> >. iIntros "[%[_?]]". by iApply pt_size_eq. Qed.
 Next Obligation. done. Qed.
 Next Obligation.
-  move=> * /=. iIntros "_ _[%[->?]]". iIntros "Ptok !>".
+  move=> * /=. iIntros "_ _[%[->?]]". iIntros "κ !>".
   iApply step_fupdN_full_intro. iModIntro. iExists [], 1%Qp.
-  do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Ptok". iExists v. by iSplit.
+  do 2 (iSplit; [done|]). iIntros "_!>". iFrame "κ". iExists v. by iSplit.
 Qed.
 
 Coercion st_of_pt: plain_type >-> simple_type.
@@ -664,11 +663,11 @@ Section traits.
 
   Global Program Instance simple_type_copy {𝔄} (st: simple_type 𝔄) : Copy st.
   Next Obligation.
-    move=> *. iIntros "#LFT #[%vl[Bor Own]] Na Tok".
+    move=> *. iIntros "#LFT #[%vl[Bor st]] Na κ".
     iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
-    iMod (frac_bor_acc with "LFT Bor Tok") as (q) "[>Mt Close]"; [solve_ndisj|].
-    iModIntro. iExists q, vl. iFrame "Mt Own". iIntros "Na".
-    iDestruct ("ToNa" with "Na") as "$". iIntros "?". by iApply "Close".
+    iMod (frac_bor_acc with "LFT Bor κ") as (q) "[>↦ Toκ]"; [solve_ndisj|].
+    iModIntro. iExists q, vl. iFrame "↦ st". iIntros "Na".
+    iDestruct ("ToNa" with "Na") as "$". iIntros "?". by iApply "Toκ".
   Qed.
 
   (** Lemmas on Send and Sync *)
@@ -884,7 +883,7 @@ Section subtyping.
     type_incl st st' f.
   Proof.
     move=> ?. iIntros "#InLft #InOwn". do 2 (iSplit; [done|]).
-    iSplit; iIntros "!>*"; [by iApply "InOwn"|]. iIntros "[%vl[Bor Own]]".
+    iSplit; iIntros "!>*"; [by iApply "InOwn"|]. iIntros "[%vl[Bor ?]]".
     iExists vl. iFrame "Bor". by iApply "InOwn".
   Qed.
 
@@ -908,8 +907,8 @@ Section subtyping.
   Proof.
     move=> ?. iIntros "#InLft #InOwn". do 2 (iSplit; [done|]). iSplit; iIntros "!>*/=".
     - iIntros "[%v[->?]]". iExists (f v). iSplit; [done|]. by iApply "InOwn".
-    - iIntros "[%vl[Bor Own]]". iExists vl. iFrame "Bor". iNext.
-      iDestruct "Own" as (v->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
+    - iIntros "[%vl[Bor pt]]". iExists vl. iFrame "Bor". iNext.
+      iDestruct "pt" as (v->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
   Qed.
 
   Lemma subtype_plain_type {𝔄 𝔅} E L (f: 𝔄 → 𝔅) pt pt' :
@@ -934,8 +933,8 @@ Section type_util.
     l ↦∗: ty.(ty_own) vπ d tid ⊣⊢
     ∃vl: vec val ty.(ty_size), l ↦∗ vl ∗ ty.(ty_own) vπ d tid vl.
   Proof.
-    iSplit; iIntros "[%vl[? Own]]"; [|iExists vl; by iFrame].
-    iDestruct (ty_size_eq with "Own") as %<-. iExists (list_to_vec vl).
+    iSplit; iIntros "[%vl[? ty]]"; [|iExists vl; by iFrame].
+    iDestruct (ty_size_eq with "ty") as %<-. iExists (list_to_vec vl).
     rewrite vec_to_list_to_vec. iFrame.
   Qed.
 

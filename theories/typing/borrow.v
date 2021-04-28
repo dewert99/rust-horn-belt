@@ -16,24 +16,22 @@ Section borrow.
     tctx_incl E L +[p ◁ own_ptr n ty] +[p ◁ &uniq{κ} ty; p ◁{κ} own_ptr n ty]
       (λ post '-[a], ∀(a': 𝔄), post -[(a, a'); a']).
   Proof.
-    iIntros (Outlv ??[vπ[]]?) "#LFT #PROPH #UNIQ #E L [p _] Obs".
+    iIntros (Out ??[vπ[]]?) "#LFT #PROPH #UNIQ #E L [p _] Obs".
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).
-    iDestruct "p" as ([[]|][|]?) "[#Time Own]"=>//=.
-    iDestruct "Own" as "[(%& >Mt & ty) Free]".
-    iDestruct (Outlv with "L E") as "#Out'".
-    iDestruct (elctx_interp_ty_outlv_E with "Out'") as "Out".
+    iDestruct "p" as ([[]|][|]?) "[#⧖ own]"=>//.
+    iDestruct "own" as "[(%& >↦ & ty) †]". iDestruct (Out with "L E") as "#Out".
+    iDestruct (elctx_interp_ty_outlv_E with "Out") as "#?".
     iMod (uniq_intro vπ with "PROPH UNIQ") as (i) "[Vo Pc]"; [done|].
     set ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i.
     iMod (bor_create ⊤ κ (∃vπ' d, _ ↦∗: ty.(ty_own) vπ' d _ ∗
-      ⧖(S d) ∗ .PC[ξ] (vπ', d))%I with "LFT [Mt ty Pc]") as "[Bor Close]"; [done| |].
-    { iExists _, _. iFrame "Pc Time". iExists _. iFrame. }
-    iExists -[pair ∘ vπ ⊛ (.$ ξ); (.$ ξ)]. rewrite right_id. iFrame "L". iModIntro.
+      ⧖(S d) ∗ .PC[ξ] (vπ', d))%I with "LFT [↦ ty Pc]") as "[Bor Toty]"; [done| |].
+    { iExists _, _. iFrame "Pc ⧖". iExists _. iFrame. }
+    iExists -[pair ∘ vπ ⊛ (.$ ξ); (.$ ξ)]. rewrite/= right_id. iFrame "L". iModIntro.
     iSplitR "Obs"; [|by iApply proph_obs_impl; [|done]=>/=]. iSplitL "Vo Bor".
     - iExists _, _. do 2 (iSplit; [done|]). iExists _, _. by iFrame.
-    - iExists _. iSplit; [done|]. iIntros "†κ".
-      iMod ("Close" with "†κ") as (??) "(Mtty & >Time' & Pc)".
-      iExists _, _. iFrame "Time' Mtty Free". iIntros "!>!>".
-      iDestruct (proph_ctrl_eqz with "PROPH Pc") as "$".
+    - iExists _. iSplit; [done|]. iIntros "†κ". iMod ("Toty" with "†κ") as
+      (??) "(↦ty & >⧖' & Pc)". iExists _, _. iFrame "⧖' ↦ty †".
+      iIntros "!>!>". iDestruct (proph_ctrl_eqz with "PROPH Pc") as "$".
   Qed.
 
   (* Lemma type_share_instr E L p κ ty :
@@ -91,12 +89,12 @@ Section borrow.
     iIntros (Alvκ ?? [vπ []]) "#LFT #TIME #PROPH #UNIQ #E $ L [p _] Obs".
     have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
     iMod (Alvκ with "E L") as (q) "[κ ToL]"; [done|]. wp_apply (wp_hasty with "p").
-    iIntros ([[]|] d ?) "#Time uniq"=>//.
+    iIntros ([[]|] ??) "#⧖ uniq"=>//.
     iDestruct "uniq" as (? ξi [? Eq]) "[ξVo Bor]". set (ξ := PrVar _ ξi).
     iMod (bor_acc_cons with "LFT Bor κ") as "[Body ToBor]"; [done|].
-    iDestruct "Body" as (?[|]) "(MtOwn & _ & ξPc)";
-      iDestruct "MtOwn" as ([|[[| |]|][]]) "[>Mt own]"; try iDestruct "own" as ">[]".
-    iDestruct "own" as "[ty Free]". rewrite heap_mapsto_vec_singleton -wp_fupd.
+    iDestruct "Body" as (?[|]) "(↦own & _ & ξPc)";
+      iDestruct "↦own" as ([|[[| |]|][]]) "[>↦ own]"; try iDestruct "own" as ">[]".
+    iDestruct "own" as "[ty †]". rewrite heap_mapsto_vec_singleton -wp_fupd.
     iApply wp_cumul_time_rcpt; [done|done|]. wp_read. iIntros "⧗1".
     iDestruct (uniq_agree with "ξVo ξPc") as %[=<-->].
     iMod (uniq_intro (fst ∘ vπ) with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].
@@ -105,22 +103,19 @@ Section borrow.
     rewrite proph_tok_singleton. iMod (uniq_preresolve with "PROPH ξVo ξPc ζ")
     as "(EqObs & ζ & ToξPc)"; [done|apply (proph_dep_one ζ)|].
     iCombine "EqObs Obs" as "Obs". iDestruct ("ToζPc" with "ζ") as "ζPc".
-    iMod ("ToBor" $! (∃v' d', (∃vl', _ ↦∗ vl' ∗ ty_own ty v' d' _ vl') ∗
-      ⧖(S d') ∗ .PC[ζ](v', d'))%I with "[Mt ⧗1 Free ToξPc] [ty ζPc]") as "[Bor κ]".
-    - iIntros "!> (%&%& ? & >Time' & ζPc)".
-      iMod (cumul_persist_time_rcpts with "TIME ⧗1 Time'") as "Time'"; [solve_ndisj|].
+    iMod ("ToBor" $! (∃vπ' d', (∃vl', _ ↦∗ vl' ∗ ty_own ty vπ' d' _ vl') ∗
+      ⧖(S d') ∗ .PC[ζ](vπ', d'))%I with "[↦ ⧗1 † ToξPc] [ty ζPc]") as "[Bor κ]".
+    - iIntros "!> (%&%& ? & >⧖' & ζPc)".
+      iMod (cumul_persist_time_rcpts with "TIME ⧗1 ⧖'") as "⧖'"; [solve_ndisj|].
       iIntros "!>!>". iDestruct ("ToξPc" with "[ζPc]") as "ξPc".
-      { iApply (proph_ctrl_eqz with "PROPH ζPc"). }
-      iExists _, _. iFrame "Time' ξPc". iExists [_].
-      rewrite heap_mapsto_vec_singleton. iFrame "Mt". iFrame.
+      { iApply (proph_ctrl_eqz with "PROPH ζPc"). } iExists _, _. iFrame "⧖' ξPc".
+      iExists [_]. rewrite heap_mapsto_vec_singleton. iFrame "↦". iFrame.
     - iExists _, _. iFrame "ty ζPc". iApply persist_time_rcpt_mono; [|done]. lia.
     - iExists -[λ π, ((vπ π).1, π ζ)]. iMod ("ToL" with "κ") as "$".
       rewrite right_id tctx_hasty_val'; [|done]. iModIntro. iSplitR "Obs".
-      { iExists _. iFrame "Time". iExists _, _. iFrame "ζVo Bor".
-        iPureIntro. split; by [lia|]. }
-      iApply proph_obs_impl; [|done]=> π[<-?]. eapply eq_ind_r; [done|].
-      rewrite {2}(surjective_pairing (vπ π)). do 2 f_equal.
-      have ->: (vπ π).2 = (snd ∘ vπ) π by done. by rewrite Eq.
+      { iExists _. iFrame "⧖". iExists _, _. iFrame "ζVo Bor". iPureIntro.
+      split; by [lia|]. } iApply proph_obs_impl; [|done]=> π[<-?].
+      eapply eq_ind; [done|]. move/equal_f/(.$ π): Eq=>/=. by case (vπ π)=>/= ??->.
   Qed.
 
   (* Lemma type_deref_uniq_own {E L} κ x p e n ty C T T' f pre:

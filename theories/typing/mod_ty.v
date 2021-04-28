@@ -12,7 +12,7 @@ Section mod_ty.
     ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ l ↦∗{q}: ty.(ty_own) vπ d tid.
   Proof. iSplit.
     - iIntros "(%vl &?& %vπ &->&?)". iExists vπ. iSplit; [done|]. iExists vl. iFrame.
-    - iIntros "(%vπ &->& %vl & Mt &?)". iExists vl. iFrame "Mt". iExists vπ.
+    - iIntros "(%vπ &->& %vl & ↦ &?)". iExists vl. iFrame "↦". iExists vπ.
       by iSplit; [done|].
   Qed.
 
@@ -35,26 +35,26 @@ Section mod_ty.
     by iApply ty_shr_lft_mono.
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT In Bor Tok". rewrite mod_ty_mt.
-    iMod (bor_exists_tok with "LFT Bor Tok") as (vπ) "[Bor Tok]"; [done|].
-    iMod (bor_sep_persistent with "LFT Bor Tok") as "(>-> & Bor & Tok)"; [done|].
-    iMod (ty_share with "LFT In Bor Tok") as "Upd"; [done|].
-    iApply (step_fupdN_wand with "Upd"). iIntros "!> >[Shr $] !>". iExists vπ. by iSplit.
+    move=> */=. iIntros "#LFT In Bor κ". rewrite mod_ty_mt.
+    iMod (bor_exists_tok with "LFT Bor κ") as (vπ) "[Bor κ]"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].
+    iMod (ty_share with "LFT In Bor κ") as "Upd"; [done|].
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >[? $] !>". iExists vπ. by iSplit.
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT In [%vπ[->Own]] Tok".
-    iMod (ty_own_proph with "LFT In Own Tok") as "Upd"; [done|]. iModIntro.
-    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q ?) "[PTok Close]".
+    move=> */=. iIntros "#LFT In [%vπ[->ty]] κ".
+    iMod (ty_own_proph with "LFT In ty κ") as "Upd"; [done|]. iModIntro.
+    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q ?) "[ξl Toty]".
     iModIntro. iExists ξl, q. iSplit; [iPureIntro; by apply (proph_dep_constr _)|].
-    iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[Own $]".
+    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[? $]".
     iModIntro. iExists vπ. by iSplit.
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT In In' [%vπ[->Shr]] Tok".
-    iMod (ty_shr_proph with "LFT In In' Shr Tok") as "Upd"; [done|]. iIntros "!>!>".
-    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q ?) "[PTok Close]".
+    move=> */=. iIntros "#LFT In In' [%vπ[->ty]] κ".
+    iMod (ty_shr_proph with "LFT In In' ty κ") as "Upd"; [done|]. iIntros "!>!>".
+    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q ?) "[ξl Toty]".
     iModIntro. iExists ξl, q. iSplit; [iPureIntro; by apply (proph_dep_constr _)|].
-    iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[Own $]".
+    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[? $]".
     iModIntro. iExists vπ. by iSplit.
   Qed.
 
@@ -75,9 +75,9 @@ Section typing.
 
   Global Instance mod_ty_copy {𝔄 𝔅} (f: 𝔄 → 𝔅) ty : Copy ty → Copy (<{f}> ty).
   Proof.
-    move=> [? ShrAcc]. split; [by apply _|]=> */=. iIntros "LFT [%vπ[->Shr]] Na Tok".
-    iMod (ShrAcc with "LFT Shr Na Tok") as (q vl) "($& Mt &?& Close)"; [done|done|].
-    iModIntro. iExists q, vl. iFrame "Mt Close". iNext. iExists vπ. by iSplit.
+    move=> [? ShrAcc]. split; [by apply _|]=> */=. iIntros "LFT [%vπ[->ty]] Na κ".
+    iMod (ShrAcc with "LFT ty Na κ") as (q vl) "($& ↦ &?& Toκ)"; [done|done|].
+    iModIntro. iExists q, vl. iFrame "↦ Toκ". iNext. iExists vπ. by iSplit.
   Qed.
 
   Global Instance mod_ty_send {𝔄 𝔅} (f: 𝔄 → 𝔅) ty : Send ty → Send (<{f}> ty).

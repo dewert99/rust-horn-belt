@@ -1,5 +1,5 @@
-Require Import ssreflect FunctionalExtensionality.
-From stdpp Require Import prelude.
+Require Export Equality FunctionalExtensionality.
+From iris.prelude Require Import prelude.
 From iris.algebra Require Import ofe monoid.
 From iris.proofmode Require Import tactics.
 
@@ -22,7 +22,7 @@ Global Instance iso_id {A} : Iso (@id A) id. Proof. done. Qed.
 Global Instance semi_iso_inj `{!@SemiIso A B f g} : Inj (=) (=) f | 100.
 Proof.
   move=> x y Eq. have [<-<-]: (g ∘ f) x = x ∧ (g ∘ f) y = y by rewrite semi_iso.
-  by rewrite /= Eq.
+  by rewrite/= Eq.
 Qed.
 
 Lemma compose_assoc {A B C D} (f: A → B) g (h: C → D) : h ∘ (g ∘ f) = (h ∘ g) ∘ f.

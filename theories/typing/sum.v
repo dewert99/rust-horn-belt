@@ -20,17 +20,17 @@ Section sum.
       (l ↦{q} #i ∗ (l +ₗ S (hget tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
       (l +ₗ 1) ↦∗{q}: (hget tyl i).(ty_own) vπ' d tid.
   Proof. iSplit.
-    - iIntros "(%& Mt & Own)". iDestruct "Own" as (i vπ' vl' vl'' (->&->&[=])) "Own".
-      iExists i, vπ'. iSplit; [done|]. iDestruct (ty_size_eq with "Own") as "%Eq'".
-      iDestruct (heap_mapsto_vec_cons with "Mt") as "[$ Mt]".
-      iDestruct (heap_mapsto_vec_app with "Mt") as "[Mt Mt']".
-      iSplitL "Mt'"; [|iExists vl'; by iFrame]. iExists vl''.
-      rewrite (shift_loc_assoc_nat _ 1) Eq'. iFrame "Mt'". iPureIntro.
+    - iIntros "(%& ↦ & ty)". iDestruct "ty" as (i vπ' vl' vl'' (->&->&[=])) "ty".
+      iExists i, vπ'. iSplit; [done|]. iDestruct (ty_size_eq with "ty") as "%Eq'".
+      iDestruct (heap_mapsto_vec_cons with "↦") as "[$ ↦]".
+      iDestruct (heap_mapsto_vec_app with "↦") as "[↦ ↦']".
+      iSplitL "↦'"; [|iExists vl'; by iFrame]. iExists vl''.
+      rewrite (shift_loc_assoc_nat _ 1) Eq'. iFrame "↦'". iPureIntro.
       by rewrite -Eq' -app_length.
-    - iDestruct 1 as (i vπ' ->) "[[Mt (%vl''&Mt''&%)](%vl'&Mt'&Own)]".
-      iDestruct (ty_size_eq with "Own") as "%Eq". iExists (#i :: vl' ++ vl'').
+    - iDestruct 1 as (i vπ' ->) "[[↦ (%vl'' & ↦'' &%)] (%vl' & ↦' & ty)]".
+      iDestruct (ty_size_eq with "ty") as "%Eq". iExists (#i :: vl' ++ vl'').
       rewrite heap_mapsto_vec_cons heap_mapsto_vec_app (shift_loc_assoc_nat _ 1) Eq.
-      iFrame "Mt Mt' Mt''". iExists i, vπ', vl', vl''. iFrame "Own". iPureIntro.
+      iFrame "↦ ↦' ↦''". iExists i, vπ', vl', vl''. iFrame "ty". iPureIntro.
       do 2 (split; [done|]). rewrite/= app_length Eq. by f_equal.
   Qed.
 
@@ -68,33 +68,33 @@ Section sum.
       by [iApply (frac_bor_shorten with "In")|iApply (ty_shr_lft_mono with "In")].
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #? Bor Tok". rewrite split_sum_mt.
-    iMod (bor_exists_tok with "LFT Bor Tok") as (i) "[Bor Tok]"; [done|].
-    iMod (bor_exists_tok with "LFT Bor Tok") as (vπ') "[Bor Tok]"; [done|].
-    iMod (bor_sep_persistent with "LFT Bor Tok") as "(>-> & Bor & Tok)"; [done|].
-    iMod (bor_sep with "LFT Bor") as "[Mt Bor]"; [done|].
-    iMod (ty_share with "LFT [] Bor Tok") as "Upd"; [done| |].
+    move=> *. iIntros "#LFT #? Bor κ". rewrite split_sum_mt.
+    iMod (bor_exists_tok with "LFT Bor κ") as (i) "[Bor κ]"; [done|].
+    iMod (bor_exists_tok with "LFT Bor κ") as (vπ') "[Bor κ]"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].
+    iMod (bor_sep with "LFT Bor") as "[↦ Bor]"; [done|].
+    iMod (ty_share with "LFT [] Bor κ") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply ty_lfts_get_incl]. }
-    iApply (step_fupdN_wand with "Upd"). iIntros "!> >[Shr $]".
-    iMod (bor_fracture (λ q, _ ↦{q} _ ∗ _ ↦∗{q}: _)%I with "LFT Mt") as "?"; [done|].
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >[? $]".
+    iMod (bor_fracture (λ q, _ ↦{q} _ ∗ _ ↦∗{q}: _)%I with "LFT ↦") as "?"; [done|].
     iModIntro. iExists i, vπ'. iSplit; [done|]. iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #?". iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "Own".
-    iIntros "Tok". iMod (ty_own_proph with "LFT [] Own Tok") as "Upd"; [done| |].
+    move=> *. iIntros "#LFT #?". iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "ty".
+    iIntros "κ". iMod (ty_own_proph with "LFT [] ty κ") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply ty_lfts_get_incl]. } iModIntro.
-    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[PTok Close]".
+    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toty]".
     iModIntro. iExists ξl, q'. iSplit. { iPureIntro. by apply proph_dep_constr. }
-    iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[?$]".
+    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[?$]".
     iModIntro. iExists i, vπ', vl', vl''. by iSplit.
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #In #? (%i & %vπ' &->& Bor & Shr) Tok".
-    iMod (ty_shr_proph with "LFT In [] Shr Tok") as "Upd"; [done| |].
+    move=> *. iIntros "#LFT #In #? (%i & %vπ' &->& Bor & ty) κ".
+    iMod (ty_shr_proph with "LFT In [] ty κ") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply ty_lfts_get_incl]. } iIntros "!>!>".
-    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[PTok Close]".
+    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toty]".
     iModIntro. iExists ξl, q'. iSplit. { iPureIntro. by apply proph_dep_constr. }
-    iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[?$]".
+    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[?$]".
     iModIntro. iExists i, vπ'. by do 2 (iSplit; [done|]).
   Qed.
 
@@ -157,7 +157,7 @@ Section typing.
     - left. exists (α' ⊓ α), βs', (E' ++ E). split=> ?.
       + rewrite -!assoc (comm (⊓) α _) !assoc.
         iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
-      + rewrite /= !elctx_interp_app HE' HE -!assoc.
+      + rewrite/= !elctx_interp_app HE' HE -!assoc.
         iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
     - right. exists (α' ⊓ α), (E' ++ E). split=> ?.
       + iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
@@ -200,28 +200,28 @@ Section typing.
   Proof.
     move=> ?. have Copy: ∀i, Copy (hget tyl i).
     { move=> *. apply (HForall_get _); by [apply _|]. }
-    split; [apply _|]. move=>/= ?????? l ?? SubF. iIntros "#LFT".
-    iDestruct 1 as (i d ->) "[Bor Shr]". iIntros "Na [Tok Tok']".
-    iMod (frac_bor_acc with "LFT Bor Tok") as (q) "[>[Idx Pad] Close]";
-    [solve_ndisj|]. iDestruct "Pad" as (vl') "[Pad %]".
-    iMod (copy_shr_acc with "LFT Shr Na Tok'") as
-      (q' vl) "(Na & Mt & #Own & Close')"; [done| |].
+    split; [apply _|]. move=>/= ?????? l ?? SubF.
+    iIntros "#LFT (%i &%&->& Bor & ty) Na [κ κ']".
+    iMod (frac_bor_acc with "LFT Bor κ") as (q) "[>[↦i ↦pad] Toκ]";
+    [solve_ndisj|]. iDestruct "↦pad" as (vl') "[↦pad %]".
+    iMod (copy_shr_acc with "LFT ty Na κ'") as
+      (q' vl) "(Na & ↦ & #ty & Toκ')"; [done| |].
     { rewrite <-SubF, <-union_subseteq_r. apply shr_locsE_subseteq. lia. }
-    iDestruct (na_own_acc with "Na") as "[$ Close'']".
+    iDestruct (na_own_acc with "Na") as "[$ ToNa]".
     { apply difference_mono_l. trans (shr_locsE (l +ₗ 1) (max_ty_size tyl));
       [apply shr_locsE_subseteq; lia|set_solver+]. }
     case (Qp_lower_bound q q')=> [q''[?[?[->->]]]].
     iExists q'', (#i :: vl ++ vl').
     rewrite heap_mapsto_vec_cons heap_mapsto_vec_app shift_loc_assoc
       -Nat.add_1_l Nat2Z.inj_add.
-    iDestruct "Idx" as "[$ Idx]". iDestruct "Mt" as "[$ Mt]".
-    iDestruct (ty_size_eq with "Own") as ">%Eq". rewrite Eq.
-    iDestruct "Pad" as "[$ Pad]". iSplitR.
-    { iIntros "!>!>". iExists i, d, vl, vl'. iFrame "Own". iPureIntro.
-      do 2 (split; [done|]). rewrite /= app_length Eq. by f_equal. }
-    iIntros "!> Na (Idx' & Mt' & Pad')". iDestruct ("Close''" with "Na") as "Na".
-    iMod ("Close'" with "Na [$Mt $Mt']") as "[$$]". iApply "Close".
-    iFrame "Idx Idx'". iExists vl'. by iFrame.
+    iDestruct "↦i" as "[$ ↦i]". iDestruct "↦" as "[$ ↦]".
+    iDestruct (ty_size_eq with "ty") as ">%Eq". rewrite Eq.
+    iDestruct "↦pad" as "[$ ↦pad]". iSplitR.
+    { iIntros "!>!>". iExists i, _, vl, vl'. iFrame "ty". iPureIntro.
+      do 2 (split; [done|]). rewrite/= app_length Eq. by f_equal. }
+    iIntros "!> Na (↦i' & ↦' & ↦pad')". iDestruct ("ToNa" with "Na") as "Na".
+    iMod ("Toκ'" with "Na [$↦ $↦']") as "[$$]". iApply "Toκ".
+    iFrame "↦i ↦i'". iExists vl'. by iFrame.
   Qed.
 
   Global Instance xsum_send {𝔄l} (tyl: _ 𝔄l) : ListSend tyl → Send (Σ! tyl).

@@ -15,7 +15,7 @@ Section maybe_uninit.
   Proof. iSplit.
     - iIntros "(%vl &?&[[%%]|(%vπ' &%&?)])". { iLeft. iSplit; [done|]. iExists vl.
       by iFrame. } iRight. iExists vπ'. iSplit; [done|]. iExists vl. iFrame.
-    - iIntros "[(%& %vl & Mt &%)|(%vπ' &%& %vl & Mt &?)]"; iExists vl; iFrame "Mt";
+    - iIntros "[(%& %vl & ↦ &%)|(%vπ' &%& %vl & ↦ &?)]"; iExists vl; iFrame "↦";
       [by iLeft|]. iRight. iExists vπ'. by iSplit.
   Qed.
 
@@ -41,35 +41,35 @@ Section maybe_uninit.
     iSplit; [done|]. by iApply ty_shr_lft_mono.
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT In Bor Tok". rewrite maybe_uninit_mt.
+    move=> *. iIntros "#LFT In Bor κ". rewrite maybe_uninit_mt.
     iMod (bor_or with "LFT Bor") as "[Bor|Bor]"; first done.
     { iApply step_fupdN_full_intro.
-      iMod (bor_sep_persistent with "LFT Bor Tok") as "(>->&?&$)"; by [|iLeft]. }
-    iMod (bor_exists_tok with "LFT Bor Tok") as (vπ) "[Bor Tok]"; [done|].
-    iMod (bor_sep_persistent with "LFT Bor Tok") as "(>->& Bor & Tok)"; [done|].
-    iMod (ty_share with "LFT In Bor Tok") as "Upd"; [done|].
+      iMod (bor_sep_persistent with "LFT Bor κ") as "(>->&?&$)"; by [|iLeft]. }
+    iMod (bor_exists_tok with "LFT Bor κ") as (vπ) "[Bor κ]"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor κ") as "(>->& Bor & κ)"; [done|].
+    iMod (ty_share with "LFT In Bor κ") as "Upd"; [done|].
     iApply (step_fupdN_wand with "Upd"). iIntros "!> >[?$] !>". iRight.
     iExists vπ. by iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "LFT In [[->%]|(%vπ &->& Own)] Tok".
+    move=> *. iIntros "LFT In [[->%]|(%vπ &->& ty)] κ".
     { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
-      do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Tok". by iLeft. }
-    iMod (ty_own_proph with "LFT In Own Tok") as "Upd"; [done|].
-    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%ξl & %q &%& PTok & Close) !>".
+      do 2 (iSplit; [done|]). iIntros "_!>". iFrame "κ". by iLeft. }
+    iMod (ty_own_proph with "LFT In ty κ") as "Upd"; [done|].
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%ξl & %q &%& ξl & Toty) !>".
     iExists ξl, q. iSplit; [iPureIntro; by apply proph_dep_constr|].
-    iFrame "PTok". iIntros "PTok". iMod ("Close" with "PTok") as "[?$]".
+    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[?$]".
     iRight. iExists vπ. by iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "LFT In In' [->|(%vπ &->& Shr)] Tok".
+    move=> *. iIntros "LFT In In' [->|(%vπ &->& ty)] κ".
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
-      do 2 (iSplit; [done|]). iIntros "_!>". iFrame "Tok". by iLeft. }
-    iMod (ty_shr_proph with "LFT In In' Shr Tok") as "Upd"; [done|].
+      do 2 (iSplit; [done|]). iIntros "_!>". iFrame "κ". by iLeft. }
+    iMod (ty_shr_proph with "LFT In In' ty κ") as "Upd"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
-    iIntros ">(%ξl&%q&%& PTok & Close) !>". iExists ξl, q.
-    iSplit; [iPureIntro; by apply proph_dep_constr|]. iFrame "PTok". iIntros "PTok".
-    iMod ("Close" with "PTok") as "[?$]". iRight. iExists vπ. by iFrame.
+    iIntros ">(%ξl&%q&%& ξl & Toty) !>". iExists ξl, q.
+    iSplit; [iPureIntro; by apply proph_dep_constr|]. iFrame "ξl". iIntros "ξl".
+    iMod ("Toty" with "ξl") as "[?$]". iRight. iExists vπ. by iFrame.
   Qed.
 
   Global Instance maybe_uninit_ne {𝔄} : NonExpansive (@maybe_uninit 𝔄).

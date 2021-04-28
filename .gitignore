@@ -18,3 +18,4 @@ html/
 Makefile.coq
 Makefile.coq.conf
 _opam
+.DS_Store
