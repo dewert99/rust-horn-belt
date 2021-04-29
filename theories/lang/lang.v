@@ -634,4 +634,4 @@ Notation If e0 e1 e2 := (Case e0 (@cons expr e2 (@cons expr e1 (@nil expr))))
   (only parsing).
 Notation Newlft := (Lit LitPoison) (only parsing).
 Notation Endlft := (Seq Skip Skip) (only parsing).
-Notation Share := Skip (only parsing).
+Notation Share := (Seq Skip Skip) (only parsing).

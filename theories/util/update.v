@@ -6,7 +6,7 @@ From lrust.util Require Import basic.
 
 Section lemmas.
 Context `{!BiFUpd PROP}.
-Implicit Type P Q: PROP.
+Implicit Type P Q R: PROP.
 
 Global Instance step_fupdN_proper E n : Proper ((⊣⊢) ==> (⊣⊢)) (λ P, |={E}▷=>^n P)%I.
 Proof. by elim n; [apply _|]=>/= *??->. Qed.
@@ -57,6 +57,43 @@ Proof.
   - iIntros ">>Upd". iApply fupd_mask_intro_subseteq; [set_solver|done].
   - iIntros ">>Upd". iApply fupd_mask_intro; [set_solver|].
     iIntros "ToE !>!>". iDestruct (IH with "Upd") as "?". by iMod "ToE".
+Qed.
+
+Lemma step_fupdN_add E n m P :
+  (|={E}▷=>^(n + m) P) ⊣⊢ (|={E}▷=>^n |={E}▷=>^m P).
+Proof. 
+  induction n as [|n IH]; [done| rewrite /= IH //].
+Qed.
+
+Lemma step_fupdN_chain E n m P Q R :
+(P -∗ |={E}▷=>^n Q) →
+(Q -∗ |={E}▷=>^m R) →
+P -∗ |={E}▷=>^(n + m) R.
+Proof.
+  iIntros (PQ QR) "P".
+  iDestruct (PQ with "P") as "Q".
+  iApply step_fupdN_add.
+  by iApply step_fupdN_mono.
+Qed.
+
+Lemma step_fupdN_fupd_mask_mono E₁ E₂ n P: 
+  E₁ ⊆ E₂ → (|={E₁}▷=>^n |={E₁}=> P) -∗ (|={E₂}▷=>^n |={E₂}=> P).
+  iIntros (Hsub).
+  induction n as [|n IH].
+  - by iApply fupd_mask_mono.
+  - iIntros "H /=". 
+    iApply fupd_mask_mono; [done|]. iApply IH.
+    iMod "H". iModIntro.
+    by iApply fupd_mask_mono; [done|].
+Qed. 
+
+Lemma fupd_step_fupdN_fupd_mask_mono E₁ E₂ n P: 
+  E₁ ⊆ E₂ →
+  (|={E₁}=> |={E₁}▷=>^n |={E₁}=> P) -∗ (|={E₂}=> |={E₂}▷=>^n |={E₂}=> P).
+Proof.
+  iIntros (Hsub) "Hstep".
+  iApply fupd_mask_mono; [done|].
+  by iApply step_fupdN_fupd_mask_mono; [done|].
 Qed.
 
 End lemmas.

@@ -34,42 +34,55 @@ Section borrow.
       iIntros "!>!>". iDestruct (proph_ctrl_eqz with "PROPH Pc") as "$".
   Qed.
 
-  (* Lemma type_share_instr E L p κ ty :
+  Lemma type_share_instr {𝔄} E L p κ (ty : type 𝔄) :
     lctx_lft_alive E L κ →
-    ⊢ typed_instr E L [p ◁ &uniq{κ}ty] Share (λ _, [p ◁ &shr{κ} ty]).
+    (* κ ⊑ ty_lft ty  *)
+    ⊢ typed_instr E L +[p ◁ &uniq{κ}ty] Share (const +[p ◁ &shr{κ} ty]) (λ post '-[a], a.1 = a.2 -> post -[a.1]).
   Proof.
-    iIntros (Hκ ?) "#LFT #TIME #HE $ HL Huniq".
-    iMod (Hκ with "HE HL") as (q) "[Htok Hclose]"; [done..|].
-    rewrite !tctx_interp_singleton /=.
-    iDestruct "Huniq" as ([[]|] [|depth1]) "[_ H]";
-      iDestruct "H" as (?) "/= [Hout Huniq]"=>//.
-    iDestruct "Huniq" as (depth2 γ ?) "[_ Hbor]".
-    iMod (bor_exists with "LFT Hbor") as (depth3) "Hbor"; [done|].
-    iMod (bor_sep with "LFT Hbor") as "[_ Hbor]"; [done|].
-    iMod (bor_sep with "LFT Hbor") as "[Hdepth3 Hbor]"; [done|].
-    iMod (bor_persistent with "LFT Hdepth3 Htok") as "[>Hdepth3 Htok]"; [done|].
-    iMod (ty.(ty_share) with "LFT Hout Hbor Htok") as "H"; [done|].
-    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME Hdepth3 [H]");
+    iIntros (Hκ ?? [vπ []]) "#LFT #TIME #PROPH #UNIQ #HE $ HL [Huniq _] Hproph".
+    iMod (Hκ with "HE HL") as (q) "[[Htok1 Htok2] Hclose]"; [done..|].
+    iDestruct "Huniq" as ([[]|] [|d]) "(% & _ & [#? H]) /="; try done;
+      iDestruct "H" as (? ?) "([% %] & Hvo & Huniq)"; try lia.
+    set (ξ := PrVar _ i).
+    iMod (bor_exists_tok with "LFT Huniq Htok1") as (vπ') "[Huniq Htok1]"; first solve_ndisj.
+    iMod (bor_exists_tok with "LFT Huniq Htok1") as (d'') "[Huniq Htok1]"; first solve_ndisj.
+    iMod (bor_acc with "LFT Huniq Htok1") as "[(Hown & > #Hd'' & Hpc) Hclose']"; first solve_ndisj.
+    iDestruct "Hown" as (?) "[H↦ Hown]".
+    iDestruct (ty.(ty_own_proph) with "LFT [$] Hown [$Htok2]") as "H"; first solve_ndisj.
+    wp_bind Skip. 
+    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME Hd'' [H]"); [done..| |].
+    { iApply step_fupdN_with_emp.  
+      iApply (fupd_step_fupdN_fupd_mask_mono with "H"); done.
+    }
+    wp_seq. iDestruct 1 as (ξl q') "/= (%Hdep & Hdt & Hclose'')". 
+    iDestruct (uniq_agree with "Hvo Hpc") as "%Hag"; inversion Hag; subst; clear Hag.
+    iMod (uniq_resolve with "PROPH Hvo Hpc Hdt") as "(Hobs & Hpc & Hdt)"; [done|done| ].
+    iMod ("Hclose''" with "Hdt") as "[Hown Htok]".
+    iMod ("Hclose'" with "[H↦ Hown Hpc]") as "[Huniq Htok2]". 
+    { iFrame "#∗". iExists _. iFrame. }
+    iMod (bor_sep with "LFT Huniq") as "[Huniq _]"; first solve_ndisj.
+    iDestruct (ty.(ty_share) with "LFT [$] Huniq Htok") as "Hshr"; first solve_ndisj.
+    iModIntro. wp_seq.
+    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME Hd'' [Hshr]");
       [done..| |].
-    { (* TODO : lemma for handling masks properly here. *)
-      rewrite difference_empty_L. iInduction depth3 as [|depth3] "IH"; simpl.
-      - iMod "H". iApply fupd_mask_intro; [done|]. iIntros "Hclose !>!>!>!>!>!>".
-        iMod "Hclose" as "_". iApply "H".
-      - iMod "H". iApply fupd_mask_intro; [done|]. iIntros "Hclose !>!>!>".
-        iMod "Hclose" as "_". iMod "H". by iMod ("IH" with "H"). }
-    wp_seq. iIntros "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
-    rewrite /tctx_interp /= right_id. iExists _, _. iFrame "% Hshr".
-    iApply persist_time_rcpt_0.
-  Qed. *)
+    { iApply step_fupdN_with_emp.  
+      iApply (fupd_step_fupdN_fupd_mask_mono with "Hshr"); done.
+    }
+    wp_seq. iIntros "[Hshr Htok1]". iMod ("Hclose" with "[$Htok1 $Htok2]") as "$".
+    iExists -[_]. rewrite /= right_id. iSplitR "Hproph Hobs".
+    - iExists _, _. by iFrame "# % Hshr".
+    - iCombine "Hobs Hproph" as "Hobs". iApply proph_obs_impl; [|done] => π /=. 
+      rewrite -(f_equal (.$ π) H1) => [] /= [<- ?]; auto. 
+  Qed.
 
-  (* Lemma type_share {E L} p e κ ty C T T' :
+  Lemma type_share {𝔄 As Bs E L} p e κ (ty : type 𝔄) C (T : tctx As) (T' : tctx Bs) f pre:
     Closed [] e →
-    tctx_extract_hasty E L p (&uniq{κ} ty) T T' →
+    tctx_extract_elt E L (p ◁ &uniq{κ} ty)%T T T' f →
     lctx_lft_alive E L κ →
-    typed_body E L C ((p ◁ &shr{κ} ty) :: T') e -∗
-    typed_body E L C T (Share ;; e).
-  Proof. iIntros. iApply type_seq; [by apply type_share_instr|solve_typing|done]. Qed. *)
-
+    typed_body E L C ((p ◁ &shr{κ} ty) +:: T') e  pre-∗
+    typed_body E L C T (Share ;; e) (f (λ '(b -:: bs), (b.1 = b.2 → pre (b.1 -:: bs)) : Prop)).
+  Proof. iIntros. iApply type_seq; [ by iApply type_share_instr |solve_typing | done | done ]. Qed.
+  
   (* Lemma tctx_extract_hasty_borrow E L p n ty ty' κ T :
     subtype E L ty' ty →
     elctx_sat E L (ty_outlv_E ty κ) →
