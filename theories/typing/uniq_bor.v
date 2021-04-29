@@ -12,7 +12,7 @@ Section uniq_bor.
 
   Program Definition uniq_bor {𝔄} (κ: lft) (ty: type 𝔄) : type (𝔄 * 𝔄) := {|
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlv_E ty κ;
-    ty_own vπ d tid vl := [loc[l] := vl] ∃d' i,
+    ty_own vπ d tid vl := κ ⊑ ty.(ty_lft) ∗ [loc[l] := vl] ∃d' i,
       let ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i in
       ⌜S d' ≤ d ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ) d' ∗
       &{κ} (∃vπ' d', l ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ξ] vπ' d');
@@ -20,7 +20,7 @@ Section uniq_bor.
       &frac{κ'}(λ q', l ↦{q'} #l') ∗ &frac{κ'} (λ q, q:[ξ]) ∗
       ▷ ty.(ty_shr) (fst ∘ vπ) d' κ' tid l';
   |}%I.
-  Next Obligation. move=>/= *. rewrite by_just_loc_ex. by iIntros "[%[->?]]". Qed.
+  Next Obligation. move=>/= *. rewrite by_just_loc_ex. by iIntros "[_ [%[->?]]]".  Qed.
   Next Obligation. move=>/= > H. by setoid_rewrite H. Qed.
   Next Obligation.
     move=> ???[|?][|?]*/=; try (by iIntros); [lia|]. do 8 f_equiv.
@@ -35,6 +35,7 @@ Section uniq_bor.
     move=> 𝔄 ??? vπ *. have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
     iIntros "#LFT #? Bor κ'". iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
     iMod (bor_sep with "LFT Bor") as "[BorMt Bor]"; [done|].
+    iMod (bor_sep with "LFT Bor") as "[_ Bor]"; [done|].
     rewrite by_just_loc_ex. iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
     iMod (bor_sep_persistent with "LFT Bor κ'") as "(>->& Bor & κ')"; [done|].
     iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
@@ -67,7 +68,9 @@ Section uniq_bor.
   Qed.
   Next Obligation.
     move=> 𝔄 ??? vπ *. iIntros "#LFT #?". setoid_rewrite by_just_loc_ex at 1.
-    iDestruct 1 as (?->d i [Le Eq]) "[Vo Bor]".
+    iDestruct 1 as "[? (% & -> & H)]".
+    iDestruct "H" as (d i [Le Eq]) "[Vo Bor]".
+    (* iDestruct 1 as (?->d i [Le Eq]) "[Vo Bor]". *)
     set ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i. move: Le=> /succ_le [?[->Le]].
     iIntros "[κ1 κ1']". iMod (lft_incl_acc with "[] κ1") as (?) "[κ1 Toκ1]";
     first done. { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
@@ -86,7 +89,7 @@ Section uniq_bor.
     iMod ("Toty" with "ζl") as "[ty $]". iDestruct ("ToPc" with "ξ") as "Pc".
     iMod ("ToBor" with "[↦ ty Pc]") as "[Bor κ1]".
     { iModIntro. iExists (fst ∘ vπ), d. iFrame "Pc ⧖". iExists vl. iFrame. }
-    iMod ("Toκ1" with "κ1") as "$". iModIntro. iExists d, i.
+    iMod ("Toκ1" with "κ1") as "$". iModIntro. iFrame. iExists d, i.
     iFrame "Vo Bor". iPureIntro. split; [lia|done].
   Qed.
   Next Obligation.
@@ -117,7 +120,7 @@ Section typing.
 
   Global Instance uniq_type_contr {𝔄} κ : TypeContractive (@uniq_bor _ _ 𝔄 κ).
   Proof. split; [by apply (type_lft_morph_add_one κ)|done| |].
-    - move=> */=. do 17 (f_contractive || f_equiv). by simpl in *.
+    - move=> */=. f_equiv. done. done. do 17 (f_contractive || f_equiv). by simpl in *.
     - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
