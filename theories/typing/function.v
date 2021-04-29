@@ -1,3 +1,4 @@
+Import EqNotations.
 From iris.algebra Require Import vector list.
 From lrust.typing Require Export type.
 From lrust.typing Require Import own programs cont.
@@ -5,8 +6,20 @@ Set Default Proof Using "Type".
 
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
+Local Fixpoint subst'_pv {𝔄l} (bl: plistc binder 𝔄l) (vl: plistc val 𝔄l)
+  (e: expr) : expr := match 𝔄l, bl, vl with [], _, _ => e |
+    _ :: _, b -:: bl', v -:: vl' => subst' b v (subst'_pv bl' vl' e) end.
+
+Local Lemma subst'_pv_renew {𝔄l 𝔅l} (bl: _ 𝔄l) (vl': _ 𝔅l) ew e :
+  subst'_pv (plistc_renew ew bl) vl' e =
+    subst'_pv bl (plistc_renew (symm_eq_len_wit ew) vl') e.
+Proof.
+  move: 𝔄l 𝔅l bl vl' ew. fix FIX 1. case=> [|??]; case=>//= ??[??][??]?.
+  f_equal. apply FIX.
+Qed.
+
 Section fn.
-  Context `{!typeG Σ} {A: Type} {𝔄l} {𝔅}.
+  Context `{!typeG Σ} {A: Type} {𝔄l 𝔅}.
 
   Record fn_params :=
     FP { fp_E_ex: lft → elctx;  fp_ityl: typel 𝔄l;  fp_oty: type 𝔅 }.
@@ -34,15 +47,14 @@ Section fn.
       pt_size := 1;
       pt_own (tr: (predₛ 𝔅 → predlₛ 𝔄l)%ST) tid vl := tc_opaque
         (∃fb kb (bl: plistc binder 𝔄l) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
-        ▷ ∀(x: A) (ϝ: lft) (k: val) (pre: predl [𝔅]) (vl': plistc val 𝔄l),
+        ▷ ∀(x: A) (ϝ: lft) (k: val) (pre: predl [𝔅]) (wl: plistc val 𝔄l),
           □ typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
             [k ◁cont{[ϝ ⊑ₗ []], (λ v: vec _ 1,
               +[vhd v ◁ box (fp x).(fp_oty)])} pre]
-            (hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) vl')
-            (subst_v (fb :: kb :: bl) (RecV fb (kb :: bl) e ::: k ::: vl') e)
+            (hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl)
+            (subst' fb (RecV fb (kb :: bl) e) $ subst' kb k $ subst'_pv bl wl e)
             (tr (λ b: 𝔅, pre -[b])))
     |}%I.
-  Next Obligation. move=> */=. by rewrite vec_to_list_length. Qed.
   Next Obligation. rewrite /tc_opaque. apply _. Qed.
   Next Obligation. move=> *. by iDestruct 1 as (?????->) "?". Qed.
 
@@ -52,13 +64,13 @@ Section fn.
     move=> fp fp' Eq. apply ty_of_st_ne, st_of_pt_ne. split; [done|]=>/= ???.
     do 5 apply bi.exist_ne=> ?. apply bi.sep_ne; [done|]. apply bi.later_ne.
     apply bi.forall_ne=> x. do 3 apply bi.forall_ne=> ?.
-    apply bi.forall_ne=> vl. f_equiv. rewrite /typed_body. (do 3 f_equiv)=> vπl.
+    apply bi.forall_ne=> wl. f_equiv. rewrite /typed_body. (do 3 f_equiv)=> vπl.
     do 6 f_equiv; [by eapply fp_E_ne|]. do 2 f_equiv; [|f_equiv].
     - rewrite/= /cctx_elt_interp. do 5 f_equiv. case=>/= ?[].
       do 4 f_equiv. rewrite /tctx_elt_interp. do 8 f_equiv. apply Eq.
     - move: (Eq x)=> [_[+ _]]. rewrite {1}/dist.
       move: (fp x).(fp_ityl) (fp' x).(fp_ityl)=> ??. clear=> Eq.
-      dependent induction Eq; [done|]. case vl=> ??. case vπl=> ??/=.
+      dependent induction Eq; [done|]. case wl=> ??. case vπl=> ??/=.
       f_equiv; [|by apply IHEq]. rewrite /tctx_elt_interp. by do 8 f_equiv.
   Qed.
 
@@ -83,9 +95,9 @@ Notation "fn( E ) → oty" := (fn (λ _: (), FP E%EL +[] oty%T))
   (at level 99, oty at level 200, format "fn( E )  →  oty") : lrust_type_scope.
 
 Section typing.
-  Context `{!typeG Σ} {A: Type} {𝔄l} {𝔅}.
+  Context `{!typeG Σ}.
 
-  Global Instance fn_type_contr {ℭ} E (IT: A → _ ℭ → _ 𝔄l) (OT: _ → _ → _ 𝔅) :
+  Global Instance fn_type_contr {A 𝔄l 𝔅 ℭ} E (IT: A → _ ℭ → _ 𝔄l) (OT: _ → _ → _ 𝔅) :
     (∀x, ListTypeNonExpansive (IT x)) → (∀x, TypeNonExpansive (OT x)) →
     TypeContractive (λ ty, fn (λ x, FP (E x) (IT x ty) (OT x ty))).
   Proof.
@@ -114,7 +126,7 @@ Section typing.
       - apply dist_dist_later. by apply Ne.
       - apply dist_S. by apply Ne. }
     apply bi.forall_ne=> x. move: (NeIT x)=> [ITl[->NeITl]].
-    do 3 apply bi.forall_ne=> ?. f_equiv=> vl. rewrite /typed_body.
+    do 3 apply bi.forall_ne=> ?. f_equiv=> wl. rewrite /typed_body.
     (do 4 f_equiv)=> vπl. do 5 f_equiv; [|do 3 f_equiv=>/=; f_equiv].
     - apply equiv_dist. rewrite /fp_E /= !elctx_interp_app.
       do 2 f_equiv; [|f_equiv; [|f_equiv]].
@@ -130,82 +142,79 @@ Section typing.
         by iApply type_lft_morph_lft_equiv_proper.
     - rewrite /cctx_elt_interp. do 4 f_equiv. case=>/= ?[].
       do 4 f_equiv. rewrite /tctx_elt_interp. do 6 f_equiv. by apply EqBox.
-    - clear -NeITl EqBox. induction NeITl, vl, vπl; [done|]=>/=.
+    - clear -NeITl EqBox. induction NeITl, wl, vπl; [done|]=>/=.
       f_equiv; [|done]. rewrite /tctx_elt_interp. do 6 f_equiv. by apply EqBox.
   Qed.
 
-  Global Instance fn_send (fp: A → _ 𝔄l 𝔅) : Send (fn fp). Proof. done. Qed.
+  Global Instance fn_send {A 𝔄l 𝔅} (fp: A → _ 𝔄l 𝔅) : Send (fn fp).
+  Proof. done. Qed.
+
+  Local Lemma subtypel_llctx_big_sep_box {𝔄l 𝔅l} (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl q E L :
+    subtypel E L tyl tyl' fl →
+    llctx_interp L q -∗ □ (elctx_interp E -∗
+      [∗ hlist] ty; ty';- f ∈ tyl; tyl';- fl, type_incl (box ty) (box ty') f).
+  Proof.
+    elim=> [|>/box_subtype Sub _ IH]; [by iIntros "_!>_"|]. iIntros "L".
+    iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
+    iIntros "!> #E /=". iDestruct ("Sub" with "E") as "$".
+    iDestruct ("IH" with "E") as "$".
+  Qed.
+
+  Lemma fn_subtype {A 𝔄l 𝔄l' 𝔅 𝔅'} E L (fp: A → _) fp' (fl: _ 𝔄l' 𝔄l) (g: 𝔅 → 𝔅') :
+    (∀x ϝ, let E' := E ++ fp_E (fp' x) ϝ in elctx_sat E' L (fp_E (fp x) ϝ) ∧
+      subtypel E' L (fp' x).(fp_ityl) (fp x).(fp_ityl) fl ∧
+      subtype E' L (fp x).(fp_oty) (fp' x).(fp_oty) g) →
+    subtype E L (fn fp) (fn fp') (λ tr (pre: predₛ 𝔅')
+      (vl: (Π! 𝔄l')%ST), tr (pre ∘ g) (plist_map fl vl)).
+  Proof.
+    move=> Big. apply subtype_plain_type=>/= ?. iIntros "L".
+    iAssert (∀ x ϝ, let E' := E ++ fp_E (fp' x) ϝ in □ (elctx_interp E' -∗
+      elctx_interp (fp_E (fp x) ϝ) ∗
+      ([∗ hlist] ty'; ty;- f ∈ (fp' x).(fp_ityl); (fp x).(fp_ityl);- fl,
+        type_incl (box ty') (box ty) f) ∗
+      type_incl (box (fp x).(fp_oty)) (box (fp' x).(fp_oty)) g))%I as "#Big".
+    { iIntros (x ϝ). case (Big x ϝ)=> Efp
+        [/subtypel_llctx_big_sep_box Il /box_subtype O].
+      iDestruct (Efp with "L") as "#Efp". iDestruct (Il with "L") as "#Il".
+      iDestruct (O with "L") as "#O". iIntros "!> E'".
+      iSplit; last iSplit; by [iApply "Efp"|iApply "Il"|iApply "O"]. }
+    iIntros "!> #E". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
+    iIntros (tr _ vl). iDestruct 1 as (fb kb bl e H ->) "#fn".
+    set ew := symm_eq_len_wit (plist2_eq_len_wit fl). set bl' := plistc_renew ew bl.
+    have Eq: (bl: list _) = bl' by rewrite plistc_renew_eq.
+    iExists fb, kb, bl', e, (rew [λ bl₀, _ (_ :b: _ :b: bl₀ +b+ _) _] Eq in H).
+    simpl_eq. iSplit; [done|]. iNext. rewrite /typed_body.
+    iIntros (x ϝ k pre wl') "!> % %vπl LFT TIME PROPH UNIQ #Efp' Na L #C T Obs".
+    rewrite subst'_pv_renew. set wl := plistc_renew _ wl'.
+    iDestruct ("Big" with "[$E $Efp']") as "(Efp & InIl & InO)".
+    iApply ("fn" $! _ _ _ (λ '(-[v]), pre -[g v]) _
+      _ (plist_map_with (λ _ _, (∘)) fl vπl) with
+      "LFT TIME PROPH UNIQ Efp Na L [] [T] [Obs]").
+    - iRevert "InO C". iClear "#". iIntros "#(_&_& InO &_) [#C _]".
+      iSplitL; [|done]. iIntros "!>" (?[vπ[]]) "Na L [(%&%&%& ⧖ & oty) _] Obs".
+      iApply ("C" $! _ -[_] with "Na L [⧖ oty] Obs"). iSplitL; [|done].
+      iExists _, _. iSplitR; [done|]. iFrame "⧖". by iApply "InO".
+    - iRevert "InIl T". iClear "#". iStopProof. rewrite /wl.
+      move: (fp x).(fp_ityl) (fp' x).(fp_ityl)=> tyl tyl'. clear.
+      move: 𝔄l 𝔄l' tyl tyl' fl ew wl' vπl. fix FIX 1. case=> [|??]; case=>//=;
+      dependent destruction tyl; dependent destruction tyl'; [by iIntros|].
+      iIntros ([]?[][]) "/= _ #[(_&_& In &_) ?] [t ?]".
+      iSplitL "t"; [|by iApply FIX]. iDestruct "t" as (???) "[⧖ ?]".
+      iExists _, _. iSplit; [done|]. iFrame "⧖". by iApply "In".
+    - iApply proph_obs_eq; [|done]=>/= ?. f_equal. clear.
+      move: 𝔄l 𝔄l' fl vπl. fix FIX 1. case=> [|??]; case=>//= ??[??][??].
+      f_equal. apply FIX.
+  Qed.
+
+  Lemma fn_subtype_specialize {A B 𝔄l 𝔅} (σ: A → B) E L (fp: _ → _ 𝔄l 𝔅) :
+    subtype E L (fn fp) (fn (fp ∘ σ)) id.
+  Proof.
+    apply subtype_plain_type. iIntros (?) "_!>_/=". iSplit; [done|].
+    iSplit; [iApply lft_incl_refl|]. iIntros (???) "?". iStopProof.
+    do 12 f_equiv. iIntros "Big" (?). iApply "Big".
+  Qed.
 
 (*
-  Lemma fn_subtype {A n} E0 L0 (fp fp' : A → fn_params n) :
-    (∀ x ϝ, let EE := E0 ++ fp_E (fp' x) ϝ in
-            elctx_sat EE L0 (fp_E (fp x) ϝ) ∧
-            Forall2 (subtype EE L0) (fp' x).(fp_ityl) (fp x).(fp_ityl) ∧
-            subtype EE L0 (fp x).(fp_oty) (fp' x).(fp_oty)) →
-    subtype E0 L0 (fn fp) (fn fp').
-  Proof.
-    intros Hcons. apply subtype_simple_type=>//= qL. iIntros "HL0".
-    (* We massage things so that we can throw away HL0 before going under the box. *)
-    iAssert (∀ x ϝ, let EE := E0 ++ fp_E (fp' x) ϝ in □ (elctx_interp EE -∗
-                 elctx_interp (fp_E (fp x) ϝ) ∗
-                 ([∗ list] tys ∈ (zip (fp' x).(fp_ityl) (fp x).(fp_ityl)), type_incl (tys.1) (tys.2)) ∗
-                 type_incl (fp x).(fp_oty) (fp' x).(fp_oty)))%I as "#Hcons".
-    { iIntros (x ϝ). destruct (Hcons x ϝ) as (HE &Htys &Hty). clear Hcons.
-      iDestruct (HE with "HL0") as "#HE".
-      iDestruct (subtype_Forall2_llctx with "HL0") as "#Htys"; first done.
-      iDestruct (Hty with "HL0") as "#Hty".
-      iClear "∗". iIntros "!> #HEE".
-      iSplit; last iSplit.
-      - by iApply "HE".
-      - by iApply "Htys".
-      - by iApply "Hty". }
-    iClear (Hcons) "∗". iIntros "!> #HE0". iSplit.
-    - iApply lft_incl_refl.
-    - iIntros (_ vl) "Hf". iDestruct "Hf" as (fb kb xb e ?) "[-> [<- #Hf]]".
-      iExists fb, kb, xb, e, _. iSplit; [done|]. iSplit; [done|]. iNext.
-      rewrite /typed_body. iIntros (x ϝ k xl) "!> * #LFT #TIME #HE' Htl HL HC HT".
-      iDestruct ("Hcons" with "[$]") as "#(HE & Htys & Hty)".
-      iApply ("Hf" with "LFT TIME HE Htl HL [HC] [HT]").
-      + unfold cctx_interp. iIntros (elt) "Helt".
-        iDestruct "Helt" as %->%elem_of_list_singleton. iIntros (ret) "Htl HL HT".
-        unfold cctx_elt_interp.
-        iApply ("HC" $! (_ ◁cont(_, _)) with "[%] Htl HL [> -]").
-        { by apply elem_of_list_singleton. }
-        rewrite /tctx_interp !big_sepL_singleton /=.
-        iDestruct "HT" as (v depth) "(Hdepth & HP & Hown)".
-        iExists v, depth. iFrame "HP Hdepth".
-        iDestruct (box_type_incl with "[$Hty]") as "(_ & _ & #Hincl & _)".
-          by iApply "Hincl".
-      + iClear "Hf". rewrite /tctx_interp
-           -{2}(fst_zip (fp x).(fp_ityl) (fp' x).(fp_ityl)) ?vec_to_list_length //
-           -{2}(snd_zip (fp x).(fp_ityl) (fp' x).(fp_ityl)) ?vec_to_list_length //
-           !zip_with_fmap_r !(zip_with_zip (λ _ _, (_ ∘ _) _ _)) !big_sepL_fmap.
-        iApply (big_sepL_impl with "HT"). iIntros "!>".
-        iIntros (i [p [ty1' ty2']]) "#Hzip H /=".
-        iDestruct "H" as (v depth) "(? & Hdepth & Hown)". iExists v, depth. iFrame.
-        rewrite !lookup_zip_with.
-        iDestruct "Hzip" as %(? & ? & ([? ?] & (? & Hty'1 &
-          (? & Hty'2 & [=->->])%bind_Some)%bind_Some & [=->->->])%bind_Some)%bind_Some.
-        iDestruct (big_sepL_lookup with "Htys") as "#Hty'".
-        { rewrite lookup_zip_with /=. erewrite Hty'2. simpl. by erewrite Hty'1. }
-        iDestruct (box_type_incl with "[$Hty']") as "(_ & _ & #Hincl & _)".
-        by iApply "Hincl".
-  Qed.
-
-  (* We cannot show a Proper instance because it is necessary to prove
-     [elctx_sat] afer the coercion.
-     See: https://github.com/rust-lang/rust/issues/25860. *)
-
-  Lemma fn_subtype_specialize {A B n} (σ : A → B) E0 L0 fp :
-    subtype E0 L0 (fn (n:=n) fp) (fn (fp ∘ σ)).
-  Proof.
-    apply subtype_simple_type. iIntros (qL) "/= _ !> _". iSplit.
-    - iApply lft_incl_refl.
-    - iIntros (_ vl) "Hf". iDestruct "Hf" as (fb kb xb e ?) "[-> [<- #Hf]]".
-      iExists fb, kb, xb, e, _. iSplit; [done|]. iSplit; [done|].
-      rewrite /typed_body. iNext. iIntros "*". iApply "Hf".
-  Qed.
-
   (* In principle, proving this hard-coded to an empty L would be sufficient --
      but then we would have to require elctx_sat as an Iris assumption. *)
   Lemma type_call_iris' E L (κs : list lft) {A} x (ps : list path) qκs qL tid

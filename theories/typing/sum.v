@@ -233,34 +233,33 @@ Section typing.
     subtypel E L tyl tyl' fl → subtype E L (Σ! tyl) (Σ! tyl') (psum_map fl).
   Proof.
     move=> Subs ?. iIntros "L".
-    iAssert (□ (lft_contexts.elctx_interp E -∗
-      ⌜max_ty_size tyl = max_ty_size tyl'⌝))%I as "#Size".
+    iAssert (□ (elctx_interp E -∗ ⌜max_ty_size tyl = max_ty_size tyl'⌝))%I as "#EqSz".
     { iInduction Subs as [|?????????? Sub Subs] "IH"; [by iIntros "!>_"|].
       iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
       iIntros "!> E /=". iDestruct ("Sub" with "E") as (->) "#_".
       by iDestruct ("IH'" with "E") as %->. }
-    iAssert (□ (lft_contexts.elctx_interp E -∗ tyl_lft tyl' ⊑ tyl_lft tyl))%I as "#Lft".
-    { iClear "Size". iInduction Subs as [|?????????? Sub Subs] "IH".
+    iAssert (□ (elctx_interp E -∗ tyl_lft tyl' ⊑ tyl_lft tyl))%I as "#InLft".
+    { iClear "EqSz". iInduction Subs as [|?????????? Sub Subs] "IH".
       { iIntros "!>_". by iApply lft_incl_refl. }
       iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
       iIntros "!> E /=". iDestruct ("Sub" with "E") as (?) "#[?_]".
       iDestruct ("IH'" with "E") as "#?".
       rewrite /tyl_lft !lft_intersect_list_app. by iApply lft_intersect_mono. }
-    have Eq: length 𝔄l = length 𝔅l by eapply subtypel_eq_len.
-    move/subtypel_llctx_get in Subs. iDestruct (Subs with "L") as "#Subs".
-    iIntros "!> #E". iDestruct ("Size" with "E") as "%Size".
-    iDestruct ("Lft" with "E") as "?". iDestruct ("Subs" with "E") as "Incl".
+    move/subtypel_llctx_get in Subs. iDestruct (Subs with "L") as "#InTyl".
+    iIntros "!> #E". iDestruct ("EqSz" with "E") as %EqSz.
+    iSpecialize ("InLft" with "E"). iSpecialize ("InTyl" with "E").
     iSplit; simpl; [iPureIntro; by f_equal|]. iSplit; [done|].
-    iSplit; iModIntro; iIntros "*".
+    set EqLen := plist2_eq_len fl. iSplit; iModIntro; iIntros "*".
     - iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "?".
-      move: vπ'. move: (ex_p2fin_l _ (length 𝔅l) i Eq)=> [j ->] vπ'.
+      move: vπ'. move: (ex_p2fin_l _ (length 𝔅l) i EqLen)=> [j ->] vπ'.
       iExists (p2fin_r j), (p2get fl j ∘ vπ'), vl', vl''.
-      rewrite Size p2fin_lr_eq. iSplit.
+      rewrite EqSz p2fin_lr_eq. iSplit.
       { iPureIntro. split; [|done]. fun_ext=>/= ?. by rewrite psum_map_pinj. }
-      iDestruct ("Incl" $! j) as (_) "[_[InOwn _]]". by iApply "InOwn".
+      iDestruct ("InTyl" $! j) as (_) "[_[InOwn _]]". by iApply "InOwn".
     - iDestruct 1 as (i vπ' ->) "[??]".
-      move: vπ'. move: (ex_p2fin_l _ (length 𝔅l) i Eq)=> [j ->] vπ'.
-      iExists (p2fin_r j), (p2get fl j ∘ vπ'). rewrite /is_pad Size p2fin_lr_eq. iDestruct ("Incl" $! j) as (->) "[_[_ InShr]]". iSplit.
+      move: vπ'. move: (ex_p2fin_l _ (length 𝔅l) i EqLen)=> [j ->] vπ'.
+      iExists (p2fin_r j), (p2get fl j ∘ vπ'). rewrite /is_pad EqSz p2fin_lr_eq.
+      iDestruct ("InTyl" $! j) as (->) "[_[_ InShr]]". iSplit.
       { iPureIntro. fun_ext=>/= ?. by rewrite psum_map_pinj. }
       iSplit; by [|iApply "InShr"].
   Qed.

@@ -906,15 +906,11 @@ Section subtyping.
     llctx_interp L q -∗ □ (elctx_interp E -∗ ∀i,
       type_incl (hget tyl (p2fin_l i)) (hget tyl' (p2fin_r i)) (p2get fl i)).
   Proof.
-    elim=> [|>Sub _ IH]. { iIntros "_!>_" ([]). } iIntros "L".
+    elim=> [|>Sub _ IH]; [by iIntros "_!>_" ([])|]. iIntros "L".
     iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
-    iIntros "!> #E" (i). iDestruct ("Sub" with "E") as "Sub'".
-    iDestruct ("IH" with "E") as "IH'". by case i.
+    iIntros "!> #E" (i). iSpecialize ("Sub" with "E").
+    iSpecialize ("IH" with "E"). by case i.
   Qed.
-
-  Lemma subtypel_eq_len {𝔄l 𝔅l} (fl: _ 𝔄l 𝔅l) tyl tyl' E L :
-    subtypel E L tyl tyl' fl → length 𝔄l = length 𝔅l.
-  Proof. by apply HForall2_1_eq_len. Qed.
 
   (** Simple Type *)
 
