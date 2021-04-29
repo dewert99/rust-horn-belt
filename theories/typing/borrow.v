@@ -28,7 +28,7 @@ Section borrow.
     { iExists _, _. iFrame "Pc ⧖". iExists _. iFrame. }
     iExists -[pair ∘ vπ ⊛ (.$ ξ); (.$ ξ)]. rewrite/= right_id. iFrame "L". iModIntro.
     iSplitR "Obs"; [|by iApply proph_obs_impl; [|done]=>/=]. iSplitL "Vo Bor".
-    - iExists _, _. do 2 (iSplit; [done|]). iExists _, _. by iFrame.
+    - iExists _, _. do 2 (iSplit; [done|]). iFrame "#". iExists _, _. by iFrame.
     - iExists _. iSplit; [done|]. iIntros "†κ". iMod ("Toty" with "†κ") as
       (??) "(↦ty & >⧖' & Pc)". iExists _, _. iFrame "⧖' ↦ty †".
       iIntros "!>!>". iDestruct (proph_ctrl_eqz with "PROPH Pc") as "$".
@@ -89,7 +89,7 @@ Section borrow.
     iIntros (Alvκ ?? [vπ []]) "#LFT #TIME #PROPH #UNIQ #E $ L [p _] Obs".
     have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
     iMod (Alvκ with "E L") as (q) "[κ ToL]"; [done|]. wp_apply (wp_hasty with "p").
-    iIntros ([[]|] ??) "#⧖ uniq"=>//.
+    iIntros ([[]|] ??) "#⧖ [#? uniq]"=>//.
     iDestruct "uniq" as (? ξi [? Eq]) "[ξVo Bor]". set (ξ := PrVar _ ξi).
     iMod (bor_acc_cons with "LFT Bor κ") as "[Body ToBor]"; [done|].
     iDestruct "Body" as (?[|]) "(↦own & _ & ξPc)";
@@ -113,7 +113,7 @@ Section borrow.
     - iExists _, _. iFrame "ty ζPc". iApply persist_time_rcpt_mono; [|done]. lia.
     - iExists -[λ π, ((vπ π).1, π ζ)]. iMod ("ToL" with "κ") as "$".
       rewrite right_id tctx_hasty_val'; [|done]. iModIntro. iSplitR "Obs".
-      { iExists _. iFrame "⧖". iExists _, _. iFrame "ζVo Bor". iPureIntro.
+      { iExists _. iFrame "⧖". iFrame "#". iExists _, _. iFrame "ζVo Bor". iPureIntro.
       split; by [lia|]. } iApply proph_obs_impl; [|done]=> π[<-?].
       eapply eq_ind; [done|]. move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.
   Qed.

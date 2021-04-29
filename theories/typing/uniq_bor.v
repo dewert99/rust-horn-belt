@@ -70,7 +70,6 @@ Section uniq_bor.
     move=> 𝔄 ??? vπ *. iIntros "#LFT #?". setoid_rewrite by_just_loc_ex at 1.
     iDestruct 1 as "[? (% & -> & H)]".
     iDestruct "H" as (d i [Le Eq]) "[Vo Bor]".
-    (* iDestruct 1 as (?->d i [Le Eq]) "[Vo Bor]". *)
     set ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i. move: Le=> /succ_le [?[->Le]].
     iIntros "[κ1 κ1']". iMod (lft_incl_acc with "[] κ1") as (?) "[κ1 Toκ1]";
     first done. { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
@@ -120,12 +119,15 @@ Section typing.
 
   Global Instance uniq_type_contr {𝔄} κ : TypeContractive (@uniq_bor _ _ 𝔄 κ).
   Proof. split; [by apply (type_lft_morph_add_one κ)|done| |].
-    - move=> */=. f_equiv. done. done. do 17 (f_contractive || f_equiv). by simpl in *.
+    - move=> > ? Hl * /=. f_equiv.
+      + apply equiv_dist. iDestruct Hl as "#[??]". 
+        iSplit; iIntros "#H"; (iApply lft_incl_trans; [iApply "H"|done]).
+      + do 17 (f_contractive || f_equiv). by simpl in *.
     - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
   Global Instance uniq_send {𝔄} κ (ty: _ 𝔄) : Send ty → Send (&uniq{κ} ty).
-  Proof. move=> >/=. by do 17 f_equiv. Qed.
+  Proof. move=> Hsend >/=. by do 18 f_equiv. Qed.
 
   Global Instance uniq_sync {𝔄} κ (ty: _ 𝔄) : Sync ty → Sync (&uniq{κ} ty).
   Proof. move=> >/=. by do 10 f_equiv. Qed.
@@ -139,7 +141,9 @@ Section typing.
     iSplit; [done|]. iDestruct ("Eqt" with "E") as (?) "[[??][#EqOwn #EqShr]]".
     iSpecialize ("In" with "E"). iSplit; [by iApply lft_intersect_mono|].
     iSplit; iModIntro=>/=.
-    - iIntros "*". rewrite by_just_loc_ex. iDestruct 1 as (l->d' ξ ?) "[Vo Bor]".
+    - iIntros "*". rewrite by_just_loc_ex. iDestruct 1 as "[#Hinc (% & -> & H)]".
+      iSplitR. iApply (lft_incl_trans with "[]"); [|done]; iApply (lft_incl_trans with "[]"); done.
+      iDestruct "H" as (d' ξ ?) "[Vo Bor]".
       iExists d', ξ. iSplit; [done|]. iFrame "Vo". iApply (bor_shorten with "In").
       iApply bor_iff; [|done]. iIntros "!>!>".
       iSplit; iDestruct 1 as (vπ' d'') "[(%vl & ↦ & ?) Misc]"; iExists vπ', d'';
@@ -212,7 +216,7 @@ Section typing.
     Copy ty → lctx_lft_alive E L κ →
     typed_read E L (&uniq{κ} ty) ty (&uniq{κ} ty) fst id.
   Proof.
-    iIntros (? Alv ?[|?][[]|]??) "#LFT E Na L uniq//".
+    iIntros (? Alv ?[|?][[]|]??) "#LFT E Na L [? uniq]//".
     { iDestruct "uniq" as (??[??]) "_". lia. }
     have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
     iDestruct "uniq" as (??[??]) "[Vo Bor]".
@@ -225,14 +229,14 @@ Section typing.
     { iApply ty_own_depth_mono; [|done]. lia. }
     iIntros "↦". iMod ("ToBor" with "[↦ Pc]") as "[? κ]".
     { iNext. iExists _, _. iFrame "Pc ⧖". iExists _. by iFrame. }
-    iMod ("ToL" with "κ") as "$". iModIntro. iExists _, _. by iFrame.
+    iMod ("ToL" with "κ") as "$". iModIntro. iFrame. iExists _, _. by iFrame.
   Qed.
 
   Lemma write_uniq {𝔄} E L κ (ty: _ 𝔄):
     lctx_lft_alive E L κ →
     typed_write E L (&uniq{κ} ty) ty (&uniq{κ} ty) (λ v w, (w, v.2)).
   Proof.
-    iIntros (Alv vπ [|?][[]|]??) "#LFT #UNIQ E L uniq //".
+    iIntros (Alv vπ [|?][[]|]??) "#LFT #UNIQ E L [? uniq] //".
     { iDestruct "uniq" as (??[??]) "_". lia. }
     have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
     iDestruct "uniq" as (??[??]) "[Vo Bor]".
@@ -245,7 +249,7 @@ Section typing.
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     iMod ("ToBor" with "[↦ Pc ty]") as "[Bor κ]".
     { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. }
-    iMod ("ToL" with "κ") as "$". iModIntro. iExists _, _.
+    iMod ("ToL" with "κ") as "$". iModIntro. iFrame. iExists _, _.
     rewrite (proof_irrel (prval_to_inh' vπ') (prval_to_inh' vπ)). by iFrame.
   Qed.
 
