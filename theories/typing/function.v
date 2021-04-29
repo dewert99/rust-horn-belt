@@ -56,8 +56,8 @@ Section fn.
     do 6 f_equiv; [by eapply fp_E_ne|]. do 2 f_equiv; [|f_equiv].
     - rewrite/= /cctx_elt_interp. do 5 f_equiv. case=>/= ?[].
       do 4 f_equiv. rewrite /tctx_elt_interp. do 8 f_equiv. apply Eq.
-    - move: {Eq}(Eq x)=> [_[+ _]]. rewrite {1}/dist.
-      move: {fp}(fp x).(fp_ityl) {fp'}(fp' x).(fp_ityl)=> ??. clear=> Eq.
+    - move: (Eq x)=> [_[+ _]]. rewrite {1}/dist.
+      move: (fp x).(fp_ityl) (fp' x).(fp_ityl)=> ??. clear=> Eq.
       dependent induction Eq; [done|]. case vl=> ??. case vπl=> ??/=.
       f_equiv; [|by apply IHEq]. rewrite /tctx_elt_interp. by do 8 f_equiv.
   Qed.
@@ -66,79 +66,73 @@ End fn.
 
 Arguments fn_params {_ _} _ _.
 
-Notation "'fn(∀' x ',' E ';' ity ',' .. ',' ity' ')' '→' oty" :=
-  (fn (λ x, FP E%EL (ity%T +:: .. (+[ity'%T]) ..) oty%T))
-  (at level 99, x binder, oty at level 200, format
-    "'fn(∀' x ','  E ';'  ity ','  .. ','  ity' ')'  '→'  oty") : lrust_type_scope.
-Notation "'fn(∀' x ',' E ')' '→' oty" := (fn (λ x, FP E%EL +[] oty%T))
-  (at level 99, x binder, oty at level 200, format
-    "'fn(∀' x ','  E ')'  '→'  oty") : lrust_type_scope.
-Notation "'fn(' E ';' ity ',' .. ',' ity' ')' '→' oty" :=
-  (fn (λ _:(), FP E%EL (ity%T +:: .. (+[ity'%T]) ..) oty%T))
-  (at level 99, oty at level 200, format
-    "'fn(' E ';'  ity ','  .. ','  ity' ')'  '→'  oty") : lrust_type_scope.
-Notation "'fn(' E ')' '→' oty" := (fn (λ _: (), FP E%EL +[] oty%T))
-  (at level 99, oty at level 200, format "'fn(' E ')'  '→'  oty") : lrust_type_scope.
+Instance elctx_empty : Empty (lft → elctx) := λ _, [].
 
-Instance elctx_empty : Empty (lft → elctx) := λ ϝ, [].
+Notation "fn< p >( E ; ity , .. , ity' ) → oty" :=
+  (fn (λ p, FP E%EL (ity%T +:: .. (+[ity'%T]) ..) oty%T))
+  (at level 99, p pattern, oty at level 200, format
+    "fn< p >( E ;  ity ,  .. ,  ity' )  →  oty") : lrust_type_scope.
+Notation "fn< p >( E ) → oty" := (fn (λ p, FP E%EL +[] oty%T))
+  (at level 99, p pattern, oty at level 200, format
+    "fn< p >( E )  →  oty") : lrust_type_scope.
+Notation "fn( E ; ity , .. , ity' ) → oty" :=
+  (fn (λ _: (), FP E%EL (ity%T +:: .. (+[ity'%T]) ..) oty%T))
+  (at level 99, oty at level 200, format
+    "fn( E ;  ity ,  .. ,  ity' )  →  oty") : lrust_type_scope.
+Notation "fn( E ) → oty" := (fn (λ _: (), FP E%EL +[] oty%T))
+  (at level 99, oty at level 200, format "fn( E )  →  oty") : lrust_type_scope.
 
 Section typing.
   Context `{!typeG Σ} {A: Type} {𝔄l} {𝔅}.
 
-(*
-  Global Instance fn_type_contr E (Tl : A → type → vec type n) T :
-    (∀ x, TypeListNonExpansive (Tl x)) →
-    (∀ x, TypeNonExpansive (T x)) →
-    TypeContractive (λ ty, fn (λ x, FP (E x) (Tl x ty) (T x ty))).
+  Global Instance fn_type_contr {ℭ} E (IT: A → _ ℭ → _ 𝔄l) (OT: _ → _ → _ 𝔅) :
+    (∀x, ListTypeNonExpansive (IT x)) → (∀x, TypeNonExpansive (OT x)) →
+    TypeContractive (λ ty, fn (λ x, FP (E x) (IT x ty) (OT x ty))).
   Proof.
-    intros HTl HT.
-    assert (∀ n' ty1 ty2, ty1.(ty_size) = ty2.(ty_size) → (⊢ ty_lft ty1 ≡ₗ ty_lft ty2) →
-             elctx_interp ty1.(ty_E) ≡ elctx_interp ty2.(ty_E) →
-             (∀ depth tid vl, dist_later n' (ty1.(ty_own) depth tid vl) (ty2.(ty_own) depth tid vl)) →
-             (∀ κ tid l, ty1.(ty_shr) κ tid l ≡{n'}≡ ty2.(ty_shr) κ tid l) →
-             ∀ vl,
-               (fn (λ x, FP (E x) (Tl x ty1) (T x ty1))).(ty_own) 0 xH vl ≡{n'}≡
-               (fn (λ x, FP (E x) (Tl x ty2) (T x ty2))).(ty_own) 0 xH vl) as Hown.
-    { rewrite /fn /fp_E /typed_body /=.
-      intros n' ty1 ty2 Hsz Hl HE Ho Hs vl. do 14 (f_contractive || f_equiv).
-      intros x. destruct (HTl x) as (Tl' & EQTl & HTl').
-      do 12 (f_contractive || f_equiv); [|do 3 f_equiv].
-      + apply equiv_dist.
-        rewrite /fp_E /= !elctx_interp_app !EQTl /tyl_E /tyl_outlv_E.
-        clear Tl HTl EQTl. (do 2 f_equiv); [|f_equiv; [|f_equiv]].
-        * induction HTl' as [|T' Tl' HT' _ IH]=>//=.
-          rewrite !elctx_interp_app IH type_lft_morph_elctx_interp_proper //.
-        * induction HTl' as [|T' Tl' HT' _ IH]=>//=.
-          rewrite !elctx_interp_app IH !elctx_interp_ty_outlv_E
-                  lft_incl_equiv_proper_r //.
-          by iApply type_lft_morph_lft_equiv_proper.
-        * apply type_lft_morph_elctx_interp_proper=>//. apply _.
-        * rewrite !elctx_interp_ty_outlv_E.
-          apply lft_incl_equiv_proper_r.
-          by iApply type_lft_morph_lft_equiv_proper.
-      + rewrite !cctx_interp_singleton /=. do 5 f_equiv.
-        rewrite !tctx_interp_singleton /tctx_elt_interp.
-        do 6 f_equiv. apply box_type_contr.
-        * by apply HT.
-        * by iApply type_lft_morph_lft_equiv_proper.
-        * apply type_lft_morph_elctx_interp_proper=>//. apply _.
-        * intros. by apply dist_dist_later, HT.
-        * intros. by apply dist_S, HT.
-      + rewrite /tctx_interp !big_sepL_zip_with /=. do 2 f_equiv. intros k v.
-        rewrite !EQTl !list_lookup_fmap /tctx_elt_interp.
-        destruct (Tl' !! k) as [T'|] eqn:EQT'; [simpl|done].
-        eapply Forall_lookup in HTl'; [|done].
-        f_equiv; intros [[]|]; f_equiv; intros [|]; try by rewrite ?right_absorb.
-        simpl. do 4 f_equiv.
-        * do 3 f_equiv. by eapply HTl'.
-        * by f_equiv; apply HTl'. }
-    split.
-    - eapply type_lft_morph_const=>? //=. apply lft_equiv_refl.
-    - done.
-    - intros. by apply Hown.
-    - intros. simpl. do 4 (f_contractive || f_equiv). by eapply Hown.
+    move=> NeIT NeOT.
+    have Eq: (∀n ty ty', ty.(ty_size) = ty'.(ty_size) → (⊢ ty_lft ty ≡ₗ ty_lft ty') →
+      elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
+      (∀vπ d tid vl, dist_later n (ty.(ty_own) vπ d tid vl) (ty'.(ty_own) vπ d tid vl)) →
+      (∀vπ d κ tid l, (ty.(ty_shr) vπ d κ tid l) ≡{n}≡ (ty'.(ty_shr) vπ d κ tid l)) →
+      ∀vπ vl,
+        (fn (λ x, FP (E x) (IT x ty) (OT x ty))).(ty_own) vπ 0 xH vl ≡{n}≡
+        (fn (λ x, FP (E x) (IT x ty') (OT x ty'))).(ty_own) vπ 0 xH vl); last first.
+    { split; [|done| |].
+      - apply (type_lft_morph_const _ static [])=>//= ?. apply lft_equiv_refl.
+      - move=> *. by apply Eq.
+      - move=>/= n *. apply bi.exist_ne=> ?. apply bi.sep_ne; [done|].
+        apply uPred_primitive.later_contractive. destruct n=>/=; [done|by apply Eq]. }
+    move=>/= n ty ty' *. apply bi.exist_ne=> ?. apply bi.sep_ne; [done|].
+    do 5 apply bi.exist_ne=> ?. apply bi.sep_ne; [done|].
+    apply uPred_primitive.later_contractive. destruct n=>/=; [done|].
+    have EqBox: ∀𝔄 (T: _ → _ 𝔄), TypeNonExpansive T → ∀vπ d tid vl,
+      (box (T ty)).(ty_own) vπ d tid vl ≡{n}≡ (box (T ty')).(ty_own) vπ d tid vl.
+    { move=> ?? Ne. apply box_type_contr=> *.
+      - by apply Ne.
+      - by iApply type_lft_morph_lft_equiv_proper.
+      - apply type_lft_morph_elctx_interp_proper=>//. apply _.
+      - apply dist_dist_later. by apply Ne.
+      - apply dist_S. by apply Ne. }
+    apply bi.forall_ne=> x. move: (NeIT x)=> [ITl[->NeITl]].
+    do 3 apply bi.forall_ne=> ?. f_equiv=> vl. rewrite /typed_body.
+    (do 4 f_equiv)=> vπl. do 5 f_equiv; [|do 3 f_equiv=>/=; f_equiv].
+    - apply equiv_dist. rewrite /fp_E /= !elctx_interp_app.
+      do 2 f_equiv; [|f_equiv; [|f_equiv]].
+      + elim: NeITl; [done|]=> ????? _ ?.
+        rewrite /tyl_E /= !elctx_interp_app. f_equiv; [|done].
+        apply type_lft_morph_elctx_interp_proper=>//. apply _.
+      + elim: NeITl; [done|]=> ????? _ ?.
+        rewrite /tyl_outlv_E /= !elctx_interp_app. f_equiv; [|done].
+        rewrite !elctx_interp_ty_outlv_E. apply lft_incl_equiv_proper_r.
+        by iApply type_lft_morph_lft_equiv_proper.
+      + apply type_lft_morph_elctx_interp_proper=>//. apply _.
+      + rewrite !elctx_interp_ty_outlv_E. apply lft_incl_equiv_proper_r.
+        by iApply type_lft_morph_lft_equiv_proper.
+    - rewrite /cctx_elt_interp. do 4 f_equiv. case=>/= ?[].
+      do 4 f_equiv. rewrite /tctx_elt_interp. do 6 f_equiv. by apply EqBox.
+    - clear -NeITl EqBox. induction NeITl, vl, vπl; [done|]=>/=.
+      f_equiv; [|done]. rewrite /tctx_elt_interp. do 6 f_equiv. by apply EqBox.
   Qed.
-*)
 
   Global Instance fn_send (fp: A → _ 𝔄l 𝔅) : Send (fn fp). Proof. done. Qed.
 
