@@ -115,7 +115,7 @@ Section borrow.
       rewrite right_id tctx_hasty_val'; [|done]. iModIntro. iSplitR "Obs".
       { iExists _. iFrame "⧖". iExists _, _. iFrame "ζVo Bor". iPureIntro.
       split; by [lia|]. } iApply proph_obs_impl; [|done]=> π[<-?].
-      eapply eq_ind; [done|]. move/equal_f/(.$ π): Eq=>/=. by case (vπ π)=>/= ??->.
+      eapply eq_ind; [done|]. move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.
   Qed.
 
   (* Lemma type_deref_uniq_own {E L} κ x p e n ty C T T' f pre:

@@ -1028,6 +1028,9 @@ Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
   right associativity, format "[loc[ l ]  :=  vl ]  P") : bi_scope.
 
 Global Hint Resolve ty_outlv_E_elctx_sat tyl_outlv_E_elctx_sat : lrust_typing.
-Global Hint Resolve subtype_refl eqtype_refl
-  subtypel_nil eqtypel_nil subtypel_cons eqtypel_cons : lrust_typing.
+Global Hint Resolve subtype_refl eqtype_refl subtypel_nil eqtypel_nil : lrust_typing.
+Global Hint Extern 0 (subtypel _ _ (_ +:: _) (_ +:: _) _) =>
+  apply subtypel_cons : lrust_typing.
+Global Hint Extern 0 (eqtypel _ _ (_ +:: _) (_ +:: _) _ _) =>
+  apply eqtypel_cons : lrust_typing.
 Global Hint Opaque subtype eqtype : lrust_typing.

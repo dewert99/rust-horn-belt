@@ -32,8 +32,8 @@ Section fn.
           generalized liftime are ignored. For simplicity, we ignore all of
           them, but this is not very faithful. *)
       pt_size := 1;
-      pt_own (tr: (predₛ 𝔅 → predlₛ 𝔄l)%ST) tid vl :=
-        tc_opaque (∃fb kb (bl: plistc binder 𝔄l) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
+      pt_own (tr: (predₛ 𝔅 → predlₛ 𝔄l)%ST) tid vl := tc_opaque
+        (∃fb kb (bl: plistc binder 𝔄l) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
         ▷ ∀(x: A) (ϝ: lft) (k: val) (pre: predl [𝔅]) (vl': plistc val 𝔄l),
           □ typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
             [k ◁cont{[ϝ ⊑ₗ []], (λ v: vec _ 1,
