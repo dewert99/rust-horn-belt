@@ -8,7 +8,7 @@ From lrust.typing Require Export base lft_contexts uniq_cmra.
 Set Default Proof Using "Type".
 Open Scope nat_scope.
 
-Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l: list syn_type).
+Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Class typeG Σ := TypeG {
   type_lrustG:> lrustG Σ;  type_prophG:> prophG Σ;  type_uniqG:> uniqG Σ;

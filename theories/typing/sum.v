@@ -2,7 +2,7 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import mod_ty.
 Set Default Proof Using "Type".
 
-Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: list syn_type).
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
 

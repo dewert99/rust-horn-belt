@@ -8,6 +8,11 @@ From iris.proofmode Require Import tactics.
 Lemma succ_le m n : S m ≤ n ↔ ∃n', n = S n' ∧ m ≤ n'.
 Proof. split; [|case; lia]. move: n=> [|n']; [|exists n']; lia. Qed.
 
+(** * Utility for Vectors *)
+
+Notation vhd := Vector.hd.
+Notation vtl := Vector.tl.
+
 (** * Utility for Point-Free Style *)
 
 Ltac fun_ext := apply functional_extensionality.

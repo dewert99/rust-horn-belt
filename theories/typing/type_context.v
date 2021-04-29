@@ -2,7 +2,7 @@ From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
 Set Default Proof Using "Type".
 
-Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl 𝔇l: list syn_type).
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl 𝔇l: syn_typel).
 
 Definition path := expr.
 Bind Scope expr_scope with path.

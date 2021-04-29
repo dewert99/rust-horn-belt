@@ -9,7 +9,7 @@ Section cont_context.
   Definition cont_postcondition: iProp Σ := True%I.
 
   Record cctx_elt := CCtxe {
-    cctxe_k: val;  cctxe_L: llctx;  cctxe_Al: list syn_type;  cctxe_n: nat;
+    cctxe_k: val;  cctxe_L: llctx;  cctxe_Al: syn_typel;  cctxe_n: nat;
     cctxe_T: vec val cctxe_n → tctx cctxe_Al;  cctxe_pre: predl cctxe_Al;
   }.
 

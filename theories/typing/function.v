@@ -3,16 +3,16 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import own programs cont.
 Set Default Proof Using "Type".
 
-Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: list syn_type).
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Section fn.
   Context `{!typeG Σ} {A: Type} {𝔄l} {𝔅}.
 
   Record fn_params :=
-    FP { fp_E_ex: lft → elctx;  fp_ityl: hlist type 𝔄l;  fp_oty: type 𝔅 }.
+    FP { fp_E_ex: lft → elctx;  fp_ityl: typel 𝔄l;  fp_oty: type 𝔅 }.
 
   Definition fn_params_dist n fp fp' : Prop :=
-    (∀κ, fp.(fp_E_ex) κ = fp'.(fp_E_ex) κ) ∧
+    (∀ϝ, fp.(fp_E_ex) ϝ = fp'.(fp_E_ex) ϝ) ∧
     fp.(fp_ityl) ≡{n}≡ fp'.(fp_ityl) ∧ fp.(fp_oty) ≡{n}≡ fp'.(fp_oty).
 
   Definition fp_E (fp: fn_params) ϝ : elctx :=
@@ -25,32 +25,65 @@ Section fn.
     f_equiv. do 2 (f_equiv; [by rewrite Eqi|]). by rewrite Eqo.
   Qed.
 
-  (* The other alternative for defining the fn type would be to state
-     that the value applied to its parameters is a typed body whose type
-     is the return type.
-     That would be slightly simpler, but, unfortunately, we are no longer
-     able to prove that this is contractive. *)
-  Program Definition fn (fp: A → fn_params) : type (predₛ 𝔅 → predₛ (Π! 𝔄l)) :=
+  Program Definition fn (fp: A → fn_params) : type (predₛ 𝔅 → predlₛ 𝔄l) :=
     {| (* FIXME : The definition of ty_lfts is less restrictive than the one
           used in Rust. In Rust, the type of parameters are taken into account
           for well-formedness, and all the liftime constrains relating a
           generalized liftime are ignored. For simplicity, we ignore all of
           them, but this is not very faithful. *)
       pt_size := 1;
-      pt_own (tr: (predₛ 𝔅 → predₛ (Π! 𝔄l))%ST) tid vl :=
-        ∃fb kb (bl: plistc binder 𝔄l) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
+      pt_own (tr: (predₛ 𝔅 → predlₛ 𝔄l)%ST) tid vl :=
+        tc_opaque (∃fb kb (bl: plistc binder 𝔄l) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
         ▷ ∀(x: A) (ϝ: lft) (k: val) (pre: predl [𝔅]) (vl': plistc val 𝔄l),
           □ typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
-            [k ◁cont{[ϝ ⊑ₗ []], (λ v: vec val 1,
-              +[(v !!! 0%fin : val) ◁ box (fp x).(fp_oty)])} pre]
+            [k ◁cont{[ϝ ⊑ₗ []], (λ v: vec _ 1,
+              +[vhd v ◁ box (fp x).(fp_oty)])} pre]
             (hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) vl')
             (subst_v (fb :: kb :: bl) (RecV fb (kb :: bl) e ::: k ::: vl') e)
-            (tr (λ b, pre -[b]))
+            (tr (λ b: 𝔅, pre -[b])))
     |}%I.
   Next Obligation. move=> */=. by rewrite vec_to_list_length. Qed.
+  Next Obligation. rewrite /tc_opaque. apply _. Qed.
   Next Obligation. move=> *. by iDestruct 1 as (?????->) "?". Qed.
 
-  Global Instance fn_send fp : Send (fn fp). Proof. done. Qed.
+  Global Instance fn_ne n :
+    Proper (pointwise_relation A (fn_params_dist n) ==> dist n) fn.
+  Proof.
+    move=> fp fp' Eq. apply ty_of_st_ne, st_of_pt_ne. split; [done|]=>/= ???.
+    do 5 apply bi.exist_ne=> ?. apply bi.sep_ne; [done|]. apply bi.later_ne.
+    apply bi.forall_ne=> x. do 3 apply bi.forall_ne=> ?.
+    apply bi.forall_ne=> vl. f_equiv. rewrite /typed_body. (do 3 f_equiv)=> vπl.
+    do 6 f_equiv; [by eapply fp_E_ne|]. do 2 f_equiv; [|f_equiv].
+    - rewrite/= /cctx_elt_interp. do 5 f_equiv. case=>/= ?[].
+      do 4 f_equiv. rewrite /tctx_elt_interp. do 8 f_equiv. apply Eq.
+    - move: {Eq}(Eq x)=> [_[+ _]]. rewrite {1}/dist.
+      move: {fp}(fp x).(fp_ityl) {fp'}(fp' x).(fp_ityl)=> ??. clear=> Eq.
+      dependent induction Eq; [done|]. case vl=> ??. case vπl=> ??/=.
+      f_equiv; [|by apply IHEq]. rewrite /tctx_elt_interp. by do 8 f_equiv.
+  Qed.
+
+End fn.
+
+Arguments fn_params {_ _} _ _.
+
+Notation "'fn(∀' x ',' E ';' ity ',' .. ',' ity' ')' '→' oty" :=
+  (fn (λ x, FP E%EL (ity%T +:: .. (+[ity'%T]) ..) oty%T))
+  (at level 99, x binder, oty at level 200, format
+    "'fn(∀' x ','  E ';'  ity ','  .. ','  ity' ')'  '→'  oty") : lrust_type_scope.
+Notation "'fn(∀' x ',' E ')' '→' oty" := (fn (λ x, FP E%EL +[] oty%T))
+  (at level 99, x binder, oty at level 200, format
+    "'fn(∀' x ','  E ')'  '→'  oty") : lrust_type_scope.
+Notation "'fn(' E ';' ity ',' .. ',' ity' ')' '→' oty" :=
+  (fn (λ _:(), FP E%EL (ity%T +:: .. (+[ity'%T]) ..) oty%T))
+  (at level 99, oty at level 200, format
+    "'fn(' E ';'  ity ','  .. ','  ity' ')'  '→'  oty") : lrust_type_scope.
+Notation "'fn(' E ')' '→' oty" := (fn (λ _: (), FP E%EL +[] oty%T))
+  (at level 99, oty at level 200, format "'fn(' E ')'  '→'  oty") : lrust_type_scope.
+
+Instance elctx_empty : Empty (lft → elctx) := λ ϝ, [].
+
+Section typing.
+  Context `{!typeG Σ} {A: Type} {𝔄l} {𝔅}.
 
 (*
   Global Instance fn_type_contr E (Tl : A → type → vec type n) T :
@@ -105,62 +138,11 @@ Section fn.
     - intros. by apply Hown.
     - intros. simpl. do 4 (f_contractive || f_equiv). by eapply Hown.
   Qed.
-
-  Global Instance fn_ne n' :
-    Proper (pointwise_relation A (fn_params_dist n') ==> dist n') fn.
-  Proof.
-    intros x y Hxy. apply ty_of_st_ne. split=>/=; [done..|].
-    intros _ _ vs. unfold typed_body, tctx_interp.
-    do 30 (apply Hxy || eapply fp_E_ne || f_equiv || done).
-    - rewrite !cctx_interp_singleton /=. do 5 f_equiv.
-      rewrite !tctx_interp_singleton /tctx_elt_interp.
-      repeat (apply Hxy || f_equiv).
-    - rewrite /tctx_interp !big_sepL_zip_with /=. do 4 f_equiv.
-      cut (∀ n tid p i, Proper (dist n ==> dist n)
-        (λ (l : list type),
-            match l !! i with
-            | Some ty => tctx_elt_interp tid (p ◁ ty) | None => emp
-            end)%I).
-      { intros Hprop. apply Hprop, (list_fmap_ne _ _ _), Hxy. }
-      clear. intros n tid p i x y. rewrite list_dist_lookup=>/(_ i).
-      case _ : (x !! i)=>[tyx|]; case  _ : (y !! i)=>[tyy|];
-      inversion_clear 1; [solve_proper|done].
-  Qed.
 *)
-End fn.
 
-Arguments fn_params {_ _} _.
+  Global Instance fn_send (fp: A → _ 𝔄l 𝔅) : Send (fn fp). Proof. done. Qed.
 
 (*
-(* We use recursive notation for binders as well, to allow patterns
-   like '(a, b) to be used. In practice, only one binder is ever used,
-   but using recursive binders is the only way to make Coq accept
-   patterns. *)
-(* FIXME : because of a bug in Coq, such patterns only work for
-   printing. Once on 8.6pl1, this should work.  *)
-Notation "'fn(∀' x .. x' ',' E ';' T1 ',' .. ',' TN ')' '→' R" :=
-  (fn (λ x, (.. (λ x',
-      FP E%EL (Vector.cons T1%T .. (Vector.cons TN%T Vector.nil) ..) R%T)..)))
-  (at level 99, R at level 200, x binder, x' binder,
-   format "'fn(∀'  x .. x' ','  E ';'  T1 ','  .. ','  TN ')'  '→'  R") : lrust_type_scope.
-Notation "'fn(∀' x .. x' ',' E ')' '→' R" :=
-  (fn (λ x, (.. (λ x', FP E%EL Vector.nil R%T)..)))
-  (at level 99, R at level 200, x binder, x' binder,
-   format "'fn(∀'  x .. x' ','  E ')'  '→'  R") : lrust_type_scope.
-Notation "'fn(' E ';' T1 ',' .. ',' TN ')' '→' R" :=
-  (fn (λ _:(), FP E%EL (Vector.cons T1%T .. (Vector.cons TN%T Vector.nil) ..) R%T))
-  (at level 99, R at level 200,
-   format "'fn(' E ';'  T1 ','  .. ','  TN ')'  '→'  R") : lrust_type_scope.
-Notation "'fn(' E ')' '→' R" :=
-  (fn (λ _:(), FP E%EL Vector.nil R%T))
-  (at level 99, R at level 200,
-   format "'fn(' E ')'  '→'  R") : lrust_type_scope.
-
-Instance elctx_empty : Empty (lft → elctx) := λ ϝ, [].
-
-Section typing.
-  Context `{!typeG Σ}.
-
   Lemma fn_subtype {A n} E0 L0 (fp fp' : A → fn_params n) :
     (∀ x ϝ, let EE := E0 ++ fp_E (fp' x) ϝ in
             elctx_sat EE L0 (fp_E (fp x) ϝ) ∧
@@ -431,7 +413,9 @@ Section typing.
     iApply typed_body_mono; last iApply "He"; try done.
     eapply contains_tctx_incl. by constructor.
   Qed.
+*)
 End typing.
 
+(*
 Global Hint Resolve fn_subtype : lrust_typing.
 *)

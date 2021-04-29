@@ -10,7 +10,8 @@ Inductive syn_type := Zₛ | boolₛ | unitₛ | Empty_setₛ | Propₛ
 | prodₛ (_ _: syn_type) | sumₛ (_ _: syn_type) | funₛ (_ _: syn_type)
 | xprodₛ (_: list syn_type) | xsumₛ (_: list syn_type).
 
-Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: list syn_type).
+Notation syn_typel := (list syn_type).
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Global Instance Empty_setₛ_empty: Empty syn_type := Empty_setₛ.
 
@@ -22,6 +23,7 @@ Infix "*" := prodₛ : syn_type_scope. Infix "+" := sumₛ : syn_type_scope.
 Infix "→" := funₛ : syn_type_scope.
 Notation "Π!" := xprodₛ : syn_type_scope. Notation "Σ!" := xsumₛ : syn_type_scope.
 Definition predₛ 𝔄 : syn_type := 𝔄 → Propₛ.
+Definition predlₛ 𝔄l : syn_type := predₛ (Π! 𝔄l).
 
 Local Notation tmap f := (fix tmap xl :=
   match xl with [] => [] | x :: xl' => f x :: tmap xl' end).
