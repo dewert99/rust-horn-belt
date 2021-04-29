@@ -29,7 +29,7 @@ Class uniqG Σ := UniqG { uniq_inG:> uniqPreG Σ; uniq_name: gname }.
 Instance subG_uniqPreG {Σ'} : subG uniqΣ Σ' → uniqPreG Σ'.
 Proof. solve_inG. Qed.
 
-Definition uniqN := nroot .@ "uniq".
+Definition uniqN := nroot .@ "lft_usr" .@ "uniq".
 
 End basic.
 
