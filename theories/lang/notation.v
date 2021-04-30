@@ -59,9 +59,9 @@ Notation "λ: xl , e" := (Lam xl%binder e%E)
 Notation "λ: xl , e" := (locked (LamV xl%binder e%E))
   (at level 102, xl at level 1, e at level 200) : val_scope.
 
-Notation "fnrec: f xl := e" := (rec: f ("return" :: xl) := e)%E
+Notation "fnrec: f xl := e" := (rec: f (BNamed "return" :: xl) := e)%E
   (at level 102, f, xl at level 1, e at level 200) : expr_scope.
-Notation "fnrec: f xl := e" := (rec: f ("return" :: xl) := e)%V
+Notation "fnrec: f xl := e" := (rec: f (BNamed "return" :: xl) := e)%V
   (at level 102, f, xl at level 1, e at level 200) : val_scope.
 Notation "fn: xl := e" := (fnrec: <> xl := e)%E
   (at level 102, xl at level 1, e at level 200) : expr_scope.

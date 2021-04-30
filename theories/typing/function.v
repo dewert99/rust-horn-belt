@@ -45,9 +45,9 @@ Section fn.
           generalized liftime are ignored. For simplicity, we ignore all of
           them, but this is not very faithful. *)
       pt_size := 1;
-      pt_own (tr: (predₛ 𝔅 → predlₛ 𝔄l)%ST) tid vl := tc_opaque
-        (∃fb kb (bl: plistc _ 𝔄l) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
-        ▷ □ ∀x ϝ k pre (wl: plistc _ 𝔄l), typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
+      pt_own (tr: (predₛ _ → predlₛ _)%ST) tid vl := tc_opaque
+        (∃fb kb (bl: plistc _ _) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
+        ▷ □ ∀x ϝ k pre (wl: plistc _ _), typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
           [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } pre]
           (hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl)
           (subst' fb (RecV fb (kb :: bl) e) $ subst' kb k $ subst'_pv bl wl e)
@@ -157,8 +157,8 @@ Section typing.
     (∀x ϝ, let E' := E ++ fp_E (fp' x) ϝ in elctx_sat E' L (fp_E (fp x) ϝ) ∧
       subtypel E' L (fp' x).(fp_ityl) (fp x).(fp_ityl) fl ∧
       subtype E' L (fp x).(fp_oty) (fp' x).(fp_oty) g) →
-    subtype E L (fn fp) (fn fp') (λ tr (pre: predₛ 𝔅')
-      (al': (Π! 𝔄l')%ST), tr (pre ∘ g) (plist_map fl al')).
+    subtype E L (fn fp) (fn fp')
+     (λ tr (pre: predₛ _) (al': Π!%ST _), tr (pre ∘ g) (plist_map fl al')).
   Proof.
     move=> Big. apply subtype_plain_type=>/= ?. iIntros "L".
     iAssert (∀x ϝ, □ (elctx_interp (E ++ fp_E (fp' x) ϝ) -∗
@@ -370,13 +370,12 @@ Section typing.
   Qed.
 *)
 
-  Lemma type_fnrec_instr {A 𝔄l 𝔅} (tr: (predₛ 𝔅 → predlₛ 𝔄l)%ST) fb
-    (bl: plistc _ 𝔄l) e (fp: A → _) E L :
+  Lemma type_fnrec_instr {A 𝔄l 𝔅} (tr: (predₛ 𝔅 → predlₛ 𝔄l)%ST) (fp: A → _)
+    fb (bl: plistc _ 𝔄l) e E L :
     Closed (fb :b: "return" :: bl +b+ []) e →
     □ (∀x ϝ (f: val) k pre (wl: plistc _ 𝔄l), typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
       [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } pre]
-      (f ◁ fn fp +::
-        hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl)
+      (f ◁ fn fp +:: hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl)
       (subst' fb f $ subst "return" k $ subst'_pv bl wl e)
       (λ '(tr' -:: al), tr' = tr ∧ tr (λ b: 𝔅, pre -[b]) al)%type) -∗
     typed_instr_ty E L +[] (fnrec: fb bl := e) (fn fp) (λ post _, post tr).
@@ -392,10 +391,10 @@ Section typing.
     by iApply proph_obs_impl; [|done]=>/= ??.
   Qed.
 
-  Lemma type_fn_instr {A 𝔄l 𝔅} (tr: (predₛ 𝔅 → predlₛ 𝔄l)%ST)
-    (bl: plistc _ 𝔄l) e (fp: A → _) E L :
+  Lemma type_fn_instr {A 𝔄l 𝔅} (tr: (predₛ 𝔅 → predlₛ 𝔄l)%ST) (fp: A → _)
+    (bl: plistc _ _) e E L :
     Closed ("return" :: bl +b+ []) e →
-    □ (∀x ϝ k pre (wl: plistc _ 𝔄l), typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
+    □ (∀x ϝ k pre (wl: plistc _ _), typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
       [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } pre]
       (hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl)
       (subst "return" k $ subst'_pv bl wl e) (tr (λ b: 𝔅, pre -[b]))) -∗
