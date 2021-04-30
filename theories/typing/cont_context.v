@@ -14,7 +14,7 @@ Section cont_context.
   }.
 
   Definition cctx_elt_interp (tid: thread_id) (c: cctx_elt) : iProp Σ :=
-    □ let '(CCtxe k L _ _ T pre) := c in ∀vl vπl,
+    □ let 'CCtxe k L _ _ T pre := c in ∀vl vπl,
       na_own tid ⊤ -∗ llctx_interp L 1 -∗ tctx_interp tid (T vl) vπl -∗
         ⟨π, pre (vπl -$ π)⟩ -∗ WP k (map of_val vl) {{ _, cont_postcondition }}.
 

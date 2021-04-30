@@ -134,7 +134,7 @@ Section code.
   Context `{!typeG Σ}.
 
   Definition mutex_new ty : val :=
-    funrec: <> ["x"] :=
+    fn: ["x"] :=
       let: "m" := new [ #(mutex ty).(ty_size) ] in
       "m" +ₗ #1 <-{ty.(ty_size)} !"x";;
       mklock_unlocked ["m" +ₗ #0];;
@@ -174,7 +174,7 @@ Section code.
   Qed.
 
   Definition mutex_into_inner ty : val :=
-    funrec: <> ["m"] :=
+    fn: ["m"] :=
       let: "x" := new [ #ty.(ty_size) ] in
       "x" <-{ty.(ty_size)} !("m" +ₗ #1);;
       delete [ #(mutex ty).(ty_size); "m"];; return: ["x"].
@@ -213,7 +213,7 @@ Section code.
   Qed.
 
   Definition mutex_get_mut : val :=
-    funrec: <> ["m"] :=
+    fn: ["m"] :=
       let: "m'" := !"m" in
       "m" <- ("m'" +ₗ #1);;
       return: ["m"].

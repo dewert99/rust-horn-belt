@@ -87,7 +87,7 @@ Fixpoint symm_eq_len_wit `{Xl: _ A} `{Yl: _ B} :
 
 Inductive hlist {A} (F: A → Type) : list A → Type :=
 | hnil: hlist F []
-| hcons {X Xs} : F X → hlist F Xs → hlist F (X :: Xs).
+| hcons {X Xl} : F X → hlist F Xl → hlist F (X :: Xl).
 Notation "+[ ]" := (hnil _) (at level 1, format "+[ ]").
 Notation "+[ ]@{ F }" := (hnil F) (at level 1, only parsing).
 Infix "+::" := (hcons _) (at level 60, right associativity).
@@ -147,7 +147,7 @@ Notation "(-::)" := cons_pair (only parsing).
 Notation "-[ X ; .. ; z ]" := (X -:: .. (z -:: -[]) ..)
   (at level 1, format "-[ X ;  .. ;  z ]").
 
-Definition to_cons_prod {A B} : A * B → A :* B := λ '((a, al)), a -:: al.
+Definition to_cons_prod {A B} : A * B → A :* B := λ '(a, al), a -:: al.
 Definition of_cons_prod {A B} : A :* B → A * B := λ '(a -:: al), (a, al).
 Global Instance cons_prod_iso {A B} : Iso (@to_cons_prod A B) of_cons_prod.
 Proof. split; fun_ext; by case. Qed.
@@ -252,7 +252,6 @@ Fixpoint plist2_eq_len_wit `{F: A → _} {Xl Yl} : plist2 F Xl Yl → eq_len_wit
 
 Lemma plist2_eq_len `{F: A → _} {Xl Yl} : plist2 F Xl Yl → length Xl = length Yl.
 Proof. by move=> /plist2_eq_len_wit/of_eq_len_wit ?. Qed.
-
 
 (** * Uniform plist *)
 

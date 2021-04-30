@@ -19,8 +19,8 @@ Notation "p ◁ ty" := (TCtx_hasty _ p ty%T) (at level 55).
 Notation "p ◁{ κ } ty" := (TCtx_blocked _ p κ ty%T)
    (at level 55, format "p  ◁{ κ }  ty").
 
-Definition pred A := A → Prop.
-Definition predl 𝔄l := pred (plist of_syn_type 𝔄l).
+Definition pred' A := A → Prop.
+Definition predl 𝔄l := pred' (plist of_syn_type 𝔄l).
 Definition predl_trans 𝔄l 𝔅l := predl 𝔅l → predl 𝔄l.
 
 Definition trans_app {𝔄l 𝔅l ℭl 𝔇l} (tr: predl_trans 𝔄l 𝔅l) (tr': predl_trans ℭl 𝔇l)
@@ -217,6 +217,12 @@ Section lemmas.
   Proof.
     iIntros (??(vπ & vπ' & wπl)?) "_ _ _ _ $ (?&?&?) ?!>".
     iExists (vπ' -:: vπ -:: wπl). iFrame.
+  Qed.
+
+  Lemma tctx_incl_leak_head {𝔄 𝔅l} (t: _ 𝔄) (T: _ 𝔅l) E L :
+    tctx_incl E L (t +:: T) T (λ post '(_ -:: bl), post bl).
+  Proof.
+    iIntros (??[??]?) "_ _ _ _ $ [_ T] ? !>". iExists _. by iFrame "T".
   Qed.
 
   Lemma tctx_incl_leak_lower {𝔄l 𝔅l} (T: _ 𝔄l) (T': _ 𝔅l) E L :

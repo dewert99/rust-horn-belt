@@ -22,10 +22,10 @@ Notation "# l" := (Lit l%Z%V%L) (at level 8, format "# l") : expr_scope.
 
 (** Syntax inspired by Coq/Ocaml. Constructions with higher precedence come
     first. *)
-Notation "'case:' e0 'of' el" := (Case e0%E el%E)
+Notation "case: e0 'of' el" := (Case e0%E el%E)
   (at level 102, e0, el at level 150) : expr_scope.
-Notation "'if:' e1 'then' e2 'else' e3" := (If e1%E e2%E e3%E)
-  (only parsing, at level 102, e1, e2, e3 at level 150) : expr_scope.
+Notation "if: e1 'then' e2 'else' e3" := (If e1%E e2%E e3%E)
+  (at level 102, e1, e2, e3 at level 150) : expr_scope.
 Notation "☠" := LitPoison : val_scope.
 Notation "! e" := (Read Na1Ord e%E) (at level 9, format "! e") : expr_scope.
 Notation "!ˢᶜ e" := (Read ScOrd e%E) (at level 9, format "!ˢᶜ e") : expr_scope.
@@ -42,9 +42,9 @@ Notation "e1 <-ˢᶜ e2" := (Write ScOrd e1%E e2%E)
   (at level 80) : expr_scope.
 Notation "e1 <- e2" := (Write Na1Ord e1%E e2%E)
   (at level 80) : expr_scope.
-Notation "'rec:' f xl := e" := (Rec f%binder xl%binder e%E)
+Notation "rec: f xl := e" := (Rec f%binder xl%binder e%E)
   (at level 102, f, xl at level 1, e at level 200) : expr_scope.
-Notation "'rec:' f xl := e" := (locked (RecV f%binder xl%binder e%E))
+Notation "rec: f xl := e" := (locked (RecV f%binder xl%binder e%E))
   (at level 102, f, xl at level 1, e at level 200) : val_scope.
 Notation "e1 +ₗ e2" := (BinOp OffsetOp e1%E e2%E)
   (at level 50, left associativity) : expr_scope.
@@ -59,41 +59,45 @@ Notation "λ: xl , e" := (Lam xl%binder e%E)
 Notation "λ: xl , e" := (locked (LamV xl%binder e%E))
   (at level 102, xl at level 1, e at level 200) : val_scope.
 
-Notation "'funrec:' f xl := e" := (rec: f ("return"::xl) := e)%E
-  (only parsing, at level 102, f, xl at level 1, e at level 200) : expr_scope.
-Notation "'funrec:' f xl := e" := (rec: f ("return"::xl) := e)%V
-  (only parsing, at level 102, f, xl at level 1, e at level 200) : val_scope.
-Notation "'return:'" := "return" : expr_scope.
+Notation "fnrec: f xl := e" := (rec: f ("return" :: xl) := e)%E
+  (at level 102, f, xl at level 1, e at level 200) : expr_scope.
+Notation "fnrec: f xl := e" := (rec: f ("return" :: xl) := e)%V
+  (at level 102, f, xl at level 1, e at level 200) : val_scope.
+Notation "fn: xl := e" := (fnrec: <> xl := e)%E
+  (at level 102, xl at level 1, e at level 200) : expr_scope.
+Notation "fn: xl := e" := (fnrec: <> xl := e)%V
+  (at level 102, xl at level 1, e at level 200) : val_scope.
+Notation "return:" := "return" : expr_scope.
 
-Notation "'let:' x := e1 'in' e2" :=
+Notation "let: x := e1 'in' e2" :=
   ((Lam (@cons binder x%binder nil) e2%E) (@cons expr e1%E nil))
   (at level 102, x at level 1, e1, e2 at level 150) : expr_scope.
 Notation "e1 ;; e2" := (let: <> := e1 in e2)%E
   (at level 100, e2 at level 200, format "e1  ;;  e2") : expr_scope.
 (* These are not actually values, but we want them to be pretty-printed. *)
-Notation "'let:' x := e1 'in' e2" :=
+Notation "let: x := e1 'in' e2" :=
   (LamV (@cons binder x%binder nil) e2%E (@cons expr e1%E nil))
   (at level 102, x at level 1, e1, e2 at level 150) : val_scope.
 Notation "e1 ;; e2" := (let: <> := e1 in e2)%V
   (at level 100, e2 at level 200, format "e1  ;;  e2") : val_scope.
 
-Notation "'letcont:' k xl := e1 'in' e2" :=
+Notation "letcont: k xl := e1 'in' e2" :=
   ((Lam (@cons binder k%binder nil) e2%E) [Rec k%binder xl%binder e1%E])
   (at level 102, k, xl at level 1, e1, e2 at level 150) : expr_scope.
-Notation "'withcont:' k1 ':' e1 'cont:' k2 xl := e2" :=
+Notation "withcont: k1 : e1 cont: k2 xl := e2" :=
   ((Lam (@cons binder k1%binder nil) e1%E) [Rec k2%binder ((fun _ : eq k1%binder k2%binder => xl%binder) eq_refl) e2%E])
   (only parsing, at level 151, k1, k2, xl at level 1, e2 at level 150) : expr_scope.
 
-Notation "'call:' f args → k" := (f (@cons expr (λ: ["_r"], Endlft ;; k ["_r"]) args))%E
+Notation "call: f args → k" := (f (@cons expr (λ: ["_r"], Endlft ;; k ["_r"]) args))%E
   (only parsing, at level 102, f, args, k at level 1) : expr_scope.
-Notation "'letcall:' x := f args 'in' e" :=
+Notation "letcall: x := f args 'in' e" :=
   (letcont: "_k" [ x ] := e in call: f args → "_k")%E
   (at level 102, x, f, args at level 1, e at level 150) : expr_scope.
 
 (* These notations unfortunately do not print.  Also, I don't think
    we would even want them to print in general.
    TODO: Introduce a Definition. *)
-Notation "e1 '<-{Σ' i } '()'" := (e1 <- #i)%E
+Notation "e1 <-{Σ i } ()" := (e1 <- #i)%E
   (only parsing, at level 80) : expr_scope.
-Notation "e1 '<-{Σ' i } e2" := (e1 <-{Σ i} () ;; e1+ₗ#1 <- e2)%E
+Notation "e1 <-{Σ i } e2" := (e1 <-{Σ i} () ;; e1+ₗ#1 <- e2)%E
   (at level 80, format "e1 <-{Σ  i }  e2") : expr_scope.

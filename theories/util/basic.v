@@ -41,17 +41,17 @@ Typeclasses Transparent s_comb.
 Lemma surjective_pairing_fun {A B C} (f: A → B * C) : f = pair ∘ (fst ∘ f) ⊛ (snd ∘ f).
 Proof. fun_ext=> ?/=. by rewrite -surjective_pairing. Qed.
 
-Definition prod_assoc {A B C} '((x, (y, z))) : (A * B) * C := ((x, y), z).
-Definition prod_assoc' {A B C} '(((x, y), z)) : A * (B * C) := (x, (y, z)).
+Definition prod_assoc {A B C} '(x, (y, z)) : (A * B) * C := ((x, y), z).
+Definition prod_assoc' {A B C} '((x, y), z) : A * (B * C) := (x, (y, z)).
 Global Instance prod_assoc_iso {A B C} : Iso (@prod_assoc A B C) prod_assoc'.
 Proof. split; fun_ext; by [case=> [?[??]]|case=> [[??]?]]. Qed.
 
-Definition prod_left_id {A} '(((), x)) : A := x.
+Definition prod_left_id {A} '((), x) : A := x.
 Definition prod_left_id' {A} (x: A) := ((), x).
 Global Instance prod_left_id_iso {A} : Iso (@prod_left_id A) prod_left_id'.
 Proof. split; fun_ext; by [case=> [[]?]|]. Qed.
 
-Definition prod_right_id {A} '((x, ())) : A := x.
+Definition prod_right_id {A} '(x, ()) : A := x.
 Definition prod_right_id' {A} (x: A) := (x, ()).
 Global Instance prod_right_id_iso {A} : Iso (@prod_right_id A) prod_right_id'.
 Proof. split; fun_ext; by [case=> [?[]]|]. Qed.

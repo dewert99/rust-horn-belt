@@ -1028,8 +1028,8 @@ Global Hint Resolve subtype_refl eqtype_refl subtypel_nil eqtypel_nil : lrust_ty
 (** We use [Hint Extern] instead of [Hint Resolve] here, because
   [subtypel_cons] and [eqtypel_cons] work with [apply] but not with
   weaker tactics like [simple apply] *)
-Global Hint Extern 0 (subtypel _ _ (_ +:: _) (_ +:: _) _) =>
+Global Hint Extern 0 (subtypel _ _ _ _ _) =>
   apply subtypel_cons : lrust_typing.
-Global Hint Extern 0 (eqtypel _ _ (_ +:: _) (_ +:: _) _ _) =>
+Global Hint Extern 0 (eqtypel _ _ _ _ _ _) =>
   apply eqtypel_cons : lrust_typing.
 Global Hint Opaque subtype eqtype : lrust_typing.

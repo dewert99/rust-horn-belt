@@ -169,7 +169,7 @@ Section code.
   Qed.
 
   Definition mutex_lock : val :=
-    funrec: <> ["mutex"] :=
+    fn: ["mutex"] :=
       let: "m" := !"mutex" in
       let: "guard" := new [ #1 ] in
       acquire ["m"];;
@@ -206,7 +206,7 @@ Section code.
   Qed.
 
   Definition mutexguard_derefmut : val :=
-    funrec: <> ["g"] :=
+    fn: ["g"] :=
       let: "g'" := !"g" in
       let: "m" := !"g'" in
       letalloc: "r" <- ("m" +ₗ #1) in
@@ -297,7 +297,7 @@ Section code.
   Qed.
 
   Definition mutexguard_drop : val :=
-    funrec: <> ["g"] :=
+    fn: ["g"] :=
       let: "m" := !"g" in
       release ["m"];;
       delete [ #1; "g" ];;

@@ -6,7 +6,7 @@ Section get_x.
   Context `{!typeG Σ}.
 
   Definition get_x : val :=
-    funrec: <> ["p"] :=
+    fn: ["p"] :=
        let: "p'" := !"p" in
        Share ;;
        letalloc: "r" <- "p'" +ₗ #0 in

@@ -35,7 +35,7 @@ Section int.
 
   Lemma type_plus_instr E L p1 p2 :
     ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 + p2) int
-      (λ post '(-[z; z']), post (z + z')).
+      (λ post '-[z; z'], post (z + z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
     wp_apply (wp_hasty with "p1"). iIntros (? d _) "⧖". iIntros ((z &->&[=->])).
@@ -56,7 +56,7 @@ Section int.
 
   Lemma type_minus_instr E L p1 p2 :
     ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 - p2) int
-      (λ post '(-[z; z']), post (z - z')).
+      (λ post '-[z; z'], post (z - z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
     wp_apply (wp_hasty with "p1"). iIntros (? d _) "⧖". iIntros ((z &->&[=->])).
@@ -77,7 +77,7 @@ Section int.
 
   Lemma type_le_instr E L p1 p2 :
     ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 ≤ p2) bool_ty
-      (λ post '(-[z; z']), post (bool_decide (z ≤ z'))).
+      (λ post '-[z; z'], post (bool_decide (z ≤ z'))).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
     wp_apply (wp_hasty with "p1"). iIntros (? d _) "⧖". iIntros ((z &->&[=->])).

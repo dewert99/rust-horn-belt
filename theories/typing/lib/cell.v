@@ -99,7 +99,7 @@ Section typing.
   (** The next couple functions essentially show owned-type equalities, as they
       are all different types for the identity function. *)
   (* Constructing a cell. *)
-  Definition cell_new : val := funrec: <> ["x"] := return: ["x"].
+  Definition cell_new : val := fn: ["x"] := return: ["x"].
 
   Lemma cell_new_type ty : typed_val cell_new (fn(∅; ty) → cell ty).
   Proof.
@@ -116,7 +116,7 @@ Section typing.
 
   (* The other direction: getting ownership out of a cell. *)
   Definition cell_into_inner : val :=
-    funrec: <> ["x"] := Skip ;; return: ["x"].
+    fn: ["x"] := Skip ;; return: ["x"].
 
   Lemma cell_into_inner_type ty :
     typed_val cell_into_inner (fn(∅; cell ty) → ty).
@@ -135,7 +135,7 @@ Section typing.
   Qed.
 
   Definition cell_get_mut : val :=
-    funrec: <> ["x"] := Skip ;; Skip ;; return: ["x"].
+    fn: ["x"] := Skip ;; Skip ;; return: ["x"].
 
   Lemma cell_get_mut_type ty :
     typed_val cell_get_mut (fn(∀ α, ∅; &uniq{α} (cell ty)) → &uniq{α} ty).
@@ -174,7 +174,7 @@ Section typing.
   Qed.
 
   Definition cell_from_mut : val :=
-    funrec: <> ["x"] := Skip ;; return: ["x"].
+    fn: ["x"] := Skip ;; return: ["x"].
 
   Lemma cell_from_mut_type ty :
     typed_val cell_from_mut (fn(∀ α, ∅; &uniq{α} ty) → &uniq{α} (cell ty)).
@@ -212,7 +212,7 @@ Section typing.
   Qed.
 
   Definition cell_into_box : val :=
-    funrec: <> ["x"] := Skip ;; Skip ;; return: ["x"].
+    fn: ["x"] := Skip ;; Skip ;; return: ["x"].
 
   Lemma cell_into_box_type ty :
     typed_val cell_into_box (fn(∅;box (cell ty)) → box ty).
@@ -238,7 +238,7 @@ Section typing.
   Qed.
 
   Definition cell_from_box : val :=
-    funrec: <> ["x"] := return: ["x"].
+    fn: ["x"] := return: ["x"].
 
   Lemma cell_from_box_type ty :
     typed_val cell_from_box (fn(∅; box ty) → box (cell ty)).
@@ -258,7 +258,7 @@ Section typing.
 
   (** Reading from a cell *)
   Definition cell_get ty : val :=
-    funrec: <> ["x"] :=
+    fn: ["x"] :=
       let: "x'" := !"x" in
       letalloc: "r" <-{ty.(ty_size)} !"x'" in
       let: "cell_into_inner" := cell_into_inner in
@@ -285,7 +285,7 @@ Section typing.
 
   (** Writing to a cell *)
   Definition cell_replace ty : val :=
-    funrec: <> ["c"; "x"] :=
+    fn: ["c"; "x"] :=
       let: "c'" := !"c" in
       letalloc: "r" <-{ty.(ty_size)} !"c'" in
       "c'" <-{ty.(ty_size)} !"x";;
@@ -344,7 +344,7 @@ Section typing.
       Called alias::one in Rust.
       This is really just [cell_from_mut] followed by sharing. *)
   Definition fake_shared_cell : val :=
-    funrec: <> ["x"] :=
+    fn: ["x"] :=
       let: "cell_from_mut" := cell_from_mut in
       letcall: "r" := "cell_from_mut" ["x"]%E in
       let: "r'" := !"r" in

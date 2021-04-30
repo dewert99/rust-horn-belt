@@ -84,7 +84,7 @@ Section spawn.
   Context `{!typeG Σ, !spawnG Σ}.
 
   Definition spawn (call_once : val) : val :=
-    funrec: <> ["f"] :=
+    fn: ["f"] :=
       let: "call_once" := call_once in
       let: "join" := spawn [λ: ["c"],
                             letcall: "r" := "call_once" ["f":expr] in
@@ -126,7 +126,7 @@ Section spawn.
   Qed.
 
   Definition join : val :=
-    funrec: <> ["c"] :=
+    fn: ["c"] :=
       let: "c'" := !"c" in
       let: "r" := spawn.join ["c'"] in
       delete [ #1; "c"];; return: ["r"].
