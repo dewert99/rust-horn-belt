@@ -3,13 +3,11 @@ From lrust.typing Require Import bool programs.
 Set Default Proof Using "Type".
 Open Scope Z_scope.
 
-Implicit Type z: Zₛ.
-
 Section int.
   Context `{!typeG Σ}.
 
   Program Definition int: type Zₛ :=
-    {| pt_size := 1;  pt_own z _ vl := ⌜vl = [ #z]⌝; |}%I.
+    {| pt_size := 1;  pt_own (z: Zₛ) _ vl := ⌜vl = [ #z]⌝; |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
   Global Instance int_send: Send int. Proof. done. Qed.
@@ -20,14 +18,14 @@ Section int.
     iSplit; [iApply lft_incl_refl|]. by iIntros.
   Qed.
 
-  Lemma type_int_instr z : typed_val #z int (λ post, post z).
+  Lemma type_int_instr (z: Z) : typed_val #z int (λ post, post z).
   Proof.
     iIntros (?????) "_ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "⧖".
     iApply wp_value. iExists -[const z]. iFrame "Obs". iSplit; [|done].
     rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "⧖". by iExists z.
   Qed.
 
-  Lemma type_int {𝔄l} z E L C (T: _ 𝔄l) x e tr :
+  Lemma type_int {𝔄l} (z: Z) E L C (T: _ 𝔄l) x e tr :
     Closed (x :b: []) e →
     (∀v: val, typed_body E L C (v ◁ int +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := #z in e) (λ al, tr (z -:: al)).
