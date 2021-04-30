@@ -472,7 +472,7 @@ Global Instance hcons_ne {X Xl} : NonExpansive2 (@hcons _ F X Xl).
 Proof. by constructor. Qed.
 
 Global Instance hget_ne {Xl} n :
-  Proper ((≡{n}≡@{hlist F Xl}) ==> forall_relation (λ _, (≡{n}≡))) hget.
+  Proper ((≡{n}@{hlist F Xl}≡) ==> forall_relation (λ _, (≡{n}≡))) hget.
 Proof. move=> ????. by apply (HForallTwo_get (λ X, ofe_dist (F X) n)). Qed.
 
 End lemmas.

@@ -77,7 +77,7 @@ Class Unique A := { unique: A; eq_unique: ∀x: A, x = unique }.
 Program Global Instance unit_unique: Unique () := {| unique := () |}.
 Next Obligation. by case. Qed.
 
-Program Global Instance prod_unique `{!Unique A, Unique B}
+Program Global Instance prod_unique `{!Unique A, !Unique B}
   : Unique (A * B) := {| unique := (unique, unique) |}.
 Next Obligation. move=> ????. case=> *; f_equal; apply eq_unique. Qed.
 
@@ -85,7 +85,7 @@ Program Global Instance fun_unique {B} `{!Unique A}
   : Unique (B → A) := {| unique := const unique |}.
 Next Obligation. move=> *. fun_ext=>/= ?. apply eq_unique. Qed.
 
-Global Instance unique_iso `{!Unique A, Unique B} : @Iso A B unique unique.
+Global Instance unique_iso `{!Unique A, !Unique B} : @Iso A B unique unique.
 Proof. split; fun_ext=>/= ?; symmetry; apply eq_unique. Qed.
 
 (** * Utility for voidness *)
@@ -97,20 +97,20 @@ Class Void A := absurd: ∀{B}, A → B.
 
 Global Instance Empty_set_void: Void ∅. Proof. by move. Qed.
 
-Global Instance fun_void `{!Inhabited A, Void B} : Void (A → B).
+Global Instance fun_void `{!Inhabited A, !Void B} : Void (A → B).
 Proof. move=> ? /(.$ inhabitant) ?. by apply absurd. Qed.
 
 Program Global Instance void_fun_unique {B} `{!Void A}
   : Unique (A → B) := {| unique := absurd |}.
 Next Obligation. move=> *. fun_ext=> ?. by apply absurd. Qed.
 
-Global Instance void_iso `{!Void A, Void B} : Iso absurd absurd.
+Global Instance void_iso `{!Void A, !Void B} : Iso absurd absurd.
 Proof. split; fun_ext=> ?; by apply absurd. Qed.
 
 (** * OFE *)
 
 Notation "(≡{ n }≡)" := (dist n) (only parsing).
-Notation "(≡{ n }≡@{ A } )" := (@dist A _ n) (only parsing).
+Notation "(≡{ n }@{ A }≡)" := (@dist A _ n) (only parsing).
 
 (** * Monoid *)
 

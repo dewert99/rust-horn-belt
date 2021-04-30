@@ -256,26 +256,26 @@ Section ofe.
   Global Instance typel_equiv {𝔄l} : Equiv (typel 𝔄l) := @hlist_equiv _ type _ _.
   Global Instance typel_dist {𝔄l} : Dist (typel 𝔄l) := @hlist_dist _ typeO _.
 
-  Global Instance ty_size_ne {𝔄} n : Proper ((≡{n}≡@{_ 𝔄}) ==> (=)) ty_size.
+  Global Instance ty_size_ne {𝔄} n : Proper ((≡{n}@{_ 𝔄}≡) ==> (=)) ty_size.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_size_proper {𝔄} : Proper ((≡@{_ 𝔄}) ==> (=)) ty_size.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
-  Global Instance ty_lfts_ne {𝔄} n : Proper ((≡{n}≡@{_ 𝔄}) ==> (=)) ty_lfts.
+  Global Instance ty_lfts_ne {𝔄} n : Proper ((≡{n}@{_ 𝔄}≡) ==> (=)) ty_lfts.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_lfts_proper {𝔄} : Proper ((≡@{_ 𝔄}) ==> (=)) ty_lfts.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
-  Global Instance ty_E_ne {𝔄} n : Proper ((≡{n}≡@{_ 𝔄}) ==> (=)) ty_E.
+  Global Instance ty_E_ne {𝔄} n : Proper ((≡{n}@{_ 𝔄}≡) ==> (=)) ty_E.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_E_proper {𝔄} : Proper ((≡@{_ 𝔄}) ==> (=)) ty_E.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
   Global Instance ty_outlv_E_ne {𝔄} n :
-    Proper ((≡{n}≡@{_ 𝔄}) ==> (=) ==> (=)) ty_outlv_E.
+    Proper ((≡{n}@{_ 𝔄}≡) ==> (=) ==> (=)) ty_outlv_E.
   Proof. rewrite /ty_outlv_E. by move=> ?? [_ -> _ _ _]. Qed.
   Global Instance ty_outlv_E_proper {𝔄} :
     Proper ((≡@{_ 𝔄}) ==> (=) ==> (=)) ty_outlv_E.
   Proof. rewrite /ty_outlv_E. by move=> ?? [_ -> _ _ _]. Qed.
 
-  Global Instance tyl_lfts_ne {𝔄l} n : Proper ((≡{n}≡@{_ 𝔄l}) ==> (=)) tyl_lfts.
+  Global Instance tyl_lfts_ne {𝔄l} n : Proper ((≡{n}@{_ 𝔄l}≡) ==> (=)) tyl_lfts.
   Proof.
     rewrite /tyl_lfts /dist=> tyl tyl' Eq. f_equal.
     dependent induction Eq; [done|]. by rewrite/= H IHEq.
@@ -285,11 +285,11 @@ Section ofe.
     rewrite /tyl_lfts /equiv=> tyl tyl' Eq. f_equal.
     dependent induction Eq; [done|]. by rewrite/= H IHEq.
   Qed.
-  Global Instance tyl_lft_ne {𝔄l} n : Proper ((≡{n}≡@{_ 𝔄l}) ==> (=)) tyl_lft.
+  Global Instance tyl_lft_ne {𝔄l} n : Proper ((≡{n}@{_ 𝔄l}≡) ==> (=)) tyl_lft.
   Proof. rewrite /tyl_lft. by move=> ??->. Qed.
   Global Instance tyl_lft_proper {𝔄l} : Proper ((≡@{_ 𝔄l}) ==> (=)) tyl_lft.
   Proof. rewrite /tyl_lft. by move=> ??->. Qed.
-  Global Instance tyl_E_ne {𝔄l} n : Proper ((≡{n}≡@{_ 𝔄l}) ==> (=)) tyl_E.
+  Global Instance tyl_E_ne {𝔄l} n : Proper ((≡{n}@{_ 𝔄l}≡) ==> (=)) tyl_E.
   Proof.
     rewrite /tyl_E /dist=> tyl tyl' Eq.
     dependent induction Eq; [done|]. by rewrite/= H IHEq.
@@ -300,7 +300,7 @@ Section ofe.
     dependent induction Eq; [done|]. by rewrite/= H IHEq.
   Qed.
   Global Instance tyl_outlv_E_ne {𝔄l} n :
-    Proper ((≡{n}≡@{_ 𝔄l}) ==> (=) ==> (=)) tyl_outlv_E.
+    Proper ((≡{n}@{_ 𝔄l}≡) ==> (=) ==> (=)) tyl_outlv_E.
   Proof.
     rewrite /tyl_outlv_E /dist=> tyl tyl' Eq ??->.
     dependent induction Eq; [done|]. by rewrite/= H IHEq.
@@ -313,13 +313,13 @@ Section ofe.
   Qed.
 
   Global Instance ty_own_ne {𝔄} n:
-    Proper ((≡{n}≡@{_ 𝔄}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) ty_own.
+    Proper ((≡{n}@{_ 𝔄}≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) ty_own.
   Proof. move=> ?? Eqv ??->??->??->??->. apply Eqv. Qed.
   Global Instance ty_own_proper {𝔄} :
     Proper ((≡@{_ 𝔄}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) ty_own.
   Proof. move=> ?? Eqv ??->??->??->??->. apply Eqv. Qed.
   Global Instance ty_shr_ne {𝔄} n :
-    Proper ((≡{n}≡@{_ 𝔄}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) ty_shr.
+    Proper ((≡{n}@{_ 𝔄}≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) ty_shr.
   Proof. move=> ?? Eqv ??->??->??->??->??->. apply Eqv. Qed.
   Global Instance ty_shr_proper {𝔄} :
     Proper ((≡@{_ 𝔄}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) ty_shr.
@@ -347,7 +347,7 @@ Section ofe.
   Canonical Structure simple_typeO 𝔄 : ofe := Ofe (simple_type 𝔄) simple_type_ofe_mixin.
 
   Global Instance st_own_ne n {𝔄} :
-    Proper ((≡{n}≡@{_ 𝔄}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) st_own.
+    Proper ((≡{n}@{_ 𝔄}≡) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) st_own.
   Proof. move=> ?? Eqv ??->??->??->??->. apply Eqv. Qed.
   Global Instance st_own_proper {𝔄} :
     Proper ((≡@{_ 𝔄}) ==> (=) ==> (=) ==> (=) ==> (=) ==> (≡)) st_own.
@@ -388,7 +388,7 @@ Section ofe.
   Canonical Structure plain_typeO 𝔄 : ofe := Ofe (plain_type 𝔄) plain_type_ofe_mixin.
 
   Global Instance pt_own_ne n {𝔄} :
-    Proper ((≡{n}≡@{_ 𝔄}) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) pt_own.
+    Proper ((≡{n}@{_ 𝔄}≡) ==> (=) ==> (=) ==> (=) ==> (≡{n}≡)) pt_own.
   Proof. move=> ?? Eqv ??->??->??->. apply Eqv. Qed.
   Global Instance pt_own_proper {𝔄} :
     Proper ((≡@{_ 𝔄}) ==> (=) ==> (=) ==> (=) ==> (≡)) pt_own.
@@ -783,7 +783,7 @@ Section subtyping.
   Proof. by rewrite eqtype_unfold. Qed.
 
   Global Instance type_incl_ne {𝔄 𝔅} n :
-    Proper ((≡{n}≡@{_ 𝔄}) ==> (≡{n}≡@{_ 𝔅}) ==> (=) ==> (≡{n}≡)) type_incl.
+    Proper ((≡{n}@{_ 𝔄}≡) ==> (≡{n}@{_ 𝔅}≡) ==> (=) ==> (≡{n}≡)) type_incl.
   Proof.
     rewrite /type_incl.
     move=> ??[->->_ EqvOwn EqvShr]??[->->_ EqvOwn' EqvShr']??->. do 4 f_equiv.
