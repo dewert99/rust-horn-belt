@@ -209,9 +209,9 @@ Section typing.
     ⊢ typed_instr E L +[p ◁ ty] (!p) (λ v, +[v ◁ tyb; p ◁ ty'])
       (λ post '-[a], post -[gt a; st a]).
   Proof.
-    move=> Sz Read. iIntros (??[vπ[]]) "LFT _ _ _ E Na L [p _] ?".
+    move=> Sz Rd. iIntros (??[vπ[]]) "LFT _ _ _ E Na L [p _] ?".
     wp_bind p. iApply (wp_hasty with "p"). iIntros (???) "#? ty".
-    iMod (Read with "LFT E Na L ty") as (l vl q ->) "(↦ & tyb & Toty')".
+    iMod (Rd with "LFT E Na L ty") as (l vl q ->) "(↦ & tyb & Toty')".
     iDestruct (ty_size_eq with "tyb") as "#>%Len". rewrite Sz in Len.
     case vl as [|v[|]]=>//. rewrite heap_mapsto_vec_singleton. iApply wp_fupd.
     wp_read. iMod ("Toty'" with "↦") as "($&$& ty')". iModIntro.
@@ -231,30 +231,6 @@ Section typing.
     f_equal. fun_ext. by case.
   Qed.
 
-  Local Lemma type_memcpy_iris {𝔄 𝔄' 𝔅 𝔅' ℭ} (tyw: _ 𝔄) (tyw': _ 𝔄') (tyr: _ 𝔅)
-    (tyr': _ 𝔅') (tyb: _ ℭ) stw gtr str (n: Z) pw pr vπw vπr E L qL tid :
-    n = tyb.(ty_size) →
-    typed_write E L tyw tyb tyw' stw → typed_read E L tyr tyb tyr' gtr str →
-    {{{ lft_ctx ∗ time_ctx ∗ uniq_ctx ∗ elctx_interp E ∗ na_own tid ⊤ ∗
-        llctx_interp L qL ∗ tctx_interp tid +[pw ◁ tyw; pr ◁ tyr] -[vπw; vπr] }}}
-      (pw <-{n} !pr)
-    {{{ RET #☠; na_own tid ⊤ ∗ llctx_interp L qL ∗ tctx_interp tid
-        +[pw ◁ tyw'; pr ◁ tyr'] -[stw ∘ vπw ⊛ (gtr ∘ vπr); str ∘ vπr] }}}.
-  Proof.
-    iIntros (-> Wrt Read ?) "(#LFT & TIME & UNIQ & #E & Na & [L L'] & (pw & pr &_)) ToΦ".
-    wp_bind pw. iApply (wp_hasty with "pw"). iIntros (???) "_ tyw".
-    wp_bind pr. iApply (wp_hasty with "pr"). iIntros (???) "#⧖ tyr".
-    iApply wp_fupd. iMod (Wrt with "LFT UNIQ E L tyw") as (??[->?]) "[↦w Closew]".
-    iMod (Read with "LFT E Na L' tyr") as (? vlb ?->) "(↦r & tyb & Closer)".
-    iApply (wp_persist_time_rcpt with "TIME ⧖"); [done|].
-    iDestruct (ty_size_eq with "tyb") as "#>%".
-    iApply (wp_memcpy with "[$↦w $↦r]"); [congruence|congruence|]. iNext.
-    iIntros "[↦w ↦r] #timeS". iMod ("Closew" with "[↦w tyb] timeS") as "[L tyw']".
-    { iExists vlb. iFrame. } iMod ("Closer" with "↦r") as "(Na & L' & tyr')".
-    iApply "ToΦ". iFrame "L L' Na". rewrite right_id.
-    iSplitL "tyw'"; (rewrite tctx_hasty_val'; [|done]); iExists _; by iFrame.
-  Qed.
-
   Lemma type_memcpy_instr {𝔄 𝔄' 𝔅 𝔅' ℭ} (tyw: _ 𝔄) (tyw': _ 𝔄') (tyr: _ 𝔅)
     (tyr': _ 𝔅') (tyb: _ ℭ) stw gtr str (n: Z) pw pr E L :
     n = tyb.(ty_size) → typed_write E L tyw tyb tyw' stw →
@@ -262,9 +238,18 @@ Section typing.
     ⊢ typed_instr E L +[pw ◁ tyw; pr ◁ tyr] (pw <-{n} !pr)
       (λ _, +[pw ◁ tyw'; pr ◁ tyr']) (λ post '-[a; b], post -[stw a (gtr b); str b]).
   Proof.
-    iIntros (?????(?&?&[])) "LFT TIME _ UNIQ E Na L T ?".
-    iApply (type_memcpy_iris with "[$LFT $TIME $UNIQ $Na $E $L $T]")=>//. iNext.
-    iIntros "($&$&?&?&_)". iExists -[_; _]. iFrame.
+    iIntros (-> Wrt Rd ??(?&?&[])) "/= #LFT TIME _ UNIQ #E Na [L L'] (pw & pr &_) Obs".
+    wp_bind pw. iApply (wp_hasty with "pw"). iIntros (???) "_ tyw".
+    wp_bind pr. iApply (wp_hasty with "pr"). iIntros (???) "#⧖ tyr".
+    iApply wp_fupd. iMod (Wrt with "LFT UNIQ E L tyw") as (??[->?]) "[↦w Closew]".
+    iMod (Rd with "LFT E Na L' tyr") as (? vlb ?->) "(↦r & tyb & Closer)".
+    iApply (wp_persist_time_rcpt with "TIME ⧖"); [done|].
+    iDestruct (ty_size_eq with "tyb") as "#>%".
+    iApply (wp_memcpy with "[$↦w $↦r]"); [congruence|congruence|]. iNext.
+    iIntros "[↦w ↦r] #⧖S". iMod ("Closew" with "[↦w tyb] ⧖S") as "[L tyw']".
+    { iExists vlb. iFrame. } iMod ("Closer" with "↦r") as "(Na & L' & tyr')".
+    iModIntro. iExists -[_; _]. iFrame "Na L L' Obs". rewrite right_id.
+    iSplitL "tyw'"; (rewrite tctx_hasty_val'; [|done]); iExists _; by iFrame.
   Qed.
 
   Lemma type_memcpy {𝔄 𝔄' 𝔅 𝔅' ℭ 𝔄l 𝔅l} (tyw: _ 𝔄) (tyw': _ 𝔄') (tyr: _ 𝔅) (tyr': _ 𝔅')

@@ -371,7 +371,7 @@ Section typing.
 *)
 
   Lemma type_fnrec_instr {A 𝔄l 𝔅} (tr: (predₛ 𝔅 → predlₛ 𝔄l)%ST) (fp: A → _)
-    fb (bl: plistc _ 𝔄l) e E L :
+    fb (bl: plistc _ _) e E L :
     Closed (fb :b: "return" :: bl +b+ []) e →
     □ (∀x ϝ (f: val) k pre (wl: plistc _ 𝔄l), typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
       [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } pre]
