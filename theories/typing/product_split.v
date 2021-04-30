@@ -153,11 +153,11 @@ Section product_split.
       [by apply excl_auth_valid|].
     iMod (own_alloc (●E depth' ⋅ ◯E depth')) as (γ2) "[H●2 H◯2]";
       [by apply excl_auth_valid|].
-    rewrite lft_intersect_list_app.
+    rewrite lftl_meet_app.
     iAssert (κ ⊑ ty_lft ty1)%I as "Hout1".
-    { by iApply lft_incl_trans; [|iApply lft_intersect_incl_l]. }
+    { by iApply lft_incl_trans; [|iApply lft_meet_incl_l]. }
     iAssert (κ ⊑ ty_lft ty2)%I as "Hout2".
-    { by iApply lft_incl_trans; [|iApply lft_intersect_incl_r]. }
+    { by iApply lft_incl_trans; [|iApply lft_meet_incl_r]. }
     iMod (bor_acc_atomic_cons with "LFT Hbor") as "[[H Hclose]|[#H† Hclose]]";
       [done|..]; last first.
     { iMod "Hclose" as "_". iSplitL "H◯1".
@@ -196,7 +196,7 @@ Section product_split.
     iExists _, _. iCombine "Hdepth1 Hdepth2" as "Hdepth".
     rewrite -persist_time_rcpt_sep -Max.succ_max_distr. iFrame "Hdepth".
     iSplitR; [done|]. iSplitR.
-    { rewrite lft_intersect_list_app. by iApply lft_incl_glb. }
+    { rewrite lftl_meet_app. by iApply lft_incl_glb. }
     iDestruct "H1" as (depth1' γ1 ?) "[H◯1 H1]".
     iDestruct "H2" as (depth2' γ2 ?) "[H◯2 H2]".
     iMod (own_alloc (●E _ ⋅ ◯E _)) as (γ) "[H● H◯]";

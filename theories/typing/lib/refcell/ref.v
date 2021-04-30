@@ -93,17 +93,17 @@ Section ref.
     iIntros "!> #HE". iDestruct ("Hα" with "HE") as "Hα1α2".
     iDestruct ("Hty" with "HE") as "(%&#Hl&#Ho&#Hs)".
     iSplit; [done|iSplit; [|iSplit; iModIntro]].
-    - simpl. by iApply lft_intersect_mono.
+    - simpl. by iApply lft_meet_mono.
     - iIntros (tid [|[[]|][|[[]|][]]]) "H"=>//=.
       iDestruct "H" as (ν q' γ β ty') "(#Hshr & #H⊑ & #Hinv & Htok & Hown)".
       iExists ν, q', γ, β, ty'. iFrame "∗#". iSplit.
       + iApply ty_shr_mono; last by iApply "Hs".
-        iApply lft_intersect_mono. done. iApply lft_incl_refl.
+        iApply lft_meet_mono. done. iApply lft_incl_refl.
       + by iApply lft_incl_trans.
     - iIntros (κ tid l) "H /=". iDestruct "H" as (ν q' γ β ty' lv lrc) "H".
       iExists ν, q', γ, β, ty', lv, lrc. iDestruct "H" as "#($&$&?&?&$&$)". iSplit.
       + iApply ty_shr_mono; last by iApply "Hs".
-        iApply lft_intersect_mono. done. iApply lft_incl_refl.
+        iApply lft_meet_mono. done. iApply lft_incl_refl.
       + by iApply lft_incl_trans.
   Qed.
   Global Instance ref_mono_flip E L :

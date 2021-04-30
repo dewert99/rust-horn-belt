@@ -99,9 +99,9 @@ Section case.
       iExists (S depth1). iFrame "Hdepth1". iSplitR; [|by auto with iFrame].
       iApply lft_incl_trans; [done|]. clear -EQty. iClear "#".
       iInduction tyl as [|ty0 tyl] "IH" forall (i EQty)=>//.
-      rewrite /= lft_intersect_list_app. destruct i.
-      + inversion EQty. subst. iApply lft_intersect_incl_l.
-      + iApply lft_incl_trans; [|by iApply "IH"]. iApply lft_intersect_incl_r.
+      rewrite /= lftl_meet_app. destruct i.
+      + inversion EQty. subst. iApply lft_meet_incl_l.
+      + iApply lft_incl_trans; [|by iApply "IH"]. iApply lft_meet_incl_r.
     - iMod ("Hclose'" with "[] [H↦i H↦vl' H↦vl'' Hown H●]") as "[Hb Htok]";
         [by iIntros "!>$"| |].
       { iExists depth2'. iFrame "∗#". iExists (#i::vl'++vl'').

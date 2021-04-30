@@ -50,8 +50,8 @@ Section rwlockwriteguard.
     iMod (bor_persistent with "LFT Hαβ Htok") as "[#Hαβ Htok]". done.
     iMod (bor_persistent with "LFT Hβty Htok") as "[#Hβty $]". done.
     iExists _. iFrame "H↦". iApply delay_sharing_nested=>//.
-    - iNext. iApply lft_incl_trans; [|done]. iApply lft_intersect_incl_l.
-    - iApply bor_shorten; [|done]. iApply lft_intersect_incl_r.
+    - iNext. iApply lft_incl_trans; [|done]. iApply lft_meet_incl_l.
+    - iApply bor_shorten; [|done]. iApply lft_meet_incl_r.
   Qed.
   Next Obligation.
     iIntros (??????) "#? H". iDestruct "H" as (l') "[#Hf #H]".
@@ -59,10 +59,10 @@ Section rwlockwriteguard.
     - by iApply frac_bor_shorten.
     - iIntros "!> * % Htok".
       iMod (lft_incl_acc with "[] Htok") as (q') "[Htok Hclose]"; first solve_ndisj.
-      { iApply lft_intersect_mono. iApply lft_incl_refl. done. }
+      { iApply lft_meet_mono. iApply lft_incl_refl. done. }
       iMod ("H" with "[] Htok") as "Hshr". done. iModIntro. iNext.
       iMod "Hshr" as "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
-      iApply ty_shr_mono; try done. iApply lft_intersect_mono. iApply lft_incl_refl. done.
+      iApply ty_shr_mono; try done. iApply lft_meet_mono. iApply lft_incl_refl. done.
   Qed.
 
   Global Instance rwlockwriteguard_type_contr α :
@@ -100,7 +100,7 @@ Section rwlockwriteguard.
     iIntros "!> #HE". iDestruct ("Hα" with "HE") as "Hα1α2".
     iDestruct ("Hty" with "HE") as "(%&#[??]&#Ho&#Hs)".
     iSplit; [done|iSplit; [|iSplit; iModIntro]].
-    - by iApply lft_intersect_mono.
+    - by iApply lft_meet_mono.
     - iIntros (tid [|[[]|][]]) "H"; try done.
       iDestruct "H" as (γ β tid_shr) "(Hb & #H⊑ & #Hβty & #Hinv & Hown)".
       iExists γ, β, tid_shr. iFrame "∗#". iSplit; [|iSplit; [|iSplit]].
@@ -114,10 +114,10 @@ Section rwlockwriteguard.
     - iIntros (κ tid l) "H". iDestruct "H" as (l') "H". iExists l'.
       iDestruct "H" as "[$ #H]". iIntros "!> * % Htok".
       iMod (lft_incl_acc with "[] Htok") as (q') "[Htok Hclose]"; first solve_ndisj.
-      { iApply lft_intersect_mono. done. iApply lft_incl_refl. }
+      { iApply lft_meet_mono. done. iApply lft_incl_refl. }
       iMod ("H" with "[] Htok") as "Hshr". done. iModIntro. iNext.
       iMod "Hshr" as "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
-      iApply ty_shr_mono; try done. iApply lft_intersect_mono. done. iApply lft_incl_refl.
+      iApply ty_shr_mono; try done. iApply lft_meet_mono. done. iApply lft_incl_refl.
       by iApply "Hs".
   Qed.
   Global Instance rwlockwriteguard_mono_flip E L :

@@ -22,8 +22,8 @@ Section shr_bor.
     move=> ?????[|?]*/=; [by iIntros|]. rewrite {1}by_just_loc_ex.
     iIntros "#LFT #? (%&->& ty) κ' !>/=".
     iDestruct (ty_shr_proph with "LFT [] [] ty κ'") as "Upd"; first done.
-    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
-    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
+    { iApply lft_incl_trans; by [|iApply lft_meet_incl_l]. }
+    { iApply lft_incl_trans; by [|iApply lft_meet_incl_r]. }
     iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξl q ?) "[ξl Upd]".
     iModIntro. iExists ξl, q. iSplit; [done|]. iFrame "ξl". iIntros "ξl".
     by iMod ("Upd" with "ξl") as "$".
@@ -52,7 +52,7 @@ Section typing.
     κ' ⊑ κ -∗ type_incl ty ty' f -∗ type_incl (&shr{κ} ty) (&shr{κ'} ty') f.
   Proof.
     iIntros "#? (_&#?&_& #Sub)".
-    iApply type_incl_simple_type=>/=; [done|by iApply lft_intersect_mono|].
+    iApply type_incl_simple_type=>/=; [done|by iApply lft_meet_mono|].
     iIntros "!>" (?[|?]??); [done|]. rewrite/= by_just_loc_ex.
     iIntros "[%[->?]]". iApply "Sub". by iApply ty_shr_lft_mono.
   Qed.

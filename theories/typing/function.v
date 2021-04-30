@@ -215,12 +215,12 @@ Section typing.
     (∀ ϝ, elctx_sat (((λ κ, ϝ ⊑ₑ κ) <$> κs) ++ E) L (fp_E (fp x) ϝ)) →
     AsVal k →
     lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗ llctx_interp L qL -∗
-    qκs.[lft_intersect_list κs] -∗
+    qκs.[lftl_meet κs] -∗
     tctx_elt_interp tid (p ◁ fn fp) -∗
     ([∗ list] y ∈ zip_with TCtx_hasty ps (box <$> vec_to_list (fp x).(fp_ityl)),
                    tctx_elt_interp tid y) -∗
     (∀ ret depth,
-        na_own tid ⊤ -∗ llctx_interp L qL -∗ qκs.[lft_intersect_list κs] -∗
+        na_own tid ⊤ -∗ llctx_interp L qL -∗ qκs.[lftl_meet κs] -∗
         ⧖depth -∗ (box (fp x).(fp_oty)).(ty_own) depth tid [ret] -∗
         WP k [of_val ret] {{ _, cont_postcondition }}) -∗
     WP (call: p ps → k) {{ _, cont_postcondition }}.
@@ -252,9 +252,9 @@ Section typing.
       iApply ("Hf" with "LFT TIME [] Htl [Htk] [Hk HκsI HL]").
       + iApply "HE'". iIntros "{$# Hf Hinh HE' LFT TIME HE %}".
         iInduction κs as [|κ κs] "IH"=> //=. iSplitL.
-        { iApply lft_incl_trans; first done. iApply lft_intersect_incl_l. }
+        { iApply lft_incl_trans; first done. iApply lft_meet_incl_l. }
         iApply "IH". iModIntro. iApply lft_incl_trans; first done.
-        iApply lft_intersect_incl_r.
+        iApply lft_meet_incl_r.
       + iSplitL; last done. iExists ϝ. iSplit; first by rewrite /= left_id.
         iFrame "#∗".
       + iIntros (y) "IN". iDestruct "IN" as %->%elem_of_list_singleton.
@@ -277,11 +277,11 @@ Section typing.
     (∀ ϝ, elctx_sat (((λ κ, ϝ ⊑ₑ κ) <$> κs) ++ E) [] (fp_E (fp x) ϝ)) →
     AsVal k →
     lft_ctx -∗ time_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
-    qκs.[lft_intersect_list κs] -∗
+    qκs.[lftl_meet κs] -∗
     (fn fp).(ty_own) 0 tid [f] -∗
     ([∗ list] y ∈ zip_with TCtx_hasty ps (box <$> vec_to_list (fp x).(fp_ityl)),
                    tctx_elt_interp tid y) -∗
-    (∀ ret depth, na_own tid ⊤ -∗ qκs.[lft_intersect_list κs] -∗
+    (∀ ret depth, na_own tid ⊤ -∗ qκs.[lftl_meet κs] -∗
              ⧖depth -∗ (box (fp x).(fp_oty)).(ty_own) depth tid [ret] -∗
              WP k [of_val ret] {{ _, cont_postcondition }}) -∗
     WP (call: f ps → k) {{ _, cont_postcondition }}.

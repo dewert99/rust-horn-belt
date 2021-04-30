@@ -17,7 +17,7 @@ Module Export lft_notation.
 End lft_notation.
 
 Definition static : lft := (∅ : gmultiset _).
-Instance lft_intersect : Meet lft := λ κ κ', κ ⊎ κ'.
+Instance lft_meet : Meet lft := λ κ κ', κ ⊎ κ'.
 
 Inductive bor_state :=
   | Bor_in

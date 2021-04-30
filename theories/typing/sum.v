@@ -37,9 +37,9 @@ Section sum.
   Local Lemma ty_lfts_get_incl {𝔄l} (tyl: typel 𝔄l) i :
     ⊢ tyl_lft tyl ⊑ ty_lft (hget tyl i).
   Proof.
-    elim: tyl i; [done|]=> ?? ty tyl IH i. rewrite /tyl_lft lft_intersect_list_app.
-    case i; [iApply lft_intersect_incl_l|]=> ?.
-    iApply lft_incl_trans; by [iApply lft_intersect_incl_r|iApply IH].
+    elim: tyl i; [done|]=> ?? ty tyl IH i. rewrite /tyl_lft lftl_meet_app.
+    case i; [iApply lft_meet_incl_l|]=> ?.
+    iApply lft_incl_trans; by [iApply lft_meet_incl_r|iApply IH].
   Qed.
 
   Program Definition xsum_ty {𝔄l} (tyl: typel 𝔄l) : type (Σ! 𝔄l) := {|
@@ -138,29 +138,27 @@ Section typing.
           elctx_interp E ∗ elctx_interp ty.(ty_E) ∗ [∗ list] β ∈ βs, β ⊑ ty_lft ty)) ∨
       (∃α E, (∀ty, ⊢ ty_lft (s ty) ≡ₗ α) ∧
         (∀ty, elctx_interp (s ty).(ty_E) ⊣⊢ elctx_interp E)); [|by eleft|by eright].
-    dependent induction All=>/=.
-    { right. exists static, []. split=> ?; by [|apply lft_equiv_refl]. }
-    setoid_rewrite lft_intersect_list_app.
+    dependent induction All=>/=. { right. exists static, [].
+    split=> ?; by [|apply lft_equiv_refl]. } setoid_rewrite lftl_meet_app.
     case IHAll=> [[α[βs[E[Hα HE]]]]|[α[E[Hα HE]]]];
     case H=> [α' βs' E' Hα' HE'|α' E' Hα' HE'].
     - left. exists (α' ⊓ α), (βs' ++ βs), (E' ++ E). split=> ?.
-      + iApply lft_equiv_trans.
-        { iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα]. }
+      + iApply lft_equiv_trans. { iApply lft_meet_equiv_proper; [iApply Hα'|iApply Hα]. }
         rewrite -!assoc (comm (⊓) _ (α ⊓ _)) -!assoc.
-        repeat iApply lft_intersect_equiv_proper; try iApply lft_equiv_refl.
-        iApply lft_intersect_equiv_idemp.
+        repeat iApply lft_meet_equiv_proper; try iApply lft_equiv_refl.
+        iApply lft_meet_equiv_idemp.
       + rewrite !elctx_interp_app HE' HE big_sepL_app -!assoc.
         iSplit; iIntros "#H"; repeat iDestruct "H" as "[?H]"; iFrame "#".
     - left. exists (α' ⊓ α), βs, (E' ++ E). split=> ?.
-      + rewrite -assoc. iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
+      + rewrite -assoc. iApply lft_meet_equiv_proper; [iApply Hα'|iApply Hα].
       + by rewrite !elctx_interp_app HE' HE -!assoc.
     - left. exists (α' ⊓ α), βs', (E' ++ E). split=> ?.
       + rewrite -!assoc (comm (⊓) α _) !assoc.
-        iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
+        iApply lft_meet_equiv_proper; [iApply Hα'|iApply Hα].
       + rewrite/= !elctx_interp_app HE' HE -!assoc.
         iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
     - right. exists (α' ⊓ α), (E' ++ E). split=> ?.
-      + iApply lft_intersect_equiv_proper; [iApply Hα'|iApply Hα].
+      + iApply lft_meet_equiv_proper; [iApply Hα'|iApply Hα].
       + by rewrite !elctx_interp_app HE HE'.
   Qed.
 
@@ -243,8 +241,8 @@ Section typing.
       { iIntros "!>_". by iApply lft_incl_refl. }
       iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
       iIntros "!> E /=". iDestruct ("Sub" with "E") as (?) "#[?_]".
-      iDestruct ("IH'" with "E") as "#?".
-      rewrite /tyl_lft !lft_intersect_list_app. by iApply lft_intersect_mono. }
+      iDestruct ("IH'" with "E") as "#?". rewrite /tyl_lft !lftl_meet_app.
+      by iApply lft_meet_mono. }
     move/subtypel_llctx_get in Subs. iDestruct (Subs with "L") as "#InTyl".
     iIntros "!> #E". iDestruct ("EqSz" with "E") as %EqSz.
     iSpecialize ("InLft" with "E"). iSpecialize ("InTyl" with "E").

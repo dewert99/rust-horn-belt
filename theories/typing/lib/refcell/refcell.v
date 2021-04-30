@@ -134,10 +134,10 @@ Section refcell.
       { by apply auth_auth_valid. }
       iApply (fupd_mask_mono (↑lftN)); first done.
       iMod (rebor _ _ (κ ⊓ ν) with "LFT [] Hvl") as "[Hvl Hh]". done.
-      { iApply lft_intersect_incl_l. }
-      iDestruct (lft_intersect_acc with "Htok' Htok1") as (q') "[Htok Hclose]".
+      { iApply lft_meet_incl_l. }
+      iDestruct (lft_meet_acc with "Htok' Htok1") as (q') "[Htok Hclose]".
       iMod (ty_share with "LFT [] Hvl Htok") as "[Hshr Htok]". done.
-      { iApply lft_incl_trans; [|done]. iApply lft_intersect_incl_l. }
+      { iApply lft_incl_trans; [|done]. iApply lft_meet_incl_l. }
       iDestruct ("Hclose" with "Htok") as "[$ Htok]".
       iExists γ, _. iFrame "Hst Hn Hshr".
       iSplitR "Htok2"; last by iExists _; iFrame; rewrite Qp_div_2.
