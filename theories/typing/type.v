@@ -51,15 +51,15 @@ Record type `{!typeG Σ} 𝔄 := {
       we can have emp == sum [].
     *)
   ty_share E vπ d κ l tid q : ↑lftN ⊆ E → lft_ctx -∗
-    κ ⊑ lftl_meet ty_lfts -∗ &{κ} (l ↦∗: ty_own vπ d tid) -∗ q.[κ]
+    κ ⊑ lft_intersect_list ty_lfts -∗ &{κ} (l ↦∗: ty_own vπ d tid) -∗ q.[κ]
     ={E}=∗ |={E}▷=>^d |={E}=> ty_shr vπ d κ tid l ∗ q.[κ];
 
   ty_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
-    κ ⊑ lftl_meet ty_lfts -∗ ty_own vπ d tid vl -∗ q.[κ]
+    κ ⊑ lft_intersect_list ty_lfts -∗ ty_own vπ d tid vl -∗ q.[κ]
     ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vπ ./ ξl⌝ ∗
       q':+[ξl] ∗ (q':+[ξl] ={E}=∗ ty_own vπ d tid vl ∗ q.[κ]);
   ty_shr_proph E vπ d κ tid l κ' q : ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
-    κ' ⊑ lftl_meet ty_lfts -∗ ty_shr vπ d κ tid l -∗ q.[κ']
+    κ' ⊑ lft_intersect_list ty_lfts -∗ ty_shr vπ d κ tid l -∗ q.[κ']
     ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vπ ./ ξl⌝ ∗
       q':+[ξl] ∗ (q':+[ξl] ={E}=∗ ty_shr vπ d κ tid l ∗ q.[κ']);
 }.
@@ -77,7 +77,7 @@ Arguments ty_shr_depth_mono {_ _ _}. Arguments ty_shr_lft_mono {_ _ _}.
 Arguments ty_share {_ _ _}.
 Arguments ty_own_proph {_ _ _}. Arguments ty_shr_proph {_ _ _}.
 
-Notation ty_lft ty := (lftl_meet ty.(ty_lfts)).
+Notation ty_lft ty := (lft_intersect_list ty.(ty_lfts)).
 
 Notation typel := (hlist type).
 
@@ -110,13 +110,13 @@ Proof.
   { iSplit; iIntros "_"; [|done]. iApply lft_incl_static. } iSplit.
   - iIntros "#[??]". by iApply lft_incl_glb.
   - iIntros "#Incl". iSplit; (iApply lft_incl_trans; [iApply "Incl"|]);
-      [iApply lft_meet_incl_l|iApply lft_meet_incl_r].
+      [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
 Qed.
 
 Definition tyl_lfts `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) : list lft :=
   concat ((λ _, ty_lfts) +c<$> tyl).
 Definition tyl_lft `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) : lft :=
-  lftl_meet (tyl_lfts tyl).
+  lft_intersect_list (tyl_lfts tyl).
 Definition tyl_E `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) : elctx :=
   concat ((λ _, ty_E) +c<$> tyl).
 Definition tyl_outlv_E `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) (κ: lft) : elctx :=
@@ -146,7 +146,7 @@ Record simple_type `{!typeG Σ} 𝔄 := {
   st_own_depth_mono d d' vπ tid vl :
     d ≤ d' → st_own vπ d tid vl -∗ st_own vπ d' tid vl;
   st_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
-    κ ⊑ lftl_meet st_lfts -∗ st_own vπ d tid vl -∗ q.[κ]
+    κ ⊑ lft_intersect_list st_lfts -∗ st_own vπ d tid vl -∗ q.[κ]
     ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vπ ./ ξl⌝ ∗
       q':+[ξl] ∗ (q':+[ξl] ={E}=∗ st_own vπ d tid vl ∗ q.[κ]);
 }.
@@ -453,13 +453,13 @@ Proof.
   - apply (type_lft_morph_add _ (αT ⊓ αU) (βst ++ βsU)
                                  (ET ++ EU ++ ((λ β, β ⊑ₑ αU) <$> βst)))=>ty.
     + iApply lft_equiv_trans. iApply HTα. rewrite -assoc.
-      iApply lft_meet_equiv_proper; [iApply lft_equiv_refl|iApply HUα].
+      iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|iApply HUα].
     + rewrite HTE HUE !elctx_interp_app big_sepL_app -!assoc.
       setoid_rewrite (lft_incl_equiv_proper_r _ _ _ (HUα _)). iSplit.
       * iIntros "($ & $ & $ & $ & H)". rewrite big_sepL_fmap.
         iSplit; iApply (big_sepL_impl with "H"); iIntros "!> * _ #H";
         (iApply lft_incl_trans; [done|]);
-        [iApply lft_meet_incl_l|iApply lft_meet_incl_r].
+        [iApply lft_intersect_incl_l|iApply lft_intersect_incl_r].
       * iIntros "($ & $ & H1 & $ & H2 & $)".
         rewrite big_sepL_fmap. iCombine "H1 H2" as "H".
         rewrite -big_sepL_sep. iApply (big_sepL_impl with "H").
@@ -467,7 +467,7 @@ Proof.
   - apply (type_lft_morph_const _ (αT ⊓ αU)
             (ET ++ EU ++ ((λ β, β ⊑ₑ αU) <$> βst)))=>ty.
     + iApply lft_equiv_trans. iApply HTα.
-      iApply lft_meet_equiv_proper; [iApply lft_equiv_refl|iApply HUα].
+      iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|iApply HUα].
     + rewrite HTE HUE !elctx_interp_app big_sepL_fmap.
       do 5 f_equiv. by apply lft_incl_equiv_proper_r.
   - apply (type_lft_morph_const _ αT ET)=>//=.
@@ -481,7 +481,7 @@ Proof.
   iIntros "#?". case HT=> [α βs E Hα HE|α E Hα HE].
   - iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
     iApply lft_equiv_trans; [iApply Hα|].
-    iApply lft_meet_equiv_proper; [iApply lft_equiv_refl|done].
+    iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|done].
   - iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
     iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_refl.
 Qed.

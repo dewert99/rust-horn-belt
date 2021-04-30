@@ -195,12 +195,12 @@ Section refcell_functions.
           iMod (own_update with "Hownst") as "[Hownst Hreading]"; first by apply
             auth_update_alloc, (op_local_update_discrete _ _ (reading_stR (1/2)%Qp ν)).
           rewrite (right_id None). iExists _, _. iFrame "Htok1 Hreading".
-          iDestruct (lft_meet_acc with "Hβtok2 Htok2") as (q) "[Htok Hclose]".
+          iDestruct (lft_intersect_acc with "Hβtok2 Htok2") as (q) "[Htok Hclose]".
           iApply (fupd_mask_mono (↑lftN)); first done.
           iMod (rebor _ _ (β ⊓ ν) with "LFT [] Hst") as "[Hst Hh]". done.
-          { iApply lft_meet_incl_l. }
+          { iApply lft_intersect_incl_l. }
           iMod (ty_share with "LFT [] Hst Htok") as "[#Hshr Htok]". done.
-          { iApply lft_incl_trans; [|done]. iApply lft_meet_incl_l. }
+          { iApply lft_incl_trans; [|done]. iApply lft_intersect_incl_l. }
           iFrame "Hshr".
           iDestruct ("Hclose" with "Htok") as "[$ Htok2]". iExists _. iFrame "∗#".
           iSplitR "Htok2".
@@ -221,7 +221,7 @@ Section refcell_functions.
         rewrite tctx_hasty_val' //. rewrite /= freeable_sz_full. iFrame.
         iExists [_; _]. rewrite heap_mapsto_vec_cons heap_mapsto_vec_singleton.
         iFrame. simpl. iExists _, _, _, _, _. iFrame "∗#". iApply ty_shr_mono; try by auto.
-        iApply lft_meet_mono. done. iApply lft_incl_refl. }
+        iApply lft_intersect_mono. done. iApply lft_incl_refl. }
       iApply (type_sum_memcpy (option $ ref α ty)); [solve_typing..|].
       simpl. iApply type_delete; [solve_typing..|].
       iApply type_jump; solve_typing.
@@ -281,7 +281,7 @@ Section refcell_functions.
           (op_local_update_discrete _ _ (refcell_st_to_R $ Some (ν, true, (1/2)%Qp, xH))). }
       rewrite (right_id None). iApply fupd_wp. iApply (fupd_mask_mono (↑lftN)); first done.
       iMod (rebor _ _ (β ⊓ ν) with "LFT [] Hb") as "[Hb Hbh]". done.
-      { iApply lft_meet_incl_l. }
+      { iApply lft_intersect_incl_l. }
       iModIntro. iMod ("Hclose''" with "[Hlx Hownst Hbh Htok1] Hna") as "[Hβtok Hna]".
       { iExists _. iFrame. iNext. iSplitL "Hbh".
         - iIntros "Hν". iMod ("Hhν" with "Hν") as "Hν". iModIntro. iNext. iMod "Hν".
@@ -300,9 +300,9 @@ Section refcell_functions.
         iFrame. simpl.
         iExists _, _, _, _, _. iFrame "#∗". iSplitL.
         - iApply (bor_shorten with "[] [$Hb]").
-          iApply lft_meet_mono; first done. iApply lft_incl_refl.
+          iApply lft_intersect_mono; first done. iApply lft_incl_refl.
         - iApply lft_incl_trans; [|done]. iApply lft_incl_trans; [|done].
-          iApply lft_meet_incl_l. }
+          iApply lft_intersect_incl_l. }
       iApply (type_sum_memcpy (option $ refmut α ty)); [solve_typing..|].
       simpl. iApply type_delete; [solve_typing..|].
       iApply type_jump; solve_typing.

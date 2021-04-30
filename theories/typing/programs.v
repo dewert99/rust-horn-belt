@@ -137,7 +137,7 @@ Section typing.
   Proof.
     iIntros (?) "e". iIntros (??) "#LFT TIME PROPH UNIQ E Na L C T Obs".
     iMod (lft_create with "LFT") as (Λ) "[Λ #Hinh]"; [done|].
-    set κ' := lftl_meet κs. wp_seq.
+    set κ' := lft_intersect_list κs. wp_seq.
     iApply ("e" $! κ' ⊓ Λ with "LFT TIME PROPH UNIQ E Na [Λ $L] C T Obs").
     rewrite /llctx_interp. iExists Λ. iFrame "Λ". by iSplit.
   Qed.
@@ -233,12 +233,12 @@ Section typing.
 
   Lemma type_memcpy_instr {𝔄 𝔄' 𝔅 𝔅' ℭ} (tyw: _ 𝔄) (tyw': _ 𝔄') (tyr: _ 𝔅)
     (tyr': _ 𝔅') (tyb: _ ℭ) stw gtr str (n: Z) pw pr E L :
-    typed_write E L tyw tyb tyw' stw → typed_read E L tyr tyb tyr' gtr str →
-    n = tyb.(ty_size) →
+    n = tyb.(ty_size) → typed_write E L tyw tyb tyw' stw →
+    typed_read E L tyr tyb tyr' gtr str →
     ⊢ typed_instr E L +[pw ◁ tyw; pr ◁ tyr] (pw <-{n} !pr)
       (λ _, +[pw ◁ tyw'; pr ◁ tyr']) (λ post '-[a; b], post -[stw a (gtr b); str b]).
   Proof.
-    iIntros (Wrt Rd ->??(?&?&[])) "/= #LFT TIME _ UNIQ #E Na [L L'] (pw & pr &_) Obs".
+    iIntros (-> Wrt Rd ??(?&?&[])) "/= #LFT TIME _ UNIQ #E Na [L L'] (pw & pr &_) Obs".
     wp_bind pw. iApply (wp_hasty with "pw"). iIntros (???) "_ tyw".
     wp_bind pr. iApply (wp_hasty with "pr"). iIntros (???) "#⧖ tyr".
     iApply wp_fupd. iMod (Wrt with "LFT UNIQ E L tyw") as (??[->?]) "[↦w Closew]".

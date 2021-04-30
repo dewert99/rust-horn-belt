@@ -34,7 +34,7 @@ Section rwlockwriteguard_functions.
     rewrite heap_mapsto_vec_singleton.
     iMod (lctx_lft_alive_tok β with "HE HL") as (qβ) "(Hβ & HL & Hclose')";
       [solve_typing..|].
-    iDestruct (lft_meet_acc with "Hβ Hα2") as (qβα) "[Hα2β Hcloseβα2]".
+    iDestruct (lft_intersect_acc with "Hβ Hα2") as (qβα) "[Hα2β Hcloseβα2]".
     wp_bind (!(LitV lx'))%E. iApply (wp_step_fupd with "[Hα2β]");
          [|by iApply ("Hshr" with "[] Hα2β")|]; first done.
     iMod "H↦" as "[H↦1 H↦2]". wp_read. iIntros "[#Hshr' Hα2β]!>". wp_op. wp_let.

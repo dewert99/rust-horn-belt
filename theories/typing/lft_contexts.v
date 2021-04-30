@@ -44,7 +44,7 @@ Section lft_contexts.
 
   (* Local lifetime context. *)
   Definition llctx_elt_interp (x : llctx_elt) (q : Qp) : iProp Σ :=
-    let κ' := lftl_meet (x.2) in
+    let κ' := lft_intersect_list (x.2) in
     (∃ κ0, ⌜x.1 = κ' ⊓ κ0⌝ ∗ q.[κ0] ∗ □ (1.[κ0] ={↑lftN ∪ ↑lft_userN}[↑lft_userN]▷=∗ [†κ0]))%I.
   Global Instance llctx_elt_interp_fractional x :
     Fractional (llctx_elt_interp x).
@@ -55,7 +55,7 @@ Section lft_contexts.
     - iDestruct "H" as "[Hq Hq']".
       iDestruct "Hq" as (κ0) "(% & Hq & #?)".
       iDestruct "Hq'" as (κ0') "(% & Hq' & #?)". simpl in *.
-      rewrite (inj ((lftl_meet κs) ⊓.) κ0' κ0); last congruence.
+      rewrite (inj ((lft_intersect_list κs) ⊓.) κ0' κ0); last congruence.
       iExists κ0. by iFrame "∗%".
   Qed.
 
@@ -79,7 +79,7 @@ Section lft_contexts.
     iIntros "#LFT". iDestruct 1 as (κ) "(% & Hκ & _)"; simplify_eq/=.
     iMod (lft_eternalize with "Hκ") as "#Hincl".
     iModIntro. iSplit.
-    - iApply lft_incl_trans; iApply lft_meet_incl_l.
+    - iApply lft_incl_trans; iApply lft_intersect_incl_l.
     - iApply (lft_incl_glb with "[]"); first iApply (lft_incl_glb with "[]").
       + iApply lft_incl_refl.
       + iApply lft_incl_static.
@@ -133,8 +133,8 @@ Section lft_contexts.
     iDestruct (big_sepL_elem_of with "H") as "H"; first done.
     iDestruct "H" as (κ'') "[EQ _]". iDestruct "EQ" as %EQ.
     simpl in EQ; subst. iIntros "!> #HE".
-    iApply lft_incl_trans; first iApply lft_meet_incl_l.
-    by iApply lftl_meet_elem_of_incl.
+    iApply lft_incl_trans; first iApply lft_intersect_incl_l.
+    by iApply lft_intersect_list_elem_of_incl.
   Qed.
 
   Lemma lctx_lft_incl_local' κ κ' κ'' κs :
@@ -150,7 +150,7 @@ Section lft_contexts.
     κ ⊑ₑ κ' ∈ E → lctx_lft_incl κ' κ'' → lctx_lft_incl κ κ''.
   Proof. intros. etrans; [|done]. by eapply lctx_lft_incl_external. Qed.
 
-  Lemma lctx_lft_incl_meet κ κ' κ'' :
+  Lemma lctx_lft_incl_intersect κ κ' κ'' :
     lctx_lft_incl κ κ' → lctx_lft_incl κ κ'' →
     lctx_lft_incl κ (κ' ⊓ κ'').
   Proof.
@@ -160,24 +160,24 @@ Section lft_contexts.
     iIntros "!> #HE". iApply lft_incl_glb. by iApply "Hκ'". by iApply "Hκ''".
   Qed.
 
-  Lemma lctx_lft_incl_meet_l κ κ' κ'' :
+  Lemma lctx_lft_incl_intersect_l κ κ' κ'' :
     lctx_lft_incl κ κ' →
     lctx_lft_incl (κ ⊓ κ'') κ'.
   Proof.
     iIntros (Hκ' ?) "HL".
     iDestruct (Hκ' with "HL") as "#Hκ'".
     iIntros "!> #HE". iApply lft_incl_trans.
-      by iApply lft_meet_incl_l. by iApply "Hκ'".
+      by iApply lft_intersect_incl_l. by iApply "Hκ'".
   Qed.
 
-  Lemma lctx_lft_incl_meet_r κ κ' κ'' :
+  Lemma lctx_lft_incl_intersect_r κ κ' κ'' :
     lctx_lft_incl κ κ' →
     lctx_lft_incl (κ'' ⊓ κ) κ'.
   Proof.
     iIntros (Hκ' ?) "HL".
     iDestruct (Hκ' with "HL") as "#Hκ'".
     iIntros "!> #HE". iApply lft_incl_trans.
-      by iApply lft_meet_incl_r. by iApply "Hκ'".
+      by iApply lft_intersect_incl_r. by iApply "Hκ'".
   Qed.
 
   (* Lifetime aliveness *)
@@ -203,8 +203,8 @@ Section lft_contexts.
   Lemma lctx_lft_alive_tok_list κs F q :
     ↑lftN ⊆ F → Forall lctx_lft_alive κs →
       elctx_interp E -∗ llctx_interp L q ={F}=∗
-         ∃ q', q'.[lftl_meet κs] ∗ llctx_interp L q' ∗
-                   (q'.[lftl_meet κs] -∗ llctx_interp L q' ={F}=∗ llctx_interp L q).
+         ∃ q', q'.[lft_intersect_list κs] ∗ llctx_interp L q' ∗
+                   (q'.[lft_intersect_list κs] -∗ llctx_interp L q' ={F}=∗ llctx_interp L q).
   Proof.
     iIntros (? Hκs) "#HE". iInduction κs as [|κ κs] "IH" forall (q Hκs).
     { iIntros "HL !>". iExists _. iFrame "HL". iSplitL; first iApply lft_tok_static.
@@ -232,8 +232,8 @@ Section lft_contexts.
     iDestruct "HL" as "[HL1 HL2]". rewrite {2}/llctx_interp /llctx_elt_interp.
     iDestruct (big_sepL_lookup_acc with "HL2") as "[Hκ Hclose]". done.
     iDestruct "Hκ" as (κ0) "(EQ & Htok & #Hend)". simpl. iDestruct "EQ" as %->.
-    iAssert (∃ q', q'.[lftl_meet κs] ∗
-      (q'.[lftl_meet κs] ={F}=∗ llctx_interp L (qL / 2)))%I
+    iAssert (∃ q', q'.[lft_intersect_list κs] ∗
+      (q'.[lft_intersect_list κs] ={F}=∗ llctx_interp L (qL / 2)))%I
       with "[> HE HL1]" as "H".
     { move:(qL/2)%Qp=>qL'. clear HL. iClear "Hend".
       iInduction Hκs as [|κ κs Hκ ?] "IH" forall (qL').
@@ -315,8 +315,8 @@ Proof. iIntros (HE' ?) "_ !> H". by iApply big_sepL_submseteq. Qed.
 
 Global Hint Resolve
      lctx_lft_incl_relf lctx_lft_incl_static lctx_lft_incl_local'
-     lctx_lft_incl_external' lctx_lft_incl_meet
-     lctx_lft_incl_meet_l lctx_lft_incl_meet_r
+     lctx_lft_incl_external' lctx_lft_incl_intersect
+     lctx_lft_incl_intersect_l lctx_lft_incl_intersect_r
      lctx_lft_alive_static lctx_lft_alive_local lctx_lft_alive_external
      elctx_sat_nil elctx_sat_lft_incl elctx_sat_app elctx_sat_refl
   : lrust_typing.

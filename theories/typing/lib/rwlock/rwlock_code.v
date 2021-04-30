@@ -204,12 +204,12 @@ Section rwlock_functions.
             iMod (own_update with "Hownst") as "[Hownst Hreading]"; first by apply
               auth_update_alloc, (op_local_update_discrete _ _ (reading_st (1/2)%Qp ν)).
             rewrite right_id. iExists _, _. iFrame "Htok1 Hreading".
-            iDestruct (lft_meet_acc with "Hβtok2 Htok2") as (q) "[Htok Hclose]".
+            iDestruct (lft_intersect_acc with "Hβtok2 Htok2") as (q) "[Htok Hclose]".
             iApply (fupd_mask_mono (↑lftN)). solve_ndisj.
             iMod (rebor _ _ (β ⊓ ν) with "LFT [] Hst") as "[Hst Hh]". solve_ndisj.
-            { iApply lft_meet_incl_l. }
+            { iApply lft_intersect_incl_l. }
             iMod (ty_share with "LFT [] Hst Htok") as "[#Hshr Htok]". solve_ndisj.
-            { iApply lft_incl_trans; [|done]. iApply lft_meet_incl_l. }
+            { iApply lft_incl_trans; [|done]. iApply lft_intersect_incl_l. }
             iFrame "#". iDestruct ("Hclose" with "Htok") as "[$ Htok2]".
             iExists _. iFrame. iExists _, _. iSplitR; first done. iFrame "#∗".
             rewrite Qp_div_2. iSplitL; last done.
@@ -223,7 +223,7 @@ Section rwlock_functions.
         { rewrite 2!tctx_interp_cons tctx_interp_singleton !tctx_hasty_val
                   tctx_hasty_val' //. iFrame.
           iExists _, _, _, _, _. iFrame "∗#". iApply ty_shr_mono; last done.
-          iApply lft_meet_mono; first done. iApply lft_incl_refl. }
+          iApply lft_intersect_mono; first done. iApply lft_incl_refl. }
         iApply (type_sum_assign (option $ rwlockreadguard α ty)); [solve_typing..|].
         simpl. iApply type_jump; solve_typing.
       + iApply (wp_cas_int_fail with "Hlx"); try done. iNext. iIntros "Hlx".

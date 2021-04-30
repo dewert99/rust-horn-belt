@@ -59,8 +59,8 @@ Section mguard.
     iMod (bor_persistent with "LFT Hβty Htok") as "[#Hβty Htok]"; [done|].
     iMod (bor_persistent with "LFT Hαβ Htok") as "[#Hαβ $]"; first done.
     iExists _. iFrame "H↦". iApply delay_sharing_nested; try done.
-    { iNext. iApply lft_incl_trans; [|done]. iApply lft_meet_incl_l. }
-    iApply (bor_shorten with "[] H"). iApply lft_meet_incl_r.
+    { iNext. iApply lft_incl_trans; [|done]. iApply lft_intersect_incl_l. }
+    iApply (bor_shorten with "[] H"). iApply lft_intersect_incl_r.
   Qed.
   Next Obligation.
     iIntros (??????) "#? H". iDestruct "H" as (l') "[#Hf #H]".
@@ -68,10 +68,10 @@ Section mguard.
     - by iApply frac_bor_shorten.
     - iIntros "!> * % Htok".
       iMod (lft_incl_acc with "[] Htok") as (q') "[Htok Hclose]"; first solve_ndisj.
-      { iApply lft_meet_mono. iApply lft_incl_refl. done. }
+      { iApply lft_intersect_mono. iApply lft_incl_refl. done. }
       iMod ("H" with "[] Htok") as "Hshr". done. iModIntro. iNext.
       iMod "Hshr" as "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
-      iApply ty_shr_mono; try done. iApply lft_meet_mono. iApply lft_incl_refl. done.
+      iApply ty_shr_mono; try done. iApply lft_intersect_mono. iApply lft_incl_refl. done.
   Qed.
 
   Global Instance mutexguard_type_contr α : TypeContractive (mutexguard α).
@@ -101,7 +101,7 @@ Section mguard.
     iIntros "!> #HE". iDestruct ("Hα" with "HE") as "{Hα} Hα".
     iDestruct ("Hty" with "HE") as "(%&[Hl1 Hl2]&#Ho&#Hs) {HE Hty}".
     iSplit; [done|iSplit; [|iSplit; iModIntro]].
-    - by iApply lft_meet_mono.
+    - by iApply lft_intersect_mono.
     - iIntros (tid [|[[]|][]]) "H //=".
       iDestruct "H" as (β) "(#H⊑ & #Hl & #Hinv & Hown)".
       iExists β. iSplit; [|iSplit; [|iSplit]].
@@ -118,10 +118,10 @@ Section mguard.
     - iIntros (κ tid l) "H". iDestruct "H" as (l') "H". iExists l'.
       iDestruct "H" as "[$ #H]". iIntros "!> * % Htok".
       iMod (lft_incl_acc with "[] Htok") as (q') "[Htok Hclose]"; first solve_ndisj.
-      { iApply lft_meet_mono. done. iApply lft_incl_refl. }
+      { iApply lft_intersect_mono. done. iApply lft_incl_refl. }
       iMod ("H" with "[] Htok") as "Hshr". done. iModIntro. iNext.
       iMod "Hshr" as "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
-      iApply ty_shr_mono; try done. iApply lft_meet_mono. done. iApply lft_incl_refl.
+      iApply ty_shr_mono; try done. iApply lft_intersect_mono. done. iApply lft_incl_refl.
       by iApply "Hs".
   Qed.
 
@@ -276,7 +276,7 @@ Section code.
     iMod (frac_bor_acc with "LFT Hlg Hα1") as (qlx') "[H↦ Hclose2]"; first done.
     iMod (lctx_lft_alive_tok β with "HE HL") as (qβ) "(Hβ & HL & Hclose3)";
       [solve_typing..|].
-    iDestruct (lft_meet_acc with "Hβ Hα2") as (qβα) "[Hα2β Hclose4]".
+    iDestruct (lft_intersect_acc with "Hβ Hα2") as (qβα) "[Hα2β Hclose4]".
     wp_bind (!_)%E. iApply (wp_step_fupd with "[Hshr Hα2β]");
          [|by iApply ("Hshr" with "[] Hα2β")|]; first done.
     wp_read. iIntros "[#Hshr Hα2β] !>". wp_let.

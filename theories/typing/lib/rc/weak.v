@@ -73,7 +73,7 @@ Section weak.
     - intros n ty1 ty2 Hsz Hl HE Ho Hs tid vl. destruct vl as [|[[|l|]|] [|]]=>//=.
       rewrite /rc_persist /type_incl Hsz.
       assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
-      { intros α. iApply lft_meet_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
       assert (∀ α l, ty1.(ty_shr) (α ⊓ ty_lft ty1) tid l ≡{n}≡
                      ty2.(ty_shr) (α ⊓ ty_lft ty2) tid l) as Hs'.
       { intros. rewrite Hs. apply equiv_dist.
@@ -83,7 +83,7 @@ Section weak.
                      f_contractive || f_equiv).
     - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. rewrite /= /weak /rc_persist /type_incl Hsz.
       assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
-      { intros α. iApply lft_meet_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
       assert (∀ l α, dist_later n (ty1.(ty_shr) (α ⊓ ty_lft ty1) tid (l +ₗ 2))
                               (ty2.(ty_shr) (α ⊓ ty_lft ty2) tid (l +ₗ 2))) as Hs'.
       { intros. rewrite Hs. apply dist_dist_later, equiv_dist.

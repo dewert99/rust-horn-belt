@@ -47,7 +47,7 @@ Section uniq_bor.
     iMod (bor_unnest with "LFT Bor") as "Bor"; [done|]. iIntros "!>!>!>".
     iMod (bor_shorten with "[] Bor") as "Bor".
     { iApply lft_incl_glb; [|iApply lft_incl_refl].
-      iApply lft_incl_trans; by [|iApply lft_meet_incl_l]. }
+      iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     do 2 (iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|]).
     iMod (bor_sep with "LFT Bor") as "[BorOwn Bor]"; [done|].
     iMod (bor_sep with "LFT Bor") as "[_ BorPc]"; [done|].
@@ -58,7 +58,7 @@ Section uniq_bor.
     iMod ("ToBor" with "[Vo ToPc] ξ") as "[Borξ κ']".
     { iIntros "!> >ξ !>!>". iFrame "Vo". by iApply "ToPc". }
     iMod (ty_share with "LFT [] BorOwn κ'") as "Upd"; [done| |].
-    { iApply lft_incl_trans; by [|iApply lft_meet_incl_r]. }
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
     iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Upd").
     rewrite heap_mapsto_vec_singleton.
     iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT BorMt") as "BorMt"; [done|].
@@ -72,13 +72,13 @@ Section uniq_bor.
     iDestruct "H" as (d i [Le Eq]) "[Vo Bor]".
     set ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i. move: Le=> /succ_le [?[->Le]].
     iIntros "[κ1 κ1']". iMod (lft_incl_acc with "[] κ1") as (?) "[κ1 Toκ1]";
-    first done. { iApply lft_incl_trans; by [|iApply lft_meet_incl_l]. }
+    first done. { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     iMod (bor_acc with "LFT Bor κ1") as "[Big ToBor]"; [done|]. iIntros "!>!>!>".
     iDestruct "Big" as (??) "((%vl & ↦ & ty) & #⧖ & Pc)".
     iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     iDestruct (uniq_proph_tok with "Vo Pc") as "(Vo & ξ & ToPc)".
     iMod (ty_own_proph with "LFT [] ty κ1'") as "Upd"; [done| |].
-    { iApply lft_incl_trans; by [|iApply lft_meet_incl_r]. } iModIntro.
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
     iApply step_fupdN_nmono; [apply Le|]. iApply (step_fupdN_wand with "Upd").
     iMod 1 as (ζl ??) "[ζl Toty]". iModIntro. rewrite proph_tok_singleton.
     iDestruct (proph_tok_combine with "ζl ξ") as (q) "[ζlξ Toζlξ]".
@@ -95,7 +95,7 @@ Section uniq_bor.
     move=> ?????[|?]*; [by iIntros|].
     iIntros "#LFT #In #? (%l & %ξ &%&?& #Bor & ty) [κ' κ'₊] !>!>".
     iDestruct (ty_shr_proph with "LFT In [] ty κ'") as "Upd"; [done| |].
-    { iApply lft_incl_trans; by [|iApply lft_meet_incl_r]. } iModIntro.
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. } iModIntro.
     iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ζl q' ?) "[ζl Toty]".
     iMod (lft_incl_acc with "In κ'₊") as (?) "[κ1 Toκ'₊]"; [done|].
     iMod (frac_bor_acc with "LFT Bor κ1") as (?) "[>ξ Toκ1]"; [done|].
@@ -120,7 +120,7 @@ Section typing.
   Global Instance uniq_type_contr {𝔄} κ : TypeContractive (@uniq_bor _ _ 𝔄 κ).
   Proof. split; [by apply (type_lft_morph_add_one κ)|done| |].
     - move=> > ? Hl * /=. f_equiv.
-      + apply equiv_dist. iDestruct Hl as "#[??]".
+      + apply equiv_dist. iDestruct Hl as "#[??]". 
         iSplit; iIntros "#H"; (iApply lft_incl_trans; [iApply "H"|done]).
       + do 17 (f_contractive || f_equiv). by simpl in *.
     - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
@@ -139,7 +139,7 @@ Section typing.
     move=> In /eqtype_id_unfold Eqt ?. iIntros "L".
     iDestruct (Eqt with "L") as "#Eqt". iDestruct (In with "L") as "#In". iIntros "!> #E".
     iSplit; [done|]. iDestruct ("Eqt" with "E") as (?) "[[??][#EqOwn #EqShr]]".
-    iSpecialize ("In" with "E"). iSplit; [by iApply lft_meet_mono|].
+    iSpecialize ("In" with "E"). iSplit; [by iApply lft_intersect_mono|].
     iSplit; iModIntro=>/=.
     - iIntros "*". rewrite by_just_loc_ex. iDestruct 1 as "[#Hinc (% & -> & H)]".
       iSplitR. iApply (lft_incl_trans with "[]"); [|done]; iApply (lft_incl_trans with "[]"); done.

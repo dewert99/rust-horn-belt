@@ -121,7 +121,7 @@ then sealed behind a module signature in
 | LftL-bor-split    | model/bor_sep.v     | bor_sep              |
 | LftL-bor-acc      | lifetime.v          | bor_acc              |
 | LftL-bor-shorten  | model/primitive.v   | bor_shorten          |
-| LftL-incl-isect   | model/primitive.v   | lft_meet_incl_l      |
+| LftL-incl-isect   | model/primitive.v   | lft_intersect_incl_l |
 | LftL-incl-glb     | model/primitive.v   | lft_incl_glb         |
 | LftL-tok-inter    | model/primitive.v   | lft_tok_sep          |
 | LftL-end-inter    | model/primitive.v   | lft_dead_or          |

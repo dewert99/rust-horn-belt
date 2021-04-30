@@ -36,7 +36,7 @@ Section arc.
     iDestruct "Heqsz" as %->. iFrame "#". iSplit.
     - iDestruct "Hs" as "[?|?]"; last auto. iLeft. iApply "Hincls".
       iApply (ty_shr_mono with "[] [//]").
-      iApply lft_meet_mono; [iApply lft_incl_refl|done].
+      iApply lft_intersect_mono; [iApply lft_incl_refl|done].
     - iIntros "!> Hν". iMod ("Hvs" with "Hν") as "H". iModIntro. iNext.
       iMod "H" as "($ & H & $)". iDestruct "H" as (vl) "[??]". iExists _.
       iFrame. by iApply "Hinclo".
@@ -73,10 +73,10 @@ Section arc.
       longer necessary. *)
     iApply fupd_trans. iApply (fupd_mask_mono (↑lftN))=>//.
     iMod (bor_create _ ν with "LFT Hown") as "[HP HPend]"=>//. iModIntro.
-    iDestruct (lft_meet_acc with "Hν Htok") as (q') "[Htok Hclose]".
+    iDestruct (lft_intersect_acc with "Hν Htok") as (q') "[Htok Hclose]".
     iMod (ty_share with "LFT [] [HP] Htok") as "[#? Htok]"; first solve_ndisj.
-    { iApply lft_meet_incl_r. }
-    { iApply (bor_shorten with "[] HP"). iApply lft_meet_incl_l. }
+    { iApply lft_intersect_incl_r. }
+    { iApply (bor_shorten with "[] HP"). iApply lft_intersect_incl_l. }
     iDestruct ("Hclose" with "Htok") as "[Hν $]".
     iMod (create_arc (P1 ν) (P2 l ty.(ty_size)) arc_invN with "Hl1 Hl2 Hν")
       as (γ q'') "(#? & ? & ?)".
@@ -173,7 +173,7 @@ Section arc.
     - intros n ty1 ty2 Hsz Hl HE Ho Hs tid vl. destruct vl as [|[[|l|]|] [|]]=>//=.
       rewrite /full_arc_own /shared_arc_own /arc_persist Hsz.
       assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
-      { intros α. iApply lft_meet_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
       assert (∀ α, ty1.(ty_shr) (α ⊓ ty_lft ty1) tid (l +ₗ 2) ≡{n}≡
                    ty2.(ty_shr) (α ⊓ ty_lft ty2) tid (l +ₗ 2)) as Hs'.
       { intros. rewrite Hs. apply equiv_dist.
@@ -181,7 +181,7 @@ Section arc.
       repeat (apply Ho || apply dist_S, Ho || apply Hs' || f_contractive || f_equiv).
     - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. rewrite /= /arc_persist Hsz.
       assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
-      { intros α. iApply lft_meet_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
       assert (∀ l α, dist_later n (ty1.(ty_shr) (α ⊓ ty_lft ty1) tid (l +ₗ 2))
                               (ty2.(ty_shr) (α ⊓ ty_lft ty2) tid (l +ₗ 2))) as Hs'.
       { intros. rewrite Hs. apply dist_dist_later, equiv_dist.
@@ -308,7 +308,7 @@ Section arc.
     - intros n ty1 ty2 Hsz Hl HE Ho Hs tid vl. destruct vl as [|[[|l|]|] [|]]=>//=.
       rewrite /arc_persist Hsz.
       assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
-      { intros α. iApply lft_meet_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
       assert (∀ α, ty1.(ty_shr) (α ⊓ ty_lft ty1) tid (l +ₗ 2) ≡{n}≡
                    ty2.(ty_shr) (α ⊓ ty_lft ty2) tid (l +ₗ 2)) as Hs'.
       { intros. rewrite Hs. apply equiv_dist.
@@ -316,7 +316,7 @@ Section arc.
       repeat (apply Ho || apply dist_S, Ho || apply Hs' || f_contractive || f_equiv).
     - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. rewrite /= /arc_persist Hsz.
       assert (∀ α, ⊢ α ⊓ ty_lft ty1 ≡ₗ α ⊓ ty_lft ty2) as Hl'.
-      { intros α. iApply lft_meet_equiv_proper; [|done]. iApply lft_equiv_refl. }
+      { intros α. iApply lft_intersect_equiv_proper; [|done]. iApply lft_equiv_refl. }
       assert (∀ l α, dist_later n (ty1.(ty_shr) (α ⊓ ty_lft ty1) tid (l +ₗ 2))
                               (ty2.(ty_shr) (α ⊓ ty_lft ty2) tid (l +ₗ 2))) as Hs'.
       { intros. rewrite Hs. apply dist_dist_later, equiv_dist.
@@ -1157,13 +1157,13 @@ Section arc.
       { iApply (Hclone _ [] with "LFT HE Hna"); rewrite /llctx_interp /tctx_interp //. }
       clear Hclone clone. iIntros (clone) "(Hna & _ & [Hclone _])". rewrite tctx_hasty_val.
       iDestruct "Hs" as "[Hs|Hν']"; last by iDestruct (lft_tok_dead with "Hν Hν'") as "[]".
-      iDestruct (lft_meet_acc with "Hν Hα2") as (q'') "[Hαν Hclose3]".
+      iDestruct (lft_intersect_acc with "Hν Hα2") as (q'') "[Hαν Hclose3]".
       rewrite -[ν ⊓ α](right_id_L).
       iApply (type_call_iris _ [ν ⊓ α] (ν ⊓ α) [_] with
               "LFT HE Hna Hαν Hclone [Hl H†]"); [solve_typing| |].
       { rewrite big_sepL_singleton tctx_hasty_val' //. rewrite /= freeable_sz_full.
         iFrame. iExists [_]. rewrite heap_mapsto_vec_singleton. iFrame.
-        iApply ty_shr_mono; last done. iApply lft_meet_mono; [|done].
+        iApply ty_shr_mono; last done. iApply lft_intersect_mono; [|done].
         iApply lft_incl_refl. }
       iIntros ([[|cl|]|]) "Hna Hαν Hcl //". wp_rec.
       iDestruct "Hcl" as "[Hcl Hcl†]". iDestruct "Hcl" as (vl) "[Hcl↦ Hown]".

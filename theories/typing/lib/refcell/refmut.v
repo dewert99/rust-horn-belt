@@ -64,8 +64,8 @@ Section refmut.
     iDestruct (frac_bor_lft_incl with "LFT H") as "#Hκν". iClear "H".
     iExists _, _. iFrame "H↦".
     iApply delay_sharing_nested; [..|iApply (bor_shorten with "[] Hb")]=>//=.
-    - iApply lft_meet_mono; [|done]. iApply lft_incl_refl.
-    - iApply lft_meet_incl_r.
+    - iApply lft_intersect_mono; [|done]. iApply lft_incl_refl.
+    - iApply lft_intersect_incl_r.
   Qed.
   Next Obligation.
     iIntros (??????) "#? H". iDestruct "H" as (lv lrc) "[#Hf #H]".
@@ -73,10 +73,10 @@ Section refmut.
     - by iApply frac_bor_shorten.
     - iIntros "!> * % Htok".
       iMod (lft_incl_acc with "[] Htok") as (q') "[Htok Hclose]"; first solve_ndisj.
-      { iApply lft_meet_mono. iApply lft_incl_refl. done. }
+      { iApply lft_intersect_mono. iApply lft_incl_refl. done. }
       iMod ("H" with "[] Htok") as "Hshr". done. iModIntro. iNext.
       iMod "Hshr" as "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
-      iApply ty_shr_mono; try done. iApply lft_meet_mono. iApply lft_incl_refl. done.
+      iApply ty_shr_mono; try done. iApply lft_intersect_mono. iApply lft_incl_refl. done.
   Qed.
 
   Global Instance refmut_type_contr α : TypeContractive (refmut α).
@@ -104,24 +104,24 @@ Section refmut.
     iIntros "!> #HE". iDestruct ("Hα" with "HE") as "Hα1α2".
     iDestruct ("Hty" with "HE") as "(%&#[??]&#Ho&#Hs)".
     iSplit; [done|iSplit; [|iSplit; iModIntro]].
-    - simpl. by iApply lft_meet_mono.
+    - simpl. by iApply lft_intersect_mono.
     - iIntros (tid [|[[]|][|[[]|][]]]) "H"=>//=.
       iDestruct "H" as (ν γ q' β ty') "(Hb & #H⊑ & #Hl & #Hinv & Hν & Hown)".
       iExists ν, γ, q', β, ty'. iFrame "∗#". iSplit; [|iSplit].
       + iApply bor_shorten; last iApply bor_iff; last done.
-        * iApply lft_meet_mono; first done. iApply lft_incl_refl.
+        * iApply lft_intersect_mono; first done. iApply lft_incl_refl.
         * iNext; iModIntro; iSplit; iIntros "H"; iDestruct "H" as (vl) "[??]";
           iExists vl; iFrame; by iApply "Ho".
       + by iApply lft_incl_trans.
       + iApply lft_incl_trans; [|done]. iApply lft_incl_trans; [|iApply "Hl"].
-        iApply lft_meet_mono; [done|]. iApply lft_incl_refl.
+        iApply lft_intersect_mono; [done|]. iApply lft_incl_refl.
     - iIntros (κ tid l) "H /=". iDestruct "H" as (lv lrc) "H". iExists lv, lrc.
       iDestruct "H" as "[$ #H]". iIntros "!> * % Htok".
       iMod (lft_incl_acc with "[] Htok") as (q') "[Htok Hclose]"; first solve_ndisj.
-      { iApply lft_meet_mono. done. iApply lft_incl_refl. }
+      { iApply lft_intersect_mono. done. iApply lft_incl_refl. }
       iMod ("H" with "[] Htok") as "Hshr". done. iModIntro. iNext.
       iMod "Hshr" as "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
-      iApply ty_shr_mono; try done. iApply lft_meet_mono. done. iApply lft_incl_refl.
+      iApply ty_shr_mono; try done. iApply lft_intersect_mono. done. iApply lft_incl_refl.
       by iApply "Hs".
   Qed.
   Global Instance refmut_mono_flip E L :

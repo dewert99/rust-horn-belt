@@ -21,9 +21,10 @@ Section S.
     elim: n=> [|n IH]; [apply lft_equiv_refl|]. rewrite /Tn /=.
     iApply lft_equiv_trans; [iApply type_lft_morph_lft_equiv_proper; iApply IH|].
     iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_trans.
-    { iApply lft_meet_equiv_proper; [iApply lft_equiv_refl|iApply Hα]. }
-    iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα]. rewrite assoc.
-    iApply lft_meet_equiv_proper; [|iApply lft_equiv_refl]. iApply lft_meet_equiv_idemp.
+    { iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|iApply Hα]. }
+    iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
+    rewrite assoc. iApply lft_intersect_equiv_proper; [|iApply lft_equiv_refl].
+    iApply lft_intersect_equiv_idemp.
   Qed.
 
   Lemma Tn_ty_E_const n n' :
@@ -166,10 +167,10 @@ Proof.
   - case type_contr_type_lft_morph=> [α βs E' Hα HE'|α E' Hα HE'].
     + iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
       iApply lft_equiv_trans; [iApply Hα|].
-      iApply lft_equiv_trans; [|iApply lft_meet_equiv_proper;
+      iApply lft_equiv_trans; [|iApply lft_intersect_equiv_proper;
         [iApply lft_equiv_refl|iApply lft_equiv_sym; iApply Hα]].
-      rewrite assoc. iApply lft_meet_equiv_proper; [|iApply lft_equiv_refl].
-      iApply lft_equiv_sym. iApply lft_meet_equiv_idemp.
+      rewrite assoc. iApply lft_intersect_equiv_proper; [|iApply lft_equiv_refl].
+      iApply lft_equiv_sym. iApply lft_intersect_equiv_idemp.
     + iApply lft_equiv_trans; [iApply Hα|iApply lft_equiv_sym; iApply Hα].
   - rewrite EqOwn'. by iApply (bi.iff_refl True%I).
   - rewrite EqShr'. by iApply (bi.iff_refl True%I).

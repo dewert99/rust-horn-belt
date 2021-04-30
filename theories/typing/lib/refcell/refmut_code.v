@@ -33,7 +33,7 @@ Section refmut_functions.
     rewrite heap_mapsto_vec_cons heap_mapsto_vec_singleton.
     iMod (lctx_lft_alive_tok β with "HE HL") as (qβ) "(Hβ & HL & Hclose'')";
       [solve_typing..|].
-    iDestruct (lft_meet_acc with "Hβ Hα2") as (qβα) "[Hα2β Hcloseβα2]".
+    iDestruct (lft_intersect_acc with "Hβ Hα2") as (qβα) "[Hα2β Hcloseβα2]".
     wp_bind (!#lx')%E. iApply (wp_step_fupd with "[Hα2β]");
          [|by iApply ("Hshr" with "[] Hα2β")|]; first done.
     iMod "H↦" as "[H↦1 H↦2]". wp_read. iIntros "[#Hshr' Hα2β] !>". wp_let.
@@ -200,8 +200,8 @@ Section refmut_functions.
     wp_let. wp_write. wp_let. rewrite tctx_hasty_val.
     iMod (lctx_lft_alive_tok α with "HE HL") as (?) "(Hα & HL & Hclose1)";[solve_typing..|].
     iMod (lctx_lft_alive_tok ϝ with "HE HL") as (?) "(Hϝ & HL & Hclose2)";[solve_typing..|].
-    iDestruct (lft_meet_acc with "Hα Hν") as (?) "[Hαν Hclose3]".
-    iDestruct (lft_meet_acc with "Hαν Hϝ") as (?) "[Hανϝ Hclose4]".
+    iDestruct (lft_intersect_acc with "Hα Hν") as (?) "[Hαν Hclose3]".
+    iDestruct (lft_intersect_acc with "Hαν Hϝ") as (?) "[Hανϝ Hclose4]".
     rewrite -[ϝ in (α ⊓ ν) ⊓ ϝ](right_id_L).
     iApply (type_call_iris _ [α ⊓ ν; ϝ] (α ⊓ ν) [_; _]
             with "LFT HE Hna [Hανϝ] Hf' [$Henv Hlx H† Hbor]"); [solve_typing|done| |].
@@ -276,8 +276,8 @@ Section refmut_functions.
     wp_let. wp_write. wp_let. rewrite tctx_hasty_val.
     iMod (lctx_lft_alive_tok α with "HE HL") as (?) "(Hα & HL & Hclose1)";[solve_typing..|].
     iMod (lctx_lft_alive_tok ϝ with "HE HL") as (?) "(Hϝ & HL & Hclose2)";[solve_typing..|].
-    iDestruct (lft_meet_acc with "Hα Hν") as (?) "[Hαν Hclose3]".
-    iDestruct (lft_meet_acc with "Hαν Hϝ") as (?) "[Hανϝ Hclose4]".
+    iDestruct (lft_intersect_acc with "Hα Hν") as (?) "[Hαν Hclose3]".
+    iDestruct (lft_intersect_acc with "Hαν Hϝ") as (?) "[Hανϝ Hclose4]".
     rewrite -[ϝ in (α ⊓ ν) ⊓ ϝ](right_id_L).
     iApply (type_call_iris _ [α ⊓ ν; ϝ] (α ⊓ ν) [_; _]
        with "LFT HE Hna [Hανϝ] Hf' [$Henv Hlx H† Hbor]"); [solve_typing|done| |].

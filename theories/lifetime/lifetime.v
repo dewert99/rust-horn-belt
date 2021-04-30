@@ -16,10 +16,10 @@ Module Export lifetime : lifetime_sig.
   Include creation.
 End lifetime.
 
-Notation lftl_meet l := (foldr (⊓) static l).
+Notation lft_intersect_list l := (foldr (⊓) static l).
 
-Lemma lftl_meet_app l1 l2 :
-  lftl_meet (l1 ++ l2) = lftl_meet l1 ⊓ lftl_meet l2.
+Lemma lft_intersect_list_app l1 l2 :
+  lft_intersect_list (l1 ++ l2) = lft_intersect_list l1 ⊓ lft_intersect_list l2.
 Proof.
   induction l1 as [|? l1 IH].
   - by rewrite /= left_id.
@@ -228,13 +228,13 @@ Proof.
   - iIntros "Hst". by iDestruct (lft_dead_static with "Hst") as "[]".
 Qed.
 
-Lemma lftl_meet_elem_of_incl κs κ :
-  κ ∈ κs → ⊢ lftl_meet κs ⊑ κ.
+Lemma lft_intersect_list_elem_of_incl κs κ :
+  κ ∈ κs → ⊢ lft_intersect_list κs ⊑ κ.
 Proof.
   induction 1 as [|???? IH].
-  - iApply lft_meet_incl_l.
+  - iApply lft_intersect_incl_l.
   - iApply lft_incl_trans; last iApply IH. (* FIXME: Why does "done" not do this? Looks like "assumption" to me. *)
-    iApply lft_meet_incl_r.
+    iApply lft_intersect_incl_r.
 Qed.
 
 Lemma lft_eternalize E q κ :
@@ -257,13 +257,13 @@ Proof. iIntros "[??]". by iSplit. Qed.
 Lemma lft_equiv_trans κ κ' κ'' : κ ≡ₗ κ' -∗ κ' ≡ₗ κ'' -∗ κ ≡ₗ κ''.
 Proof. iIntros "#[??] #[??]". by iSplit; iApply lft_incl_trans. Qed.
 
-Lemma lft_meet_equiv_proper κ1 κ2 κ3 κ4 :
+Lemma lft_intersect_equiv_proper κ1 κ2 κ3 κ4 :
   κ1 ≡ₗ κ3 -∗ κ2 ≡ₗ κ4 -∗ κ1 ⊓ κ2 ≡ₗ κ3 ⊓ κ4.
-Proof. iIntros "#[??] #[??]". iSplit; by iApply lft_meet_mono. Qed.
+Proof. iIntros "#[??] #[??]". iSplit; by iApply lft_intersect_mono. Qed.
 
-Lemma lft_meet_equiv_idemp κ : ⊢ κ ⊓ κ ≡ₗ κ.
+Lemma lft_intersect_equiv_idemp κ : ⊢ κ ⊓ κ ≡ₗ κ.
 Proof.
-  iSplit; [iApply lft_meet_incl_r|iApply lft_incl_glb; iApply lft_incl_refl].
+  iSplit; [iApply lft_intersect_incl_r|iApply lft_incl_glb; iApply lft_incl_refl].
 Qed.
 
 Lemma lft_incl_equiv_proper κ1 κ2 κ3 κ4 :

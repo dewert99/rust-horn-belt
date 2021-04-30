@@ -170,7 +170,7 @@ Proof.
     - rewrite /bor. iExists static. iFrame. iApply lft_incl_refl.
     - iDestruct "Hbor" as ">Hbor".
       iApply bor_shorten; [|by rewrite bor_unfold_idx; auto].
-      iApply lft_meet_incl_l. }
+      iApply lft_intersect_incl_l. }
   rewrite /idx_bor /bor. destruct i as [κ0 i].
   iDestruct "HP" as "[Hκκ0 HP]". iDestruct "HP" as (P') "[HPP' HP']".
   iMod (raw_bor_shorten _ _ (κ0 ⊓ κ'0) with "LFT Hbor") as "Hbor";
@@ -178,6 +178,6 @@ Proof.
   iMod (raw_idx_bor_unnest with "LFT HP' Hbor") as "Hbor";
     [done|by apply gmultiset_disj_union_subset_l|].
   iExists _. iDestruct (raw_bor_iff with "HPP' Hbor") as "$".
-    by iApply lft_meet_mono.
+    by iApply lft_intersect_mono.
 Qed.
 End reborrow.

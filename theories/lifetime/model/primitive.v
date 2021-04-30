@@ -256,12 +256,12 @@ Qed.
 (** Basic rules about lifetimes  *)
 Instance lft_inhabited : Inhabited lft := _.
 Instance bor_idx_inhabited : Inhabited bor_idx := _.
-Instance lft_meet_comm : Comm (A:=lft) eq (⊓) := _.
-Instance lft_meet_assoc : Assoc (A:=lft) eq (⊓) := _.
-Instance lft_meet_inj_1 κ : Inj eq eq (κ ⊓.) := _.
-Instance lft_meet_inj_2 κ : Inj eq eq (.⊓ κ) := _.
-Instance lft_meet_left_id : LeftId eq static (⊓) := _.
-Instance lft_meet_right_id : RightId eq static (⊓) := _.
+Instance lft_intersect_comm : Comm (A:=lft) eq (⊓) := _.
+Instance lft_intersect_assoc : Assoc (A:=lft) eq (⊓) := _.
+Instance lft_intersect_inj_1 κ : Inj eq eq (κ ⊓.) := _.
+Instance lft_intersect_inj_2 κ : Inj eq eq (.⊓ κ) := _.
+Instance lft_intersect_left_id : LeftId eq static (⊓) := _.
+Instance lft_intersect_right_id : RightId eq static (⊓) := _.
 
 Lemma lft_tok_sep q κ1 κ2 : q.[κ1] ∗ q.[κ2] ⊣⊢ q.[κ1 ⊓ κ2].
 Proof. by rewrite /lft_tok -big_sepMS_disj_union. Qed.
@@ -326,7 +326,7 @@ Lemma lft_incl_intro κ κ' :
       ([†κ'] ={↑lftN}=∗ [†κ])) -∗ κ ⊑ κ'.
 Proof. reflexivity. Qed.
 
-Lemma lft_meet_incl_l κ κ' : ⊢ κ ⊓ κ' ⊑ κ.
+Lemma lft_intersect_incl_l κ κ' : ⊢ κ ⊓ κ' ⊑ κ.
 Proof.
   unfold lft_incl. iIntros "!>". iSplitR.
   - iIntros (q). rewrite <-lft_tok_sep. iIntros "[H Hf]". iExists q. iFrame.
@@ -334,8 +334,8 @@ Proof.
   - iIntros "? !>". iApply lft_dead_or. auto.
 Qed.
 
-Lemma lft_meet_incl_r κ κ' : ⊢ κ ⊓ κ' ⊑ κ'.
-Proof. rewrite comm. apply lft_meet_incl_l. Qed.
+Lemma lft_intersect_incl_r κ κ' : ⊢ κ ⊓ κ' ⊑ κ'.
+Proof. rewrite comm. apply lft_intersect_incl_l. Qed.
 
 Lemma lft_incl_refl κ : ⊢ κ ⊑ κ.
 Proof. unfold lft_incl. iIntros "!>"; iSplitR; auto 10 with iFrame. Qed.
@@ -351,7 +351,7 @@ Proof.
   - iIntros "H†". iMod ("H2†" with "H†"). by iApply "H1†".
 Qed.
 
-Lemma lft_meet_acc κ κ' q q' :
+Lemma lft_intersect_acc κ κ' q q' :
   q.[κ] -∗ q'.[κ'] -∗ ∃ q'', q''.[κ ⊓ κ'] ∗ (q''.[κ ⊓ κ'] -∗ q.[κ] ∗ q'.[κ']).
 Proof.
   iIntros "Hκ Hκ'".
@@ -366,19 +366,19 @@ Proof.
   - iIntros (q) "[Hκ'1 Hκ'2]".
     iMod ("H1" with "Hκ'1") as (q') "[Hκ' Hclose']".
     iMod ("H2" with "Hκ'2") as (q'') "[Hκ'' Hclose'']".
-    iDestruct (lft_meet_acc with "Hκ' Hκ''") as (qq) "[Hqq Hclose]".
+    iDestruct (lft_intersect_acc with "Hκ' Hκ''") as (qq) "[Hqq Hclose]".
     iExists qq. iFrame. iIntros "!> Hqq".
     iDestruct ("Hclose" with "Hqq") as "[Hκ' Hκ'']".
     iMod ("Hclose'" with "Hκ'") as "$". by iApply "Hclose''".
   - rewrite -lft_dead_or. iIntros "[H†|H†]". by iApply "H1†". by iApply "H2†".
 Qed.
 
-Lemma lft_meet_mono κ1 κ1' κ2 κ2' :
+Lemma lft_intersect_mono κ1 κ1' κ2 κ2' :
   κ1 ⊑ κ1' -∗ κ2 ⊑ κ2' -∗ κ1 ⊓ κ2 ⊑ κ1' ⊓ κ2'.
 Proof.
   iIntros "#H1 #H2". iApply (lft_incl_glb with "[]").
-  - iApply (lft_incl_trans with "[] H1"). iApply lft_meet_incl_l.
-  - iApply (lft_incl_trans with "[] H2"). iApply lft_meet_incl_r.
+  - iApply (lft_incl_trans with "[] H1"). iApply lft_intersect_incl_l.
+  - iApply (lft_incl_trans with "[] H2"). iApply lft_intersect_incl_r.
 Qed.
 
 (** Basic rules about borrows *)
