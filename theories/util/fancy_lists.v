@@ -136,8 +136,8 @@ Inductive nil_unit: Set := nil_tt: nil_unit.
 Program Global Instance nil_unit_unique: Unique nil_unit := {|unique := nil_tt|}.
 Next Obligation. by case. Qed.
 
-Record cons_prod (A B: Type) : Type := cons_pair { phead: A; ptail: B }.
-Arguments cons_pair {_ _} _ _. Arguments phead {_ _} _. Arguments ptail {_ _} _.
+Record cons_prod (A B: Type) : Type := cons_pair { phd: A; ptl: B }.
+Arguments cons_pair {_ _} _ _. Arguments phd {_ _} _. Arguments ptl {_ _} _.
 
 Notation ":1" := nil_unit : type_scope.
 Infix ":*" := cons_prod (at level 60, right associativity) : type_scope.
@@ -276,6 +276,10 @@ Qed.
 (** * Vector *)
 
 Fixpoint pvec A n : Type := match n with 0 => :1 | S m => A :* pvec A m end.
+
+Fixpoint pvec_to_list {A n} (xl: pvec A n) : list A := match n, xl with
+  0, _ => [] | S _, x -:: xl' => x :: pvec_to_list xl' end.
+Coercion pvec_to_list: pvec >-> list.
 
 Fixpoint pvmap {A B n} (f: A → B) : pvec A n → pvec B n :=
   match n with 0 => id | S _ => λ '(x -:: xl'), f x -:: pvmap f xl' end.

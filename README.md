@@ -99,7 +99,7 @@ borrows" in the Coq development.
 | F-jump                | cont.v          | type_jump             |
 | F-newlft              | programs.v      | type_newlft           |
 | F-endlft              | programs.v      | type_endlft           |
-| F-call                | function.v      | type_call'            |
+| F-call                | function.v      | type_call             |
 
 Some of these lemmas are called `something'` because the version without the `'` is a derived, more specialized form used together with our eauto-based `solve_typing` tactic.  You can see this tactic in action in the [examples](theories/typing/examples) subfolder.
 
