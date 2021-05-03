@@ -139,29 +139,32 @@ Section borrow.
     typed_body E L C T (let: x := !p in e) _.
   Proof. iIntros. iApply type_let; [by apply type_deref_uniq_own_instr|solve_typing|done]. Qed. *)
 
-  (* Lemma type_deref_shr_own_instr {E L} κ p n ty :
+  Lemma type_deref_shr_own_instr {𝔅} {E L} κ p n (ty : type 𝔅) :
     lctx_lft_alive E L κ →
-    ⊢ typed_instr_ty E L [p ◁ &shr{κ}(own_ptr n ty)] (!p) (&shr{κ} ty).
+    ⊢ typed_instr_ty E L +[p ◁ &shr{κ}(own_ptr n ty)] (!p) (&shr{κ} ty) (λ post '-[a], post a).
   Proof.
-    iIntros (Hκ tid) "#LFT #TIME HE $ HL Hp".
-    rewrite tctx_interp_singleton.
+    iIntros (Hκ tid ? [vπ []]) "#LFT #TIME #PROPH #UNIQ HE $ HL [Hp _] /= Hproph".
     iMod (Hκ with "HE HL") as (q) "[[Htok1 Htok2] Hclose]"; first solve_ndisj.
-    wp_apply (wp_hasty with "Hp"). iIntros (depth [[]|]) "_ _ Hown"; try done.
+    wp_apply (wp_hasty with "Hp"). iIntros ([[]|] [|[|depth]]) "_ #Hd Hown /="; try done.
     iDestruct "Hown" as (l') "#[H↦b #Hown]".
     iMod (frac_bor_acc with "LFT H↦b Htok1") as (q''') "[>H↦ Hclose']". done.
     iApply wp_fupd. wp_read. iMod ("Hclose'" with "[H↦]") as "Htok1"; first by auto.
+    iExists -[_].
     iMod ("Hclose" with "[Htok1 Htok2]") as "($ & $)"; first by iFrame.
-    rewrite tctx_interp_singleton tctx_hasty_val' //. iFrame "#".
-    iExists 0%nat. iApply persist_time_rcpt_0.
-  Qed. *)
+    rewrite right_id tctx_hasty_val' //. iFrame.
+    iExists (S _). simpl. iFrame "Hown".
+    iApply (persist_time_rcpt_mono with "Hd"); lia.
+  Qed.
 
-  (* Lemma type_deref_shr_own {E L} κ x p e n ty C T T' :
+  Lemma type_deref_shr_own {𝔄 As Bs} {E L} κ x p e n (ty : type 𝔄) C (T : tctx As) (T' : tctx Bs) f pre :
     Closed (x :b: []) e →
-    tctx_extract_hasty E L p (&shr{κ}(own_ptr n ty)) T T' →
+    tctx_extract_elt E L (p ◁ &shr{κ}(own_ptr n ty)) T T' f →
     lctx_lft_alive E L κ →
-    (∀ (v:val), typed_body E L C ((v ◁ &shr{κ} ty) :: T') (subst' x v e)) -∗
-    typed_body E L C T (let: x := !p in e).
-  Proof. iIntros. iApply type_let; [by apply type_deref_shr_own_instr|solve_typing|done]. Qed. *)
+    (∀ (v:val), typed_body E L C ((v ◁ &shr{κ} ty) +:: T') (subst' x v e) pre) -∗
+    typed_body E L C T (let: x := !p in e) (f pre).
+  Proof. iIntros. iApply type_let; [by eapply type_deref_shr_own_instr|solve_typing| |done]. 
+    simpl. f_equal. fun_ext. move => /= [? ?] //=.
+  Qed.
 
   Lemma type_deref_uniq_uniq_instr {𝔄 E L} κ κ' p (ty : type 𝔄) :
     lctx_lft_alive E L κ →
