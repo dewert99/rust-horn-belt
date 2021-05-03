@@ -170,9 +170,12 @@ Section borrow.
     simpl. f_equal. fun_ext. move => /= [? ?] //=.
   Qed.
 
+  Definition tr_unnest {𝔄} (post : pred' (𝔄 * 𝔄)%ST) (vs : plist of_syn_type [((𝔄 * 𝔄) * (𝔄 * 𝔄))%ST]) : Prop :=
+    let '-[(v, v')] := vs in v.2 = v'.2 → post (v.1, v'.1).
+
   Lemma type_deref_uniq_uniq_instr {𝔄 E L} κ κ' p (ty : type 𝔄) :
     lctx_lft_alive E L κ →
-    ⊢ typed_instr_ty E L +[p ◁ &uniq{κ}(&uniq{κ'}ty)] (!p) (&uniq{κ} ty) (λ post '-[(v, v')], (v.2 = v'.2 → post (v.1, v'.1)) : Prop).
+    ⊢ typed_instr_ty E L +[p ◁ &uniq{κ}(&uniq{κ'}ty)] (!p) (&uniq{κ} ty) tr_unnest.
   Proof.
     iIntros (Hκ tid ? [vπ []]) "/= #LFT #TIME #PROPH #UNIQ #HE $ HL [Hp _] Hproph".
     iMod (Hκ with "HE HL") as (q) "[Htok Hclose]"; first solve_ndisj.
@@ -264,13 +267,13 @@ Section borrow.
       destruct (vπ π) as [v v'] => /= -> ? /= [+ b]; rewrite b => /= ?; auto.
   Qed.
 
-  (* Lemma type_deref_uniq_uniq {E L} κ κ' x p e ty C T T' :
+  Lemma type_deref_uniq_uniq {𝔄 As Bs} {E L} κ κ' x p e (ty : type 𝔄) C (T : tctx As) (T' : tctx Bs) f pre:
     Closed (x :b: []) e →
-    tctx_extract_hasty E L p (&uniq{κ}(&uniq{κ'}ty))%T T T' →
+    tctx_extract_elt E L (p ◁ &uniq{κ}(&uniq{κ'}ty))%T T T' f →
     lctx_lft_alive E L κ → lctx_lft_incl E L κ κ' →
-    (∀ (v:val), typed_body E L C ((v ◁ &uniq{κ}ty) :: T') (subst' x v e)) -∗
-    typed_body E L C T (let: x := !p in e).
-  Proof. iIntros. iApply type_let; [by apply type_deref_uniq_uniq_instr|solve_typing|done]. Qed. *)
+    (∀ (v:val), typed_body E L C ((v ◁ &uniq{κ}ty) +:: T') (subst' x v e) pre) -∗
+    typed_body E L C T (let: x := !p in e) (f (λ '(v -:: bs), tr_unnest (λ v', pre (v' -:: bs)) -[v])).
+  Proof. iIntros. iApply type_let; [by eapply type_deref_uniq_uniq_instr|solve_typing|done|done]. Qed.
 
   (* Lemma type_deref_shr_uniq_instr {E L} κ κ' p ty :
     lctx_lft_alive E L κ →
