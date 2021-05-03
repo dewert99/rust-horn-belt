@@ -177,9 +177,9 @@ Next Obligation.
   move=> *. iIntros "#LFT ? Bor κ".
   iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
   iMod (bor_sep with "LFT Bor") as "[Bor st]"; [done|].
-  iMod (bor_persistent with "LFT st κ") as "[? κ]"; [done|].
-  iMod (bor_fracture (λ q, _ ↦∗{q} vl)%I with "LFT Bor") as "?"; [done|]. iModIntro.
-  iApply step_fupdN_full_intro. iModIntro. iFrame "κ". iExists vl. iFrame.
+  iMod (bor_persistent with "LFT st κ") as "[? $]"; [done|].
+  iMod (bor_fracture (λ q, _ ↦∗{q} vl)%I with "LFT Bor") as "?"; [done|].
+  iApply step_fupdN_full_intro. iIntros "!>!>". iExists vl. iFrame.
 Qed.
 Next Obligation. move=> >. apply st_own_proph. Qed.
 Next Obligation.
@@ -211,9 +211,9 @@ Program Definition st_of_pt `{!typeG Σ} {𝔄} (pt: plain_type 𝔄) : simple_t
 Next Obligation. move=> >. iIntros "[%[_?]]". by iApply pt_size_eq. Qed.
 Next Obligation. done. Qed.
 Next Obligation.
-  move=> * /=. iIntros "_ _[%[->?]]". iIntros "κ !>".
+  move=> * /=. iIntros "_ _[%[->?]]". iIntros "$ !>".
   iApply step_fupdN_full_intro. iModIntro. iExists [], 1%Qp.
-  do 2 (iSplit; [done|]). iIntros "_!>". iFrame "κ". iExists v. by iSplit.
+  do 2 (iSplit; [done|]). iIntros "_!>". iExists v. by iSplit.
 Qed.
 
 Coercion st_of_pt: plain_type >-> simple_type.

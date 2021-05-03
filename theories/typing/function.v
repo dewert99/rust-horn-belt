@@ -265,9 +265,8 @@ Section typing.
     have ->: (λ: ["_r"], Skip;; k ["_r"])%E = (λ: ["_r"], Skip;; k ["_r"])%V by unlock.
     iApply (wp_app_hasty_box [] with "ql")=>/=. iIntros (?) "ityl". wp_rec.
     iApply ("Body" with "LFT TIME PROPH UNIQ Efp Na [ϝ] [C ToκL L ToL]
-      [ityl T'] Obs"); first 2 last.
-    { rewrite big_sepHL_1_app. iFrame. } { iSplitL; [|done]. iExists _.
-    iSplit; [by rewrite/= left_id|]. by iFrame "ϝ". }
+      [$ityl $T'] Obs").
+    { iSplitL; [|done]. iExists _. iSplit; [by rewrite/= left_id|]. by iFrame "ϝ". }
     rewrite cctx_interp_singleton. iIntros (v[bπ ?]). inv_vec v=> v.
     iIntros "Na [(%& %Eq & ϝ &_) _] [oty Tk] Obs". rewrite/= left_id in Eq.
     rewrite -Eq. wp_rec. wp_bind Skip. iSpecialize ("To†ϝ" with "ϝ").

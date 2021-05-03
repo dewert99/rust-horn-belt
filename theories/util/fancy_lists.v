@@ -540,4 +540,16 @@ Global Instance into_from_sep_big_sepHL_1_app `{F: A → _} {G Xl Yl}
     (big_sepHL_1 Φ xl yl) (big_sepHL_1 Φ xl' yl').
 Proof. by apply get_into_from_sep, big_sepHL_1_app. Qed.
 
+Global Instance frame_big_sepHL_app `{F: A → _} {Xl Yl}
+  p R Q (xl: _ F Xl) (xl': _ Yl) (Φ: ∀C, _ → PROP) :
+  Frame p R (big_sepHL Φ xl ∗ big_sepHL Φ xl') Q →
+  Frame p R (big_sepHL Φ (xl h++ xl')) Q.
+Proof. by rewrite /Frame big_sepHL_app. Qed.
+
+Global Instance frame_big_sepHL_1_app `{F: A → _} {G Xl Yl}
+  p R Q (xl: _ F Xl) (xl': _ Yl) (yl: _ G _) yl' (Φ: ∀C, _ → _ → PROP) :
+  Frame p R (big_sepHL_1 Φ xl yl ∗ big_sepHL_1 Φ xl' yl') Q →
+  Frame p R (big_sepHL_1 Φ (xl h++ xl') (yl -++ yl')) Q.
+Proof. by rewrite /Frame big_sepHL_1_app. Qed.
+
 End lemmas.

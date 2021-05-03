@@ -182,13 +182,13 @@ Section lemmas.
     tctx_incl E L T1 T1' tr → tctx_incl E L T2 T2' tr' →
     tctx_incl E L (T1 h++ T2) (T1' h++ T2') (trans_app tr tr').
   Proof.
-    move=> Hincl1 Hincl2 ?? vπl ?. move: (papp_ex vπl)=> [?[?->]].
+    move=> In1 In2 ?? vπl ?. move: (papp_ex vπl)=> [?[?->]].
     iIntros "#LFT #PROPH #UNIQ #E L [T1 T2] Obs".
-    iMod (Hincl1 with "LFT PROPH UNIQ E L T1 [Obs]")  as (wπl) "(L & T1' & Obs)".
+    iMod (In1 with "LFT PROPH UNIQ E L T1 [Obs]")  as (wπl) "(L & T1' & Obs)".
     { iApply proph_obs_eq; [|done]=> ?.
       by rewrite /trans_app papply_app papp_sepl papp_sepr. }
-    iMod (Hincl2 with "LFT PROPH UNIQ E L T2 Obs") as (wπl') "(L & T2' &?)".
-    iExists (wπl -++ wπl'). iCombine "T1' T2'" as "$". iFrame "L".
+    iMod (In2 with "LFT PROPH UNIQ E L T2 Obs") as (wπl') "(L & T2' &?)".
+    iExists (wπl -++ wπl'). iFrame "L T1' T2'".
     iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app.
   Qed.
 
