@@ -16,12 +16,12 @@ Proof.
   rewrite /DoSubstL. induction 𝔄l, bl, vl; [done|]=>/=. by rewrite IH𝔄l.
 Qed.
 
-Lemma subst_plv_renew {𝔄l 𝔅l} (bl: _ 𝔄l) (vl': _ 𝔅l) ew e :
-  subst_plv (plistc_renew ew bl) vl' e =
-    subst_plv bl (plistc_renew (symm_eq_len_wit ew) vl') e.
+Lemma subst_plv_renew {𝔄l 𝔅l} (bl: _ 𝔄l) (vl': _ 𝔅l) eq eq' e :
+  subst_plv (plistc_renew eq bl) vl' e =
+    subst_plv bl (plistc_renew eq' vl') e.
 Proof.
-  move: 𝔄l 𝔅l bl vl' ew. fix FIX 1. case=> [|??]; case=>//= ??[??][??]?.
-  f_equal. apply FIX.
+  move: 𝔄l 𝔅l bl vl' eq eq'. fix FIX 1.
+  case=> [|??]; case=>//= ??[??][??]??. f_equal. apply FIX.
 Qed.
 
 Section fn.
@@ -181,12 +181,13 @@ Section typing.
       iSplit; last iSplit; by [iApply "Efp"|iApply "Il"|iApply "O"]. }
     iIntros "!> #E". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iIntros (tr _ vl). iDestruct 1 as (fb kb bl e H ->) "#fn".
-    set ew := symm_eq_len_wit (plist2_eq_len_wit fl). set bl' := plistc_renew ew bl.
+    set eq := plist2_eq_nat_len fl. set bl' := plistc_renew (symmetry eq) bl.
     have Eq: (bl: list _) = bl' by rewrite plistc_renew_eq.
     iExists fb, kb, bl', e, (rew [λ bl₀, _ (_ :b: _ :b: bl₀ +b+ _) _] Eq in H).
     simpl_eq. iSplit; [done|]. iNext. rewrite /typed_body.
     iIntros (x ϝ ??? pre wl') "!> % %acπl LFT TIME PROPH UNIQ #Efp' Na L C T Obs".
-    move: (papp_ex acπl)=> [aπl[cπl->]]. rewrite subst_plv_renew. set wl := plistc_renew _ wl'.
+    move: (papp_ex acπl)=> [aπl[cπl->]].
+    rewrite subst_plv_renew. set wl := plistc_renew _ wl'.
     iDestruct ("Big" with "[$E $Efp']") as "(Efp & InIl & InO)".
     iApply ("fn" $! _ _ _ _ _ (λ '(b -:: cl), pre (g b -:: cl)) _
       _ (plist_map_with (λ _ _, (∘)) fl aπl -++ cπl) with
@@ -197,7 +198,7 @@ Section typing.
       iExists _, _. iSplitR; [done|]. iFrame "⧖". by iApply "InO".
     - iRevert "InIl T". iClear "#". iIntros "?". iStopProof. rewrite /wl.
       move: (fp x).(fp_ityl) (fp' x).(fp_ityl)=> tyl tyl'. clear.
-      move: 𝔄l 𝔄l' tyl tyl' fl ew wl' aπl. fix FIX 1. case=> [|??]; case=>//=;
+      move: 𝔄l 𝔄l' tyl tyl' fl eq wl' aπl. fix FIX 1. case=> [|??]; case=>//=;
       dependent destruction tyl; dependent destruction tyl'; [by iIntros|].
       iIntros ([]?[][]) "/= #[(_&_& In &_) ?] [t ?]".
       iSplitL "t"; [|by iApply FIX]. iDestruct "t" as (???) "[⧖ ?]".

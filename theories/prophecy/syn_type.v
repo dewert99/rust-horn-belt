@@ -25,9 +25,6 @@ Notation "Π!" := xprodₛ : syn_type_scope. Notation "Σ!" := xsumₛ : syn_typ
 Definition predₛ 𝔄 : syn_type := 𝔄 → Propₛ.
 Definition predlₛ 𝔄l : syn_type := predₛ (Π! 𝔄l).
 
-Local Notation tmap f := (fix tmap xl :=
-  match xl with [] => [] | x :: xl' => f x :: tmap xl' end).
-
 Fixpoint of_syn_type (𝔄: syn_type) : Type := match 𝔄 with
   | Zₛ => Z | boolₛ => bool | unitₛ => () | Empty_setₛ => ∅ | Propₛ => Prop
   | optionₛ 𝔄₀ => option (of_syn_type 𝔄₀) | listₛ 𝔄₀ => list (of_syn_type 𝔄₀)
@@ -44,7 +41,7 @@ Coercion of_syn_type: syn_type >-> Sortclass.
 Local Notation all2 f := (fix all2 xl yl := match xl, yl with [], [] => true
   | x :: xl', y :: yl' => f x y && all2 xl' yl' | _, _ => false end).
 
-Fixpoint syn_type_beq (𝔄 𝔅: syn_type) : bool := match 𝔄, 𝔅 with
+Fixpoint syn_type_beq 𝔄 𝔅 : bool := match 𝔄, 𝔅 with
   | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Empty_setₛ, Empty_setₛ | Propₛ, Propₛ => true
   | optionₛ 𝔄₀, optionₛ 𝔅₀ | listₛ 𝔄₀, listₛ 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀
   | 𝔄₀ * 𝔄₁, 𝔅₀ * 𝔅₁ | 𝔄₀ + 𝔄₁, 𝔅₀ + 𝔅₁ | 𝔄₀ → 𝔄₁, 𝔅₀ → 𝔅₁
@@ -73,10 +70,10 @@ Qed.
 
 Local Notation all f := (fix all xl := match xl with
   [] => true | x :: xl' => f x && all xl' end).
-Local Notation some f := (fix all xl := match xl with
-  [] => false | x :: xl' => f x || all xl' end).
+Local Notation some f := (fix some xl := match xl with
+  [] => false | x :: xl' => f x || some xl' end).
 
-Fixpoint inh_syn_type (𝔄: syn_type) : bool := match 𝔄 with
+Fixpoint inh_syn_type 𝔄 : bool := match 𝔄 with
   | prodₛ 𝔄₀ 𝔄₁ => inh_syn_type 𝔄₀ && inh_syn_type 𝔄₁
   | sumₛ 𝔄₀ 𝔄₁ => inh_syn_type 𝔄₀ || inh_syn_type 𝔄₁
   | funₛ 𝔄₀ 𝔄₁ => negb (inh_syn_type 𝔄₀) || inh_syn_type 𝔄₁
@@ -91,7 +88,7 @@ Proof. by case b; case c. Qed.
 Lemma negb_negb_orb b c : negb (negb b || c) = b && negb c.
 Proof. by case b; case c. Qed.
 
-Lemma of_just_and_neg_inh_syn_type {𝔄} :
+Local Lemma of_just_and_neg_inh_syn_type {𝔄} :
   (inh_syn_type 𝔄 → 𝔄) * (negb (inh_syn_type 𝔄) → 𝔄 → ∅).
 Proof.
   move: 𝔄. fix FIX 1. move=> 𝔄. split.
@@ -100,7 +97,7 @@ Proof.
     + move=> 𝔄?. case Eq: (inh_syn_type 𝔄)=>/= H.
       { apply inl, FIX. by rewrite Eq. } { by apply inr, FIX. }
     + move=> 𝔄?. case Eq: (inh_syn_type 𝔄)=>/= ??; [by apply FIX|].
-      suff E: Empty_set by done. eapply FIX; [|done]. by rewrite Eq.
+      apply (@absurd ∅ _). eapply FIX; [|done]. by rewrite Eq.
     + elim; [move=> ?; exact -[]|]=> ?? IH /andb_True [??].
       split; by [apply FIX|apply IH].
     + elim; [done|]=> 𝔄 ? IH. case Eq: (inh_syn_type 𝔄)=>/= H.
@@ -117,19 +114,17 @@ Proof.
 Qed.
 Lemma of_inh_syn_type {𝔄} : inh_syn_type 𝔄 → 𝔄.
 Proof. apply of_just_and_neg_inh_syn_type. Qed.
-Lemma of_neg_inh_syn_type {𝔄: syn_type} : negb (inh_syn_type 𝔄) → 𝔄 → ∅.
+Lemma of_neg_inh_syn_type {𝔄} : negb (inh_syn_type 𝔄) → 𝔄 → ∅.
 Proof. apply of_just_and_neg_inh_syn_type. Qed.
-
 Lemma to_inh_syn_type {𝔄} (x: 𝔄) : inh_syn_type 𝔄.
 Proof.
-  move: 𝔄 x. fix FIX 1. case=>//= [??|??|𝔄?|𝔄l|𝔄l].
-  - move=> [??]. rewrite andb_True. by split; apply FIX.
-  - move=> [?|?]; rewrite orb_True; [left|right]; by apply FIX.
-  - move=> f. case Eq: (inh_syn_type 𝔄); [|done].
-    apply FIX, f, of_inh_syn_type. by rewrite Eq.
-  - elim 𝔄l; [done|]=>/= ?? IH [??]. rewrite andb_True. split; by [apply FIX|apply IH].
-  - elim 𝔄l; [by apply absurd|]=> ?? IH [?|?];
-    rewrite orb_True; [left|right]; by [eapply FIX|apply IH].
+  case Eq: (inh_syn_type 𝔄); [done|]. apply (@absurd ∅ _).
+  eapply of_neg_inh_syn_type; [|done]. by rewrite Eq.
+Qed.
+Lemma to_neg_inh_syn_type {𝔄} (f: 𝔄 → ∅) : negb (inh_syn_type 𝔄).
+Proof.
+  case Eq: (inh_syn_type 𝔄); [|done]. apply (@absurd ∅ _), f, of_inh_syn_type.
+  by rewrite Eq.
 Qed.
 
 Definition syn_typei: Type := { 𝔄 | inh_syn_type 𝔄 }.

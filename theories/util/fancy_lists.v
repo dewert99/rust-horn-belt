@@ -62,27 +62,6 @@ Fixpoint lget {A} (Xl: list A) : pidx Xl → A :=
   match Xl with [] => absurd |
     X :: Xl' => λ i, match i with PO => X | PS j => lget Xl' j end end.
 
-(** * Equal Length Witness *)
-
-Fixpoint eq_len_wit {A B} (Xl: list A) (Yl: list B) : Set :=
-  match Xl, Yl with [], [] => () |
-    _ :: Xl', _ :: Yl' => eq_len_wit Xl' Yl' | _, _ => ∅ end.
-
-Lemma of_eq_len_wit `{Xl: _ A} `{Yl: _ B} :
-  eq_len_wit Xl Yl → length Xl = length Yl.
-Proof.
-  move: Xl Yl. fix FIX 1. case=> [|??]; case=>//= ???. f_equal. by apply FIX.
-Qed.
-Lemma to_eq_len_wit `{Xl: _ A} `{Yl: _ B} :
-  length Xl = length Yl → eq_len_wit Xl Yl.
-Proof.
-  move: Xl Yl. fix FIX 1. case=> [|??]; case=>//= ??[=?]. by apply FIX.
-Qed.
-
-Fixpoint symm_eq_len_wit `{Xl: _ A} `{Yl: _ B} :
-  eq_len_wit Xl Yl → eq_len_wit Yl Xl := match Xl, Yl with [], [] => λ _, () |
-    _ :: Xl', _ :: Yl' => λ e, symm_eq_len_wit (e: _ Xl' Yl') | _, _ => absurd end.
-
 (** * Heterogeneous List *)
 
 Inductive hlist {A} (F: A → Type) : list A → Type :=
@@ -246,12 +225,13 @@ Fixpoint hzip_with {A} {F G H: A → Type} {Xl} (f: ∀X, F X → G X → H X)
   match xl, yl with +[], _ => +[] |
     x +:: xl', y -:: yl' => f _ x y +:: hzip_with f xl' yl' end.
 
-Fixpoint plist2_eq_len_wit `{F: A → _} {Xl Yl} : plist2 F Xl Yl → eq_len_wit Xl Yl :=
-  match Xl, Yl with [], [] => λ _, () |
-    _ :: _, _ :: _ => λ '(_ -:: xl'), plist2_eq_len_wit xl' | _, _ => absurd end.
+Fixpoint plist2_eq_nat_len `{F: A → _} {Xl Yl} :
+  plist2 F Xl Yl → eq_nat (length Xl) (length Yl) :=
+  match Xl, Yl with [], [] => λ _, I |
+    _ :: _, _ :: _ => λ '(_ -:: xl'), plist2_eq_nat_len xl' | _, _ => absurd end.
 
 Lemma plist2_eq_len `{F: A → _} {Xl Yl} : plist2 F Xl Yl → length Xl = length Yl.
-Proof. by move=> /plist2_eq_len_wit/of_eq_len_wit ?. Qed.
+Proof. by move=> /plist2_eq_nat_len/eq_nat_is_eq ?. Qed.
 
 (** * Uniform plist *)
 
@@ -262,12 +242,12 @@ Fixpoint plistc_to_vec {B A} {Xl: _ B} (xl: plistc A Xl) : vec A (length Xl) :=
 Coercion plistc_to_vec: plistc >-> vec.
 
 Fixpoint plistc_renew {A} `{Xl: _ B} `{Yl: _ C}
-  : eq_len_wit Xl Yl → plistc A Xl → plistc A Yl :=
+  : eq_nat (length Xl) (length Yl) → plistc A Xl → plistc A Yl :=
   match Xl, Yl with [], [] => λ _ _, -[] |
-    _ :: Xl', _ :: Yl' => λ e '(x -:: xl'), x -:: plistc_renew (e: _ Xl' Yl') xl' |
+    _ :: Xl', _ :: Yl' => λ e '(x -:: xl'), x -:: plistc_renew (Xl:=Xl') e xl' |
     _, _ => absurd end.
 
-Lemma plistc_renew_eq {A} `{Xl: _ B} `{Yl: _ C} (xl: _ A _) (e: _ Xl Yl) :
+Lemma plistc_renew_eq {A} `{Xl: _ B} `{Yl: _ C} (xl: _ A _) (e: _ (_ Xl) (_ Yl)) :
   (plistc_renew e xl: list _) = xl.
 Proof.
   move: Xl Yl e xl. fix FIX 1. case=> [|??]; case=>//= ???[??]/=. f_equal. apply FIX.

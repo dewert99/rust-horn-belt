@@ -8,6 +8,9 @@ From iris.proofmode Require Import tactics.
 Lemma succ_le m n : S m ≤ n ↔ ∃n', n = S n' ∧ m ≤ n'.
 Proof. split; [|case; lia]. move: n=> [|n']; [|exists n']; lia. Qed.
 
+Global Instance eq_nat_sym : Symmetric eq_nat.
+Proof. move=> ??. by rewrite !eq_nat_is_eq. Qed.
+
 (** * Utility for Vectors *)
 
 Notation vhd := Vector.hd.
@@ -96,6 +99,7 @@ Global Instance Empty_set_empty': Empty Type := Empty_set.
 Class Void A := absurd: ∀{B}, A → B.
 
 Global Instance Empty_set_void: Void ∅. Proof. by move. Qed.
+Global Instance False_void: Void False. Proof. by move. Qed.
 
 Global Instance fun_void `{!Inhabited A, !Void B} : Void (A → B).
 Proof. move=> ? /(.$ inhabitant) ?. by apply absurd. Qed.
