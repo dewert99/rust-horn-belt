@@ -10,6 +10,8 @@ Section empty.
     {| pt_size := n; pt_own _ _ _ := False |}%I.
   Next Obligation. by iIntros. Qed.
 
+  Global Instance empty_empty : Empty (type ∅) := empty 0.
+
   Global Instance empty_send {𝔄} n : Send (@empty 𝔄 n). Proof. done. Qed.
 
   Lemma empty_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) n E L : subtype E L (empty n) (empty n) f.

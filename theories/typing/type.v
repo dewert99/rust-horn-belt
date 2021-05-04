@@ -253,8 +253,8 @@ Section ofe.
   Qed.
   Canonical Structure typeO 𝔄 : ofe := Ofe (type 𝔄) type_ofe_mixin.
 
-  Global Instance typel_equiv {𝔄l} : Equiv (typel 𝔄l) := @hlist_equiv _ type _ _.
-  Global Instance typel_dist {𝔄l} : Dist (typel 𝔄l) := @hlist_dist _ typeO _.
+  Global Instance typel_equiv {𝔄l} : Equiv (typel 𝔄l) := ofe_equiv (hlistO typeO _).
+  Global Instance typel_dist {𝔄l} : Dist (typel 𝔄l) := ofe_dist (hlistO typeO _).
 
   Global Instance ty_size_ne {𝔄} n : Proper ((≡{n}@{_ 𝔄}≡) ==> (=)) ty_size.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
@@ -901,15 +901,15 @@ Section subtyping.
     elim; [split; by constructor|]=>/= > [??] _ [??]; split; by constructor.
   Qed.
 
-  Lemma subtypel_llctx_get {𝔄l 𝔅l} (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl q E L :
+  Lemma subtypel_llctx_nth {ℭ 𝔄l 𝔅l} (ty: _ ℭ) (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl q E L :
     subtypel E L tyl tyl' fl →
     llctx_interp L q -∗ □ (elctx_interp E -∗ ∀i,
-      type_incl (hget tyl (p2fin_l i)) (hget tyl' (p2fin_r i)) (p2get fl i)).
+      type_incl (hnth ty tyl i) (hnth ty tyl' i) (p2nth id fl i)).
   Proof.
-    elim=> [|>Sub _ IH]; [by iIntros "_!>_" ([])|]. iIntros "L".
-    iDestruct (Sub with "L") as "#Sub". iDestruct (IH with "L") as "#IH".
-    iIntros "!> #E" (i). iSpecialize ("Sub" with "E").
-    iSpecialize ("IH" with "E"). by case i.
+    elim=> [|>Sub _ IH]. { iIntros "_!>_/=" (?). iApply type_incl_refl. }
+    iIntros "L". iDestruct (Sub with "L") as "#Sub".
+    iDestruct (IH with "L") as "#IH". iIntros "!> #E" (i).
+    iSpecialize ("Sub" with "E"). iSpecialize ("IH" with "E"). by case i.
   Qed.
 
   (** Simple Type *)

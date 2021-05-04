@@ -3,65 +3,6 @@ From iris.algebra Require Import ofe.
 From iris.proofmode Require Import tactics.
 From lrust.util Require Import basic.
 
-(** * Natural number with a bound; a passive variant of fin *)
-
-Inductive poption (A: Set) : Set := PO | PS (ppred: A).
-Arguments PO {_}. Arguments PS {_} _.
-Fixpoint pfin (n: nat) : Set :=
-  match n with 0 => ∅ | S m => poption (pfin m) end.
-
-Declare Scope pfin_scope.
-Bind Scope pfin_scope with pfin. Delimit Scope pfin_scope with pfin.
-Notation "0" := (PO) : pfin_scope. Notation "1" := (PS 0%pfin) : pfin_scope.
-Notation "2" := (PS 1%pfin) : pfin_scope. Notation "3" := (PS 2%pfin) : pfin_scope.
-
-Fixpoint pfin_to_nat {n} : pfin n → nat := match n with 0 => absurd |
-  S _ => λ i, match i with PO => 0 | PS j => pfin_to_nat j end end.
-Coercion pfin_to_nat: pfin >-> nat.
-
-Fixpoint fin_to_pfin {n} (i: fin n) : pfin n :=
-  match i with 0%fin => 0 | FS j => PS (fin_to_pfin j) end.
-Fixpoint pfin_to_fin {n} : pfin n → fin n := match n with 0 => absurd |
-  S _ => λ i, match i with PO => 0%fin | PS j => FS (pfin_to_fin j) end end.
-Global Instance fin_pfin_iso n : Iso (@fin_to_pfin n) pfin_to_fin.
-Proof.
-  split; fun_ext. { by elim; [done|]=>/= ??->. }
-  elim n; [done|]=>/= ? IH. case; [done|]=>/= ?. by rewrite IH.
-Qed.
-
-Fixpoint p2fin (m: nat) (n: nat) : Set :=
-  match m, n with S m', S n' => poption (p2fin m' n') | _, _ => ∅ end.
-
-Fixpoint p2fin_to_nat {m n} : p2fin m n → nat := match m, n with
-  S _, S _ => λ i, match i with PO => 0 | PS j => p2fin_to_nat j end |
-  _, _ => absurd end.
-Coercion p2fin_to_nat: p2fin >-> nat.
-
-Fixpoint p2fin_l {m n} : p2fin m n → pfin m := match m, n with
-  S _, S _ => λ i, match i with PO => PO | PS j => PS (p2fin_l j) end |
-  _, _ => absurd end.
-Fixpoint p2fin_r {m n} : p2fin m n → pfin n := match m, n with
-  S _, S _ => λ i, match i with PO => PO | PS j => PS (p2fin_r j) end |
-  _, _ => absurd end.
-
-Lemma p2fin_lr_eq {m n} (i: p2fin m n) : (p2fin_l i : nat) = (p2fin_r i : nat).
-Proof.
-  move: m n i. elim; [done|]=> ? IH. do 2 (case; [done|]=> ?). by apply IH.
-Qed.
-
-Lemma ex_p2fin_l m n (i: pfin m) : m = n → ∃j: p2fin m n, i = p2fin_l j.
-Proof.
-  move=> <-. move: m i. elim; [done|]=> ? IH. case; [by exists PO|]=> i.
-  move: (IH i)=> [j Eq]. exists (PS j). by rewrite Eq.
-Qed.
-
-Notation pidx Xl := (pfin (length Xl)).
-Notation p2idx Xl Yl := (p2fin (length Xl) (length Yl)).
-
-Fixpoint lget {A} (Xl: list A) : pidx Xl → A :=
-  match Xl with [] => absurd |
-    X :: Xl' => λ i, match i with PO => X | PS j => lget Xl' j end end.
-
 (** * Heterogeneous List *)
 
 Inductive hlist {A} (F: A → Type) : list A → Type :=
@@ -89,9 +30,11 @@ Fixpoint hcmap `{F: A → _} {Y Xl} (f: ∀X, F X → Y) (xl: hlist F Xl) : list
   match xl with +[] => [] | x +:: xl' => f _ x :: hcmap f xl' end.
 Infix "+c<$>" := hcmap (at level 61, left associativity).
 
-Fixpoint hget `{F: A → _} {Xl} (xl: hlist F Xl) : ∀i: pidx Xl, F (lget Xl i) :=
-  match xl with +[] => λ i, absurd i | x +:: xl' =>
-    λ i, match i with PO => x | PS j => hget xl' j end end.
+Fixpoint hnth `{F: A → _} {Xl D} (d: F D) (xl: hlist F Xl)
+  : ∀i, F (lnth D Xl i) :=
+  match xl with +[] => λ _, d | x +:: xl' =>
+    λ i, match i with 0 => x | S j => hnth d xl' j end end.
+Notation hnthe := (hnth ∅).
 
 Fixpoint hrepeat `{F: A → _} {X} (x: F X) n : hlist F (repeat X n) :=
   match n with 0 => +[] | S m => x +:: hrepeat x m end.
@@ -105,8 +48,9 @@ Fixpoint happly `{F: A → _} {Y Xl} (fl: hlist (λ X, Y → F X) Xl) (x: Y)
 Infix "+$" := happly (at level 61, left associativity).
 Notation "( fl +$.)" := (happly fl) (only parsing).
 
-Lemma hget_apply `{F: A → _} {Xl Y} (fl: _ (λ X, Y → F X) Xl) (x: Y) i :
-  hget (fl +$ x) i = hget fl i x.
+Lemma hnth_apply `{F: A → _} {Xl Y D} (g: Y → F D)
+  (fl: _ (λ X, Y → F X) Xl) (x: Y) i :
+  hnth (g x) (fl +$ x) i = hnth g fl i x.
 Proof. move: i. elim fl; [done|]=> > ?. by case. Qed.
 
 (** * Passive Heterogeneous List *)
@@ -191,11 +135,12 @@ Fixpoint p2map `{F: A → _} {G Xl Yl} (f: ∀X Y, F X Y → G X Y)
     _ :: _, _ :: _ => λ '(x -:: xl'), f _ _ x -:: p2map f xl' | _, _ => absurd end.
 Infix "-2<$>" := p2map (at level 61, left associativity).
 
-Fixpoint p2get `{F: A → _} {Xl Yl}
-  : plist2 F Xl Yl → ∀i, F (lget Xl (p2fin_l i)) (lget Yl (p2fin_r i)) :=
-  match Xl, Yl with _ :: _, _ :: _ =>
-    λ '(x -:: xl') i, match i with PO => x | PS j => p2get xl' j end
-  | _, _ => λ _ i, absurd i end.
+Fixpoint p2nth `{F: A → _} {Xl Yl D D'} (d: F D D')
+  : plist2 F Xl Yl → ∀i, F (lnth D Xl i) (lnth D' Yl i) :=
+  match Xl, Yl with [], [] => λ _ _, d
+  | _ :: _, _ :: _ =>
+      λ '(x -:: xl') i, match i with 0 => x | S j => p2nth d xl' j end
+  | _, _ => absurd end.
 
 Fixpoint papply `{F: A → _} {A Xl} (fl: plist (λ X, A → F X) Xl) (x: A)
   : plist F Xl := match Xl, fl with
@@ -317,15 +262,10 @@ Notation psum_raw F := (fix psum_raw Xl := match Xl with
   [] => ∅ | X :: Xl' => F X + psum_raw Xl' end%type).
 Definition psum {A} (F: A → Type) (Xl: list A) : Type := psum_raw F Xl.
 
-Fixpoint pinj `{F: A → _} {Xl} : ∀i: pidx Xl, F (lget Xl i) → psum F Xl :=
-  match Xl with [] => λ i, absurd i | X :: Xl' => λ i,
-    match i with PO => inl | PS j => λ x, inr (pinj j x) end end.
-
-Lemma ex_pinj `{F: A → _} {Xl} (s: psum F Xl) : ∃i x, s = pinj i x.
-Proof.
-  move: Xl s. elim; [by case|]=> ?? IH [x|s]; [by exists PO, x|].
-  move: (IH s)=> [i[x->]]. by exists (PS i), x.
-Qed.
+Fixpoint pinj `{F: A → _} {Xl} `{!Void (F D)} i :
+  F (lnth D Xl i) → psum F Xl :=
+  match Xl with [] => absurd | X :: Xl' =>
+    match i with 0 => inl | S j => λ x, inr (pinj j x) end end.
 
 Fixpoint psum_map `{F: A → _} {Xl Yl} :
   plist2 (λ X Y, F X → F Y) Xl Yl → psum F Xl → psum F Yl :=
@@ -333,11 +273,12 @@ Fixpoint psum_map `{F: A → _} {Xl Yl} :
   | _ :: _, _ :: _ => λ '(f -:: fl'), sum_map f (psum_map fl')
   | _, _ => absurd end.
 
-Lemma psum_map_pinj `{F: A → _} {Xl Yl} (fl: _ Xl Yl) i (x: F _) :
-  psum_map fl (pinj (p2fin_l i) x) = pinj (p2fin_r i) (p2get fl i x).
+Lemma psum_map_pinj `{F: A → _} {Xl Yl} `{!Void (F D)}
+  (fl: _ Xl Yl) i (x: F (lnth D _ _)) :
+  psum_map fl (pinj i x) = pinj i (p2nth id fl i x).
 Proof.
-  move: Xl Yl fl i x. fix FIX 1. move=> [|??] [|??] /= fl; case=> [|?];
-  case fl; [done|]=>/= *. by rewrite FIX.
+  move: Xl Yl fl i x. fix FIX 1. move=> [|??][|??]//=; [move=> *; by apply absurd|].
+  case=> ??. case; [done|]=>/= *. by rewrite FIX.
 Qed.
 
 Definition to_psum_2 `{F: A → _} {X Y} (s: F X + F Y) : psum F [X; Y] :=
@@ -381,13 +322,14 @@ Lemma HForallTwo_impl `{F: A → _} {G Xl} (Φ Ψ: ∀X, F X → G X → Prop) (
   (∀X x y, Φ X x y → Ψ _ x y) → HForallTwo Φ xl yl → HForallTwo Ψ xl yl.
 Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
 
-Lemma HForall_get `{F: A → _} {Xl} (Φ: ∀X, F X → Prop) (xl: _ Xl) i :
-  HForall Φ xl → Φ _ (hget xl i).
-Proof. move=> All. move: i. elim All; [done|]=> > ???. by case. Qed.
+Lemma HForall_nth `{F: A → _} {Xl D} (Φ: ∀X, F X → Prop) (d: _ D) (xl: _ Xl) i :
+  Φ _ d → HForall Φ xl → Φ _ (hnth d xl i).
+Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
 
-Lemma HForallTwo_get `{F: A → _} {G Xl} (Φ: ∀X, F X → G X → Prop) (xl yl: _ Xl) i :
-  HForallTwo Φ xl yl → Φ _ (hget xl i) (hget yl i).
-Proof. move=> All. move: i. elim All; [done|]=> > ???. by case. Qed.
+Lemma HForallTwo_nth `{F: A → _} {G Xl D}
+  (Φ: ∀X, F X → G X → Prop) (d d': _ D) (xl yl: _ Xl) i :
+  Φ _ d d' → HForallTwo Φ xl yl → Φ _ (hnth d xl i) (hnth d' yl i).
+Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
 
 Lemma HForallTwo_forall `{!Inhabited Y} `{F: A → _} {G Xl}
   (Φ: ∀X, Y → F X → G X → Prop) (xl yl: _ Xl) :
@@ -416,26 +358,10 @@ Global Instance HForallTwo_equivalence `{F: A → _} {Xl} (R: ∀X, F X → F X 
   (∀X, Equivalence (R X)) → Equivalence (HForallTwo R (Xl:=Xl)).
 Proof. split; apply _. Qed.
 
-(** * Setoid *)
-
-Global Instance hlist_equiv `{F: A → _, ∀X, Equiv (F X)} {Xl}
-  : Equiv (hlist F Xl) := HForallTwo (λ _, (≡)).
-
-Section lemmas.
-Context `{F: A → _, ∀X, Equiv (F X)}.
-
-Global Instance hcons_proper {X Xl} :
-  Proper ((≡@{_ X}) ==> (≡@{_ Xl}) ==> (≡)) (hcons F).
-Proof. by constructor. Qed.
-
-Global Instance hget_proper {Xl} :
-  Proper ((≡@{_ F Xl}) ==> forall_relation (λ _, (≡))) hget.
-Proof. move=> ????. by apply (HForallTwo_get _). Qed.
-
-End lemmas.
-
 (** * Ofe *)
 
+Global Instance hlist_equiv `{F: A → ofe} {Xl}
+: Equiv (hlist F Xl) := HForallTwo (λ _, (≡)).
 Global Instance hlist_dist `{F: A → ofe} {Xl} : Dist (hlist F Xl) :=
   λ n, HForallTwo (λ _, (≡{n}≡)).
 
@@ -454,10 +380,16 @@ Context `{F: A → ofe}.
 
 Global Instance hcons_ne {X Xl} : NonExpansive2 (@hcons _ F X Xl).
 Proof. by constructor. Qed.
+Global Instance hcons_proper {X Xl} :
+  Proper ((≡@{_ X}) ==> (≡@{_ Xl}) ==> (≡)) (hcons F).
+Proof. by constructor. Qed.
 
-Global Instance hget_ne {Xl} n :
-  Proper ((≡{n}@{hlist F Xl}≡) ==> forall_relation (λ _, (≡{n}≡))) hget.
-Proof. move=> ????. by apply (HForallTwo_get (λ X, ofe_dist (F X) n)). Qed.
+Global Instance hnth_ne {Xl D} n :
+  Proper ((=@{_ D}) ==> (≡{n}@{hlist F Xl}≡) ==> forall_relation (λ _, (≡{n}≡))) hnth.
+Proof. move=> ??->????. by apply (HForallTwo_nth (λ X, ofe_dist (F X) n)). Qed.
+Global Instance hnth_proper {Xl D} :
+  Proper ((=@{_ D}) ==> (≡@{hlist F Xl}) ==> forall_relation (λ _, (≡))) hnth.
+Proof. move=> ??->?? /equiv_dist ??. apply equiv_dist=> ?. by apply hnth_ne. Qed.
 
 End lemmas.
 
@@ -509,16 +441,25 @@ Proof.
   dependent induction xl; case yl=>/= >; by [rewrite left_id|rewrite IHxl assoc].
 Qed.
 
-Global Instance into_from_sep_big_sepHL_app `{F: A → _} {Xl Yl}
+Global Instance into_sep_big_sepHL_app `{F: A → _} {Xl Yl}
   (xl: _ F Xl) (xl': _ Yl) (Φ: ∀C, _ → PROP) :
-  IntoFromSep (big_sepHL Φ (xl h++ xl')) (big_sepHL Φ xl) (big_sepHL Φ xl').
-Proof. by apply get_into_from_sep, big_sepHL_app. Qed.
+  IntoSep (big_sepHL Φ (xl h++ xl')) (big_sepHL Φ xl) (big_sepHL Φ xl').
+Proof. by rewrite /IntoSep big_sepHL_app. Qed.
+Global Instance from_sep_big_sepHL_app `{F: A → _} {Xl Yl}
+  (xl: _ F Xl) (xl': _ Yl) (Φ: ∀C, _ → PROP) :
+  FromSep (big_sepHL Φ (xl h++ xl')) (big_sepHL Φ xl) (big_sepHL Φ xl').
+Proof. by rewrite /FromSep big_sepHL_app. Qed.
 
-Global Instance into_from_sep_big_sepHL_1_app `{F: A → _} {G Xl Yl}
+Global Instance into_sep_big_sepHL_1_app `{F: A → _} {G Xl Yl}
   (xl: _ F Xl) (xl': _ Yl) (yl: _ G _) yl' (Φ: ∀C, _ → _ → PROP) :
-  IntoFromSep (big_sepHL_1 Φ (xl h++ xl') (yl -++ yl'))
+  IntoSep (big_sepHL_1 Φ (xl h++ xl') (yl -++ yl'))
     (big_sepHL_1 Φ xl yl) (big_sepHL_1 Φ xl' yl').
-Proof. by apply get_into_from_sep, big_sepHL_1_app. Qed.
+Proof. by rewrite /IntoSep big_sepHL_1_app. Qed.
+Global Instance from_sep_big_sepHL_1_app `{F: A → _} {G Xl Yl}
+  (xl: _ F Xl) (xl': _ Yl) (yl: _ G _) yl' (Φ: ∀C, _ → _ → PROP) :
+  FromSep (big_sepHL_1 Φ (xl h++ xl') (yl -++ yl'))
+    (big_sepHL_1 Φ xl yl) (big_sepHL_1 Φ xl' yl').
+Proof. by rewrite /FromSep big_sepHL_1_app. Qed.
 
 Global Instance frame_big_sepHL_app `{F: A → _} {Xl Yl}
   p R Q (xl: _ F Xl) (xl': _ Yl) (Φ: ∀C, _ → PROP) :

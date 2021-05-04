@@ -16,6 +16,14 @@ Proof. move=> ??. by rewrite !eq_nat_is_eq. Qed.
 Notation vhd := Vector.hd.
 Notation vtl := Vector.tl.
 
+(** * Utility for Lists *)
+
+(** List.nth with better pattern matching *)
+Fixpoint lnth {A} (d: A) (xl: list A) (i: nat) : A := match xl with
+  [] => d | x :: xl' => match i with 0 => x | S j => lnth d xl' j end end.
+
+Notation lnthe := (lnth ∅).
+
 (** * Utility for Point-Free Style *)
 
 Ltac fun_ext := apply functional_extensionality.
@@ -116,16 +124,7 @@ Proof. split; fun_ext=> ?; by apply absurd. Qed.
 Notation "(≡{ n }≡)" := (dist n) (only parsing).
 Notation "(≡{ n }@{ A }≡)" := (@dist A _ n) (only parsing).
 
-(** * Monoid *)
-
-Global Instance and_monoid: Monoid and := {| monoid_unit := True |}.
-
 (** * Iris *)
-
-Class IntoFromSep {PROP: bi} (P Q Q': PROP) :=
-  { into_from_sep_into:> IntoSep P Q Q'; into_from_sep_from:> FromSep P Q Q' }.
-Lemma get_into_from_sep {PROP: bi} (P Q Q': PROP) : P ⊣⊢ Q ∗ Q' → IntoFromSep P Q Q'.
-Proof. move=> Eq. split; [rewrite /IntoSep|rewrite /FromSep]; by rewrite Eq. Qed.
 
 Notation big_sepL := (big_opL bi_sep) (only parsing).
 
