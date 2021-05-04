@@ -44,8 +44,8 @@ Section product_split.
       (λ post '-[al], post al).
   Proof.
     move=> HSub JLoc In. elim: tyl. { move=>/= ?. by eapply tctx_incl_eq;
-    [|apply tctx_incl_leak_head]=>/= ?[[][]]. } move=>/= 𝔄 𝔅l ty tyl IH p.
-    eapply tctx_incl_eq; last first. { eapply tctx_incl_trans;
+    [apply tctx_incl_leak_head|]=>/= ?[[][]]. } move=>/= 𝔄 𝔅l ty tyl IH p.
+    eapply tctx_incl_eq. { eapply tctx_incl_trans;
     [by eapply subtype_tctx_incl, HSub, mod_ty_out, _|].
     set tr := (λ post '-[a; bl], post (a -:: bl)) :
       predl (𝔄 :: 𝔅l) → predl [𝔄; Π!%ST 𝔅l].
@@ -78,7 +78,7 @@ Section product_split.
       iFrame "L Obs". iSplit; [|done]. iExists _, _. iFrame "⧖".
       iSplit; [|by iApply "In"]. move: Ev=>/=. case (eval_path p)=>//.
       (do 2 case=>//)=> ?. by rewrite shift_loc_0=> [=->]. }
-    move=> 𝔅 𝔅l' ?? IH _ p. eapply tctx_incl_eq; last first. {
+    move=> 𝔅 𝔅l' ?? IH _ p. eapply tctx_incl_eq. {
     eapply tctx_incl_trans; [|by eapply subtype_tctx_incl, HSub, mod_ty_in].
     set tr := (λ post '(a -:: bl), post -[a; bl]) :
       predl [𝔄; Π!%ST (𝔅 :: 𝔅l')] → predl (𝔄 :: 𝔅 :: 𝔅l').
@@ -322,7 +322,7 @@ Section product_split.
     tctx_extract_elt E L t (p ◁ own_ptr n (Π! tyl) +:: T) (T' h++ T)
       (λ post '(al -:: bl), tr (λ '(a -:: cl), post (a -:: cl -++ bl)) al).
   Proof.
-    move=> ?. eapply tctx_incl_eq; last first. {
+    move=> ?. eapply tctx_incl_eq. {
     eapply (tctx_incl_frame_r +[_] (_ +:: _)). eapply tctx_incl_trans;
     [apply tctx_split_own_xprod|done]. } move=>/= ?[??].
     rewrite /trans_upper /=. f_equal. fun_ext. by case.
@@ -334,7 +334,7 @@ Section product_split.
     tctx_extract_elt E L t (p ◁ &shr{κ} (Π! tyl) +:: T) (T' h++ T)
       (λ post '(al -:: bl), tr (λ '(a -:: cl), post (a -:: cl -++ bl)) al).
   Proof.
-    move=> ?. eapply tctx_incl_eq; last first. {
+    move=> ?. eapply tctx_incl_eq. {
     eapply (tctx_incl_frame_r +[_] (_ +:: _)). eapply tctx_incl_trans;
     [apply tctx_split_shr_xprod|done]. } move=>/= ?[??].
     rewrite /trans_upper /=. f_equal. fun_ext. by case.

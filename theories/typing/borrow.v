@@ -89,7 +89,7 @@ Section borrow.
     tctx_extract_elt E L (p ◁ &uniq{κ}ty) ((p ◁ own_ptr n ty')+::T)
                        ((p ◁{κ} own_ptr n ty)+::T) (λ post '(b -:: bs), ∀ (b' : 𝔄), post ((f b, b') -:: b' -:: bs)).
   Proof.
-    intros. eapply tctx_incl_impl; first last.
+    intros. eapply tctx_incl_impl.
     eapply tctx_incl_trans; [by eapply subtype_tctx_incl, own_subtype|].
     eapply (tctx_incl_frame_r +[_] +[_; _]).
     - by eapply tctx_borrow.

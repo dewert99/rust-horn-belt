@@ -96,7 +96,7 @@ Section lemmas.
 
   Lemma tctx_elt_interp_hasty_path {𝔄} p1 p2 (ty: _ 𝔄) tid vπ :
     eval_path p1 = eval_path p2 →
-    tctx_elt_interp tid (p1 ◁ ty) vπ ≡ tctx_elt_interp tid (p2 ◁ ty) vπ.
+    tctx_elt_interp tid (p1 ◁ ty) vπ ⊣⊢ tctx_elt_interp tid (p2 ◁ ty) vπ.
   Proof. move=> Hp. rewrite /tctx_elt_interp. by setoid_rewrite Hp. Qed.
 
   Lemma tctx_hasty_val' {𝔄} tid p v (ty: _ 𝔄) vπ:
@@ -152,18 +152,18 @@ Section lemmas.
       llctx_interp L q ∗ tctx_interp tid T' vπl' ∗ ⟨π, postπ π (vπl' -$ π)⟩.
 
   Lemma tctx_incl_impl {𝔄l 𝔅l} (T: _ 𝔄l) (T': _ 𝔅l) (tr tr': _ → _ → Prop) E L :
-    (∀post vl, tr post vl → tr' post vl) →
-    tctx_incl E L T T' tr' → tctx_incl E L T T' tr.
+    tctx_incl E L T T' tr' → (∀post vl, tr post vl → tr' post vl) →
+    tctx_incl E L T T' tr.
   Proof.
-    move=> Imp In. iIntros (????) "LFT PROPH UNIQ E L T #Obs".
+    move=> In Imp. iIntros (????) "LFT PROPH UNIQ E L T #Obs".
     iMod (In with "LFT PROPH UNIQ E L T []") as "$"; [|done].
     iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
   Qed.
 
   Lemma tctx_incl_eq {𝔄l 𝔅l} (T: _ 𝔄l) (T': _ 𝔅l) tr tr' E L :
-    (∀post vl, tr post vl = tr' post vl) →
-    tctx_incl E L T T' tr' → tctx_incl E L T T' tr.
-  Proof. move=> Eq. apply tctx_incl_impl=> ??. by rewrite Eq. Qed.
+    tctx_incl E L T T' tr' → (∀post vl, tr post vl = tr' post vl) →
+    tctx_incl E L T T' tr.
+  Proof. move=> In Eq. eapply tctx_incl_impl; [done|]=> ??. by rewrite Eq. Qed.
 
   Lemma tctx_incl_refl {𝔄l} (T: _ 𝔄l) E L : tctx_incl E L T T id.
   Proof. move=> ?? vπl ?. iIntros. iExists vπl. by iFrame. Qed.
@@ -195,19 +195,19 @@ Section lemmas.
   Lemma tctx_incl_frame_l {𝔄l 𝔅l ℭl} (T: _ 𝔄l) (T': _ 𝔅l) (Tf: _ ℭl) tr E L :
     tctx_incl E L T T' tr → tctx_incl E L (Tf h++ T) (Tf h++ T') (trans_lower tr).
   Proof.
-    move=> ?. eapply tctx_incl_eq; last first.
-    { apply tctx_incl_app=>//. apply tctx_incl_refl. } done.
+    move=> ?. eapply tctx_incl_eq. { apply tctx_incl_app; [|done].
+    apply tctx_incl_refl. } done.
   Qed.
   Lemma tctx_incl_frame_r {𝔄l 𝔅l ℭl} (T: _ 𝔄l) (T': _ 𝔅l) (Tf: _ ℭl) tr E L :
     tctx_incl E L T T' tr → tctx_incl E L (T h++ Tf) (T' h++ Tf) (trans_upper tr).
   Proof.
-    move=> ?. eapply tctx_incl_eq; last first.
-    { apply tctx_incl_app=>//. apply tctx_incl_refl. } done.
+    move=> ?. eapply tctx_incl_eq. { apply tctx_incl_app; [done|].
+    apply tctx_incl_refl. } done.
   Qed.
   Lemma tctx_incl_tail {𝔄 𝔄l 𝔅l} (t: _ 𝔄) (T1: _ 𝔄l) (T2: _ 𝔅l) tr E L :
     tctx_incl E L T1 T2 tr → tctx_incl E L (t +:: T1) (t +:: T2) (trans_tail tr).
   Proof.
-    move=> ?. eapply tctx_incl_eq; last first.
+    move=> ?. eapply tctx_incl_eq.
     { by apply (tctx_incl_frame_l _ _ +[_]). } by move=> ?[??].
   Qed.
 
@@ -280,7 +280,7 @@ Section lemmas.
     tctx_extract_elt E L t (t' +:: T) (t' +:: T')
       (λ post '(b -:: al), tr (λ '(a -:: bl), post (a -:: b -:: bl)) al).
   Proof.
-    move=> ?. eapply tctx_incl_eq; last first. { eapply tctx_incl_trans;
+    move=> ?. eapply tctx_incl_eq. { eapply tctx_incl_trans;
     by [eapply tctx_incl_tail|apply tctx_incl_swap]. } move=> ?[??]/=. f_equal.
   Qed.
 
@@ -289,7 +289,7 @@ Section lemmas.
     tctx_extract_elt E L (p ◁ ty) (p' ◁ ty' +:: T) (p' ◁ ty' +:: T)
       (λ post '(b -:: al), post (f b -:: b -:: al)).
   Proof.
-    move=> ->??. eapply tctx_incl_eq; last first. { eapply tctx_incl_trans;
+    move=> ->??. eapply tctx_incl_eq. { eapply tctx_incl_trans;
     by [apply copy_tctx_incl|apply subtype_tctx_incl]. } by move=> ?[??].
   Qed.
 
@@ -302,8 +302,7 @@ Section lemmas.
     tctx_extract_elt E L (p ◁ ty) (p ◁ ty' +:: T) T
       (λ post '(b -:: al), post (f b -:: al)).
   Proof.
-    move=> ?. eapply tctx_incl_eq; [|by apply subtype_tctx_incl].
-    by move=> ?[??].
+    move=> ?. eapply tctx_incl_eq; [by apply subtype_tctx_incl|]. by move=> ?[??].
   Qed.
 
   Lemma tctx_extract_elt_here_blocked {𝔄 𝔅 𝔄l} κ κ' ty ty'
@@ -312,7 +311,7 @@ Section lemmas.
     tctx_extract_elt E L (p ◁{κ} ty) (p ◁{κ'} ty' +:: T) T
       (λ post '(b -:: al), post (f b -:: al)).
   Proof.
-    move=> ??. eapply tctx_incl_eq; [|by apply subtype_tctx_incl_blocked].
+    move=> ??. eapply tctx_incl_eq; [by apply subtype_tctx_incl_blocked|].
     by move=> ?[??].
   Qed.
 
@@ -333,7 +332,7 @@ Section lemmas.
     tctx_extract_ctx E L T' T Tx tr →
     tctx_incl E L T T' (λ post, tr (λ bcl, post (psepl bcl))).
   Proof.
-    move=> Ex. eapply tctx_incl_eq; last first. { eapply tctx_incl_trans;
+    move=> Ex. eapply tctx_incl_eq. { eapply tctx_incl_trans;
     [apply Ex|apply tctx_incl_leak_lower]. } done.
   Qed.
 
