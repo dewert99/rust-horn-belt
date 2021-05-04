@@ -142,7 +142,7 @@ Fixpoint p2nth `{F: A → _} {Xl Yl D D'} (d: F D D')
       λ '(x -:: xl') i, match i with 0 => x | S j => p2nth d xl' j end
   | _, _ => absurd end.
 
-Fixpoint papply `{F: A → _} {A Xl} (fl: plist (λ X, A → F X) Xl) (x: A)
+Fixpoint papply `{F: A → _} {B Xl} (fl: plist (λ X, B → F X) Xl) (x: B)
   : plist F Xl := match Xl, fl with
     [], _ => -[] | _ :: _, f -:: fl' => f x -:: papply fl' x end.
 Infix "-$" := papply (at level 61, left associativity).
