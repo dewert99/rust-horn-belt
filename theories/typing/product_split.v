@@ -39,7 +39,8 @@ Section product_split.
   Lemma tctx_split_ptr_xprod {𝔄l} ptr (tyl: _ 𝔄l) E L :
     ptr_homo_sub ptr → ptr_just_loc ptr →
     (∀p 𝔄 𝔅 (ty: _ 𝔄) (ty': _ 𝔅), tctx_incl E L +[p ◁ ptr _ (ty * ty')%T]
-      +[p ◁ ptr _ ty; p +ₗ #ty.(ty_size) ◁ ptr _ ty'] (λ post '-[(a, b)], post -[a; b])) →
+      +[p ◁ ptr _ ty; p +ₗ #ty.(ty_size) ◁ ptr _ ty']
+      (λ post '-[(a, b)], post -[a; b])) →
     ∀p, tctx_incl E L +[p ◁ ptr _ (Π! tyl)%T] (hasty_ptr_offsets ptr p tyl 0)
       (λ post '-[al], post al).
   Proof.
@@ -47,10 +48,9 @@ Section product_split.
     [apply tctx_incl_leak_head|]=>/= ?[[][]]. } move=>/= 𝔄 𝔅l ty tyl IH p.
     eapply tctx_incl_eq. { eapply tctx_incl_trans;
     [by eapply subtype_tctx_incl, HSub, mod_ty_out, _|].
-    set tr := (λ post '-[a; bl], post (a -:: bl)) :
-      predl (𝔄 :: 𝔅l) → predl [𝔄; Π!%ST 𝔅l].
-    eapply (tctx_incl_trans _ _ _ _ tr); [apply In|]=>/=.
-    iIntros (??(aπ &?&[])postπ)
+    eapply (tctx_incl_trans _ [𝔄; Π!%ST 𝔅l] (𝔄 :: 𝔅l)
+      _ (λ post '-[a; bl], post (a -:: bl))); [apply In|]=>/=.
+    iIntros (?? (aπ &?&[]) postπ)
       "LFT PROPH UNIQ E L ((%&%& %Ev & ? & ptr) & p' & _) Obs".
     iDestruct (JLoc with "ptr") as %[?[=->]].
     iMod (IH _ _ _ -[_] (λ π bl, postπ π (aπ π -:: bl)) with
@@ -70,30 +70,30 @@ Section product_split.
   Proof.
     move=> HSub JLoc In. elim: tyl; [done|]=>/= 𝔄 ? ty. case.
     { have Sub: subtype E L (ptr _ ty) (ptr _ (Π!%T +[ty])) (λ a, -[a]).
-      { apply HSub. eapply subtype_eq. { eapply subtype_trans; [|apply mod_ty_in].
-        eapply subtype_trans; [apply prod_ty_right_id|].
+      { apply HSub. eapply subtype_eq. { eapply subtype_trans;
+        [|apply mod_ty_in]. eapply subtype_trans; [apply prod_ty_right_id|].
         apply prod_subtype, mod_ty_in. solve_typing. } done. }
       iIntros (_ _ p ??[?[]]?) "_ _ _ E L [(%&%& %Ev & ⧖ & ptr) _] Obs !>".
       iDestruct (Sub with "L E") as "#(_&_& #In &_)". iExists -[_].
       iFrame "L Obs". iSplit; [|done]. iExists _, _. iFrame "⧖".
       iSplit; [|by iApply "In"]. move: Ev=>/=. case (eval_path p)=>//.
       (do 2 case=>//)=> ?. by rewrite shift_loc_0=> [=->]. }
-    move=> 𝔅 𝔅l' ?? IH _ p. eapply tctx_incl_eq. {
+    move=> 𝔅 𝔅l' ?? IH _ p. set 𝔅l := 𝔅 :: 𝔅l'. eapply tctx_incl_eq. {
     eapply tctx_incl_trans; [|by eapply subtype_tctx_incl, HSub, mod_ty_in].
-    set tr := (λ post '(a -:: bl), post -[a; bl]) :
-      predl [𝔄; Π!%ST (𝔅 :: 𝔅l')] → predl (𝔄 :: 𝔅 :: 𝔅l').
-    eapply (tctx_incl_trans _ _ _ tr); [|by apply In]. rewrite [hasty_ptr_offsets]lock.
-    iIntros (??(aπ&?&?)postπ) "LFT PROPH UNIQ E L /= [(%&%& %Ev & ⧖ & ptr) T] Obs".
-    have Ne: 𝔅 :: 𝔅l' ≠ [] by done. iDestruct (JLoc with "ptr") as %[l[=->]].
+    eapply (tctx_incl_trans (𝔄 :: 𝔅l) [𝔄; Π!%ST 𝔅l] _
+      (λ post '(a -:: bl), post -[a; bl])); [|by apply In].
+    rewrite [hasty_ptr_offsets]lock. iIntros (?? (aπ &?&?) postπ)
+      "LFT PROPH UNIQ E L /= [(%&%& %Ev & ⧖ & ptr) T] Obs".
+    have Ne: 𝔅l ≠ [] by done. iDestruct (JLoc with "ptr") as %[l[=->]].
     have ?: eval_path p = Some #l. { move: Ev=>/=. case (eval_path p)=>//.
     (do 2 case=>//)=> ?. by rewrite shift_loc_0=> [=->]. }
     iMod (IH Ne _ _ _ (_ -:: _) (λ π '-[bl], postπ π -[aπ π; bl]) with
-      "LFT PROPH UNIQ E L [T] Obs") as ([?[]]) "($ & T & Obs)".
-    { unlock. by rewrite -hasty_ptr_offsets_offset. } iModIntro. iExists -[_; _].
+    "LFT PROPH UNIQ E L [T] Obs") as ([?[]]) "($ & T & Obs)". { unlock.
+    by rewrite -hasty_ptr_offsets_offset. } iModIntro. iExists -[_; _].
     iFrame "Obs T". iExists _, _. by iFrame. } by move=> ?[?[??]].
   Qed.
 
-  (** * Owned pointers *)
+  (** * Owning pointers *)
 
   Lemma tctx_split_own_prod {𝔄 𝔅} n (ty: _ 𝔄) (ty': _ 𝔅) p E L :
     tctx_incl E L +[p ◁ own_ptr n (ty * ty')]
@@ -118,13 +118,13 @@ Section product_split.
     tctx_incl E L +[p ◁ own_ptr n ty; p +ₗ #ty.(ty_size) ◁ own_ptr n ty']
       +[p ◁ own_ptr n (ty * ty')] (λ post '-[a; b], post -[(a, b)]).
   Proof.
-    iIntros (??(aπ&bπ&[])?) "_ _ _ _ $ (p & p' &_) Obs".
+    iIntros (??(?&?&[])?) "_ _ _ _ $ (p & p' &_) Obs".
     iDestruct "p" as ([[]|][|]Ev) "[⧖ own]"=>//.
     iDestruct "p'" as ([[]|][|]Ev') "[⧖' own']"=>//.
     move: Ev'. rewrite/= Ev. move=> [=<-]. iCombine "⧖ ⧖'" as "?".
     iDestruct "own" as "[(% & >↦ & ty) †]".
     iDestruct "own'" as "[(% & >↦' & ty') †']". iModIntro.
-    iExists -[pair ∘ aπ ⊛ bπ]. iFrame "Obs". iSplitL; [|done]. iExists _, _.
+    iExists -[_]. iFrame "Obs". iSplitL; [|done]. iExists _, _.
     do 2 (iSplit; [done|]). rewrite/= -freeable_sz_split. iFrame "† †'".
     iNext. iExists (_ ++ _). rewrite heap_mapsto_vec_app.
     iDestruct (ty_size_eq with "ty") as %->. iFrame "↦ ↦'". iExists _, _.
@@ -171,11 +171,11 @@ Section product_split.
     tctx_incl E L +[p ◁ &shr{κ} ty; p +ₗ #ty.(ty_size) ◁ &shr{κ} ty']
       +[p ◁ &shr{κ} (ty * ty')] (λ post '-[a; b], post -[(a, b)]).
   Proof.
-    iIntros (??(aπ&bπ&[])?) "_ _ _ _ $ (p & p' &_) Obs !>".
+    iIntros (??(?&?&[])?) "_ _ _ _ $ (p & p' &_) Obs !>".
     iDestruct "p" as ([[]|][|]Ev) "[⧖ ty]"=>//.
     iDestruct "p'" as ([[]|][|]Ev') "[⧖' ty']"=>//.
     move: Ev'. rewrite/= Ev. move=> [=<-]. iCombine "⧖ ⧖'" as "?".
-    iExists -[pair ∘ aπ ⊛ bπ]. iFrame "Obs". iSplitL; [|done]. iExists _, _.
+    iExists -[_]. iFrame "Obs". iSplitL; [|done]. iExists _, _.
     do 2 (iSplit; [done|])=>/=.
     iSplit; (iApply ty_shr_depth_mono; [|done]); lia.
   Qed.

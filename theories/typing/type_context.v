@@ -168,7 +168,7 @@ Section lemmas.
   Lemma tctx_incl_refl {𝔄l} (T: _ 𝔄l) E L : tctx_incl E L T T id.
   Proof. move=> ?? vπl ?. iIntros. iExists vπl. by iFrame. Qed.
 
-  Lemma tctx_incl_trans {𝔄l 𝔅l ℭl} (T1: _ 𝔄l) (T2: _ 𝔅l) (T3: _ ℭl) tr tr' E L :
+  Lemma tctx_incl_trans 𝔄l 𝔅l ℭl tr tr' (T1: _ 𝔄l) (T2: _ 𝔅l) (T3: _ ℭl) E L :
     tctx_incl E L T1 T2 tr → tctx_incl E L T2 T3 tr' → tctx_incl E L T1 T3 (tr ∘ tr').
   Proof.
     move=> In In' >. iIntros "#LFT #PROPH #UNIQ #E L T Obs".
