@@ -503,13 +503,13 @@ Class TypeNonExpansive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : P
     ty.(ty_size) = ty'.(ty_size) → (T ty).(ty_size) = (T ty').(ty_size);
   type_ne_ty_own n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
-    elctx_interp (ty.(ty_E)) ≡ elctx_interp (ty'.(ty_E)) →
+    elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
     (∀vπ d tid vl, ty.(ty_own) vπ d tid vl ≡{n}≡ ty'.(ty_own) vπ d tid vl) →
     (∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l ≡{S n}≡ ty'.(ty_shr) vπ d κ tid l) →
     (∀vπ d tid vl, (T ty).(ty_own) vπ d tid vl ≡{n}≡ (T ty').(ty_own) vπ d tid vl);
   type_ne_ty_shr n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
-    elctx_interp (ty.(ty_E)) ≡ elctx_interp (ty'.(ty_E)) →
+    elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
     (∀vπ d tid vl,
       dist_later n (ty.(ty_own) vπ d tid vl) (ty'.(ty_own) vπ d tid vl)) →
     (∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l ≡{n}≡ ty'.(ty_shr) vπ d κ tid l) →
@@ -521,13 +521,13 @@ Class TypeContractive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Pr
   type_contr_ty_size ty ty' : (T ty).(ty_size) = (T ty').(ty_size);
   type_contr_ty_own n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
-    elctx_interp (ty.(ty_E)) ≡ elctx_interp (ty'.(ty_E)) →
+    elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
     (∀vπ d tid vl, dist_later n (ty.(ty_own) vπ d tid vl) (ty'.(ty_own) vπ d tid vl)) →
     (∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l ≡{n}≡ ty'.(ty_shr) vπ d κ tid l) →
     (∀vπ d tid vl, (T ty).(ty_own) vπ d tid vl ≡{n}≡ (T ty').(ty_own) vπ d tid vl);
   type_contr_ty_shr n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
-    elctx_interp (ty.(ty_E)) ≡ elctx_interp (ty'.(ty_E)) →
+    elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
     (∀vπ d tid vl, match n with S (S n) =>
       ty.(ty_own) vπ d tid vl ≡{n}≡ ty'.(ty_own) vπ d tid vl | _ => True end) →
     (∀vπ d κ tid l, dist_later n (ty.(ty_shr) vπ d κ tid l) (ty'.(ty_shr) vπ d κ tid l)) →

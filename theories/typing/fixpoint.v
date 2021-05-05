@@ -14,8 +14,8 @@ Section S.
 
   Lemma Tn_ty_lft_const n n' : ⊢ (Tn n).(ty_lft) ≡ₗ (Tn n').(ty_lft).
   Proof using HT.
-    have H: ∀n, ⊢ (Tn n).(ty_lft) ≡ₗ (Tn 0).(ty_lft); last first.
-    { iApply lft_equiv_trans; [|iApply lft_equiv_sym]; iApply H. } clear n n'=> n.
+    have Eq: ∀n, ⊢ (Tn n).(ty_lft) ≡ₗ (Tn 0).(ty_lft); last first.
+    { iApply lft_equiv_trans; [|iApply lft_equiv_sym]; iApply Eq. } clear n n'=> n.
     case type_contr_type_lft_morph=> [> Hα ?|> Hα ?]; last first.
     { iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_sym. iApply Hα. }
     elim: n=> [|n IH]; [apply lft_equiv_refl|]. rewrite /Tn /=.
@@ -30,8 +30,8 @@ Section S.
   Lemma Tn_ty_E_const n n' :
     elctx_interp (Tn (S n)).(ty_E) ≡ elctx_interp (Tn (S n')).(ty_E).
   Proof using HT.
-    have H: ∀n, elctx_interp (Tn (S n)).(ty_E) ≡ elctx_interp (Tn 1).(ty_E); last first.
-    { by rewrite H. } clear n n'=> n.
+    have Eq: ∀n, elctx_interp (Tn (S n)).(ty_E) ≡ elctx_interp (Tn 1).(ty_E);
+    [|by rewrite !Eq]. clear n n'=> n.
     case type_contr_type_lft_morph=> [> Hα HE|> ? HE]; last by rewrite !HE.
     elim: n; [done|]=> n IH.
     rewrite (HE (Tn (S n))) IH !HE !assoc -!persistent_sep_dup -!assoc.
@@ -274,11 +274,8 @@ Section subtyping.
 
   Local Lemma wand_forall P (Φ: nat → iProp Σ) : (∀n, P -∗ Φ n) ⊢ (P -∗ ∀n, Φ n).
   Proof. iIntros "To P %". iApply ("To" with "P"). Qed.
-  Local Lemma entails_equiv (P Q: iProp Σ) : (P ⊣⊢ P ∧ Q) ↔ (P ⊢ Q).
-  Proof.
-    split; [by iIntros (->) "[_ $]"|]=> To. iSplit; [|by iIntros "[$ _]"].
-    iIntros "?". iSplit; [done|]. by iApply To.
-  Qed.
+  Local Lemma entails_dist_True (P Q: iProp Σ) : (P ⊢ Q) ↔ ∀n, (P → Q)%I ≡{n}≡ True%I.
+  Proof. by rewrite entails_eq_True equiv_dist. Qed.
 
   Lemma fix_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅)
     T `{!TypeContractive T} T' `{!TypeContractive T'} E L :
@@ -296,10 +293,10 @@ Section subtyping.
     apply and_intro; [|apply and_intro; [|apply and_intro]].
     - iIntros "H". iDestruct ("H" $! 0) as "($&_)".
     - iIntros "H". iDestruct ("H" $! 0) as "(_&$&_)".
-    - apply entails_equiv, equiv_dist=> ?. setoid_rewrite conv_compl=>/=.
-      apply equiv_dist, entails_equiv. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
-    - apply entails_equiv, equiv_dist=> ?. setoid_rewrite conv_compl=>/=.
-      apply equiv_dist, entails_equiv. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
+    - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
+      apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
+    - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
+      apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
   Qed.
 
   Lemma fix_eqtype_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g
@@ -316,10 +313,10 @@ Section subtyping.
     apply and_intro; [|apply and_intro; [|apply and_intro]].
     - iIntros "H". iDestruct ("H" $! 0) as "($&_)".
     - iIntros "H". iDestruct ("H" $! 0) as "(_&$&_)".
-    - apply entails_equiv, equiv_dist=> ?. setoid_rewrite conv_compl=>/=.
-      apply equiv_dist, entails_equiv. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
-    - apply entails_equiv, equiv_dist=> ?. setoid_rewrite conv_compl=>/=.
-      apply equiv_dist, entails_equiv. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
+    - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
+      apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
+    - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
+      apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
   Qed.
 
   Lemma fix_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g
