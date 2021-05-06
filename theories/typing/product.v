@@ -42,23 +42,23 @@ Section product.
     iIntros "* In [??]". iSplit; by iApply (ty_shr_lft_mono with "In").
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT #? Bor [κ κ']". rewrite split_prod_mt.
+    move=> */=. iIntros "#LFT #? Bor [κ κ+]". rewrite split_prod_mt.
     iMod (bor_sep with "LFT Bor") as "[Bor Bor']"; first done.
     iMod (ty_share with "LFT [] Bor κ") as "ty"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iMod (ty_share with "LFT [] Bor' κ'") as "ty'"; first done.
+    iMod (ty_share with "LFT [] Bor' κ+") as "ty'"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
     iCombine "ty ty'" as "ty2". iApply (step_fupdN_wand with "ty2").
     by iIntros "!> [>[$$] >[$$]]".
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #? (%wl & %wl' &->& ty & ty') [κ κ']".
+    move=> *. iIntros "#LFT #? (%wl & %wl' &->& ty & ty') [κ κ+]".
     iDestruct (ty_own_proph with "LFT [] ty κ") as ">Toty"; [done| |].
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iDestruct (ty_own_proph with "LFT [] ty' κ'") as ">Toty'"; [done| |].
+    iDestruct (ty_own_proph with "LFT [] ty' κ+") as ">Toty'"; [done| |].
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
     iCombine "Toty Toty'" as "Toty2". iApply (step_fupdN_wand with "Toty2").
@@ -71,11 +71,11 @@ Section product.
     iModIntro. iExists wl, wl'. iSplit; [done|]. iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #In #? [ty ty'] [κ κ']".
+    move=> *. iIntros "#LFT #In #? [ty ty'] [κ κ+]".
     iDestruct (ty_shr_proph with "LFT In [] ty κ") as "> Toty"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iDestruct (ty_shr_proph with "LFT In [] ty' κ'") as "> Toty'"; first done.
+    iDestruct (ty_shr_proph with "LFT In [] ty' κ+") as "> Toty'"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
     iIntros "!>!>". iCombine "Toty Toty'" as ">Toty2".

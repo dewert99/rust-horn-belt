@@ -97,7 +97,8 @@ Section typing.
   Lemma type_let' {𝔄l 𝔅l ℭl} E L (T1: _ 𝔄l) (T2: _ → _ 𝔅l) (T: _ ℭl) C xb e e' tr pre:
     Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr -∗
     (∀v: val, typed_body E L C (T2 v h++ T) (subst' xb v e') pre) -∗
-    typed_body E L C (T1 h++ T) (let: xb := e in e') (trans_upper tr pre).
+    typed_body E L C (T1 h++ T) (let: xb := e in e')
+      (λ acl, let '(al, cl) := psep acl in tr (λ bl, pre (bl -++ cl)) al).
   Proof.
     iIntros (?) "e e'". iIntros (tid vπl2). move: (papp_ex vπl2)=> [vπl[vπl'->]].
     iIntros "#LFT #TIME #PROPH #UNIQ #E Na L C [T1 T] Obs". wp_bind e.

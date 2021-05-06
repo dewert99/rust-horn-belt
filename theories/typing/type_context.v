@@ -24,20 +24,20 @@ Definition predl 𝔄l := pred' (plist of_syn_type 𝔄l).
 Definition predl_trans 𝔄l 𝔅l := predl 𝔅l → predl 𝔄l.
 
 Definition trans_app {𝔄l 𝔅l ℭl 𝔇l} (tr: predl_trans 𝔄l 𝔅l) (tr': predl_trans ℭl 𝔇l)
-  : predl_trans (𝔄l ++ ℭl) (𝔅l ++ 𝔇l) :=
-  λ post bdl, tr (λ al, tr' (λ cl, post (al -++ cl)) (psepr bdl)) (psepl bdl).
+  : predl_trans (𝔄l ++ ℭl) (𝔅l ++ 𝔇l) := λ post bdl,
+  let '(bl, dl) := psep bdl in tr (λ al, tr' (λ cl, post (al -++ cl)) dl) bl.
 
 Definition trans_lower {𝔄l 𝔅l ℭl} (tr: predl_trans 𝔄l 𝔅l)
-  : predl_trans (ℭl ++ 𝔄l) (ℭl ++ 𝔅l) :=
-  λ post cal, tr (λ bl, post (psepl cal -++ bl)) (psepr cal).
+  : predl_trans (ℭl ++ 𝔄l) (ℭl ++ 𝔅l) := λ post cal,
+  let '(cl, al) := psep cal in tr (λ bl, post (cl -++ bl)) al.
 
 Definition trans_upper {𝔄l 𝔅l ℭl} (tr: predl_trans 𝔄l 𝔅l)
-  : predl_trans (𝔄l ++ ℭl) (𝔅l ++ ℭl) :=
-  λ post acl, tr (λ bl, post (bl -++ psepr acl)) (psepl acl).
+  : predl_trans (𝔄l ++ ℭl) (𝔅l ++ ℭl) := λ post acl,
+  let '(al, cl) := psep acl in tr (λ bl, post (bl -++ cl)) al.
 
-Definition trans_tail {𝔄 𝔅l ℭl} (tr: predl_trans 𝔅l ℭl)
-  : predl_trans (𝔄 :: 𝔅l) (𝔄 :: ℭl) :=
-  λ post '(a -:: cl), tr (λ bl, post (a -:: bl)) cl.
+Definition trans_tail {ℭ 𝔄l 𝔅l} (tr: predl_trans 𝔄l 𝔅l)
+  : predl_trans (ℭ :: 𝔄l) (ℭ :: 𝔅l) :=
+  λ post '(c -:: al), tr (λ bl, post (c -:: bl)) al.
 
 Section type_context.
   Context `{!typeG Σ}.

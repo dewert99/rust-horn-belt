@@ -44,6 +44,10 @@ Section fn.
     f_equiv. do 2 (f_equiv; [by rewrite Eqi|]). by rewrite Eqo.
   Qed.
 
+  Definition trans_upper' {𝔄l 𝔅 ℭl} (tr: pred' 𝔅 → predl 𝔄l)
+    : predl_trans (𝔄l ++ ℭl) (𝔅 :: ℭl) := λ post acl,
+    let '(al, cl) := psep acl in tr (λ b, post (b -:: cl)) al.
+
   Program Definition fn (fp: A → fn_params) : type (predₛ 𝔅 → predlₛ 𝔄l) :=
     {| (* FIXME : The definition of ty_lfts is less restrictive than the one
           used in Rust. In Rust, the type of parameters are taken into account
@@ -58,7 +62,7 @@ Section fn.
             [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, vhd v ◁ box (fp x).(fp_oty) +:: T} pre]
             (hzip_with (λ _ ty (w: val), w ◁ box ty) (fp x).(fp_ityl) wl h++ T)
             (subst' fb (RecV fb (kb :: bl) e) $ subst' kb k $ subst_plv bl wl e)
-            (λ acl, tr (λ b: 𝔅, pre (b -:: psepr acl)) (psepl acl)))
+            (trans_upper' tr pre))
     |}%I.
   Next Obligation. rewrite /tc_opaque. apply _. Qed.
   Next Obligation. move=> *. by iDestruct 1 as (?????->) "?". Qed.
@@ -203,8 +207,8 @@ Section typing.
       iIntros ([]?[][]) "/= #[(_&_& In &_) ?] [t ?]".
       iSplitL "t"; [|by iApply FIX]. iDestruct "t" as (???) "[⧖ ?]".
       iExists _, _. iSplit; [done|]. iFrame "⧖". by iApply "In".
-    - iApply proph_obs_eq; [|done]=>/= ?. rewrite !papply_app !papp_sepl !papp_sepr.
-      f_equal. clear. move: 𝔄l 𝔄l' fl aπl. fix FIX 1.
+    - iApply proph_obs_eq; [|done]=>/= ?. rewrite /trans_upper' !papply_app
+      !papp_sepl !papp_sepr. f_equal. clear. move: 𝔄l 𝔄l' fl aπl. fix FIX 1.
       case=> [|??]; case=>//= ??[??][??]. f_equal. apply FIX.
   Qed.
 
@@ -245,8 +249,8 @@ Section typing.
       hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') T T' tr →
     k ◁cont{L, Tk} pre ∈ C →
     (∀ret: val, tctx_incl E L (ret ◁ box (fp x).(fp_oty) +:: T') (Tk [#ret]) tr') →
-    ⊢ typed_body E L C T (call: p ql → k) (tr (λ '(trp -:: adl),
-        let '(al, dl) := psep adl in trp (λ b: 𝔅, tr' pre (b -:: dl)) al))%type.
+    ⊢ typed_body E L C T (call: p ql → k)
+      (tr (λ '(trp -:: adl), trans_upper' trp (tr' pre) adl))%type.
   Proof.
     iIntros (-> Alv ToEfp ?? InTk). iApply typed_body_tctx_incl; [done|].
     iIntros (?[? adπl]). move: (papp_ex adπl)=> [aπl[dπl->]].
@@ -288,8 +292,8 @@ Section typing.
       hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') T T' tr →
     (∀ret: val, typed_body E L C
       (ret ◁ box (fp x).(fp_oty) +:: T') (subst' b ret e) pre) -∗
-    typed_body E L C T (letcall: b := p ql in e) (tr (λ '(trp -:: adl),
-      let '(al, dl) := psep adl in trp (λ b: 𝔅, pre (b -:: dl)) al)).
+    typed_body E L C T (letcall: b := p ql in e)
+      (tr (λ '(trp -:: adl), trans_upper' trp pre adl)).
   Proof.
     iIntros (->?? Clql ???) "e". iApply type_cont_norec.
     - (* TODO : make [solve_closed] work here. *)
@@ -321,8 +325,7 @@ Section typing.
         [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, vhd v ◁ box (fp x).(fp_oty) +:: T} pre]
         (f ◁ fn fp +:: hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl h++ T)
         (subst' fb f $ subst "return" k $ subst_plv bl wl e)
-        (λ '(tr' -:: acl), tr' = tr ∧ let '(al, cl) := psep acl in
-          tr (λ b: 𝔅, pre (b -:: cl)) al)%type) -∗
+        (λ '(tr' -:: acl), tr' = tr ∧ trans_upper' tr pre acl)%type) -∗
     typed_instr_ty E L +[] (fnrec: fb bl := e) (fn fp) (λ post _, post tr).
   Proof.
     iIntros (Cl) "#Body %%% _ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "#⧖".
@@ -343,8 +346,7 @@ Section typing.
       typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
         [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, vhd v ◁ box (fp x).(fp_oty) +:: T} pre]
         (hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl h++ T)
-        (subst "return" k $ subst_plv bl wl e)
-        (λ acl, let '(al, cl) := psep acl in tr (λ b: 𝔅, pre (b -:: cl)) al)%type) -∗
+        (subst "return" k $ subst_plv bl wl e) (trans_upper' tr pre)) -∗
     typed_instr_ty E L +[] (fn: bl := e) (fn fp) (λ post _, post tr).
   Proof.
     iIntros (?) "#?". iApply type_fnrec_instr. iIntros "!> *".

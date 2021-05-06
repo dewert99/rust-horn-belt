@@ -1,4 +1,3 @@
-Require Import PropExtensionality.
 From lrust.lang.lib Require Import memcpy.
 From lrust.typing Require Export type.
 From lrust.typing Require Import uninit type_context programs.
@@ -254,12 +253,6 @@ Section typing.
     f_equal. fun_ext. by case.
   Qed.
 
-  Local Lemma true_imp (P: Prop) : P = (True → P).
-  Proof.
-    (** TODO: get rid of propositional_extensionality *)
-    apply propositional_extensionality. split; [done|]. move=> Imp. by apply Imp.
-  Qed.
-
   Lemma type_letalloc_1 {𝔄 𝔄l 𝔅l} (ty: _ 𝔄) (x: string) p e
     (T: _ 𝔄l) (T': _ 𝔅l) tr pre E L C :
     Closed [] p → Closed [x] e →
@@ -267,8 +260,8 @@ Section typing.
     (∀v: val, typed_body E L C (v ◁ box ty +:: T') (subst x v e) pre) -∗
     typed_body E L C T (letalloc: x <- p in e) (tr pre).
   Proof.
-    iIntros (??? Sz) "?". iApply typed_body_eq; last first. {
-    iApply type_new; [|done|done|].
+    iIntros (??? Sz) "?". iApply typed_body_tctx_incl; [done|].
+    iApply typed_body_impl; last first. { iApply type_new; [|done|done|].
     - rewrite /Closed /= !andb_True. split; [done|]. split; [|done].
       split; [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
     - iIntros (xv) "/=".
@@ -277,7 +270,7 @@ Section typing.
         [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
       iApply type_assign; [|solve_typing|by eapply write_own|done|done].
       apply subst_is_closed; [|done]. apply is_closed_of_val. }
-    f_equal. fun_ext. case=>/= ??. apply true_imp.
+    by move=>/= [??]??.
   Qed.
 
   Lemma type_letalloc_n {𝔄 𝔅 𝔅' 𝔄l 𝔅l} (ty: _ 𝔄) (tyr: _ 𝔅) (tyr': _ 𝔅')
@@ -289,7 +282,8 @@ Section typing.
     typed_body E L C T (letalloc: x <-{ty.(ty_size)} !p in e)
       (tr (λ '(b -:: bl), pre (gt b -:: st b -:: bl))).
   Proof.
-    iIntros. iApply typed_body_eq; last first. { iApply type_new; [|lia|done|]=>/=.
+    iIntros. iApply typed_body_tctx_incl; [done|].
+    iApply typed_body_impl; last first. { iApply type_new; [|lia|done|]=>/=.
     - rewrite /Closed /= !andb_True !right_id. split; [done|].
       split; [by apply is_closed_of_val|]. split;
       [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
@@ -301,7 +295,7 @@ Section typing.
         - eapply is_closed_subst; [done|set_solver]. } rewrite Nat2Z.id.
       iApply type_memcpy; [|solve_typing| |solve_typing|done|done|done].
       { apply subst_is_closed; [|done]. apply is_closed_of_val. }
-      by apply write_own. } f_equal. fun_ext. case=>/= ??. apply true_imp.
+      by apply write_own. } by move=>/= [??]??.
   Qed.
 
 End typing.
