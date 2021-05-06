@@ -1,3 +1,4 @@
+Require Import PropExtensionality.
 From lrust.lang.lib Require Import memcpy.
 From lrust.typing Require Export type.
 From lrust.typing Require Import uninit type_context programs.
@@ -175,12 +176,13 @@ Section typing.
 
   Lemma write_own {𝔄 𝔅} (ty: _ 𝔄) (ty': _ 𝔅) n E L :
     ty.(ty_size) = ty'.(ty_size) →
-    typed_write E L (own_ptr n ty') ty (own_ptr n ty) (λ _ a, a).
+    typed_write E L (own_ptr n ty) ty (own_ptr n ty') ty' id (λ _ a, a).
   Proof.
-    iIntros (Sz ?[|?]???) "_ _ _ $ own"; [done|]. setoid_rewrite by_just_loc_ex at 1.
-    iDestruct "own" as (l[=->]) "[(%vl & >↦ & ty') †]". rewrite Sz.
-    iDestruct (ty_size_eq with "ty'") as ">%". iModIntro. iExists l, vl.
-    iSplit; [done|]. iFrame "↦". iIntros (??) "$ ? !>". by rewrite Sz.
+    move=> Sz. split; [done|]. iIntros (?[|][[]|]??) "_ _ _ $ own //".
+    iDestruct "own" as "[(%vl & >↦ & ty) †]". iModIntro. iExists _.
+    iSplit; [done|]. iSplitL "↦ ty".
+    { iNext. iExists _. iFrame "↦". iApply ty_own_depth_mono; [|done]. lia. }
+    iIntros (??) "$ ? !>". by rewrite Sz.
   Qed.
 
   Lemma read_own_copy {𝔄} (ty: _ 𝔄) n E L :
@@ -252,24 +254,30 @@ Section typing.
     f_equal. fun_ext. by case.
   Qed.
 
+  Local Lemma true_imp (P: Prop) : P = (True → P).
+  Proof.
+    (** TODO: get rid of propositional_extensionality *)
+    apply propositional_extensionality. split; [done|]. move=> Imp. by apply Imp.
+  Qed.
+
   Lemma type_letalloc_1 {𝔄 𝔄l 𝔅l} (ty: _ 𝔄) (x: string) p e
     (T: _ 𝔄l) (T': _ 𝔅l) tr pre E L C :
     Closed [] p → Closed [x] e →
     tctx_extract_ctx E L +[p ◁ ty] T T' tr → ty.(ty_size) = 1 →
-    (∀v: val, typed_body E L C (v ◁ own_ptr 1 ty +:: T') (subst x v e) pre) -∗
+    (∀v: val, typed_body E L C (v ◁ box ty +:: T') (subst x v e) pre) -∗
     typed_body E L C T (letalloc: x <- p in e) (tr pre).
   Proof.
-    iIntros (??? Sz) "e". iApply typed_body_eq; last first.
-    { iApply type_new; [|done|done|].
-      - rewrite /Closed /= !andb_True. split; [done|]. split; [|done].
-        split; [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
-      - rewrite -Sz. iIntros (xv) "/=".
-        have ->: (subst x xv (x <- p;; e))%E = (xv <- p;; subst x xv e)%E.
-        { rewrite /subst /=. repeat f_equal;
-          [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
-        iApply type_assign; [|solve_typing|by eapply write_own|done].
-        apply subst_is_closed; [|done]. apply is_closed_of_val. }
-    f_equal. fun_ext. by case.
+    iIntros (??? Sz) "?". iApply typed_body_eq; last first. {
+    iApply type_new; [|done|done|].
+    - rewrite /Closed /= !andb_True. split; [done|]. split; [|done].
+      split; [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
+    - iIntros (xv) "/=".
+      have ->: (subst x xv (x <- p;; e))%E = (xv <- p;; subst x xv e)%E.
+      { rewrite /subst /=. repeat f_equal;
+        [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
+      iApply type_assign; [|solve_typing|by eapply write_own|done|done].
+      apply subst_is_closed; [|done]. apply is_closed_of_val. }
+    f_equal. fun_ext. case=>/= ??. apply true_imp.
   Qed.
 
   Lemma type_letalloc_n {𝔄 𝔅 𝔅' 𝔄l 𝔅l} (ty: _ 𝔄) (tyr: _ 𝔅) (tyr': _ 𝔅')
@@ -281,20 +289,19 @@ Section typing.
     typed_body E L C T (letalloc: x <-{ty.(ty_size)} !p in e)
       (tr (λ '(b -:: bl), pre (gt b -:: st b -:: bl))).
   Proof.
-    iIntros. iApply typed_body_eq; last first.
-    { iApply type_new; [|lia|done|]=>/=.
-      - rewrite /Closed /= !andb_True !right_id. split; [done|].
-        split; [by apply is_closed_of_val|]. split;
-        [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
-      - iIntros (xv). have ->: subst x xv (x <-{ty.(ty_size)} !p;; e)%E =
-          (xv <-{ty.(ty_size)} !p;; subst x xv e)%E.
-        { rewrite /subst /=. repeat f_equal.
-          - eapply (is_closed_subst []); [apply is_closed_of_val|set_solver].
-          - by rewrite bool_decide_true.
-          - eapply is_closed_subst; [done|set_solver]. } rewrite Nat2Z.id.
-        iApply type_memcpy; [|solve_typing| |solve_typing|done|done].
-        { apply subst_is_closed; [|done]. apply is_closed_of_val. }
-        by apply write_own. } done.
+    iIntros. iApply typed_body_eq; last first. { iApply type_new; [|lia|done|]=>/=.
+    - rewrite /Closed /= !andb_True !right_id. split; [done|].
+      split; [by apply is_closed_of_val|]. split;
+      [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
+    - iIntros (xv). have ->: subst x xv (x <-{ty.(ty_size)} !p;; e)%E =
+        (xv <-{ty.(ty_size)} !p;; subst x xv e)%E.
+      { rewrite /subst /=. repeat f_equal.
+        - eapply (is_closed_subst []); [apply is_closed_of_val|set_solver].
+        - by rewrite bool_decide_true.
+        - eapply is_closed_subst; [done|set_solver]. } rewrite Nat2Z.id.
+      iApply type_memcpy; [|solve_typing| |solve_typing|done|done|done].
+      { apply subst_is_closed; [|done]. apply is_closed_of_val. }
+      by apply write_own. } f_equal. fun_ext. case=>/= ??. apply true_imp.
   Qed.
 
 End typing.

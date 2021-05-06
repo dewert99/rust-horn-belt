@@ -169,6 +169,7 @@ Fixpoint hzip_with {A} {F G H: A → Type} {Xl} (f: ∀X, F X → G X → H X)
   (xl: hlist F Xl) (yl: plist G Xl) : hlist H Xl :=
   match xl, yl with +[], _ => +[] |
     x +:: xl', y -:: yl' => f _ x y +:: hzip_with f xl' yl' end.
+Notation hzip := (hzip_with (λ _, pair)).
 
 Fixpoint plist2_eq_nat_len `{F: A → _} {Xl Yl} :
   plist2 F Xl Yl → eq_nat (length Xl) (length Yl) :=

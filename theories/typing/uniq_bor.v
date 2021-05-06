@@ -126,10 +126,27 @@ Section typing.
   Qed.
 
   Global Instance uniq_send {𝔄} κ (ty: _ 𝔄) : Send ty → Send (&uniq{κ} ty).
-  Proof. move=> Hsend >/=. by do 18 f_equiv. Qed.
+  Proof. move=> >/=. by do 18 f_equiv. Qed.
 
   Global Instance uniq_sync {𝔄} κ (ty: _ 𝔄) : Sync ty → Sync (&uniq{κ} ty).
   Proof. move=> >/=. by do 10 f_equiv. Qed.
+
+  Global Instance uniq_leak {𝔄} κ (ty: _ 𝔄) :
+    Leak (&uniq{κ} ty) [κ] (λ '(a, a'), a' = a).
+  Proof.
+    move=>/= ? vπ d ? vl ??. rewrite right_id. iIntros "#LFT PROPH [κ κ'] [In uniq]".
+    case vl as [|[[]|][]]=>//. iDestruct "uniq" as (??[Le Eq]) "[Vo Bor]".
+    move: Le=> /succ_le[?[->Le]]. have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
+    iMod (bor_acc with "LFT Bor κ") as "[(%&%&(%& ↦ & ty)&⧖& Pc) ToBor]"; [solve_ndisj|].
+    iIntros "/= !>!>!>". iMod (ty_own_proph with "LFT In ty κ'") as "Toξl";
+    [solve_ndisj|]. iDestruct (uniq_agree with "Vo Pc") as %[<-->].
+    iApply step_fupdN_nmono; [by apply Le|].
+    iApply (step_fupdN_wand with "Toξl"). iIntros "!> >(%&%&%& ξl & Toty)".
+    iMod (uniq_resolve with "PROPH Vo Pc ξl") as "(Obs & Pc & ξl)"; [solve_ndisj|done|].
+    iMod ("Toty" with "ξl") as "[ty $]". iMod ("ToBor" with "[↦ ty ⧖ Pc]") as "[_ $]".
+    { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. } iApply proph_obs_eq;
+    [|done]=>/= π. move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.
+  Qed.
 
   Lemma uniq_subtype {𝔄} E L κ κ' (ty ty': _ 𝔄) :
     lctx_lft_incl E L κ' κ → eqtype E L ty ty' id id →
@@ -257,17 +274,18 @@ Section typing.
 
   Lemma write_uniq {𝔄} E L κ (ty: _ 𝔄):
     lctx_lft_alive E L κ →
-    typed_write E L (&uniq{κ} ty) ty (&uniq{κ} ty) (λ v w, (w, v.2)).
+    typed_write E L (&uniq{κ} ty) ty (&uniq{κ} ty) ty fst (λ v w, (w, v.2)).
   Proof.
-    iIntros (Alv vπ [|?][[]|]??) "#LFT #UNIQ E L [In uniq] //".
-    { iDestruct "uniq" as (??[??]) "_". lia. }
+    move=> Alv. split; [done|]. iIntros (vπ d[[]|]??) "#LFT #UNIQ E L [In uniq] //".
+    case d=> [|?]. { iDestruct "uniq" as (??[??]) "_". lia. }
     have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
     iDestruct "uniq" as (??[??]) "[Vo Bor]".
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
     iMod (bor_acc with "LFT Bor κ") as "[(%&%&(%& >↦ & ty)&_& Pc) ToBor]"; [done|].
-    iMod (uniq_strip_later with "Vo Pc") as (<-<-) "[Vo Pc]".
-    rewrite {1}ty_size_eq. iDestruct "ty" as ">%". iModIntro. iExists _, _.
-    iSplit; [done|]. iFrame "↦". iIntros (wπ ?) "(% & >↦ & ty) #⧖ /=".
+    iMod (uniq_strip_later with "Vo Pc") as (<-<-) "[Vo Pc]". iModIntro.
+    iExists _. iSplit; [done|]. iSplitL "↦ ty".
+    { iNext. iExists _. iFrame "↦". iApply ty_own_depth_mono; [|done]. lia. }
+    iIntros (wπ ?) "(% & >↦ & ty) #⧖ /=".
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     iMod ("ToBor" with "[↦ Pc ty]") as "[Bor κ]".
     { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. }
@@ -279,4 +297,3 @@ End typing.
 
 Global Hint Resolve uniq_subtype uniq_eqtype write_uniq read_uniq : lrust_typing.
 Global Hint Resolve tctx_extract_hasty_reborrow | 10 : lrust_typing.
-

@@ -614,7 +614,7 @@ Class Copy `{!typeG Σ} {𝔄} (ty: type 𝔄) := {
     ↑lftN ∪ ↑shrN ⊆ E → shr_locsE l (ty.(ty_size) + 1) ⊆ F →
     lft_ctx -∗ ty.(ty_shr) vπ d κ tid l -∗ na_own tid F -∗ q.[κ] ={E}=∗ ∃q' vl,
       na_own tid (F ∖ shr_locsE l ty.(ty_size)) ∗
-      l ↦∗{q'} vl ∗ ▷ty.(ty_own) vπ d tid vl ∗
+      l ↦∗{q'} vl ∗ ▷ ty.(ty_own) vπ d tid vl ∗
       (na_own tid (F ∖ shr_locsE l ty.(ty_size)) -∗ l ↦∗{q'} vl
         ={E}=∗ na_own tid F ∗ q.[κ])
 }.
@@ -623,11 +623,6 @@ Instance: Params (@Copy) 3 := {}.
 
 Class ListCopy `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) := list_copy: HForall (λ _, Copy) tyl.
 Instance: Params (@ListCopy) 3 := {}.
-Global Instance list_copy_nil `{!typeG Σ} : ListCopy +[].
-Proof. constructor. Qed.
-Global Instance list_copy_cons `{!typeG Σ} {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) :
-  Copy ty → ListCopy tyl → ListCopy (ty +:: tyl).
-Proof. by constructor. Qed.
 
 Class Send `{!typeG Σ} {𝔄} (ty: type 𝔄) :=
   send_change_tid tid tid' vπ d vl :
@@ -636,11 +631,6 @@ Instance: Params (@Send) 3 := {}.
 
 Class ListSend `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) := list_send: HForall (λ _, Send) tyl.
 Instance: Params (@ListSend) 3 := {}.
-Global Instance list_send_nil `{!typeG Σ} : ListSend +[].
-Proof. constructor. Qed.
-Global Instance list_send_cons `{!typeG Σ} {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) :
-  Send ty → ListSend tyl → ListSend (ty +:: tyl).
-Proof. by constructor. Qed.
 
 Class Sync `{!typeG Σ} {𝔄} (ty: type 𝔄) :=
   sync_change_tid tid tid' vπ d κ l :
@@ -649,11 +639,17 @@ Instance: Params (@Sync) 3 := {}.
 
 Class ListSync `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) := list_sync: HForall (λ _, Sync) tyl.
 Instance: Params (@ListSync) 3 := {}.
-Global Instance list_sync_nil `{!typeG Σ} : ListSync +[].
-Proof. constructor. Qed.
-Global Instance list_sync_cons `{!typeG Σ} {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) :
-  Sync ty → ListSync tyl → ListSync (ty +:: tyl).
-Proof. by constructor. Qed.
+
+Class Leak `{!typeG Σ} {𝔄} (ty: type 𝔄) (κl: list lft) (Φ: 𝔄 → Prop) :=
+  leak E vπ d tid vl q : ↑lftN ∪ ↑prophN ⊆ E → let κ := lft_intersect_list κl in
+    lft_ctx -∗ proph_ctx -∗ q.[κ] -∗
+    ty.(ty_own) vπ d tid vl ={E}=∗ |={E}▷=>^d |={E}=> ⟨π, Φ (vπ π)⟩ ∗ q.[κ].
+Instance: Params (@Leak) 3 := {}.
+
+Class ListLeak `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) (κl: list lft)
+  (Φl: plist (λ 𝔄, 𝔄 → Prop) 𝔄l) :=
+  list_leak: ∃κll: plistc _ _, κl = concat κll ∧
+    HForall (λ _ '(ty, κl, Φ), Leak ty κl Φ) (hzip (hzip tyl κll) Φl).
 
 Section traits.
   Context `{!typeG Σ}.
@@ -711,6 +707,12 @@ Section traits.
     iDestruct ("ToNa" with "Na") as "$". iIntros "?". by iApply "Toκ".
   Qed.
 
+  Global Instance list_copy_nil : ListCopy +[].
+  Proof. constructor. Qed.
+  Global Instance list_copy_cons {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) :
+    Copy ty → ListCopy tyl → ListCopy (ty +:: tyl).
+  Proof. by constructor. Qed.
+
   (** Lemmas on Send and Sync *)
 
   Global Instance send_equiv {𝔄} : Proper ((≡@{_ 𝔄}) ==> impl) Send.
@@ -721,6 +723,34 @@ Section traits.
 
   Global Instance simple_type_sync {𝔄} (st: simple_type 𝔄) : Send st → Sync st.
   Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
+
+  Global Instance list_send_nil : ListSend +[].
+  Proof. constructor. Qed.
+  Global Instance list_send_cons {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) :
+    Send ty → ListSend tyl → ListSend (ty +:: tyl).
+  Proof. by constructor. Qed.
+
+  Global Instance list_sync_nil : ListSync +[].
+  Proof. constructor. Qed.
+  Global Instance list_sync_cons {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) :
+    Sync ty → ListSync tyl → ListSync (ty +:: tyl).
+  Proof. by constructor. Qed.
+
+  (** Lemmas on Leak *)
+
+  Global Instance leak_just {𝔄} (ty: _ 𝔄) : Leak ty [] (const True) | 100.
+  Proof.
+    move=> > ?. iIntros "_ _ $ _!>". iApply step_fupdN_full_intro.
+    by iApply proph_obs_true.
+  Qed.
+
+  Global Instance list_leak_nil : ListLeak +[] [] -[].
+  Proof. exists -[]. split; [done|constructor]. Qed.
+  Global Instance list_leak_cons {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) κl κl' Φ Φl :
+    Leak ty κl Φ → ListLeak tyl κl' Φl → ListLeak (ty +:: tyl) (κl ++ κl') (Φ -:: Φl).
+  Proof.
+    move=> ?[κll[??]]. exists (κl -:: κll). split=>/=; by [f_equal|constructor].
+  Qed.
 
 End traits.
 
