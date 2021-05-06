@@ -183,8 +183,8 @@ Section typing.
     iDestruct "uniq" as (? ξi [Le Eq]) "[ξVo ξBor]". set ξ := PrVar _ ξi.
     move: Le=> /succ_le[?[->?]].
     iMod (rebor with "LFT κ⊑κ' ξBor") as "[ξBor ToξBor]"; [done|].
-    iMod (uniq_intro (fst ∘ vπ) with "PROPH UNIQ") as (ζi) "(ζVo & ζPc)"; [done|].
-    set ζ := PrVar _ ζi.
+    iMod (uniq_intro (fst ∘ vπ) with "PROPH UNIQ") as (ζi) "(ζVo & ζPc)";
+    [done|]. set ζ := PrVar _ ζi.
     iMod (bor_create _ κ' (∃vπ' d', .VO[ξ] vπ' d' ∗ ⧖(S d') ∗ .PC[ζ] vπ' d')%I
       with "LFT [⧖ ξVo ζPc]") as "[ζBor ToζBig]"; [done| |].
     { iExists _, _. iFrame "ξVo ζPc". iApply persist_time_rcpt_mono; [|done]. lia. }
@@ -230,7 +230,7 @@ Section typing.
     lctx_lft_incl E L κ' κ → eqtype E L ty ty' id id →
     tctx_extract_elt E L (p ◁ &uniq{κ'} ty) (p ◁ &uniq{κ} ty' +:: T)
       (p ◁{κ'} &uniq{κ} ty' +:: T) (λ post '((a, a') -:: bl),
-        ∀ a'', post ((a, a'') -:: (a'', a') -:: bl)).
+        ∀a'': 𝔄, post ((a, a'') -:: (a'', a') -:: bl)).
   Proof.
     move=> ??. eapply tctx_incl_impl. { apply (tctx_incl_frame_r +[_] +[_;_]).
     eapply tctx_incl_trans; [by apply tctx_reborrow_uniq|].

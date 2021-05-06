@@ -192,7 +192,7 @@ Section borrow.
     iDestruct "H" as (depth3 ωi) "(>[% %ωEq] & ωVo & Hbor)".
     set ω := PrVar _ ωi.
     iMod (uniq_strip_later with "ξVo ξPc") as "(<- & -> & ξVo & ξPc)".
-    iMod (uniq_update _ ξ _ _ _ _ (λ π, ((vπ π).1.1, π ω)) (S depth3) with "UNIQ ξVo ξPc") as "[ξVo ξPc]"; [done|].
+    iMod (uniq_update ξ with "UNIQ ξVo ξPc") as "[ξVo ξPc]"; [done|].
     iMod ("Hclose'" $! (∃ l', l ↦ #(LitLoc l') ∗
       (∃ vπ' d', .VO[ω] vπ' d' ∗ .PC[ξ] (λ π, (vπ' π, π ω)) (S d') ∗ ⧖ (2 + d')) ∗
       &{κ'}(∃ vπ' d', l' ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ω] vπ' d')
@@ -234,19 +234,15 @@ Section borrow.
     set (ζ := PrVar _ ζi).
     iDestruct (uniq_proph_tok with "ζVo ζPc") as "(ζVo & ζ & ToζPc)".
     iDestruct (uniq_proph_tok with "ωVo ωPc") as "(ωVo & ω & ToωPc)".
-    rewrite !proph_tok_singleton.
-    iDestruct (proph_tok_combine with "ζ ω") as (?) "[ζω Toζω]".
-    iMod (uniq_preresolve  _ ξ (λ π, (π ζ, π ω)) with "PROPH ξVo ξPc ζω") as "(Hobs & ζω & Heqz)"; [done| |].
-      { apply proph_dep_pair; [apply (proph_dep_one ζ) | apply (proph_dep_one ω)]. }
-    iDestruct ("Toζω" with "ζω") as "[ζ ω]".
-    rewrite -!proph_tok_singleton.
+    iMod (uniq_preresolve ξ [ζ; ω] (λ π, (π ζ, π ω)) with "PROPH ξVo ξPc [$ζ $ω]") as "(Hobs & (ζ & ω &_) & Heqz)"; [done| |done|].
+    { apply (proph_dep_pair [_] [_]); apply proph_dep_one. }
     iDestruct ("ToζPc" with "ζ") as "ζPc".
     iDestruct ("ToωPc" with "ω") as "ωPc".
     iMod ("Hclose'" $! (∃ vπ' d', l' ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖ (S d') ∗ .PC[ζ] vπ' d')%I
       with "[Heqz ωVo ωPc Ht] [Hown ζPc]") as "[? Htok]".
     { iIntros "!> H".
       iMod (bi.later_exist_except_0 with "H") as (? ?) "(Hinner & > #Hd' & Hpc)".
-      iMod (uniq_update _ _ _ _ _ _ _ d' with "UNIQ ωVo ωPc") as "[ωVo ωPc]"; [solve_ndisj|].
+      iMod (uniq_update with "UNIQ ωVo ωPc") as "[ωVo ωPc]"; [solve_ndisj|].
       iSplitR "Hinner ωPc".
       - iExists _, d'.
         iMod (cumul_persist_time_rcpts with "TIME Ht Hd'") as "$"; [solve_ndisj|].

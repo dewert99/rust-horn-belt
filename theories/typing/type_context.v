@@ -364,7 +364,7 @@ Section lemmas.
     iMod (Alv with "E L'") as (?) "[lft ToL']"; [done|].
     iMod (ty_own_proph with "LFT [] ty lft") as "Toty";
     [done|by iApply lft_incl_refl|]. iExists _, (vπ' -:: vπl').
-    iCombine "⧖dp ⧖dT" as "$". iIntros "!>!>!>". iMod "ToT'" as "ToT'".
+    iCombine "⧖dp ⧖dT" as "$". iIntros "!>!>!>". iMod "ToT'".
     iModIntro. iCombine "Toty ToT'" as "Big". iApply (step_fupdN_wand with "Big").
     iIntros "[>(%&%&%& ξl & Toty) >($& Obs' &$)]".
     iMod ("Eqz" with "[] ξl") as "[Obs ξl]"; [done|]. iCombine "Obs Obs'" as "?".

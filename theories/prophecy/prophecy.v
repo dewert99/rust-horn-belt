@@ -71,7 +71,7 @@ Qed.
 Lemma proph_dep_unique `{!Unique A} (vπ: _ → A) : vπ ./ [].
 Proof. by rewrite (eq_unique vπ). Qed.
 
-Lemma proph_dep_pair {A B} (vπ: _ → A * B) ξl ζl :
+Lemma proph_dep_pair {A B} ξl ζl (vπ: _ → A * B) :
   fst ∘ vπ ./ ξl → snd ∘ vπ ./ ζl → vπ ./ ξl ++ ζl.
 Proof.
   move=> ??. rewrite (surjective_pairing_fun vπ). by apply proph_dep_constr2.

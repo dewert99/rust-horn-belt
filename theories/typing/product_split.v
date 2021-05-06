@@ -201,112 +201,71 @@ Section product_split.
     [solve_typing|apply shr_just_loc|move=> *; apply tctx_merge_shr_prod|done].
   Qed.
 
+  (** Unique References *)
+
+  Lemma tctx_split_uniq_prod {𝔄 𝔅} κ (ty: _ 𝔄) (ty': _ 𝔅) E L p :
+    lctx_lft_alive E L κ →
+    tctx_incl E L +[p ◁ &uniq{κ} (ty * ty')]
+      +[p ◁ &uniq{κ} ty; p +ₗ #ty.(ty_size) ◁ &uniq{κ} ty']
+      (λ post '-[((a, b), (a', b'))], post -[(a, a'); (b, b')]).
+  Proof.
+    iIntros (Alv ??[vπ[]]?) "#LFT #PROPH #UNIQ E L [p _] Obs".
+    set aπ: proph 𝔄 := λ π, (vπ π).1.1. set bπ: proph 𝔅 := λ π, (vπ π).1.2.
+    have ?: Inhabited 𝔄 := populate (aπ inhabitant).
+    have ?: Inhabited 𝔅 := populate (bπ inhabitant).
+    iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
+    iDestruct "p" as ([[]|]? Ev) "[_ [#In uniq]]"=>//.
+    iDestruct "uniq" as (? ξi [? Eq]) "[ξVo ξBor]".
+    move: Eq. (set ξ := PrVar _ ξi)=> Eq.
+    iMod (bor_acc_cons with "LFT ξBor κ") as "[(%&%& ↦ty & >#⧖ & ξPc) ToξBor]"; [done|].
+    iMod (uniq_strip_later with "ξVo ξPc") as (<-<-) "[ξVo ξPc]".
+    iMod (uniq_intro aπ with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].
+    iMod (uniq_intro bπ with "PROPH UNIQ") as (ζ'i) "[ζ'Vo ζ'Pc]"; [done|].
+    set ζ := PrVar _ ζi. set ζ' := PrVar _ ζ'i.
+    iDestruct (uniq_proph_tok with "ζVo ζPc") as "(ζVo & ζ & ζPc)".
+    iDestruct (uniq_proph_tok with "ζ'Vo ζ'Pc") as "(ζ'Vo & ζ' & ζ'Pc)".
+    iMod (uniq_preresolve ξ [ζ; ζ'] (λ π, (π ζ, π ζ')) with
+      "PROPH ξVo ξPc [$ζ $ζ']") as "(Obs' & (ζ & ζ' &_) & ToξPc)"; [done| |done|].
+    { apply (proph_dep_pair [_] [_]); apply proph_dep_one. }
+    iCombine "Obs Obs'" as "#Obs".
+    iSpecialize ("ζPc" with "ζ"). iSpecialize ("ζ'Pc" with "ζ'").
+    iMod ("ToξBor" with "[ToξPc] [↦ty ζPc ζ'Pc]") as "[Bor κ]"; last first.
+    - iMod ("ToL" with "κ") as "$".
+      iMod (bor_sep with "LFT Bor") as "[Bor Bor']"; [done|]. iModIntro.
+      iExists -[λ π, (aπ π, π ζ); λ π, (bπ π, π ζ')]. iSplitL; last first.
+      { iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq π)=>/=.
+        rewrite /aπ /bπ. case (vπ π). by (do 2 (case=>/= ??))=> <- [?[=<-<-]]. }
+      rewrite lft_intersect_list_app.
+      iSplitL "ζVo Bor"; [|iSplit; [|done]]; iExists _, _; iFrame "⧖".
+      + iSplit; [done|]. iSplit; [by iApply lft_incl_trans;
+        [|iApply lft_intersect_incl_l]|]. iExists _, _. by iFrame.
+      + iSplit; [by rewrite/= Ev|]. iSplit; [by iApply lft_incl_trans;
+      [|iApply lft_intersect_incl_r]|]. iExists _, _. by iFrame.
+    - iNext. iDestruct "↦ty" as (?) "[↦ (%&%&->& ty & ty')]".
+      rewrite heap_mapsto_vec_app. iDestruct "↦" as "[↦ ↦']".
+      iDestruct (ty_size_eq with "ty") as %->. iSplitL "↦ ty ζPc"; iExists _, _;
+      iFrame "⧖"; [iFrame "ζPc"|iFrame "ζ'Pc"]; iExists _; iFrame.
+    - iClear "⧖". iIntros "!> [(%&%& ↦ty & ⧖ & ζPc) (%&%& ↦ty' & ⧖' & ζ'Pc)] !>!>".
+      iCombine "⧖ ⧖'" as "⧖"=>/=. iExists (pair ∘ _ ⊛ _), _. iFrame "⧖".
+      iSplitL "↦ty ↦ty'"; last first.
+      { iApply "ToξPc". iApply (proph_eqz_constr2 with "[ζPc] [ζ'Pc]");
+        [iApply (proph_ctrl_eqz with "PROPH ζPc")|
+         iApply (proph_ctrl_eqz with "PROPH ζ'Pc")]. }
+      iDestruct "↦ty" as (?) "[↦ ty]". iDestruct "↦ty'" as (?) "[↦' ty']".
+      iExists (_ ++ _). rewrite heap_mapsto_vec_app.
+      iDestruct (ty_size_eq with "ty") as %->. iFrame "↦ ↦'". iExists _, _.
+      iSplit; [done|]. iSplitL "ty"; (iApply ty_own_depth_mono; [|done]); lia.
+  Qed.
+
+  (** Merging mutable references is not supported. *)
+
 (*
-  (** Unique borrows *)
-  Lemma tctx_split_uniq_prod2 E L p κ ty1 ty2 :
-    tctx_incl E L [p ◁ &uniq{κ}(product2 ty1 ty2)]
-                  [p ◁ &uniq{κ} ty1; p +ₗ #ty1.(ty_size) ◁ &uniq{κ} ty2].
-  Proof.
-    iIntros (tid q) "#LFT _ $ H".
-    rewrite tctx_interp_singleton tctx_interp_cons tctx_interp_singleton.
-    iDestruct "H" as ([[]|] [|depth]) "(#Hdepth & Hp & #Hout & H)"=>//.
-    iDestruct "Hp" as %Hp. setoid_rewrite split_prod_mt.
-    iDestruct "H" as (depth' γ ?) "[H◯ Hbor]".
-    iMod (own_alloc (●E depth' ⋅ ◯E depth')) as (γ1) "[H●1 H◯1]";
-      [by apply excl_auth_valid|].
-    iMod (own_alloc (●E depth' ⋅ ◯E depth')) as (γ2) "[H●2 H◯2]";
-      [by apply excl_auth_valid|].
-    rewrite lft_intersect_list_app.
-    iAssert (κ ⊑ ty_lft ty1)%I as "Hout1".
-    { by iApply lft_incl_trans; [|iApply lft_intersect_incl_l]. }
-    iAssert (κ ⊑ ty_lft ty2)%I as "Hout2".
-    { by iApply lft_incl_trans; [|iApply lft_intersect_incl_r]. }
-    iMod (bor_acc_atomic_cons with "LFT Hbor") as "[[H Hclose]|[#H† Hclose]]";
-      [done|..]; last first.
-    { iMod "Hclose" as "_". iSplitL "H◯1".
-      - iExists _, _. iFrame "%#". iExists _, _. iFrame "∗%". by iApply bor_fake.
-      - iExists _, _. iFrame "%#". rewrite /= Hp. iSplitR; [done|].
-        iExists _, _. iFrame "∗%". by iApply bor_fake. }
-    iDestruct "H" as (?) "(>H● & _ & H1 & H2)".
-    iDestruct (own_valid_2 with "H● H◯") as %->%excl_auth_agree_L.
-    iMod ("Hclose" with "[H● H◯] [H●1 H●2 H1 H2]") as "Hbor"; last first.
-    - iMod (bor_sep with "LFT Hbor") as "[Hbor1 Hbor2]"; [done|].
-      iSplitL "H◯1 Hbor1".
-      + iExists _, _. iFrame "#%". auto with iFrame.
-      + iExists _, _. iFrame "#". rewrite /= Hp. iSplitR; [done|]. auto with iFrame.
-    - rewrite -!(bi.exist_intro depth'). iFrame.
-      iSplit; iApply (persist_time_rcpt_mono with "Hdepth"); lia.
-    - iIntros "!> [H1 H2]".
-      iDestruct "H1" as (depth1) "(_ & >Hdepth1 & H1)".
-      iDestruct "H2" as (depth2) "(_ & >Hdepth2 & H2)".
-      iCombine "Hdepth1 Hdepth2" as "Hdepth12".
-      rewrite -persist_time_rcpt_sep -Max.succ_max_distr.
-      iExists _. iFrame "Hdepth12".
-      iMod (own_update_2 with "H● H◯") as "[$ _]"; [by apply excl_auth_update|].
-      iSplitL "H1"; (iApply ty_own_mt_depth_mono; [|done]); lia.
-  Qed.
-
-  Lemma tctx_merge_uniq_prod2 E L p κ ty1 ty2 :
-    tctx_incl E L [p ◁ &uniq{κ} ty1; p +ₗ #ty1.(ty_size) ◁ &uniq{κ} ty2]
-                  [p ◁ &uniq{κ}(product2 ty1 ty2)].
-  Proof.
-    iIntros (tid q) "#LFT _ $ H".
-    rewrite tctx_interp_singleton tctx_interp_cons tctx_interp_singleton.
-    iDestruct "H" as "[H1 H2]".
-    iDestruct "H1" as ([[]|] [|depth1]) "(Hdepth1 & Hp1 & #Hout1 & H1)"=>//. iDestruct "Hp1" as %Hp1.
-    rewrite /tctx_elt_interp /= Hp1.
-    iDestruct "H2" as (v2 [|depth2]) "(Hdepth2 & Hp2 & #Hout2 & H2)"=>//. iDestruct "Hp2" as %[=<-].
-    iExists _, _. iCombine "Hdepth1 Hdepth2" as "Hdepth".
-    rewrite -persist_time_rcpt_sep -Max.succ_max_distr. iFrame "Hdepth".
-    iSplitR; [done|]. iSplitR.
-    { rewrite lft_intersect_list_app. by iApply lft_incl_glb. }
-    iDestruct "H1" as (depth1' γ1 ?) "[H◯1 H1]".
-    iDestruct "H2" as (depth2' γ2 ?) "[H◯2 H2]".
-    iMod (own_alloc (●E _ ⋅ ◯E _)) as (γ) "[H● H◯]";
-      [by apply excl_auth_valid|].
-    iExists _, _. iSplitR; [iPureIntro; apply Nat.max_le_compat; eassumption|].
-    iFrame "H◯". iMod (bor_combine with "LFT H1 H2") as "H"; first solve_ndisj.
-    setoid_rewrite split_prod_mt.
-    iMod (bor_acc_atomic_cons with "LFT H") as "[[[H1 H2] Hclose]|[H† Hclose]]";
-      [done|..]; first last.
-    { iMod "Hclose" as "_". by iApply bor_fake. }
-    iDestruct "H1" as (depth1'') "(>H●1 & >Hdepth1' & H1)".
-    iDestruct "H2" as (depth2'') "(>H●2 & >Hdepth2' & H2)".
-    iDestruct (own_valid_2 with "H●1 H◯1") as %->%excl_auth_agree_L.
-    iDestruct (own_valid_2 with "H●2 H◯2") as %->%excl_auth_agree_L.
-    iCombine "Hdepth1' Hdepth2'" as "Hdepth".
-    rewrite -persist_time_rcpt_sep -Max.succ_max_distr.
-    iApply ("Hclose" with "[H◯1 H◯2 H●1 H●2]").
-    - iIntros "!> H". iDestruct "H" as (depth') "(_ & >#Hdepth' & H1 & H2)".
-      rewrite -!(bi.exist_intro depth'). iFrame "∗#".
-      iMod (own_update_2 with "H●1 H◯1") as "[$ _]"; [by apply excl_auth_update|].
-      iMod (own_update_2 with "H●2 H◯2") as "[$ _]"; [by apply excl_auth_update|].
-      done.
-    - iExists _. iFrame "H● Hdepth". iNext.
-      iSplitL "H1"; (iApply ty_own_mt_depth_mono; [|done]); lia.
-  Qed.
-
-  Lemma uniq_is_ptr κ ty depth tid (vl : list val) :
-    ty_own (&uniq{κ}ty) depth tid vl -∗ ⌜∃ l : loc, vl = [(#l) : val]⌝.
-  Proof. iIntros "[? H]". destruct vl as [|[[]|][]], depth; eauto. Qed.
-
   Lemma tctx_split_uniq_prod E L κ tyl p :
     tctx_incl E L [p ◁ &uniq{κ}(product tyl)]
                   (hasty_ptr_offsets p (uniq_bor κ) tyl 0).
   Proof.
     apply tctx_split_ptr_prod.
     - intros. apply tctx_split_uniq_prod2.
-    - intros. apply uniq_is_ptr.
-  Qed.
-
-  Lemma tctx_merge_uniq_prod E L κ tyl :
-    tyl ≠ [] →
-    ∀ p, tctx_incl E L (hasty_ptr_offsets p (uniq_bor κ) tyl 0)
-                   [p ◁ &uniq{κ}(product tyl)].
-  Proof.
-    intros. apply tctx_merge_ptr_prod; try done.
-    - apply _.
-    - intros. apply tctx_merge_uniq_prod2.
     - intros. apply uniq_is_ptr.
   Qed.
 *)
