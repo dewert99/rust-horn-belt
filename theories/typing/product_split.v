@@ -5,6 +5,8 @@ From lrust.typing Require Import type_context
   mod_ty uninit product own uniq_bor shr_bor.
 Set Default Proof Using "Type".
 
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl: syn_typel).
+
 (** * General Split/Merger for Plain Pointer Types *)
 Section product_split.
   Context `{!typeG Σ}.
@@ -15,8 +17,7 @@ Section product_split.
       p +ₗ #off ◁ ptr _ ty +:: hasty_ptr_offsets ptr p tyl' (off + ty.(ty_size))
     end.
 
-  Lemma hasty_ptr_offsets_offset {𝔄l}
-    (off: nat) p ptr (l: loc) (tyl: _ 𝔄l) tid vπl :
+  Lemma hasty_ptr_offsets_offset {𝔄l} ptr p (tyl: _ 𝔄l) (off: nat) (l: loc) tid vπl :
     eval_path p = Some #l →
     tctx_interp tid (hasty_ptr_offsets ptr (p +ₗ #off) tyl 0) vπl ⊣⊢
     tctx_interp tid (hasty_ptr_offsets ptr p tyl off) vπl.
@@ -217,7 +218,7 @@ Section product_split.
     iDestruct "p" as ([[]|]? Ev) "[_ [#In uniq]]"=>//.
     iDestruct "uniq" as (? ξi [? Eq]) "[ξVo ξBor]".
     move: Eq. (set ξ := PrVar _ ξi)=> Eq.
-    iMod (bor_acc_cons with "LFT ξBor κ") as "[(%&%& ↦ty & >#⧖ & ξPc) ToξBor]"; [done|].
+    iMod (bor_acc_cons with "LFT ξBor κ") as "[(%&%& ↦ty & >#⧖ & ξPc) ToBor]"; [done|].
     iMod (uniq_strip_later with "ξVo ξPc") as (<-<-) "[ξVo ξPc]".
     iMod (uniq_intro aπ with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].
     iMod (uniq_intro bπ with "PROPH UNIQ") as (ζ'i) "[ζ'Vo ζ'Pc]"; [done|].
@@ -229,12 +230,12 @@ Section product_split.
     { apply (proph_dep_pair [_] [_]); apply proph_dep_one. }
     iCombine "Obs Obs'" as "#Obs".
     iSpecialize ("ζPc" with "ζ"). iSpecialize ("ζ'Pc" with "ζ'").
-    iMod ("ToξBor" with "[ToξPc] [↦ty ζPc ζ'Pc]") as "[Bor κ]"; last first.
+    iMod ("ToBor" with "[ToξPc] [↦ty ζPc ζ'Pc]") as "[Bor κ]"; last first.
     - iMod ("ToL" with "κ") as "$".
       iMod (bor_sep with "LFT Bor") as "[Bor Bor']"; [done|]. iModIntro.
       iExists -[λ π, (aπ π, π ζ); λ π, (bπ π, π ζ')]. iSplitL; last first.
-      { iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq π)=>/=.
-        rewrite /aπ /bπ. case (vπ π). by (do 2 (case=>/= ??))=> <- [?[=<-<-]]. }
+      { iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq π).
+        rewrite/= /aπ /bπ. case (vπ π). by (do 2 (case=>/= ??))=> <- [?[=<-<-]]. }
       rewrite lft_intersect_list_app.
       iSplitL "ζVo Bor"; [|iSplit; [|done]]; iExists _, _; iFrame "⧖".
       + iSplit; [done|]. iSplit; [by iApply lft_incl_trans;
@@ -259,16 +260,42 @@ Section product_split.
 
   (** Merging mutable references is not supported. *)
 
-(*
-  Lemma tctx_split_uniq_prod E L κ tyl p :
-    tctx_incl E L [p ◁ &uniq{κ}(product tyl)]
-                  (hasty_ptr_offsets p (uniq_bor κ) tyl 0).
+  Fixpoint hasty_uniq_offsets {𝔄l} (κ: lft) (p: path)
+    (tyl: typel 𝔄l) (off: nat) : tctx (map (λ 𝔄, 𝔄 * 𝔄)%ST 𝔄l) :=
+    match tyl with +[] => +[] | ty +:: tyl' =>
+      p +ₗ #off ◁ &uniq{κ} ty +:: hasty_uniq_offsets κ p tyl' (off + ty.(ty_size))
+    end.
+
+  Lemma hasty_uniq_offsets_offset {𝔄l} κ p (tyl: _ 𝔄l) (off: nat) (l: loc) tid vπl :
+    eval_path p = Some #l →
+    tctx_interp tid (hasty_uniq_offsets κ (p +ₗ #off) tyl 0) vπl ⊣⊢
+    tctx_interp tid (hasty_uniq_offsets κ p tyl off) vπl.
   Proof.
-    apply tctx_split_ptr_prod.
-    - intros. apply tctx_split_uniq_prod2.
-    - intros. apply uniq_is_ptr.
+    move=> ?. rewrite -{2}(Nat.add_0_r off). move: off 0.
+    induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl assoc_L].
+    apply tctx_elt_interp_hasty_path=>/=. case (eval_path p)=>//.
+    (do 2 case=>//)=> ?. by rewrite shift_loc_assoc Nat2Z.inj_add.
   Qed.
-*)
+
+  Lemma tctx_split_uniq_xprod {𝔄l} κ (tyl: _ 𝔄l) E L p :
+    lctx_lft_alive E L κ →
+    tctx_incl E L +[p ◁ &uniq{κ} (Π! tyl)%T] (hasty_uniq_offsets κ p tyl 0)
+      (λ post '-[(al, al')], post (ptrans (pzip al al'))).
+  Proof.
+    move=> ?. move: p. elim: tyl. { move=>/= ?. by eapply tctx_incl_eq;
+    [apply tctx_incl_leak_head|]=>/= ?[[][]]_[]. } move=>/= 𝔄 𝔅l ty tyl IH p.
+    eapply tctx_incl_eq. { eapply tctx_incl_trans; [apply tctx_uniq_mod_ty_out;
+    by [apply _|]|]. eapply (tctx_incl_trans _ [𝔄 * 𝔄; Π! 𝔅l * Π! 𝔅l]%ST
+      (𝔄 * 𝔄 :: map (λ 𝔄, 𝔄 * 𝔄) 𝔅l)%ST _ (λ post '-[aa'; (bl, bl')],
+        post (aa' -:: ptrans (pzip bl bl')))); [by apply tctx_split_uniq_prod|].
+    iIntros (??(aa'π &?&[])?) "LFT PROPH UNIQ E L (p & p' &_) Obs".
+    iDestruct "p" as ([[]|]? Ev) "[⧖ [In uniq]]"=>//.
+    iMod (IH _ _ _ -[_] (λ π bl, postπ π (aa'π π -:: bl)) with
+      "LFT PROPH UNIQ E L [$p'] Obs") as (?) "($ & T & Obs)". iModIntro.
+    rewrite hasty_uniq_offsets_offset; [|done]. iExists (_ -:: _).
+    iFrame "Obs T". iExists _, _. iSplit; [by rewrite/= Ev|].
+    rewrite shift_loc_0. iFrame. } by move=>/= ?[[[??][??]][]].
+  Qed.
 
   (** * Splitting with [tctx_extract_elt]. *)
 
@@ -281,9 +308,8 @@ Section product_split.
     tctx_extract_elt E L t (p ◁ own_ptr n (Π! tyl) +:: T) (T' h++ T)
       (λ post '(al -:: bl), tr (λ '(a -:: cl), post (a -:: cl -++ bl)) al).
   Proof.
-    move=> ?. eapply tctx_incl_eq. {
-    eapply (tctx_incl_frame_r +[_] (_ +:: _)). eapply tctx_incl_trans;
-    [apply tctx_split_own_xprod|done]. } move=>/= ?[??].
+    move=> ?. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+    eapply tctx_incl_trans; by [apply tctx_split_own_xprod|]. } move=>/= ?[??].
     rewrite /trans_upper /=. f_equal. fun_ext. by case.
   Qed.
 
@@ -293,20 +319,23 @@ Section product_split.
     tctx_extract_elt E L t (p ◁ &shr{κ} (Π! tyl) +:: T) (T' h++ T)
       (λ post '(al -:: bl), tr (λ '(a -:: cl), post (a -:: cl -++ bl)) al).
   Proof.
-    move=> ?. eapply tctx_incl_eq. {
-    eapply (tctx_incl_frame_r +[_] (_ +:: _)). eapply tctx_incl_trans;
-    [apply tctx_split_shr_xprod|done]. } move=>/= ?[??].
+    move=> ?. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+    eapply tctx_incl_trans; by [apply tctx_split_shr_xprod|]. } move=>/= ?[??].
     rewrite /trans_upper /=. f_equal. fun_ext. by case.
   Qed.
 
-(*
-  Lemma tctx_extract_split_uniq_prod E L p p' κ ty tyl T T' :
-    tctx_extract_hasty E L p' ty (hasty_ptr_offsets p (uniq_bor κ) tyl 0) T' →
-    tctx_extract_hasty E L p' ty ((p ◁ &uniq{κ}(Π tyl)) :: T) (T' ++ T).
+  Lemma tctx_extract_split_uniq_prod {𝔄 𝔄l 𝔅l ℭl} (t: _ 𝔄) κ (tyl: _ 𝔄l)
+    (T: _ 𝔅l) (T': _ ℭl) tr p E L :
+    lctx_lft_alive E L κ →
+    tctx_extract_elt E L t (hasty_uniq_offsets κ p tyl 0) T' tr →
+    tctx_extract_elt E L t (p ◁ &uniq{κ} (Π! tyl) +:: T) (T' h++ T)
+      (λ post '((al, al') -:: bl),
+        tr (λ '(a -:: cl), post (a -:: cl -++ bl)) (ptrans (pzip al al'))).
   Proof.
-    intros. apply (tctx_incl_frame_r T [_] (_::_)). by rewrite tctx_split_uniq_prod.
+    move=> ??. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+    eapply tctx_incl_trans; by [apply tctx_split_uniq_xprod|]. }
+    move=>/= ?[[??]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
   Qed.
-*)
 
   (** * Merging with [tctx_extract_elt]. *)
 
@@ -350,16 +379,16 @@ Section product_split.
 
 End product_split.
 
-(*
 (* We do not want unification to try to unify the definition of these
    types with anything in order to try splitting or merging. *)
-Global Hint Opaque tctx_extract_hasty : lrust_typing lrust_typing_merge.
+Global Hint Opaque tctx_extract_elt : lrust_typing lrust_typing_merge.
 
 (* We make sure that splitting is tried before borrowing, so that not
    the entire product is borrowed when only a part is needed. *)
 Global Hint Resolve tctx_extract_split_own_prod tctx_extract_split_uniq_prod tctx_extract_split_shr_prod
     | 5 : lrust_typing.
 
+(*
 (* Merging is also tried after everything, except
    [tctx_extract_hasty_further]. Moreover, it is placed in a
    difference hint db. The reason is that it can make the proof search

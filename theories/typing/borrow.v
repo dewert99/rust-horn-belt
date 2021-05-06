@@ -102,7 +102,7 @@ Section borrow.
         (!p) (&uniq{κ} ty) (λ post '-[a], post a).
   Proof.
     iIntros (Alvκ ?? [vπ []]) "#LFT #TIME #PROPH #UNIQ #E $ L [p _] Obs".
-    have ?: Inhabited 𝔄 := populate (fst (vπ inhabitant)).
+    have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
     iMod (Alvκ with "E L") as (q) "[κ ToL]"; [done|]. wp_apply (wp_hasty with "p").
     iIntros ([[]|] ??) "#⧖ [#? uniq]"=>//.
     iDestruct "uniq" as (? ξi [? Eq]) "[ξVo Bor]". set (ξ := PrVar _ ξi).

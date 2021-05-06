@@ -165,11 +165,20 @@ Fixpoint plist_map_with `{F: A → _} {G} {Xl Yl} (h: ∀X Y, G X Y → F X → 
   | _ :: _, _ :: _ => λ '(f -:: fl') '(x -:: xl'), h _ _ f x -:: plist_map_with h fl' xl'
   | _, _ => absurd end.
 
-Fixpoint hzip_with {A} {F G H: A → Type} {Xl} (f: ∀X, F X → G X → H X)
+Fixpoint hzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
   (xl: hlist F Xl) (yl: plist G Xl) : hlist H Xl :=
   match xl, yl with +[], _ => +[] |
     x +:: xl', y -:: yl' => f _ x y +:: hzip_with f xl' yl' end.
 Notation hzip := (hzip_with (λ _, pair)).
+
+Fixpoint pzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
+  (xl: plist F Xl) (yl: plist G Xl) : plist H Xl :=
+  match Xl, xl, yl with [], _, _ => -[] |
+    _ :: _, x -:: xl', y -:: yl' => f _ x y -:: pzip_with f xl' yl' end.
+Notation pzip := (pzip_with (λ _, pair)).
+
+Fixpoint ptrans `{F: A → B} {G Xl} (xl: plist (G ∘ F) Xl) : plist G (map F Xl) :=
+  match Xl, xl with [], _ => -[] | _ :: _, x -:: xl' => x -:: ptrans xl' end.
 
 Fixpoint plist2_eq_nat_len `{F: A → _} {Xl Yl} :
   plist2 F Xl Yl → eq_nat (length Xl) (length Yl) :=

@@ -236,7 +236,7 @@ Section typing.
     ⊢ typed_instr E L +[p ◁ own_ptr n' ty] (delete [ #n; p])%E (λ _, +[])
       (λ post _, post -[]).
   Proof.
-    iIntros (?->??[?[]]) "_ TIME _ _ E $$ [p _] #Obs". wp_bind p.
+    iIntros (?->??[?[]]) "_ _ _ _ _ $$ [p _] #Obs". wp_bind p.
     iApply (wp_hasty with "p"). iIntros (?[|?] _) "? own"; [done|].
     setoid_rewrite by_just_loc_ex. iDestruct "own" as (?[=->]) "[(%& >↦ & ty)?]".
     iDestruct (ty_size_eq with "ty") as "#>%Sz". iApply (wp_delete with "[-]").
