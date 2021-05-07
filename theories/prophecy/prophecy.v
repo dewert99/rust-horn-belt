@@ -15,7 +15,7 @@ Add Printing Constructor proph_var.
 Global Instance proph_var_eq_dec: EqDecision proph_var.
 Proof. solve_decision. Qed.
 
-Definition proph_asn := ∀ξ, ξ.(pv_ty).
+Definition proph_asn := ∀ξ: proph_var, ξ.(pv_ty).
 Notation proph A := (proph_asn → A).
 
 Implicit Type (ξ ζ: proph_var) (ξl ζl: list proph_var) (π: proph_asn).
@@ -29,7 +29,8 @@ Local Definition proph_asn_eqv ξl π π' := ∀ξ, ξ ∈ ξl → π ξ = π' �
 Local Notation "π .≡{ ξl }≡ π'" := (proph_asn_eqv ξl π π')
   (at level 70, format "π  .≡{ ξl }≡  π'").
 
-Definition proph_dep {A} (vπ: _ → A) ξl := ∀π π', π .≡{ξl}≡ π' → vπ π = vπ π'.
+Definition proph_dep {A} (vπ: proph A) (ξl: list proph_var) :=
+  ∀π π', π .≡{ξl}≡ π' → vπ π = vπ π'.
 Notation "vπ ./ ξl" := (proph_dep vπ ξl) (at level 70, format "vπ  ./  ξl").
 
 (** ** Lemmas *)
@@ -142,7 +143,7 @@ Local Definition proph_itemR (𝔄i: syn_typei) :=
   csumR fracR (agreeR (leibnizO (proph 𝔄i))).
 Local Definition proph_gmapUR 𝔄i := gmapUR positive (proph_itemR 𝔄i).
 Local Definition proph_smryUR := discrete_funUR proph_gmapUR.
-Definition prophUR := authUR proph_smryUR.
+Definition prophUR: ucmra := authUR proph_smryUR.
 
 Local Definition aitem {𝔄i} vπ : proph_itemR 𝔄i := Cinr (to_agree vπ).
 Local Definition fitem {𝔄i} (q: Qp) : proph_itemR 𝔄i := Cinl q.
@@ -150,13 +151,13 @@ Local Definition line ξ it : proph_smryUR := .{[ξ.(pv_ty) := {[ξ.(pv_id) := i
 Local Definition add_line ξ it (S: proph_smryUR) : proph_smryUR :=
   .<[ξ.(pv_ty) := <[ξ.(pv_id) := it]> (S ξ.(pv_ty))]> S.
 
-Definition prophΣ := #[GFunctor prophUR].
+Definition prophΣ: gFunctors := #[GFunctor prophUR].
 Class prophPreG Σ := ProphPreG { proph_preG_inG:> inG Σ prophUR }.
 Class prophG Σ := ProphG { proph_inG:> prophPreG Σ; proph_name: gname }.
-Instance subG_prophPreG {Σ} : subG prophΣ Σ → prophPreG Σ.
+Global Instance subG_prophPreG Σ : subG prophΣ Σ → prophPreG Σ.
 Proof. solve_inG. Qed.
 
-Definition prophN := nroot .@ "proph".
+Definition prophN: namespace := nroot .@ "proph".
 
 (** * Iris Propositions *)
 
@@ -169,11 +170,12 @@ Context `{!invG Σ, !prophG Σ}.
 
 (** Prophecy Context *)
 Local Definition proph_inv: iProp Σ :=
-  ∃ S, ⌜∃L, .✓ L ∧ S :~ L⌝ ∗ own proph_name (● S).
+  ∃S, ⌜∃L, .✓ L ∧ S :~ L⌝ ∗ own proph_name (● S).
 Definition proph_ctx: iProp Σ := inv prophN proph_inv.
 
 (** Prophecy Token *)
-Definition proph_tok ξ q : iProp Σ := own proph_name(◯ line ξ (fitem q)).
+Definition proph_tok (ξ: proph_var) (q: Qp) : iProp Σ :=
+  own proph_name (◯ line ξ (fitem q)).
 
 (** Prophecy Observation *)
 Local Definition proph_atom pli : iProp Σ :=
@@ -236,19 +238,19 @@ Lemma proph_tok_combine ξl ζl q q' :
   q:+[ξl] -∗ q':+[ζl] -∗
     ∃q'', q'':+[ξl ++ ζl] ∗ (q'':+[ξl ++ ζl] -∗ q:+[ξl] ∗ q':+[ζl]).
 Proof.
-  case (Qp_lower_bound q q')=> [q''[?[?[->->]]]]. iIntros "[??][??]".
-  iExists q''. iFrame. iIntros "[$$]".
+  case (Qp_lower_bound q q')=> [q''[?[?[->->]]]]. iIntros "[ξl $][ζl $]".
+  iExists q''. iFrame "ξl ζl". iIntros "[$$]".
 Qed.
 
 (** Initialization *)
 
 Lemma proph_init `{!prophPreG Σ} E :
-  ↑prophN ⊆ E → ⊢ |={E}=> ∃ _: prophG Σ, proph_ctx.
+  ↑prophN ⊆ E → ⊢ |={E}=> ∃_: prophG Σ, proph_ctx.
 Proof.
   move=> ?. iMod (own_alloc (● ε)) as (γ) "●ε"; [by apply auth_auth_valid|].
   set IProphG := ProphG Σ _ γ. iExists IProphG.
   iMod (inv_alloc _ _ proph_inv with "[●ε]") as "?"; [|done]. iModIntro.
-  iExists ε. iFrame. iPureIntro. exists []. split; [done|]=> ??.
+  iExists ε. iFrame "●ε". iPureIntro. exists []. split; [done|]=> ??.
   rewrite lookup_empty. split=> Hyp; inversion Hyp.
 Qed.
 
@@ -257,7 +259,7 @@ Qed.
 Lemma proph_intro 𝔄i (I: gset positive) E :
   ↑prophN ⊆ E → proph_ctx ={E}=∗ ∃i, ⌜i ∉ I⌝ ∗ 1:[PrVar 𝔄i i].
 Proof.
-  iIntros (?) "?". iInv prophN as (S) "> [(%L & %Ok & %Sim) ●S]".
+  iIntros (?) "?". iInv prophN as (S) ">[(%L &%& %Sim) ●S]".
   case (exist_fresh (I ∪ dom _ (S 𝔄i)))
     => [i /not_elem_of_union [? /not_elem_of_dom EqNone]].
   set ξ := PrVar 𝔄i i. set S' := add_line ξ (fitem 1) S.
@@ -265,7 +267,7 @@ Proof.
   { by apply auth_update_alloc,
       discrete_fun_insert_local_update, alloc_singleton_local_update. }
   iModIntro. iSplitL "●S'"; last first. { iModIntro. iExists i. by iFrame. }
-  iModIntro. iExists S'. iFrame. iPureIntro. exists L.
+  iModIntro. iExists S'. iFrame "●S'". iPureIntro. exists L.
   split; [done|]. case=> [𝔅i j]?. rewrite /S' /add_line /discrete_fun_insert -Sim.
   case (decide (𝔄i = 𝔅i))=> [?|?]; [|done]. subst=>/=.
   case (decide (i = j))=> [<-|?]; [|by rewrite lookup_insert_ne].
@@ -293,19 +295,18 @@ Proof.
   iIntros "ξ ζ". iDestruct (own_valid_2 with "ξ ζ") as %ValBoth.
   iPureIntro=> ?. subst. move: ValBoth.
   rewrite -auth_frag_op auth_frag_valid discrete_fun_singleton_op
-    discrete_fun_singleton_valid singleton_op singleton_valid -Cinl_op
-    Cinl_valid. apply exclusive_l, _.
+    discrete_fun_singleton_valid singleton_op singleton_valid -Cinl_op Cinl_valid.
+  apply exclusive_l, _.
 Qed.
 
 Lemma proph_resolve E ξ vπ ζl q : ↑prophN ⊆ E → vπ ./ ζl →
   proph_ctx -∗ 1:[ξ] -∗ q:+[ζl] ={E}=∗ ⟨π, π ξ = vπ π⟩ ∗ q:+[ζl].
 Proof.
   move: ξ vπ => [𝔄i i] vπ. set ξ := PrVar 𝔄i i.
-  iIntros (? Dep) "? ξ ζl". iInv prophN as (S) "> [(%L & %Ok & %Sim) ●S]".
+  iIntros (? Dep) "? ξ ζl". iInv prophN as (S) ">[(%L & % & %Sim) ●S]".
   iDestruct (proph_tok_out with "●S ξ") as %Outξ; [done|].
   set L' := .{ξ := vπ} :: L. iAssert ⌜∀ζ, ζ ∈ ζl → ζ ∉ res L'⌝%I as %Outζl.
-  { iIntros (? In).
-    iDestruct (big_sepL_elem_of with "ζl") as "ζ"; [apply In|].
+  { iIntros (? In). iDestruct (big_sepL_elem_of with "ζl") as "ζ"; [apply In|].
     iDestruct (proph_tok_ne with "ξ ζ") as %?.
     iDestruct (proph_tok_out with "●S ζ") as %?; [done|].
     by rewrite not_elem_of_cons. }
@@ -315,16 +316,14 @@ Proof.
   { apply auth_update, discrete_fun_singleton_local_update_any,
       singleton_local_update_any => ? _. by apply exclusive_local_update. }
   iModIntro. iSplitL "●S'"; last first.
-  { iModIntro. iFrame. iExists [.{ξ := vπ}]. rewrite big_sepL_singleton.
+  { iModIntro. iFrame "ζl". iExists [.{ξ := vπ}]. rewrite big_sepL_singleton.
     iSplitR; [|done]. iPureIntro=> ? Sat. by inversion Sat. }
-  iModIntro. iExists S'. iFrame. iPureIntro. exists L'. split.
-  { split; [done| split; [|done]] => ?? Eqv. apply Dep => ? /Outζl ?.
-    by apply Eqv. }
+  iModIntro. iExists S'. iFrame "●S'". iPureIntro. exists L'. split.
+  { split; [done| split; [|done]] => ?? Eqv. apply Dep => ? /Outζl ?. by apply Eqv. }
   have InLNe ζ wπ : .{ζ := wπ} ∈ L → ξ ≠ ζ.
   { move=> /(elem_of_list_fmap_1 pli_pv) ??. by subst. }
-  move=> [𝔅i j] ?. rewrite elem_of_cons.
-  case (decide (ξ = PrVar 𝔅i j))=> [Eq|Ne].
-  { move: (Eq)=> ?. dependent destruction Eq.
+  move=> [𝔅i j] ?. rewrite elem_of_cons. case (decide (ξ = PrVar 𝔅i j))=> [Eq|Ne].
+  { dependent destruction Eq.
     rewrite /S' /add_line discrete_fun_lookup_insert lookup_insert. split.
     - move=> /(inj (Some ∘ aitem)) ->. by left.
     - move=> [Eq'|/InLNe ?]; [|done]. by dependent destruction Eq'. }
@@ -332,8 +331,7 @@ Proof.
   { rewrite /S' /add_line /discrete_fun_insert.
     case (decide (𝔄i = 𝔅i))=> [?|?]; [|done]. simpl_eq.
     case (decide (i = j))=> [?|?]; [|by rewrite lookup_insert_ne]. by subst. }
-  rewrite Eqv Sim. split; [by right|]. move=> [Eq|?]; [|done].
-  by dependent destruction Eq.
+  rewrite Eqv Sim. split; [by right|]. case; [|done]=> Eq. by dependent destruction Eq.
 Qed.
 
 (** Manipulating Prophecy Observations *)
@@ -351,7 +349,7 @@ Proof. move=> Eq. apply proph_obs_impl=> ?. by rewrite Eq. Qed.
 
 Lemma proph_obs_and φπ ψπ : .⟨φπ⟩ -∗ .⟨ψπ⟩ -∗ ⟨π, φπ π ∧ ψπ π⟩.
 Proof.
-  iIntros "(%L & %Toφπ &?) (%L' & %Toψπ &?)". iExists (L ++ L'). iFrame.
+  iIntros "(%L & %Toφπ & L) (%L' & %Toψπ & L')". iExists (L ++ L'). iFrame "L L'".
   iPureIntro=> ? /Forall_app[??]. split; by [apply Toφπ|apply Toψπ].
 Qed.
 
@@ -365,7 +363,7 @@ Proof.
   move: (Ok)=> /proph_ok_sat [π /Forall_forall Sat]. iModIntro.
   iAssert ⌜π ◁ L'⌝%I as %?; last first.
   { iSplitL; last first. { iPureIntro. exists π. by apply Toφπ. }
-    iModIntro. iExists S. iFrame. iPureIntro. by exists L. }
+    iModIntro. iExists S. iFrame "●S". iPureIntro. by exists L. }
   rewrite /proph_sat Forall_forall. iIntros ([[𝔄i i] vπ] In)=>/=.
   set ξ := PrVar 𝔄i i. iAssert (proph_atom .{ξ := vπ}) with "[L']" as "ξvπ".
   { iApply big_sepL_elem_of; by [apply In|]. }
@@ -386,7 +384,7 @@ Global Opaque proph_ctx proph_tok proph_obs.
 
 (** * Prophecy Equalizer *)
 
-Definition proph_eqz `{!invG Σ, !prophG Σ} {A} (uπ vπ: _ → A) : iProp Σ :=
+Definition proph_eqz `{!invG Σ, !prophG Σ} {A} (uπ vπ: proph A) : iProp Σ :=
   ∀E ξl q, ⌜↑prophN ⊆ E ∧ vπ ./ ξl⌝ -∗ q:+[ξl] ={E}=∗ ⟨π, uπ π = vπ π⟩ ∗ q:+[ξl].
 
 Notation "uπ :== vπ" := (proph_eqz uπ vπ) (at level 70, format "uπ  :==  vπ") : bi_scope.

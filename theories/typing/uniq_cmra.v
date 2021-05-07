@@ -3,40 +3,40 @@ From iris.proofmode Require Import tactics.
 From iris.base_logic Require Import invariants.
 From lrust.util Require Import discrete_fun.
 From lrust.prophecy Require Import prophecy.
+From lrust.lifetime Require Import lifetime_sig.
 
 Implicit Type (𝔄i: syn_typei) (𝔄: syn_type).
 
 Section basic.
-Context `{!invG Σ, !prophG Σ}.
 
 (** * Camera for Unique Borrowing *)
 
 Local Definition uniq_itemR 𝔄i := frac_agreeR (leibnizO (proph 𝔄i * nat)).
 Local Definition uniq_gmapUR 𝔄i := gmapUR positive (uniq_itemR 𝔄i).
 Local Definition uniq_smryUR := discrete_funUR uniq_gmapUR.
-Definition uniqUR := authUR uniq_smryUR.
+Definition uniqUR: ucmra := authUR uniq_smryUR.
 
-Local Definition item {𝔄i} q (vπ: proph 𝔄i) (d: nat) : uniq_itemR 𝔄i :=
+Local Definition item {𝔄i} q vπ d : uniq_itemR 𝔄i :=
   @to_frac_agree (leibnizO _) q (vπ, d).
 Local Definition line ξ q vπ d : uniq_smryUR :=
   .{[ξ.(pv_ty) := {[ξ.(pv_id) := item q vπ d]}]}.
 Local Definition add_line ξ q vπ d (S: uniq_smryUR) : uniq_smryUR :=
   .<[ξ.(pv_ty) := <[ξ.(pv_id) := item q vπ d]> (S ξ.(pv_ty))]> S.
 
-Definition uniqΣ := #[GFunctor uniqUR].
+Definition uniqΣ: gFunctors := #[GFunctor uniqUR].
 Class uniqPreG Σ := UniqPreG { uniq_preG_inG:> inG Σ uniqUR }.
 Class uniqG Σ := UniqG { uniq_inG:> uniqPreG Σ; uniq_name: gname }.
-Instance subG_uniqPreG {Σ'} : subG uniqΣ Σ' → uniqPreG Σ'.
+Global Instance subG_uniqPreG Σ : subG uniqΣ Σ → uniqPreG Σ.
 Proof. solve_inG. Qed.
 
-Definition uniqN := nroot .@ "lft_usr" .@ "uniq".
+Definition uniqN: namespace := lft_userN .@ "uniq".
 
 End basic.
 
 (** * Iris Propositions *)
 
 Section defs.
-Context `{!invG Σ, !prophG Σ, uniqG Σ}.
+Context `{!invG Σ, !prophG Σ, !uniqG Σ}.
 
 (** Unique Reference Context *)
 Definition uniq_inv: iProp Σ := ∃S, own uniq_name (● S).
@@ -45,11 +45,12 @@ Definition uniq_ctx: iProp Σ := inv uniqN uniq_inv.
 Local Definition own_line ξ q vπ d := own uniq_name (◯ line ξ q vπ d).
 
 (** Value Observer *)
-Definition val_obs ξ vπ d : iProp Σ := own_line ξ (1/2) vπ d.
+Definition val_obs (ξ: proph_var) (vπ: proph ξ.(pv_ty)) (d: nat) : iProp Σ :=
+  own_line ξ (1/2) vπ d.
 
 (** Prophecy Control *)
 Local Definition val_obs2 ξ vπ d : iProp Σ := own_line ξ 1 vπ d.
-Definition proph_ctrl ξ vπ d : iProp Σ :=
+Definition proph_ctrl (ξ: proph_var) (vπ: proph ξ.(pv_ty)) (d: nat) : iProp Σ :=
   (val_obs ξ vπ d ∗ 1:[ξ]) ∨ ((∃vπ' d', val_obs2 ξ vπ' d') ∗ (.$ ξ) :== vπ).
 
 End defs.
@@ -60,11 +61,10 @@ Local Notation ".VO2[ ξ ]" := (val_obs2 ξ)
 Notation ".PC[ ξ ]" := (proph_ctrl ξ)
   (at level 5, format ".PC[ ξ ]") : bi_scope.
 
-
 (** * Lemmas *)
 
 Section lemmas.
-Context `{!invG Σ, !prophG Σ, uniqG Σ}.
+Context `{!invG Σ, !prophG Σ, !uniqG Σ}.
 
 Global Instance uniq_ctx_persistent : Persistent uniq_ctx := _.
 Global Instance val_obs_timeless ξ vπ d : Timeless (.VO[ξ] vπ d) := _.
@@ -97,7 +97,7 @@ Qed.
 (** Initialization *)
 
 Lemma uniq_init `{!uniqPreG Σ} E :
-  ↑uniqN ⊆ E → ⊢ |={E}=> ∃ _: uniqG Σ, uniq_ctx.
+  ↑uniqN ⊆ E → ⊢ |={E}=> ∃_: uniqG Σ, uniq_ctx.
 Proof.
   move=> ?. iMod (own_alloc (● ε)) as (γ) "●ε"; [by apply auth_auth_valid|].
   set IUniqG := UniqG Σ _ γ. iExists IUniqG.
@@ -111,7 +111,7 @@ Lemma uniq_intro {𝔄} (vπ: _ → 𝔄) d E :
   ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗ ∃i,
     let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i in .VO[ξ] vπ d ∗ .PC[ξ] vπ d.
 Proof.
-  iIntros (?) "PROPH ?". iInv uniqN as (S) "> ●S".
+  iIntros (?) "PROPH ?". iInv uniqN as (S) ">●S".
   set 𝔄i := 𝔄 ↾ prval_to_inh vπ. set I := dom (gset _) (S 𝔄i).
   iMod (proph_intro 𝔄i I with "PROPH") as (i NIn) "ξ"; [by solve_ndisj|].
   set ξ := PrVar 𝔄i i. set S' := add_line ξ 1 vπ d S.
@@ -127,7 +127,7 @@ Lemma uniq_strip_later ξ vπ d vπ' d' :
   ▷ .VO[ξ] vπ d -∗ ▷ .PC[ξ] vπ' d' -∗
     ◇ (⌜vπ = vπ'⌝ ∗ ⌜d = d'⌝ ∗ .VO[ξ] vπ d ∗ .PC[ξ] vπ' d').
 Proof.
-  iIntros "> Vo [> [Vo' ?]|[>(%&%& Vo2) _]]";
+  iIntros ">Vo [>[Vo' ?]|[>(%&%& Vo2) _]]";
   [|by iDestruct (own_line_agree with "Vo Vo2") as %[? _]].
   iDestruct (own_line_agree with "Vo Vo'") as %[_[->->]]. iModIntro.
   do 2 (iSplit; [done|]). iSplitL "Vo"; [done|]. iLeft. by iSplitL "Vo'".
@@ -150,8 +150,8 @@ Lemma uniq_update ξ vπ'' d'' vπ d vπ' d' E : ↑uniqN ⊆ E →
   uniq_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' ={E}=∗ .VO[ξ] vπ'' d'' ∗ .PC[ξ] vπ'' d''.
 Proof.
   iIntros (?) "? Vo Pc". iDestruct (vo_pc with "Vo Pc") as (->->) "[Vo2 ξ]".
-  iInv uniqN as (S) "> ●S". set S' := add_line ξ 1 vπ'' d'' S.
-  iMod (own_update_2 _ _ _ (●S' ⋅ ◯line ξ 1 vπ'' d'') with "●S Vo2") as "[? Vo2]".
+  iInv uniqN as (S) ">●S". set S' := add_line ξ 1 vπ'' d'' S.
+  iMod (own_update_2 _ _ _ (● S' ⋅ ◯ line ξ 1 vπ'' d'') with "●S Vo2") as "[? Vo2]".
   { apply auth_update, discrete_fun_singleton_local_update_any,
     singleton_local_update_any => ? _. by apply exclusive_local_update. }
   iModIntro. iSplitR "Vo2 ξ"; [by iExists S'|]. iModIntro.
