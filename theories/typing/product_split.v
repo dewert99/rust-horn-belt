@@ -7,9 +7,10 @@ Set Default Proof Using "Type".
 
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl: syn_typel).
 
-(** * General Split/Merger for Plain Pointer Types *)
 Section product_split.
   Context `{!typeG Σ}.
+
+  (** * General Split/Merger for Plain Pointer Types *)
 
   Fixpoint hasty_ptr_offsets {𝔄l} (ptr: ∀𝔄, type 𝔄 → type 𝔄) (p: path)
     (tyl: typel 𝔄l) (off: nat) : tctx 𝔄l :=
@@ -31,7 +32,6 @@ Section product_split.
   Definition ptr_homo_sub (ptr: ∀𝔄, type 𝔄 → type 𝔄) : Prop :=
     ∀E L 𝔄 𝔅 (ty: _ 𝔄) (ty': _ 𝔅) f,
       subtype E L ty ty' f → subtype E L (ptr _ ty) (ptr _ ty') f.
-  Hint Unfold ptr_homo_sub : lrust_typing.
 
   Definition ptr_just_loc (ptr: ∀𝔄, type 𝔄 → type 𝔄) : Prop :=
     ∀𝔄 (ty: _ 𝔄) vπ d tid vl,
@@ -94,7 +94,18 @@ Section product_split.
     iFrame "Obs T". iExists _, _. by iFrame. } by move=> ?[?[??]].
   Qed.
 
-  (** * Owning pointers *)
+End product_split.
+
+Global Hint Unfold ptr_homo_sub : lrust_typing.
+Notation hasty_own_offsets n :=
+  (hasty_ptr_offsets (λ 𝔄, @own_ptr _ _ 𝔄 n)).
+Notation hasty_shr_offsets κ :=
+  (hasty_ptr_offsets (λ 𝔄, @shr_bor _ _ 𝔄 κ)).
+
+Section product_split.
+  Context `{!typeG Σ}.
+
+  (** * Owning Pointers *)
 
   Lemma tctx_split_own_prod {𝔄 𝔅} n (ty: _ 𝔄) (ty': _ 𝔅) p E L :
     tctx_incl E L +[p ◁ own_ptr n (ty * ty')]
@@ -132,12 +143,10 @@ Section product_split.
     iSplit; [done|]. iSplitL "ty"; (iApply ty_own_depth_mono; [|done]); lia.
   Qed.
 
-  Definition hasty_own_offsets {𝔄l} n := @hasty_ptr_offsets 𝔄l (λ _, own_ptr n).
-
   Local Lemma own_just_loc n : ptr_just_loc (λ _, own_ptr n).
   Proof. iIntros (???[|]?[|[[]|][]]) "? //". by iExists _. Qed.
 
-  Lemma tctx_split_own_xprod {𝔄l} n (tyl: typel 𝔄l) p E L :
+  Lemma tctx_split_own_xprod {𝔄l} n (tyl: _ 𝔄l) p E L :
     tctx_incl E L +[p ◁ own_ptr n (Π! tyl)]
       (hasty_own_offsets n p tyl 0) (λ post '-[al], post al).
   Proof.
@@ -145,7 +154,7 @@ Section product_split.
     [solve_typing|apply own_just_loc|move=> *; apply tctx_split_own_prod].
   Qed.
 
-  Lemma tctx_merge_own_xprod {𝔄 𝔄l} n (tyl: typel (𝔄 :: 𝔄l)) p E L :
+  Lemma tctx_merge_own_xprod {𝔄 𝔄l} n (tyl: _ (𝔄 :: 𝔄l)) p E L :
     tctx_incl E L (hasty_own_offsets n p tyl 0)
       +[p ◁ own_ptr n (Π! tyl)] (λ post al, post -[al]).
   Proof.
@@ -181,12 +190,10 @@ Section product_split.
     iSplit; (iApply ty_shr_depth_mono; [|done]); lia.
   Qed.
 
-  Definition hasty_shr_offsets {𝔄l} κ := @hasty_ptr_offsets 𝔄l (λ _, &shr{κ}%T).
-
   Local Lemma shr_just_loc κ : ptr_just_loc (λ _, &shr{κ}%T).
   Proof. iIntros (???[|]?[|[[]|][]]) "? //". by iExists _. Qed.
 
-  Lemma tctx_split_shr_xprod {𝔄l} κ (tyl: typel 𝔄l) p E L :
+  Lemma tctx_split_shr_xprod {𝔄l} κ (tyl: _ 𝔄l) p E L :
     tctx_incl E L +[p ◁ &shr{κ} (Π! tyl)]
       (hasty_shr_offsets κ p tyl 0) (λ post '-[al], post al).
   Proof.
@@ -202,7 +209,7 @@ Section product_split.
     [solve_typing|apply shr_just_loc|move=> *; apply tctx_merge_shr_prod|done].
   Qed.
 
-  (** Unique References *)
+  (** * Unique References *)
 
   Lemma tctx_split_uniq_prod {𝔄 𝔅} κ (ty: _ 𝔄) (ty': _ 𝔅) E L p :
     lctx_lft_alive E L κ →
@@ -302,7 +309,7 @@ Section product_split.
   (* We do not state the extraction lemmas directly, because we want the
      automation system to be able to perform e.g., borrowing or splitting after
      splitting. *)
-  Lemma tctx_extract_split_own_prod {𝔄 𝔄l 𝔅l ℭl} (t: _ 𝔄) n (tyl: _ 𝔄l)
+  Lemma tctx_extract_split_own_xprod {𝔄 𝔄l 𝔅l ℭl} (t: _ 𝔄) n (tyl: _ 𝔄l)
     (T: _ 𝔅l) (T': _ ℭl) tr p E L :
     tctx_extract_elt E L t (hasty_own_offsets n p tyl 0) T' tr →
     tctx_extract_elt E L t (p ◁ own_ptr n (Π! tyl) +:: T) (T' h++ T)
@@ -313,7 +320,7 @@ Section product_split.
     rewrite /trans_upper /=. f_equal. fun_ext. by case.
   Qed.
 
-  Lemma tctx_extract_split_shr_prod {𝔄 𝔄l 𝔅l ℭl} (t: _ 𝔄) κ (tyl: _ 𝔄l)
+  Lemma tctx_extract_split_shr_xprod {𝔄 𝔄l 𝔅l ℭl} (t: _ 𝔄) κ (tyl: _ 𝔄l)
     (T: _ 𝔅l) (T': _ ℭl) tr p E L :
     tctx_extract_elt E L t (hasty_shr_offsets κ p tyl 0) T' tr →
     tctx_extract_elt E L t (p ◁ &shr{κ} (Π! tyl) +:: T) (T' h++ T)
@@ -324,7 +331,7 @@ Section product_split.
     rewrite /trans_upper /=. f_equal. fun_ext. by case.
   Qed.
 
-  Lemma tctx_extract_split_uniq_prod {𝔄 𝔄l 𝔅l ℭl} (t: _ 𝔄) κ (tyl: _ 𝔄l)
+  Lemma tctx_extract_split_uniq_xprod {𝔄 𝔄l 𝔅l ℭl} (t: _ 𝔄) κ (tyl: _ 𝔄l)
     (T: _ 𝔅l) (T': _ ℭl) tr p E L :
     lctx_lft_alive E L κ →
     tctx_extract_elt E L t (hasty_uniq_offsets κ p tyl 0) T' tr →
@@ -339,56 +346,37 @@ Section product_split.
 
   (** * Merging with [tctx_extract_elt]. *)
 
-(*
-  Fixpoint extract_tyl E L p (ptr: type → type) tyl (off : nat) T T' : Prop :=
-    match tyl with
-    | [] => T = T'
-    | ty :: tyl => ∃ T'',
-        tctx_extract_hasty E L (p +ₗ #off) (ptr ty) T T'' ∧
-        extract_tyl E L p ptr tyl (off + ty.(ty_size)) T'' T'
-    end.
-
-  Lemma tctx_extract_merge_ptr_prod E L p ptr tyl T T' :
-    tctx_incl E L (hasty_ptr_offsets p ptr tyl 0) [p ◁ ptr $ product tyl] →
-    extract_tyl E L p ptr tyl 0 T T' →
-    tctx_extract_hasty E L p (ptr (Π tyl)) T T'.
+  Lemma tctx_extract_merge_own_xprod {𝔄 𝔄l 𝔅l ℭl} n (tyl: _ (𝔄 :: 𝔄l))
+    (T: _ 𝔅l) (T': _ ℭl) tr p E L :
+    tctx_extract_ctx E L (hasty_own_offsets n p tyl 0) T T' tr →
+    tctx_extract_elt E L (p ◁ own_ptr n (Π! tyl)) T T'
+      (λ post, tr (λ acl, let '(al, cl) := psep acl in post (al -:: cl))).
   Proof.
-    rewrite /extract_tyl /tctx_extract_hasty=>Hi Htyl.
-    etrans; last by eapply (tctx_incl_frame_r T' _ [_]). revert T Htyl. clear.
-    generalize 0%nat. induction tyl=>[T n /= -> //|T n /= [T'' [-> Htyl]]]. f_equiv. auto.
+    move=> ?. eapply tctx_incl_eq. { eapply tctx_incl_trans; [done|].
+    apply (tctx_incl_frame_r _ +[_]), tctx_merge_own_xprod. } done.
   Qed.
 
-  Lemma tctx_extract_merge_own_prod E L p n tyl T T' :
-    tyl ≠ [] →
-    extract_tyl E L p (own_ptr n) tyl 0 T T' →
-    tctx_extract_hasty E L p (own_ptr n (Π tyl)) T T'.
-  Proof. auto using tctx_extract_merge_ptr_prod, tctx_merge_own_prod. Qed.
-
-  Lemma tctx_extract_merge_uniq_prod E L p κ tyl T T' :
-    tyl ≠ [] →
-    extract_tyl E L p (uniq_bor κ) tyl 0 T T' →
-    tctx_extract_hasty E L p (&uniq{κ}(Π tyl)) T T'.
-  Proof. auto using tctx_extract_merge_ptr_prod, tctx_merge_uniq_prod. Qed.
-
-  Lemma tctx_extract_merge_shr_prod E L p κ tyl T T' :
-    tyl ≠ [] →
-    extract_tyl E L p (shr_bor κ) tyl 0 T T' →
-    tctx_extract_hasty E L p (&shr{κ}(Π tyl)) T T'.
-  Proof. auto using tctx_extract_merge_ptr_prod, tctx_merge_shr_prod. Qed.
-*)
+  Lemma tctx_extract_merge_shr_xprod {𝔄 𝔄l 𝔅l ℭl} κ (tyl: _ (𝔄 :: 𝔄l))
+    (T: _ 𝔅l) (T': _ ℭl) tr p E L :
+    tctx_extract_ctx E L (hasty_shr_offsets κ p tyl 0) T T' tr →
+    tctx_extract_elt E L (p ◁ &shr{κ} (Π! tyl)) T T'
+      (λ post, tr (λ acl, let '(al, cl) := psep acl in post (al -:: cl))).
+  Proof.
+    move=> ?. eapply tctx_incl_eq. { eapply tctx_incl_trans; [done|].
+    apply (tctx_incl_frame_r _ +[_]), tctx_merge_shr_xprod. } done.
+  Qed.
 
 End product_split.
 
 (* We do not want unification to try to unify the definition of these
    types with anything in order to try splitting or merging. *)
-Global Hint Opaque tctx_extract_elt : lrust_typing lrust_typing_merge.
+Global Hint Opaque tctx_extract_elt : lrust_typing_merge.
 
 (* We make sure that splitting is tried before borrowing, so that not
    the entire product is borrowed when only a part is needed. *)
-Global Hint Resolve tctx_extract_split_own_prod tctx_extract_split_uniq_prod tctx_extract_split_shr_prod
-    | 5 : lrust_typing.
+Global Hint Resolve tctx_extract_split_own_xprod
+  tctx_extract_split_shr_xprod tctx_extract_split_uniq_xprod | 5 : lrust_typing.
 
-(*
 (* Merging is also tried after everything, except
    [tctx_extract_hasty_further]. Moreover, it is placed in a
    difference hint db. The reason is that it can make the proof search
@@ -399,7 +387,5 @@ Global Hint Resolve tctx_extract_split_own_prod tctx_extract_split_uniq_prod tct
    solve_typing get slow because of that. See:
      https://coq.inria.fr/bugs/show_bug.cgi?id=5304
 *)
-Global Hint Resolve tctx_extract_merge_own_prod tctx_extract_merge_uniq_prod tctx_extract_merge_shr_prod
-    | 40 : lrust_typing_merge.
-Global Hint Unfold extract_tyl : lrust_typing.
-*)
+Global Hint Resolve tctx_extract_merge_own_xprod tctx_extract_merge_shr_xprod
+  | 40 : lrust_typing_merge.
