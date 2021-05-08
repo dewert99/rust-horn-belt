@@ -23,9 +23,10 @@ Section maybe_uninit.
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own vπ d tid vl :=
       ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
-      ∃vπ', ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl;
+      ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl;
     ty_shr vπ d κ tid l :=
-      ⌜vπ = const None⌝ ∨ ∃vπ', ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_shr) vπ' d κ tid l;
+      ⌜vπ = const None⌝ ∨
+      ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_shr) vπ' d κ tid l;
   |}%I.
   Next Obligation. iIntros "* [[_$]|(%&_&?)]". by rewrite ty_size_eq. Qed.
   Next Obligation.
@@ -93,6 +94,17 @@ Section typing.
   Global Instance maybe_uninit_sync {𝔄} (ty: _ 𝔄) : Sync ty → Sync (? ty).
   Proof. move=> >/=. by do 4 f_equiv. Qed.
 
+  Lemma maybe_uninit_leak {𝔄} (ty: _ 𝔄) Φ E L :
+    Leak E L ty Φ → Leak E L (? ty) (λ o, ∀a: 𝔄, o = Some a → Φ a).
+  Proof.
+    move=> Lk > ?. iIntros "LFT PROPH E L [[-> _]|(%&->& ty)]".
+    { iApply step_fupdN_full_intro. iIntros "!>!>". iFrame "L".
+      iApply proph_obs_true=>/= ?? Eq. inversion Eq. }
+    iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
+    iApply (step_fupdN_wand with "ToObs"). iIntros "!> >[Obs $] !>".
+    by iApply proph_obs_impl; [|done]=>/= ???[=<-].
+  Qed.
+
   Lemma maybe_uninit_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty' E L :
     subtype E L ty ty' f → subtype E L (? ty) (? ty') (option_map f).
   Proof.
@@ -134,4 +146,5 @@ Section typing.
 
 End typing.
 
+Global Hint Resolve maybe_uninit_leak | 10 : lrust_typing.
 Global Hint Resolve maybe_uninit_subtype maybe_uninit_eqtype : lrust_typing.

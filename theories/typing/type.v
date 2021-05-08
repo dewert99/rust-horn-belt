@@ -640,16 +640,6 @@ Instance: Params (@Sync) 3 := {}.
 Class ListSync `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) := list_sync: HForall (λ _, Sync) tyl.
 Instance: Params (@ListSync) 3 := {}.
 
-Class Leak `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄) (Φ: 𝔄 → Prop) :=
-  leak F q vπ d tid vl : ↑lftN ∪ ↑prophN ⊆ F →
-    lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
-    ty.(ty_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, Φ (vπ π)⟩ ∗ llctx_interp L q.
-Instance: Params (@Leak) 3 := {}.
-
-Class ListLeak `{!typeG Σ} {𝔄l} (E: elctx) (L: llctx) (tyl: typel 𝔄l)
-  (Φl: plist (λ 𝔄, 𝔄 → Prop) 𝔄l) :=
-  list_leak: HForall (λ _ '(ty, Φ), Leak E L ty Φ) (hzip tyl Φl).
-
 Section traits.
   Context `{!typeG Σ}.
 
@@ -735,21 +725,45 @@ Section traits.
     Sync ty → ListSync tyl → ListSync (ty +:: tyl).
   Proof. by constructor. Qed.
 
-  (** Lemmas on Leak *)
+End traits.
 
-  Global Instance leak_just {𝔄} (ty: _ 𝔄) E L : Leak E L ty (const True) | 100.
+(** * Leak *)
+
+Definition Leak `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄) (Φ: 𝔄 → Prop)
+  : Prop := ∀F q vπ d tid vl, ↑lftN ∪ ↑prophN ⊆ F →
+    lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    ty.(ty_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, Φ (vπ π)⟩ ∗ llctx_interp L q.
+Instance: Params (@Leak) 3 := {}.
+
+Definition ListLeak `{!typeG Σ} {𝔄l} (E: elctx) (L: llctx) (tyl: typel 𝔄l)
+  (Φl: plist (λ 𝔄, 𝔄 → Prop) 𝔄l) : Prop :=
+  HForall (λ _ '(ty, Φ), Leak E L ty Φ) (hzip tyl Φl).
+
+Section leak.
+  Context `{!typeG Σ}.
+
+  Lemma leak_just {𝔄} (ty: _ 𝔄) E L : Leak E L ty (const True).
   Proof.
     move=> > ?. iIntros "_ _ _ $ _!>". iApply step_fupdN_full_intro.
     by iApply proph_obs_true.
   Qed.
 
-  Global Instance list_leak_nil E L : ListLeak E L +[] -[].
+  Lemma leak_impl {𝔄} (ty: _ 𝔄) E L (Φ Φ': _ → Prop) :
+    Leak E L ty Φ → (∀a, Φ a → Φ' a) → Leak E L ty Φ'.
+  Proof.
+    move=> Lk Imp > ?. iIntros "LFT PROPH E L ty".
+    iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
+    iApply (step_fupdN_wand with "ToObs"). iIntros "!> >[? $] !>".
+    iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
+  Qed.
+
+  Lemma list_leak_nil E L : ListLeak E L +[] -[].
   Proof. constructor. Qed.
-  Global Instance list_leak_cons {𝔄 𝔄l} E L (ty: _ 𝔄) (tyl: _ 𝔄l) Φ Φl :
+  Lemma list_leak_cons {𝔄 𝔄l} E L (ty: _ 𝔄) (tyl: _ 𝔄l) Φ Φl :
     Leak E L ty Φ → ListLeak E L tyl Φl → ListLeak E L (ty +:: tyl) (Φ -:: Φl).
   Proof. by constructor. Qed.
 
-End traits.
+End leak.
 
 (** * Subtyping *)
 
@@ -1051,6 +1065,8 @@ Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
   right associativity, format "[loc[ l ]  :=  vl ]  P") : bi_scope.
 
 Global Hint Resolve ty_outlv_E_elctx_sat tyl_outlv_E_elctx_sat : lrust_typing.
+Global Hint Resolve leak_just | 100 : lrust_typing.
+Global Hint Resolve list_leak_nil list_leak_cons : lrust_typing.
 Global Hint Resolve subtype_refl eqtype_refl subtypel_nil eqtypel_nil : lrust_typing.
 (** We use [Hint Extern] instead of [Hint Resolve] here, because
   [subtypel_cons] and [eqtypel_cons] work with [apply] but not with

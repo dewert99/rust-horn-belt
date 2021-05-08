@@ -131,7 +131,7 @@ Section typing.
   Global Instance uniq_sync {𝔄} κ (ty: _ 𝔄) : Sync ty → Sync (&uniq{κ} ty).
   Proof. move=> >/=. by do 10 f_equiv. Qed.
 
-  Global Instance uniq_leak {𝔄} E L κ (ty: _ 𝔄) :
+  Lemma uniq_leak {𝔄} E L κ (ty: _ 𝔄) :
     lctx_lft_alive E L κ → Leak E L (&uniq{κ} ty) (λ '(a, a'), a' = a).
   Proof.
     move=>/= Alv ?? vπ d ? vl ?. iIntros "#LFT PROPH E L [In uniq]".
@@ -323,5 +323,6 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve uniq_subtype uniq_eqtype write_uniq read_uniq : lrust_typing.
+Global Hint Resolve uniq_leak uniq_subtype uniq_eqtype write_uniq read_uniq
+  : lrust_typing.
 Global Hint Resolve tctx_extract_hasty_reborrow | 10 : lrust_typing.

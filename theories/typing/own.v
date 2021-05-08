@@ -98,20 +98,29 @@ Section own.
     iExists l. by iFrame.
   Qed.
 
+  Global Instance own_ne {𝔄} n : NonExpansive (@own_ptr 𝔄 n).
+  Proof. solve_ne_type. Qed.
+
   Global Instance own_type_contr 𝔄 n : TypeContractive (@own_ptr 𝔄 n).
   Proof.
     split; [by apply type_lft_morph_id_like|done| |].
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= > *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
-  Global Instance own_ne 𝔄 n : NonExpansive (@own_ptr 𝔄 n).
-  Proof. solve_ne_type. Qed.
 
-  Global Instance own_send 𝔄 n ty : Send ty → Send (@own_ptr 𝔄 n ty).
+  Global Instance own_send {𝔄} n (ty: _ 𝔄) : Send ty → Send (own_ptr n ty).
   Proof. move=> >/=. by do 9 f_equiv. Qed.
 
-  Global Instance own_sync 𝔄 n ty : Sync ty → Sync (@own_ptr 𝔄 n ty).
+  Global Instance own_sync {𝔄} n (ty: _ 𝔄) : Sync ty → Sync (own_ptr n ty).
   Proof. move=> >/=. by do 6 f_equiv. Qed.
+
+  Lemma own_leak {𝔄} E L n (ty: _ 𝔄) Φ :
+    Leak E L ty Φ → Leak E L (own_ptr n ty) Φ.
+  Proof.
+    iIntros (Lk ???[|]?[|[[]|][]]?) "LFT PROPH E L own //".
+    iIntros "/=!>!>!>". iDestruct "own" as "[(%& _ & ty) _]".
+    by iApply (Lk with "LFT PROPH E L").
+  Qed.
 
   Lemma own_type_incl {𝔄 𝔅} n (f: 𝔄 → 𝔅) ty1 ty2 :
     type_incl ty1 ty2 f -∗ type_incl (own_ptr n ty1) (own_ptr n ty2) f.
@@ -268,7 +277,7 @@ Section typing.
       have ->: (subst x xv (x <- p;; e))%E = (xv <- p;; subst x xv e)%E.
       { rewrite /subst /=. repeat f_equal;
         [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
-      iApply type_assign; [|solve_typing|by eapply write_own|done].
+      iApply type_assign; [|solve_typing|by eapply write_own|solve_typing|done].
       apply subst_is_closed; [|done]. apply is_closed_of_val. }
     by move=>/= [??]??.
   Qed.
@@ -293,13 +302,14 @@ Section typing.
         - eapply (is_closed_subst []); [apply is_closed_of_val|set_solver].
         - by rewrite bool_decide_true.
         - eapply is_closed_subst; [done|set_solver]. } rewrite Nat2Z.id.
-      iApply type_memcpy; [|solve_typing| |done|done|done].
-      { apply subst_is_closed; [|done]. apply is_closed_of_val. }
-      by apply write_own. } by move=>/= [??]??.
+      iApply type_memcpy; [|solve_typing| |solve_typing|done|done|done];
+      [|by apply write_own]. apply subst_is_closed; [|done].
+      apply is_closed_of_val. } by move=>/= [??]??.
   Qed.
 
 End typing.
 
+Global Hint Resolve own_leak | 10 : lrust_typing.
 Global Hint Resolve own_subtype own_eqtype box_subtype box_eqtype
             write_own read_own_copy : lrust_typing.
 (* By setting the priority high, we make sure copying is tried before

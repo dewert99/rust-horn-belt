@@ -325,7 +325,7 @@ Inductive HForallTwo `{F: A → _} {G} (Φ: ∀X, F X → G X → Prop)
     Φ _ x y → HForallTwo Φ xl yl → HForallTwo Φ (x +:: xl) (y +:: yl).
 
 Lemma HForall_impl `{F: A → _} {Xl} (Φ Ψ: ∀X, F X → Prop) (xl: _ Xl) :
-(∀X x, Φ X x → Ψ _ x) → HForall Φ xl → HForall Ψ xl.
+  (∀X x, Φ X x → Ψ _ x) → HForall Φ xl → HForall Ψ xl.
 Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
 
 Lemma HForallTwo_impl `{F: A → _} {G Xl} (Φ Ψ: ∀X, F X → G X → Prop) (xl yl: _ Xl) :

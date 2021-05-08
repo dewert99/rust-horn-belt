@@ -204,6 +204,17 @@ Section typing.
   Global Instance xprod_sync {𝔄l} (tyl: _ 𝔄l) : ListSync tyl → Sync (Π! tyl).
   Proof. elim; apply _. Qed.
 
+  Lemma prod_leak {𝔄 𝔅} (ty: _ 𝔄) (ty': _ 𝔅) Φ Φ' E L :
+    Leak E L ty Φ → Leak E L ty' Φ' → Leak E L (ty * ty') (λ '(a, b), Φ a ∧ Φ' b).
+  Proof.
+    iIntros (Lk Lk' ?? vπ ????) "#LFT #PROPH #E [L L'] (%&%&->& ty & ty')".
+    iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
+    iMod (Lk' with "LFT PROPH E L' ty'") as "ToObs'"; [done|].
+    iCombine "ToObs ToObs'" as "ToObs". iApply (step_fupdN_wand with "ToObs").
+    iIntros "!> [>[Obs $] >[Obs' $]] !>". iCombine "Obs Obs'" as "?".
+    iApply proph_obs_eq; [|done]=>/= π. by case (vπ π).
+  Qed.
+
   Lemma prod_subtype {𝔄 𝔅 𝔄' 𝔅'} E L (f: 𝔄 → 𝔄') (g: 𝔅 → 𝔅') ty1 ty2 ty1' ty2' :
     subtype E L ty1 ty1' f → subtype E L ty2 ty2' g →
     subtype E L (ty1 * ty2) (ty1' * ty2') (prod_map f g).
@@ -317,5 +328,6 @@ Section typing.
 
 End typing.
 
+Global Hint Resolve prod_leak | 10 : lrust_typing.
 Global Hint Resolve prod_subtype prod_eqtype xprod_subtype xprod_eqtype
   xprod_outlv_E_elctx_sat : lrust_typing.
