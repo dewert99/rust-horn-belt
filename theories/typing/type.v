@@ -535,10 +535,10 @@ Class TypeContractive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Pr
 }.
 
 Class ListTypeNonExpansive `{!typeG Σ} {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅l) : Prop :=
-  type_list_non_expansive: ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeNonExpansive) Tl.
+  type_list_non_expansive: ∃Tl, T = (Tl +$.) ∧ TCHForall (λ _, TypeNonExpansive) Tl.
 
 Class ListTypeContractive `{!typeG Σ} {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅l) : Prop :=
-  type_list_contractive: ∃Tl, T = (Tl +$.) ∧ HForall (λ _, TypeContractive) Tl.
+  type_list_contractive: ∃Tl, T = (Tl +$.) ∧ TCHForall (λ _, TypeContractive) Tl.
 
 Section type_contr.
   Context `{!typeG Σ}.
@@ -621,24 +621,21 @@ Class Copy `{!typeG Σ} {𝔄} (ty: type 𝔄) := {
 Existing Instances copy_persistent.
 Instance: Params (@Copy) 3 := {}.
 
-Class ListCopy `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) := list_copy: HForall (λ _, Copy) tyl.
-Instance: Params (@ListCopy) 3 := {}.
+Notation ListCopy := (TCHForall (λ 𝔄, @Copy _ _ 𝔄)).
 
 Class Send `{!typeG Σ} {𝔄} (ty: type 𝔄) :=
   send_change_tid tid tid' vπ d vl :
     ty.(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) vπ d tid' vl.
 Instance: Params (@Send) 3 := {}.
 
-Class ListSend `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) := list_send: HForall (λ _, Send) tyl.
-Instance: Params (@ListSend) 3 := {}.
+Notation ListSend := (TCHForall (λ 𝔄, @Send _ _ 𝔄)).
 
 Class Sync `{!typeG Σ} {𝔄} (ty: type 𝔄) :=
   sync_change_tid tid tid' vπ d κ l :
     ty.(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) vπ d κ tid' l.
 Instance: Params (@Sync) 3 := {}.
 
-Class ListSync `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) := list_sync: HForall (λ _, Sync) tyl.
-Instance: Params (@ListSync) 3 := {}.
+Notation ListSync := (TCHForall (λ 𝔄, @Sync _ _ 𝔄)).
 
 Section traits.
   Context `{!typeG Σ}.
@@ -696,12 +693,6 @@ Section traits.
     iDestruct ("ToNa" with "Na") as "$". iIntros "?". by iApply "Toκ".
   Qed.
 
-  Global Instance list_copy_nil : ListCopy +[].
-  Proof. constructor. Qed.
-  Global Instance list_copy_cons {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) :
-    Copy ty → ListCopy tyl → ListCopy (ty +:: tyl).
-  Proof. by constructor. Qed.
-
   (** Lemmas on Send and Sync *)
 
   Global Instance send_equiv {𝔄} : Proper ((≡@{_ 𝔄}) ==> impl) Send.
@@ -713,43 +704,31 @@ Section traits.
   Global Instance simple_type_sync {𝔄} (st: simple_type 𝔄) : Send st → Sync st.
   Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
 
-  Global Instance list_send_nil : ListSend +[].
-  Proof. constructor. Qed.
-  Global Instance list_send_cons {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) :
-    Send ty → ListSend tyl → ListSend (ty +:: tyl).
-  Proof. by constructor. Qed.
-
-  Global Instance list_sync_nil : ListSync +[].
-  Proof. constructor. Qed.
-  Global Instance list_sync_cons {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) :
-    Sync ty → ListSync tyl → ListSync (ty +:: tyl).
-  Proof. by constructor. Qed.
-
 End traits.
 
 (** * Leak *)
 
-Definition Leak `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄) (Φ: 𝔄 → Prop)
+Definition leak `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄) (Φ: 𝔄 → Prop)
   : Prop := ∀F q vπ d tid vl, ↑lftN ∪ ↑prophN ⊆ F →
     lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
     ty.(ty_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, Φ (vπ π)⟩ ∗ llctx_interp L q.
-Instance: Params (@Leak) 3 := {}.
+Instance: Params (@leak) 3 := {}.
 
-Definition ListLeak `{!typeG Σ} {𝔄l} (E: elctx) (L: llctx) (tyl: typel 𝔄l)
+Definition leakl `{!typeG Σ} {𝔄l} (E: elctx) (L: llctx) (tyl: typel 𝔄l)
   (Φl: plist (λ 𝔄, 𝔄 → Prop) 𝔄l) : Prop :=
-  HForall (λ _ '(ty, Φ), Leak E L ty Φ) (hzip tyl Φl).
+  HForall_1 (λ _, leak E L) tyl Φl.
 
 Section leak.
   Context `{!typeG Σ}.
 
-  Lemma leak_just {𝔄} (ty: _ 𝔄) E L : Leak E L ty (const True).
+  Lemma leak_just {𝔄} (ty: _ 𝔄) E L : leak E L ty (const True).
   Proof.
     move=> > ?. iIntros "_ _ _ $ _!>". iApply step_fupdN_full_intro.
     by iApply proph_obs_true.
   Qed.
 
   Lemma leak_impl {𝔄} (ty: _ 𝔄) E L (Φ Φ': _ → Prop) :
-    Leak E L ty Φ → (∀a, Φ a → Φ' a) → Leak E L ty Φ'.
+    leak E L ty Φ → (∀a, Φ a → Φ' a) → leak E L ty Φ'.
   Proof.
     move=> Lk Imp > ?. iIntros "LFT PROPH E L ty".
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
@@ -757,10 +736,10 @@ Section leak.
     iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
   Qed.
 
-  Lemma list_leak_nil E L : ListLeak E L +[] -[].
+  Lemma leakl_nil E L : leakl E L +[] -[].
   Proof. constructor. Qed.
-  Lemma list_leak_cons {𝔄 𝔄l} E L (ty: _ 𝔄) (tyl: _ 𝔄l) Φ Φl :
-    Leak E L ty Φ → ListLeak E L tyl Φl → ListLeak E L (ty +:: tyl) (Φ -:: Φl).
+  Lemma leakl_cons {𝔄 𝔄l} E L (ty: _ 𝔄) (tyl: _ 𝔄l) Φ Φl :
+    leak E L ty Φ → leakl E L tyl Φl → leakl E L (ty +:: tyl) (Φ -:: Φl).
   Proof. by constructor. Qed.
 
 End leak.
@@ -1066,13 +1045,12 @@ Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
 
 Global Hint Resolve ty_outlv_E_elctx_sat tyl_outlv_E_elctx_sat : lrust_typing.
 Global Hint Resolve leak_just | 100 : lrust_typing.
-Global Hint Resolve list_leak_nil list_leak_cons : lrust_typing.
-Global Hint Resolve subtype_refl eqtype_refl subtypel_nil eqtypel_nil : lrust_typing.
+Global Hint Resolve leakl_nil subtype_refl eqtype_refl subtypel_nil eqtypel_nil
+  : lrust_typing.
 (** We use [Hint Extern] instead of [Hint Resolve] here, because
-  [subtypel_cons] and [eqtypel_cons] work with [apply] but not with
-  weaker tactics like [simple apply] *)
-Global Hint Extern 0 (subtypel _ _ _ _ _) =>
-  apply subtypel_cons : lrust_typing.
-Global Hint Extern 0 (eqtypel _ _ _ _ _ _) =>
-  apply eqtypel_cons : lrust_typing.
+  [leakl_cons], [subtypel_cons] and [eqtypel_cons] work with [apply]
+  but not with weaker tactics like [simple apply] *)
+Global Hint Extern 0 (leakl _ _ _ _) => apply leakl_cons : lrust_typing.
+Global Hint Extern 0 (subtypel _ _ _ _ _) => apply subtypel_cons : lrust_typing.
+Global Hint Extern 0 (eqtypel _ _ _ _ _ _) => apply eqtypel_cons : lrust_typing.
 Global Hint Opaque subtype eqtype : lrust_typing.

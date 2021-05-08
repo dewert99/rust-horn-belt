@@ -115,7 +115,7 @@ Section own.
   Proof. move=> >/=. by do 6 f_equiv. Qed.
 
   Lemma own_leak {𝔄} E L n (ty: _ 𝔄) Φ :
-    Leak E L ty Φ → Leak E L (own_ptr n ty) Φ.
+    leak E L ty Φ → leak E L (own_ptr n ty) Φ.
   Proof.
     iIntros (Lk ???[|]?[|[[]|][]]?) "LFT PROPH E L own //".
     iIntros "/=!>!>!>". iDestruct "own" as "[(%& _ & ty) _]".
@@ -277,7 +277,7 @@ Section typing.
       have ->: (subst x xv (x <- p;; e))%E = (xv <- p;; subst x xv e)%E.
       { rewrite /subst /=. repeat f_equal;
         [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
-      iApply type_assign; [|solve_typing|by eapply write_own|solve_typing|done].
+      iApply type_assign; [|solve_typing|by eapply write_own|apply leak_just|done].
       apply subst_is_closed; [|done]. apply is_closed_of_val. }
     by move=>/= [??]??.
   Qed.
@@ -302,14 +302,14 @@ Section typing.
         - eapply (is_closed_subst []); [apply is_closed_of_val|set_solver].
         - by rewrite bool_decide_true.
         - eapply is_closed_subst; [done|set_solver]. } rewrite Nat2Z.id.
-      iApply type_memcpy; [|solve_typing| |solve_typing|done|done|done];
+      iApply type_memcpy; [|solve_typing| |apply leak_just|done|done|done];
       [|by apply write_own]. apply subst_is_closed; [|done].
       apply is_closed_of_val. } by move=>/= [??]??.
   Qed.
 
 End typing.
 
-Global Hint Resolve own_leak | 10 : lrust_typing.
+Global Hint Resolve own_leak | 1 : lrust_typing.
 Global Hint Resolve own_subtype own_eqtype box_subtype box_eqtype
             write_own read_own_copy : lrust_typing.
 (* By setting the priority high, we make sure copying is tried before

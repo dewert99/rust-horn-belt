@@ -130,7 +130,8 @@ Section typing.
   Context `{!typeG Σ}.
 
   Lemma xsum_lft_morph {𝔅 𝔄l} (Tl: _ 𝔄l) :
-    HForall (λ _, TypeLftMorphism) Tl → TypeLftMorphism (λ (ty: _ 𝔅), Σ! (Tl +$ ty))%T.
+    TCHForall (λ _, TypeLftMorphism) Tl →
+    TypeLftMorphism (λ (ty: _ 𝔅), Σ! (Tl +$ ty))%T.
   Proof.
     move=> All. set s := λ ty, Σ!%T (Tl +$ ty).
     have [[?[?[?[??]]]]|[?[?[??]]]]:
@@ -172,12 +173,12 @@ Section typing.
       ty_size ty = ty_size ty' → max_ty_size (Tl +$ ty) = max_ty_size (Tl +$ ty').
     { move=> *. elim All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
     split=>/=.
-    - apply xsum_lft_morph. eapply HForall_impl; [|done]. by move=> >[].
+    - apply xsum_lft_morph. eapply TCHForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
-    - move=> *. f_equiv=> i. apply (HForall_nth _ (const ∅) _ i) in All;
+    - move=> *. f_equiv=> i. apply (TCHForall_nth _ (const ∅) _ i) in All;
       [|apply _]. rewrite !(hnth_apply (const ∅)).
       do 7 f_equiv; [|by apply All]. do 5 f_equiv. by apply EqMsz.
-    - move=> *. f_equiv=> i. apply (HForall_nth _ (const ∅) _ i) in All; [|apply _].
+    - move=> *. f_equiv=> i. apply (TCHForall_nth _ (const ∅) _ i) in All; [|apply _].
       rewrite /is_pad !(hnth_apply (const ∅)). do 4 f_equiv; [|by apply All].
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
@@ -189,12 +190,12 @@ Section typing.
     have EqMsz: ∀ty ty', max_ty_size (Tl +$ ty) = max_ty_size (Tl +$ ty').
     { move=> *. elim All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
     split=>/=.
-    - apply xsum_lft_morph. eapply HForall_impl; [|done]. by move=> >[].
+    - apply xsum_lft_morph. eapply TCHForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
-    - move=> *. f_equiv=> i. apply (HForall_nth _ (const ∅) _ i) in All;
+    - move=> *. f_equiv=> i. apply (TCHForall_nth _ (const ∅) _ i) in All;
       [|apply _]. rewrite !(hnth_apply (const ∅)).
       do 7 f_equiv; [|by apply All]. do 5 f_equiv. by apply EqMsz.
-    - move=> *. f_equiv=> i. apply (HForall_nth _ (const ∅) _ i) in All; [|apply _].
+    - move=> *. f_equiv=> i. apply (TCHForall_nth _ (const ∅) _ i) in All; [|apply _].
       rewrite /is_pad !(hnth_apply (const ∅)). do 4 f_equiv; [|by apply All].
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
@@ -202,7 +203,7 @@ Section typing.
   Global Instance xsum_copy {𝔄l} (tyl: _ 𝔄l) : ListCopy tyl → Copy (Σ! tyl).
   Proof.
     move=> ?. have Copy: ∀i, Copy (hnthe tyl i).
-    { move=> *. apply (HForall_nth _); by [apply _|]. }
+    { move=> *. apply (TCHForall_nth _); by [apply _|]. }
     split; [apply _|]. move=>/= ?????? l ?? SubF.
     iIntros "#LFT (%i &%&->& Bor & ty) Na [κ κ']".
     iMod (frac_bor_acc with "LFT Bor κ") as (q) "[>[↦i ↦pad] Toκ]";
@@ -228,9 +229,29 @@ Section typing.
   Qed.
 
   Global Instance xsum_send {𝔄l} (tyl: _ 𝔄l) : ListSend tyl → Send (Σ! tyl).
-  Proof. move=> Send ?*/=. do 9 f_equiv. by eapply HForall_nth in Send. Qed.
+  Proof. move=> Send ?*/=. do 9 f_equiv. by eapply TCHForall_nth in Send. Qed.
   Global Instance xsum_sync {𝔄l} (tyl: _ 𝔄l) : ListSync tyl → Sync (Σ! tyl).
-  Proof. move=> Sync ?*/=. do 6 f_equiv. by eapply HForall_nth in Sync. Qed.
+  Proof. move=> Sync ?*/=. do 6 f_equiv. by eapply TCHForall_nth in Sync. Qed.
+
+  Lemma xsum_leak {𝔄l} E L (tyl: _ 𝔄l) Φl :
+    leakl E L tyl Φl →
+    leak E L (Σ! tyl) (λ s, match to_xsum s with
+      xinj i x => pnth Empty_setₛ unique Φl i x end).
+  Proof.
+    iIntros (Lk ???????) "LFT PROPH E L (%&%&%&%&[-> _] & ty)".
+    eapply HForall_1_nth in Lk; [|apply leak_just].
+    iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
+    iApply (step_fupdN_wand with "ToObs"). iIntros "!> >[Obs $] !>".
+    iApply proph_obs_impl; [|done]=> ?. by rewrite [const _]eq_unique pinj_to_xsum.
+  Qed.
+
+  Lemma sum_leak {𝔄 𝔅} E L (ty: _ 𝔄) (ty': _ 𝔅) Φ Φ' :
+    leak E L ty Φ → leak E L ty' Φ' →
+    leak E L (ty + ty') (λ s, match s with inl a => Φ a | inr b => Φ' b end).
+  Proof.
+    move=> ??. eapply leak_impl; [apply mod_ty_leak, xsum_leak;
+    [apply _|solve_typing]|]. by case.
+  Qed.
 
   Lemma xsum_subtype {𝔄l 𝔅l} E L (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl :
     subtypel E L tyl tyl' fl → subtype E L (Σ! tyl) (Σ! tyl') (psum_map fl).
@@ -285,4 +306,5 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve xsum_subtype xsum_eqtype sum_subtype sum_eqtype: lrust_typing.
+Global Hint Resolve xsum_leak sum_leak | 1 : lrust_typing.
+Global Hint Resolve xsum_subtype xsum_eqtype sum_subtype sum_eqtype : lrust_typing.

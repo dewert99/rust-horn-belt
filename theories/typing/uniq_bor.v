@@ -132,7 +132,7 @@ Section typing.
   Proof. move=> >/=. by do 10 f_equiv. Qed.
 
   Lemma uniq_leak {𝔄} E L κ (ty: _ 𝔄) :
-    lctx_lft_alive E L κ → Leak E L (&uniq{κ} ty) (λ '(a, a'), a' = a).
+    lctx_lft_alive E L κ → leak E L (&uniq{κ} ty) (λ '(a, a'), a' = a).
   Proof.
     move=>/= Alv ?? vπ d ? vl ?. iIntros "#LFT PROPH E L [In uniq]".
     case vl as [|[[]|][]]=>//. iDestruct "uniq" as (??[Le Eq]) "[Vo Bor]".

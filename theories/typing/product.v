@@ -205,7 +205,7 @@ Section typing.
   Proof. elim; apply _. Qed.
 
   Lemma prod_leak {𝔄 𝔅} (ty: _ 𝔄) (ty': _ 𝔅) Φ Φ' E L :
-    Leak E L ty Φ → Leak E L ty' Φ' → Leak E L (ty * ty') (λ '(a, b), Φ a ∧ Φ' b).
+    leak E L ty Φ → leak E L ty' Φ' → leak E L (ty * ty') (λ '(a, b), Φ a ∧ Φ' b).
   Proof.
     iIntros (Lk Lk' ?? vπ ????) "#LFT #PROPH #E [L L'] (%&%&->& ty & ty')".
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
@@ -213,6 +213,14 @@ Section typing.
     iCombine "ToObs ToObs'" as "ToObs". iApply (step_fupdN_wand with "ToObs").
     iIntros "!> [>[Obs $] >[Obs' $]] !>". iCombine "Obs Obs'" as "?".
     iApply proph_obs_eq; [|done]=>/= π. by case (vπ π).
+  Qed.
+
+  Lemma xprod_leak {𝔄l} (tyl: _ 𝔄l) Φl E L :
+    leakl E L tyl Φl →
+    leak E L (Π! tyl) (λ al, pforall (λ _, curry ($)) (pzip Φl al)).
+  Proof.
+    elim; [by eapply leak_impl; [apply leak_just|]|]=>/= *. by eapply leak_impl;
+    [apply mod_ty_leak, prod_leak; by [apply _| |]|]=>/= [[??][??]].
   Qed.
 
   Lemma prod_subtype {𝔄 𝔅 𝔄' 𝔅'} E L (f: 𝔄 → 𝔄') (g: 𝔅 → 𝔅') ty1 ty2 ty1' ty2' :
@@ -328,6 +336,6 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve prod_leak | 10 : lrust_typing.
+Global Hint Resolve prod_leak xprod_leak | 1 : lrust_typing.
 Global Hint Resolve prod_subtype prod_eqtype xprod_subtype xprod_eqtype
   xprod_outlv_E_elctx_sat : lrust_typing.

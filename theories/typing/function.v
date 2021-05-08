@@ -8,7 +8,7 @@ Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Fixpoint subst_plv {𝔄l} (bl: plistc binder 𝔄l) (vl: plistc val 𝔄l)
   (e: expr) : expr := match 𝔄l, bl, vl with [], _, _ => e |
-    _ :: _, b -:: bl', v -:: vl' => subst' b v (subst_plv bl' vl' e) end.
+    _::_, b -:: bl', v -:: vl' => subst' b v (subst_plv bl' vl' e) end.
 
 Instance do_subst_plv {𝔄l} (bl vl: plistc _ 𝔄l) e :
   DoSubstL bl (map of_val vl) e (subst_plv bl vl e).

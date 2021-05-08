@@ -11,10 +11,17 @@ Section list.
     fix_ty (λ ty', <{option_to_list: optionₛ (𝔄 * listₛ 𝔄) → listₛ 𝔄}>
       (option_ty (ty * box ty')))%T.
 
+  Lemma list_leak {𝔄} E L (ty: _ 𝔄) Φ :
+    leak E L ty Φ → leak E L (list_ty ty) (lforall Φ).
+  Proof.
+    move=> ?. apply fix_leak=> ??. eapply leak_impl. { apply mod_ty_leak,
+    option_leak, prod_leak, own_leak; by [apply _| |]. } by case.
+  Qed.
+
   Lemma list_subtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty ty' :
     subtype E L ty ty' f → subtype E L (list_ty ty) (list_ty ty') (map f).
   Proof.
-    move=> ?. apply fix_subtype=> *. eapply subtype_eq; [solve_typing|].
+    move=> ?. apply fix_subtype=> ???. eapply subtype_eq; [solve_typing|].
     fun_ext. by case.
   Qed.
 
@@ -24,4 +31,5 @@ Section list.
 
 End list.
 
+Global Hint Resolve list_leak | 1 : lrust_typing.
 Global Hint Resolve list_subtype list_eqtype : lrust_typing.

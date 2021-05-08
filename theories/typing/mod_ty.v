@@ -87,7 +87,7 @@ Section typing.
   Proof. move=> ??*/=. by do 3 f_equiv. Qed.
 
   Lemma mod_ty_leak' {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty Φ :
-    Leak E L ty Φ → Leak E L (<{f}> ty) (λ b, ∃a, b = f a ∧ Φ a).
+    leak E L ty Φ → leak E L (<{f}> ty) (λ b, ∃a, b = f a ∧ Φ a).
   Proof.
     move=> Lk > ?. iIntros "LFT PROPH E L (%&->& ty)".
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
@@ -96,7 +96,7 @@ Section typing.
   Qed.
 
   Lemma mod_ty_leak {𝔄 𝔅} E L f g `{!@SemiIso 𝔄 𝔅 f g} ty Φ :
-    Leak E L ty Φ → Leak E L (<{f}> ty) (Φ ∘ g).
+    leak E L ty Φ → leak E L (<{f}> ty) (Φ ∘ g).
   Proof.
     move=> ?. eapply leak_impl; [by apply mod_ty_leak'|]=>/=
     ?[?[/(f_equal g) + ?]]. by rewrite semi_iso'=> ->.
@@ -162,6 +162,6 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve mod_ty_leak | 10 : lrust_typing.
-Global Hint Resolve mod_ty_leak' | 20 : lrust_typing.
+Global Hint Resolve mod_ty_leak | 1 : lrust_typing.
+Global Hint Resolve mod_ty_leak' | 10 : lrust_typing.
 Global Hint Resolve mod_ty_subtype mod_ty_eqtype : lrust_typing.

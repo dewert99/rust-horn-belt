@@ -10,7 +10,7 @@ Module fix_defs.
 Section S.
   Context `{!typeG Σ} {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T}.
 
-  Definition Tn n := Nat.iter (S n) T (empty 0).
+  Definition Tn n := Nat.iter (S n) T empty.
 
   Lemma Tn_ty_lft_const n n' : ⊢ (Tn n).(ty_lft) ≡ₗ (Tn n').(ty_lft).
   Proof using HT.
@@ -185,7 +185,7 @@ Proof. move=> Eq.
     { rewrite /Tn. elim (S (3 + n)); [done|]=> ? IH. by rewrite !Nat_iter_S IH Eq. }
     etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
     split; repeat move=> ? /=; apply Eq''. }
-  split=>/=; try apply Eq; try apply Eq'. by rewrite /Tn /= (Eq (empty 0)) Eq.
+  split=>/=; try apply Eq; try apply Eq'. by rewrite /Tn /= (Eq empty) Eq.
 Qed.
 
 Lemma fix_type_ne `{!typeG Σ} {𝔄 𝔅} (T : _ 𝔄 → _ → _ 𝔅)
@@ -232,7 +232,7 @@ Proof.
     etrans; [|symmetry; apply conv_compl]. by apply Hne.
 Qed.
 
-Section traits.
+Section lemmas.
   Context `{!typeG Σ}.
   Context {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T}.
 
@@ -253,21 +253,31 @@ Section traits.
 
   Global Instance fix_send :
     (∀`(!Send ty), Send (T ty)) → Send (fix_ty T).
-  Proof. move=> ?.
-    have ?: ∀n, Send (Tn T n) by elim; apply _. rewrite /fix_ty=> > /=.
-    eapply @limit_preserving; [|move=> ?; apply send_change_tid].
+  Proof.
+    move=> ?. have ?: ∀n, Send (Tn T n) by elim; apply _. rewrite /fix_ty=> > /=.
+    eapply @limit_preserving; [|move=> ?; by apply send_change_tid].
     apply limit_preserving_equiv=> ??? Eq; apply Eq.
   Qed.
 
   Global Instance fix_sync :
     (∀`(!Sync ty), Sync (T ty)) → Sync (fix_ty T).
-  Proof. move=> ?.
-    have ?: ∀n, Sync (Tn T n) by elim; apply _. rewrite /fix_ty=> > /=.
-    eapply @limit_preserving; [|move=> ?; apply sync_change_tid].
+  Proof.
+    move=> ?. have ?: ∀n, Sync (Tn T n) by elim; apply _. rewrite /fix_ty=> > /=.
+    eapply @limit_preserving; [|move=> ?; by apply sync_change_tid].
     apply limit_preserving_equiv=> ??? Eq; apply Eq.
   Qed.
 
-End traits.
+  Lemma fix_leak E L Φ :
+    (∀ty, leak E L ty Φ → leak E L (T ty) Φ) → leak E L (fix_ty T) Φ.
+  Proof.
+    move=> Loop. have Lk: ∀n, leak E L (Tn T n) Φ. { elim=> [|? H]; apply Loop;
+    [apply empty_leak|apply H]. } rewrite /fix_ty=> > /=.
+    eapply @limit_preserving; [|move=> ?; by apply Lk].
+    apply limit_preserving_forall=> ?.
+    apply limit_preserving_entails; [done|]=> ??? Eq. do 4 f_equiv. apply Eq.
+  Qed.
+
+End lemmas.
 
 Section subtyping.
   Context `{!typeG Σ}.
@@ -286,7 +296,7 @@ Section subtyping.
       ∀n, type_incl (Tn T n) (Tn T' n) f).
     { rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
       apply forall_intro=> n. rewrite -intuitionistically_into_persistently.
-      move: qL. apply Loop. elim n=> [|??]; [apply empty_subtype|by apply Loop]. }
+      move: qL. apply Loop. elim n=> [|??]; [solve_typing|by apply Loop]. }
     rewrite Incl /type_incl -!persistent_and_sep /=. do 2 f_equiv.
     (* FIXME : change the definition of limit_preserving so that it
        applies even if the limti is not computed with compl. *)
@@ -308,7 +318,7 @@ Section subtyping.
       ∀n, type_incl (Tn T n) (Tn T' n) f).
     { rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
       apply forall_intro=> n. rewrite -intuitionistically_into_persistently.
-      move: qL. apply Loop. elim n=> [|??]; [apply empty_eqtype|by apply Loop]. }
+      move: qL. apply Loop. elim n=> [|??]; [solve_typing|by apply Loop]. }
     rewrite Incl /type_incl -!persistent_and_sep /=. do 2 f_equiv.
     apply and_intro; [|apply and_intro; [|apply and_intro]].
     - iIntros "H". iDestruct ("H" $! 0) as "($&_)".
@@ -330,5 +340,3 @@ Section subtyping.
   Qed.
 
 End subtyping.
-
-Global Hint Resolve fix_subtype fix_eqtype : lrust_typing.

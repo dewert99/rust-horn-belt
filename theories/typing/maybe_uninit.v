@@ -95,14 +95,14 @@ Section typing.
   Proof. move=> >/=. by do 4 f_equiv. Qed.
 
   Lemma maybe_uninit_leak {𝔄} (ty: _ 𝔄) Φ E L :
-    Leak E L ty Φ → Leak E L (? ty) (λ o, ∀a: 𝔄, o = Some a → Φ a).
+    leak E L ty Φ →
+    leak E L (? ty) (λ o, match o with None => True | Some a => Φ a end).
   Proof.
     move=> Lk > ?. iIntros "LFT PROPH E L [[-> _]|(%&->& ty)]".
     { iApply step_fupdN_full_intro. iIntros "!>!>". iFrame "L".
-      iApply proph_obs_true=>/= ?? Eq. inversion Eq. }
+      by iApply proph_obs_true. }
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
-    iApply (step_fupdN_wand with "ToObs"). iIntros "!> >[Obs $] !>".
-    by iApply proph_obs_impl; [|done]=>/= ???[=<-].
+    iApply (step_fupdN_wand with "ToObs"). by iIntros "!> >[$$]".
   Qed.
 
   Lemma maybe_uninit_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty' E L :
@@ -146,5 +146,5 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve maybe_uninit_leak | 10 : lrust_typing.
+Global Hint Resolve maybe_uninit_leak | 1 : lrust_typing.
 Global Hint Resolve maybe_uninit_subtype maybe_uninit_eqtype : lrust_typing.

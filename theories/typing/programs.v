@@ -180,7 +180,7 @@ Section typing.
 
   Lemma type_assign_instr {𝔄 𝔅 𝔄' 𝔅'} (ty: _ 𝔄) (tyb: _ 𝔅)
     (ty': _ 𝔄') (tyb': _ 𝔅') gt st Φ p pb E L :
-    typed_write E L ty tyb ty' tyb' gt st → Leak E L tyb Φ →
+    typed_write E L ty tyb ty' tyb' gt st → leak E L tyb Φ →
     ⊢ typed_instr E L +[p ◁ ty; pb ◁ tyb'] (p <- pb) (λ _, +[p ◁ ty'])
       (λ post '-[a; b], Φ (gt a) → post -[st a b])%type.
   Proof.
@@ -207,7 +207,7 @@ Section typing.
   Lemma type_assign {𝔄 𝔅 𝔄' 𝔅' 𝔄l 𝔅l} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄')
     (tyb': _ 𝔅') gt st Φ p pb E L C (T: _ 𝔄l) (T': _ 𝔅l) tr e pre:
     Closed [] e → tctx_extract_ctx E L +[p ◁ ty; pb ◁ tyb'] T T' tr →
-    typed_write E L ty tyb ty' tyb' gt st → Leak E L tyb Φ →
+    typed_write E L ty tyb ty' tyb' gt st → leak E L tyb Φ →
     typed_body E L C (p ◁ ty' +:: T') e pre -∗
     typed_body E L C T (p <- pb;; e)
       (tr (λ '(a -:: b -:: bl), Φ (gt a) → pre (st a b -:: bl)))%type.
@@ -245,7 +245,7 @@ Section typing.
 
   Lemma type_memcpy_instr {𝔄 𝔄' 𝔅 𝔅' ℭ ℭ'} (tyw: _ 𝔄) (tyw': _ 𝔄') (tyr: _ 𝔅)
     (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str Φ (n: Z) pw pr E L :
-    typed_write E L tyw tyb tyw' tyb' gtw stw → Leak E L tyb Φ →
+    typed_write E L tyw tyb tyw' tyb' gtw stw → leak E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
     ⊢ typed_instr E L +[pw ◁ tyw; pr ◁ tyr] (pw <-{n} !pr)
       (λ _, +[pw ◁ tyw'; pr ◁ tyr'])
@@ -276,7 +276,7 @@ Section typing.
     (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str Φ
     (n: Z) pw pr E L C (T: _ 𝔄l) (T': _ 𝔅l) e tr pre :
     Closed [] e → tctx_extract_ctx E L +[pw ◁ tyw; pr ◁ tyr] T T' tr →
-    typed_write E L tyw tyb tyw' tyb' gtw stw → Leak E L tyb Φ →
+    typed_write E L tyw tyb tyw' tyb' gtw stw → leak E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
     typed_body E L C (pw ◁ tyw' +:: pr ◁ tyr' +:: T') e pre -∗
     typed_body E L C T (pw <-{n} !pr;; e) (tr (λ '(a -:: b -:: bl),

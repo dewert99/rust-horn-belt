@@ -11,6 +11,14 @@ Section option.
   Definition option_ty {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
     <{sum_to_option: (() + 𝔄)%ST → optionₛ 𝔄}> (unit_ty + ty).
 
+  Lemma option_leak {𝔄} E L (ty: _ 𝔄) Φ :
+    leak E L ty Φ →
+    leak E L (option_ty ty) (λ o, match o with None => True | Some o => Φ o end).
+  Proof.
+    move=> ?. eapply leak_impl. { apply mod_ty_leak, sum_leak;
+    [apply _|apply leak_just|done]. } by case.
+  Qed.
+
   Lemma option_subtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty ty' :
     subtype E L ty ty' f → subtype E L (option_ty ty) (option_ty ty') (option_map f).
   Proof.
@@ -112,4 +120,5 @@ Section option.
 
 End option.
 
+Global Hint Resolve option_leak | 1 : lrust_typing.
 Global Hint Resolve option_subtype option_eqtype : lrust_typing.

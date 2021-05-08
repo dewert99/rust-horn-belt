@@ -21,8 +21,11 @@ Notation vtl := Vector.tl.
 (** List.nth with better pattern matching *)
 Fixpoint lnth {A} (d: A) (xl: list A) (i: nat) : A := match xl with
   [] => d | x :: xl' => match i with 0 => x | S j => lnth d xl' j end end.
-
 Notation lnthe := (lnth ∅).
+
+(** Fixpoint version of List.Forall *)
+Fixpoint lforall {A} (Φ: A → Prop) (xl: list A) : Prop :=
+  match xl with [] => True | x :: xl' => Φ x ∧ lforall Φ xl' end.
 
 (** * Utility for Point-Free Style *)
 

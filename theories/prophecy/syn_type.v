@@ -68,16 +68,12 @@ Qed.
 
 (** Decidable Inhabitedness *)
 
-Local Notation all f := (fix all xl := match xl with
-  [] => true | x :: xl' => f x && all xl' end).
-Local Notation some f := (fix some xl := match xl with
-  [] => false | x :: xl' => f x || some xl' end).
-
 Fixpoint inh_syn_type 𝔄 : bool := match 𝔄 with
   | prodₛ 𝔄₀ 𝔄₁ => inh_syn_type 𝔄₀ && inh_syn_type 𝔄₁
   | sumₛ 𝔄₀ 𝔄₁ => inh_syn_type 𝔄₀ || inh_syn_type 𝔄₁
   | funₛ 𝔄₀ 𝔄₁ => negb (inh_syn_type 𝔄₀) || inh_syn_type 𝔄₁
-  | xprodₛ 𝔄l => all inh_syn_type 𝔄l | xsumₛ 𝔄l => some inh_syn_type 𝔄l
+  | xprodₛ 𝔄l => forallb inh_syn_type 𝔄l
+  | xsumₛ 𝔄l => existsb inh_syn_type 𝔄l
   | Empty_setₛ => false | _ => true
   end.
 
@@ -100,7 +96,7 @@ Proof.
       apply (@absurd ∅ _). eapply FIX; [|done]. by rewrite Eq.
     + elim; [move=> ?; exact -[]|]=> ?? IH /andb_True [??].
       split; by [apply FIX|apply IH].
-    + elim; [done|]=> 𝔄 ? IH. case Eq: (inh_syn_type 𝔄)=>/= H.
+    + elim; [done|]=>/= 𝔄 ? IH. case Eq: (inh_syn_type 𝔄)=>/= H.
       { left. apply FIX. by rewrite Eq. } { right. by apply IH. }
   - case: 𝔄=>//= [𝔄?|𝔄?|𝔄?|𝔄l|𝔄l].
     + rewrite negb_andb. case Eq: (inh_syn_type 𝔄)=>/= ?[a?]; [by eapply FIX|].
