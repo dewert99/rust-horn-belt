@@ -179,38 +179,35 @@ Section typing.
   Qed.
 
   Lemma type_assign_instr {𝔄 𝔅 𝔄' 𝔅'} (ty: _ 𝔄) (tyb: _ 𝔅)
-    (ty': _ 𝔄') (tyb': _ 𝔅') gt st κl Φ p pb E L :
-    typed_write E L ty tyb ty' tyb' gt st →
-    Leak tyb κl Φ → Forall (lctx_lft_alive E L) κl →
+    (ty': _ 𝔄') (tyb': _ 𝔅') gt st Φ p pb E L :
+    typed_write E L ty tyb ty' tyb' gt st → Leak E L tyb Φ →
     ⊢ typed_instr E L +[p ◁ ty; pb ◁ tyb'] (p <- pb) (λ _, +[p ◁ ty'])
       (λ post '-[a; b], Φ (gt a) → post -[st a b])%type.
   Proof.
-    iIntros ([Eq Wrt] Lk ??? (vπ & wπ &[]))
-      "#LFT #TIME PROPH UNIQ #E $ L (p & pb & _) Obs".
-    iMod (lctx_lft_alive_tok_list with "E L") as (?) "(κl & L & ToL)"; [done|done|].
+    iIntros ([Eq Wrt] Lk ?? (vπ & wπ &[]))
+      "#LFT #TIME PROPH UNIQ #E $ [L L'] (p & pb & _) Obs".
     wp_bind p. iApply (wp_hasty with "p"). iIntros (???) "⧖ ty".
     iMod (Wrt with "LFT UNIQ E L ty") as (? ->) "[(%vl & ↦ & tyb) Toty']".
     iDestruct (ty_size_eq with "tyb") as "#>%Sz".
-    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH κl tyb") as "ToObs";
+    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH E L' tyb") as "ToObs";
     [set_solver|]. iApply (wp_step_fupdN_persist_time_rcpt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
     with "TIME ⧖ [ToObs]")=>//. { by iApply step_fupdN_with_emp. }
     wp_bind pb. iApply (wp_hasty with "pb"). iIntros (vb db ?) "#⧖' tyb'".
     iDestruct (ty_size_eq with "tyb'") as %Sz'. move: Sz. rewrite Eq -Sz' /=.
     case vl=> [|?[|]]=>// ?. iApply (wp_persist_time_rcpt with "TIME ⧖'")=>//.
     { solve_ndisj. } rewrite heap_mapsto_vec_singleton.
-    wp_write. iIntros "#⧖S [Obs' κl]". iCombine "Obs Obs'" as "Obs".
-    iMod ("Toty'" with "[↦ tyb'] ⧖S") as "(L & ty')".
+    wp_write. iIntros "#⧖S [Obs' $]". iCombine "Obs Obs'" as "Obs".
+    iMod ("Toty'" with "[↦ tyb'] ⧖S") as "[$ ty']".
     { iExists [vb]. rewrite -heap_mapsto_vec_singleton. iFrame. }
-    iMod ("ToL" with "κl L") as "$". iExists -[st ∘ vπ ⊛ wπ]. iSplitR "Obs".
+    iExists -[st ∘ vπ ⊛ wπ]. iSplitR "Obs".
     - rewrite right_id tctx_hasty_val'; [|done]. iExists (S db). by iFrame.
     - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
   Qed.
 
   Lemma type_assign {𝔄 𝔅 𝔄' 𝔅' 𝔄l 𝔅l} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄')
-    (tyb': _ 𝔅') gt st κl Φ p pb E L C (T: _ 𝔄l) (T': _ 𝔅l) tr e pre:
+    (tyb': _ 𝔅') gt st Φ p pb E L C (T: _ 𝔄l) (T': _ 𝔅l) tr e pre:
     Closed [] e → tctx_extract_ctx E L +[p ◁ ty; pb ◁ tyb'] T T' tr →
-    typed_write E L ty tyb ty' tyb' gt st →
-    Leak tyb κl Φ → Forall (lctx_lft_alive E L) κl →
+    typed_write E L ty tyb ty' tyb' gt st → Leak E L tyb Φ →
     typed_body E L C (p ◁ ty' +:: T') e pre -∗
     typed_body E L C T (p <- pb;; e)
       (tr (λ '(a -:: b -:: bl), Φ (gt a) → pre (st a b -:: bl)))%type.
@@ -247,42 +244,39 @@ Section typing.
   Qed.
 
   Lemma type_memcpy_instr {𝔄 𝔄' 𝔅 𝔅' ℭ ℭ'} (tyw: _ 𝔄) (tyw': _ 𝔄') (tyr: _ 𝔅)
-    (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str κl Φ (n: Z) pw pr E L :
-    typed_write E L tyw tyb tyw' tyb' gtw stw →
-    Leak tyb κl Φ → Forall (lctx_lft_alive E L) κl →
+    (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str Φ (n: Z) pw pr E L :
+    typed_write E L tyw tyb tyw' tyb' gtw stw → Leak E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
     ⊢ typed_instr E L +[pw ◁ tyw; pr ◁ tyr] (pw <-{n} !pr)
       (λ _, +[pw ◁ tyw'; pr ◁ tyr'])
       (λ post '-[a; b], Φ (gtw a) → post -[stw a (gtr b); str b])%type.
   Proof.
-    iIntros ([Eq Wrt] Lk ? Rd ->??(?&?&[]))
-      "/= #LFT #TIME PROPH UNIQ #E Na [L L'] (pw & pr &_) Obs".
-    iMod (lctx_lft_alive_tok_list with "E L") as (?) "(κl & L & ToL)"; [done|done|].
+    iIntros ([Eq Wrt] Lk Rd ->??(?&?&[]))
+      "/= #LFT #TIME PROPH UNIQ #E Na [[L L'] L''] (pw & pr &_) Obs".
     wp_bind pw. iApply (wp_hasty with "pw"). iIntros (???) "⧖ tyw".
     iMod (Wrt with "LFT UNIQ E L tyw") as (?->) "[(% & >↦ & tyb) Totyw]".
     wp_bind pr. iApply (wp_hasty with "pr"). iIntros (???) "#⧖' tyr".
     iMod (Rd with "LFT E Na L' tyr") as (? vlb ?->) "(↦' & tyb' & Totyr')".
     iDestruct (ty_size_eq with "tyb") as "#>%".
     iDestruct (ty_size_eq with "tyb'") as "#>%".
-    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH κl tyb") as "ToObs";
+    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH E L'' tyb") as "ToObs";
     [set_solver|]. iApply (wp_step_fupdN_persist_time_rcpt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
-    with "TIME ⧖ [ToObs]")=>//. { by iApply step_fupdN_with_emp. }
+    with "TIME ⧖ [ToObs]")=>//; [by iApply step_fupdN_with_emp|].
     iApply (wp_persist_time_rcpt with "TIME ⧖'"); [solve_ndisj|].
     iApply (wp_memcpy with "[$↦ $↦']"); [congruence|congruence|]. iNext.
-    iIntros "[↦ ↦'] #⧖'S [Obs' κl]". iCombine "Obs Obs'" as "Obs".
-    iMod ("Totyw" with "[↦ tyb'] ⧖'S") as "[L tyw']". { iExists vlb. iFrame. }
-    iMod ("Totyr'" with "↦'") as "($&$& tyr')". iMod ("ToL" with "κl L") as "$".
-    iModIntro. iExists -[_; _]. iSplit; [rewrite right_id|].
+    iIntros "[↦ ↦'] #⧖'S [Obs' $]". iCombine "Obs Obs'" as "Obs".
+    iMod ("Totyw" with "[↦ tyb'] ⧖'S") as "[$ tyw']". { iExists vlb. iFrame. }
+    iMod ("Totyr'" with "↦'") as "($&$& tyr')". iModIntro. iExists -[_; _].
+    iSplit; [rewrite right_id|].
     - iSplitL "tyw'"; (rewrite tctx_hasty_val'; [|done]); iExists _; by iFrame.
     - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
   Qed.
 
   Lemma type_memcpy {𝔄 𝔄' 𝔅 𝔅' ℭ ℭ' 𝔄l 𝔅l} (tyw: _ 𝔄) (tyw': _ 𝔄') (tyr: _ 𝔅)
-    (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str κl Φ
+    (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str Φ
     (n: Z) pw pr E L C (T: _ 𝔄l) (T': _ 𝔅l) e tr pre :
     Closed [] e → tctx_extract_ctx E L +[pw ◁ tyw; pr ◁ tyr] T T' tr →
-    typed_write E L tyw tyb tyw' tyb' gtw stw →
-    Leak tyb κl Φ → Forall (lctx_lft_alive E L) κl →
+    typed_write E L tyw tyb tyw' tyb' gtw stw → Leak E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
     typed_body E L C (pw ◁ tyw' +:: pr ◁ tyr' +:: T') e pre -∗
     typed_body E L C T (pw <-{n} !pr;; e) (tr (λ '(a -:: b -:: bl),

@@ -131,21 +131,23 @@ Section typing.
   Global Instance uniq_sync {𝔄} κ (ty: _ 𝔄) : Sync ty → Sync (&uniq{κ} ty).
   Proof. move=> >/=. by do 10 f_equiv. Qed.
 
-  Global Instance uniq_leak {𝔄} κ (ty: _ 𝔄) :
-    Leak (&uniq{κ} ty) [κ] (λ '(a, a'), a' = a).
+  Global Instance uniq_leak {𝔄} E L κ (ty: _ 𝔄) :
+    lctx_lft_alive E L κ → Leak E L (&uniq{κ} ty) (λ '(a, a'), a' = a).
   Proof.
-    move=>/= ? vπ d ? vl ??. rewrite right_id. iIntros "#LFT PROPH [κ κ+] [In uniq]".
+    move=>/= Alv ?? vπ d ? vl ?. iIntros "#LFT PROPH E L [In uniq]".
     case vl as [|[[]|][]]=>//. iDestruct "uniq" as (??[Le Eq]) "[Vo Bor]".
     move: Le=> /succ_le[?[->Le]]. have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
+    iMod (Alv with "E L") as (?) "[[κ κ+] ToL]"; [solve_ndisj|].
     iMod (bor_acc with "LFT Bor κ") as "[(%&%&(%& ↦ & ty)&⧖& Pc) ToBor]"; [solve_ndisj|].
     iIntros "/= !>!>!>". iMod (ty_own_proph with "LFT In ty κ+") as "Toξl";
     [solve_ndisj|]. iDestruct (uniq_agree with "Vo Pc") as %[<-->].
     iApply step_fupdN_nmono; [by apply Le|].
     iApply (step_fupdN_wand with "Toξl"). iIntros "!> >(%&%&%& ξl & Toty)".
     iMod (uniq_resolve with "PROPH Vo Pc ξl") as "(Obs & Pc & ξl)"; [solve_ndisj|done|].
-    iMod ("Toty" with "ξl") as "[ty $]". iMod ("ToBor" with "[↦ ty ⧖ Pc]") as "[_ $]".
-    { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. } iApply proph_obs_eq;
-    [|done]=>/= π. move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.
+    iMod ("Toty" with "ξl") as "[ty κ+]". iMod ("ToBor" with "[↦ ty ⧖ Pc]") as "[_ κ]".
+    { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. }
+    iSplitL "Obs"; [|iApply "ToL"; by iFrame]. iApply proph_obs_eq; [|done]=>/= π.
+    move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.
   Qed.
 
   Lemma uniq_subtype {𝔄} E L κ κ' (ty ty': _ 𝔄) :

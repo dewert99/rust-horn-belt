@@ -640,16 +640,15 @@ Instance: Params (@Sync) 3 := {}.
 Class ListSync `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) := list_sync: HForall (λ _, Sync) tyl.
 Instance: Params (@ListSync) 3 := {}.
 
-Class Leak `{!typeG Σ} {𝔄} (ty: type 𝔄) (κl: list lft) (Φ: 𝔄 → Prop) :=
-  leak E vπ d tid vl q : ↑lftN ∪ ↑prophN ⊆ E → let κ := lft_intersect_list κl in
-    lft_ctx -∗ proph_ctx -∗ q.[κ] -∗
-    ty.(ty_own) vπ d tid vl ={E}=∗ |={E}▷=>^d |={E}=> ⟨π, Φ (vπ π)⟩ ∗ q.[κ].
+Class Leak `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄) (Φ: 𝔄 → Prop) :=
+  leak F q vπ d tid vl : ↑lftN ∪ ↑prophN ⊆ F →
+    lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    ty.(ty_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, Φ (vπ π)⟩ ∗ llctx_interp L q.
 Instance: Params (@Leak) 3 := {}.
 
-Class ListLeak `{!typeG Σ} {𝔄l} (tyl: typel 𝔄l) (κl: list lft)
+Class ListLeak `{!typeG Σ} {𝔄l} (E: elctx) (L: llctx) (tyl: typel 𝔄l)
   (Φl: plist (λ 𝔄, 𝔄 → Prop) 𝔄l) :=
-  list_leak: ∃κll: plistc _ _, κl = concat κll ∧
-    HForall (λ _ '(ty, κl, Φ), Leak ty κl Φ) (hzip (hzip tyl κll) Φl).
+  list_leak: HForall (λ _ '(ty, Φ), Leak E L ty Φ) (hzip tyl Φl).
 
 Section traits.
   Context `{!typeG Σ}.
@@ -738,19 +737,17 @@ Section traits.
 
   (** Lemmas on Leak *)
 
-  Global Instance leak_just {𝔄} (ty: _ 𝔄) : Leak ty [] (const True) | 100.
+  Global Instance leak_just {𝔄} (ty: _ 𝔄) E L : Leak E L ty (const True) | 100.
   Proof.
-    move=> > ?. iIntros "_ _ $ _!>". iApply step_fupdN_full_intro.
+    move=> > ?. iIntros "_ _ _ $ _!>". iApply step_fupdN_full_intro.
     by iApply proph_obs_true.
   Qed.
 
-  Global Instance list_leak_nil : ListLeak +[] [] -[].
-  Proof. exists -[]. split; [done|constructor]. Qed.
-  Global Instance list_leak_cons {𝔄 𝔄l} (ty: _ 𝔄) (tyl: _ 𝔄l) κl κl' Φ Φl :
-    Leak ty κl Φ → ListLeak tyl κl' Φl → ListLeak (ty +:: tyl) (κl ++ κl') (Φ -:: Φl).
-  Proof.
-    move=> ?[κll[??]]. exists (κl -:: κll). split=>/=; by [f_equal|constructor].
-  Qed.
+  Global Instance list_leak_nil E L : ListLeak E L +[] -[].
+  Proof. constructor. Qed.
+  Global Instance list_leak_cons {𝔄 𝔄l} E L (ty: _ 𝔄) (tyl: _ 𝔄l) Φ Φl :
+    Leak E L ty Φ → ListLeak E L tyl Φl → ListLeak E L (ty +:: tyl) (Φ -:: Φl).
+  Proof. by constructor. Qed.
 
 End traits.
 
