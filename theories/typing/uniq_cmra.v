@@ -7,8 +7,6 @@ From lrust.lifetime Require Import lifetime_sig.
 
 Implicit Type (𝔄i: syn_typei) (𝔄: syn_type).
 
-Section basic.
-
 (** * Camera for Unique Borrowing *)
 
 Local Definition uniq_itemR 𝔄i := frac_agreeR (leibnizO (proph 𝔄i * nat)).
@@ -30,8 +28,6 @@ Global Instance subG_uniqPreG Σ : subG uniqΣ Σ → uniqPreG Σ.
 Proof. solve_inG. Qed.
 
 Definition uniqN: namespace := lft_userN .@ "uniq".
-
-End basic.
 
 (** * Iris Propositions *)
 
