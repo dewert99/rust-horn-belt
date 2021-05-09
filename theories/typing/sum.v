@@ -235,8 +235,7 @@ Section typing.
 
   Lemma xsum_leak {𝔄l} E L (tyl: _ 𝔄l) Φl :
     leakl E L tyl Φl →
-    leak E L (Σ! tyl) (λ s, match to_xsum s with
-      xinj i x => pnth Empty_setₛ unique Φl i x end).
+    leak E L (Σ! tyl) (λ s, match to_xsume s with xinj i x => pnth absurd Φl i x end).
   Proof.
     iIntros (Lk ???????) "LFT PROPH E L (%&%&%&%&[-> _] & ty)".
     eapply HForall_1_nth in Lk; [|apply leak_just].

@@ -249,7 +249,6 @@ Section typing.
     move=> Subs. elim Subs; [solve_typing|]=> *. eapply subtype_eq.
     { apply mod_ty_subtype; [apply _|]. by apply prod_subtype. } fun_ext. by case.
   Qed.
-
   Lemma xprod_eqtype {𝔄l 𝔅l} E L (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl gl :
     eqtypel E L tyl tyl' fl gl →
     eqtype E L (Π! tyl) (Π! tyl') (plist_map fl) (plist_map gl).

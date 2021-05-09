@@ -38,22 +38,19 @@ Coercion of_syn_type: syn_type >-> Sortclass.
 
 (** Decidable Equality *)
 
-Local Notation all2 f := (fix all2 xl yl := match xl, yl with [], [] => true
-  | x :: xl', y :: yl' => f x y && all2 xl' yl' | _, _ => false end).
-
 Fixpoint syn_type_beq 𝔄 𝔅 : bool := match 𝔄, 𝔅 with
   | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Empty_setₛ, Empty_setₛ | Propₛ, Propₛ => true
   | optionₛ 𝔄₀, optionₛ 𝔅₀ | listₛ 𝔄₀, listₛ 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀
   | 𝔄₀ * 𝔄₁, 𝔅₀ * 𝔅₁ | 𝔄₀ + 𝔄₁, 𝔅₀ + 𝔅₁ | 𝔄₀ → 𝔄₁, 𝔅₀ → 𝔅₁
     => syn_type_beq 𝔄₀ 𝔅₀ && syn_type_beq 𝔄₁ 𝔅₁
-  | Π! 𝔄l, Π! 𝔅l | Σ! 𝔄l, Σ! 𝔅l => all2 syn_type_beq 𝔄l 𝔅l
+  | Π! 𝔄l, Π! 𝔅l | Σ! 𝔄l, Σ! 𝔅l => forall2b syn_type_beq 𝔄l 𝔅l
   | _, _ => false
   end%ST.
 
 Lemma syn_type_eq_correct 𝔄 𝔅 : syn_type_beq 𝔄 𝔅 ↔ 𝔄 = 𝔅.
 Proof.
   move: 𝔄 𝔅. fix FIX 1.
-  have FIXl: ∀𝔄l 𝔅l, all2 syn_type_beq 𝔄l 𝔅l ↔ 𝔄l = 𝔅l.
+  have FIXl: ∀𝔄l 𝔅l, forall2b syn_type_beq 𝔄l 𝔅l ↔ 𝔄l = 𝔅l.
   { elim=> [|?? IH][|??]//. rewrite andb_True FIX IH.
     split; by [move=> [->->]|move=> [=]]. }
   move=> [|||||?|?|??|??|??|?|?] [|||||?|?|??|??|??|?|?]//=;
@@ -77,13 +74,6 @@ Fixpoint inh_syn_type 𝔄 : bool := match 𝔄 with
   | Empty_setₛ => false | _ => true
   end.
 
-Lemma negb_andb b c : negb (b && c) = negb b || negb c.
-Proof. by case b; case c. Qed.
-Lemma negb_orb b c : negb (b || c) = negb b && negb c.
-Proof. by case b; case c. Qed.
-Lemma negb_negb_orb b c : negb (negb b || c) = b && negb c.
-Proof. by case b; case c. Qed.
-
 Local Lemma of_just_and_neg_inh_syn_type {𝔄} :
   (inh_syn_type 𝔄 → 𝔄) * (negb (inh_syn_type 𝔄) → 𝔄 → ∅).
 Proof.
@@ -101,7 +91,7 @@ Proof.
   - case: 𝔄=>//= [𝔄?|𝔄?|𝔄?|𝔄l|𝔄l].
     + rewrite negb_andb. case Eq: (inh_syn_type 𝔄)=>/= ?[a?]; [by eapply FIX|].
       eapply FIX; [|apply a]. by rewrite Eq.
-    + rewrite negb_orb=> /andb_True[??] [x|x]; eapply FIX; [|apply x| |apply x]=>//.
+    + by rewrite negb_orb=> /andb_True[??] [a|b]; eapply FIX; [|apply a| |apply b].
     + rewrite negb_negb_orb=> /andb_True[??] f. eapply FIX; [done|]. by apply f, FIX.
     + elim 𝔄l; [done|]=> 𝔄 ? IH. rewrite negb_andb. case Eq: (inh_syn_type 𝔄)
       =>/= ?[??]; [by apply IH|]. eapply FIX; [|done]. by rewrite Eq.
@@ -114,20 +104,20 @@ Lemma of_neg_inh_syn_type {𝔄} : negb (inh_syn_type 𝔄) → 𝔄 → ∅.
 Proof. apply of_just_and_neg_inh_syn_type. Qed.
 Lemma to_inh_syn_type {𝔄} (x: 𝔄) : inh_syn_type 𝔄.
 Proof.
-  case Eq: (inh_syn_type 𝔄); [done|]. apply (@absurd ∅ _).
+  case Eq: (inh_syn_type 𝔄); [done|]. apply (absurd (A:=∅)).
   eapply of_neg_inh_syn_type; [|done]. by rewrite Eq.
 Qed.
 Lemma to_neg_inh_syn_type {𝔄} (f: 𝔄 → ∅) : negb (inh_syn_type 𝔄).
 Proof.
-  case Eq: (inh_syn_type 𝔄); [|done]. apply (@absurd ∅ _), f, of_inh_syn_type.
-  by rewrite Eq.
+  case Eq: (inh_syn_type 𝔄); [|done].
+  apply (absurd (A:=∅)), f, of_inh_syn_type. by rewrite Eq.
 Qed.
 
-Definition syn_typei: Type := { 𝔄 | inh_syn_type 𝔄 }.
+Definition syn_typei: Type := {𝔄 | inh_syn_type 𝔄}.
 Implicit Type 𝔄i 𝔅i: syn_typei.
 
 Definition of_syn_typei 𝔄i : Type := `𝔄i.
 Coercion of_syn_typei: syn_typei >-> Sortclass.
 
 Global Instance syn_typei_inhabited 𝔄i : Inhabited 𝔄i.
-Proof. apply populate. case 𝔄i=>??. by apply of_inh_syn_type. Qed.
+Proof. apply populate. case 𝔄i=> ??. by apply of_inh_syn_type. Qed.

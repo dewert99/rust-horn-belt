@@ -121,9 +121,9 @@ Lemma pmap_app `{F: A → _} {G Xl Yl} (f: ∀X, F X → G X) (xl: _ F Xl) (yl: 
   f -<$> (xl -++ yl) = (f -<$> xl) -++ (f -<$> yl).
 Proof. move: xl. elim Xl; [done|]=>/= ?? IH [??]. by rewrite IH. Qed.
 
-Fixpoint pnth `{F: A → _} {Xl} D (d: F D) (xl: plist F Xl) : ∀i, F (lnth D Xl i) :=
+Fixpoint pnth `{F: A → _} {Xl D} (d: F D) (xl: plist F Xl) : ∀i, F (lnth D Xl i) :=
   match Xl, xl with [], _ => λ _, d |
-    _::_, x -:: xl' => λ i, match i with 0 => x | S j => pnth D d xl' j end end.
+    _::_, x -:: xl' => λ i, match i with 0 => x | S j => pnth d xl' j end end.
 
 Fixpoint hlist_to_plist `{F: A → _} {Xl} (xl: hlist F Xl) : plist F Xl :=
   match xl with +[] => -[] | x +:: xl' => x -:: hlist_to_plist xl' end.
@@ -305,13 +305,14 @@ Inductive xsum {A} D (F: A → _) (Xl: list A) :=
 Arguments xinj {_ _ _ _} _ _.
 Notation xsume := (xsum ∅).
 
-Fixpoint to_xsum `{F: A → _} {D Xl} : psum F Xl → xsum D F Xl :=
+Fixpoint to_xsum `{F: A → _} {Xl} D : psum F Xl → xsum D F Xl :=
   match Xl with [] => absurd | _::_ => λ s, match s with
-    inl a => xinj (Xl:=_::_) 0 a | inr s' => match to_xsum s' with
+    inl a => xinj (Xl:=_::_) 0 a | inr s' => match to_xsum D s' with
       xinj j b => xinj (Xl:=_::_) (S j) b end end end.
+Notation to_xsume := (to_xsum ∅).
 
 Lemma pinj_to_xsum `{F: A → _} `{!Void (F D)} {Xl} i (x: F (_ D Xl _)) :
-  to_xsum (pinj i x) = xinj i x.
+  to_xsum D (pinj i x) = xinj i x.
 Proof.
   move: Xl i x. elim. { move=>/= ??. by apply absurd. }
   move=>/= ?? IH. case; [done|]=> ??. by rewrite IH.
@@ -390,7 +391,7 @@ Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
 
 Lemma HForall_1_nth `{F: A → _} {G Xl D} (Φ: ∀X, F X → G X → Prop)
   (d: _ D) d' (xl: _ Xl) yl i :
-  Φ _ d d' → HForall_1 Φ xl yl → Φ _ (hnth d xl i) (pnth D d' yl i).
+  Φ _ d d' → HForall_1 Φ xl yl → Φ _ (hnth d xl i) (pnth d' yl i).
 Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
 
 Lemma HForallTwo_nth `{F: A → _} {G Xl D}

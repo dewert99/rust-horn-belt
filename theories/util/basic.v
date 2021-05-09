@@ -11,10 +11,14 @@ Proof. split; [|case; lia]. move: n=> [|n']; [|exists n']; lia. Qed.
 Global Instance eq_nat_sym : Symmetric eq_nat.
 Proof. move=> ??. by rewrite !eq_nat_is_eq. Qed.
 
-(** * Utility for Vectors *)
+(** * Utility for Booleans *)
 
-Notation vhd := Vector.hd.
-Notation vtl := Vector.tl.
+Lemma negb_andb b c : negb (b && c) = negb b || negb c.
+Proof. by case b; case c. Qed.
+Lemma negb_orb b c : negb (b || c) = negb b && negb c.
+Proof. by case b; case c. Qed.
+Lemma negb_negb_orb b c : negb (negb b || c) = b && negb c.
+Proof. by case b; case c. Qed.
 
 (** * Utility for Lists *)
 
@@ -26,6 +30,16 @@ Notation lnthe := (lnth ∅).
 (** Fixpoint version of List.Forall *)
 Fixpoint lforall {A} (Φ: A → Prop) (xl: list A) : Prop :=
   match xl with [] => True | x :: xl' => Φ x ∧ lforall Φ xl' end.
+
+Section forall2b. Context {A B} (f: A → B → bool).
+Fixpoint forall2b (xl: list A) (yl: list B) := match xl, yl with [], [] => true
+  | x :: xl', y :: yl' => f x y && forall2b xl' yl' | _, _ => false end.
+End forall2b.
+
+(** * Utility for Vectors *)
+
+Notation vhd := Vector.hd.
+Notation vtl := Vector.tl.
 
 (** * Utility for Point-Free Style *)
 
