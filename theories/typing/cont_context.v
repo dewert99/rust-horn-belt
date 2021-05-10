@@ -1,5 +1,3 @@
-From iris.proofmode Require Import tactics.
-From lrust.lang Require Import notation.
 From lrust.typing Require Export type_context.
 Set Default Proof Using "Type".
 

@@ -1,5 +1,4 @@
 Import EqNotations.
-From iris.algebra Require Import vector list.
 From lrust.typing Require Export type.
 From lrust.typing Require Import own programs cont.
 Set Default Proof Using "Type".
@@ -250,9 +249,9 @@ Section typing.
     k ◁cont{L, Tk} post ∈ C →
     (∀ret: val, tctx_incl E L (ret ◁ box (fp x).(fp_oty) +:: T') (Tk [#ret]) tr') →
     ⊢ typed_body E L C T (call: p ql → k)
-      (tr (λ '(trp -:: adl), trans_upper' trp (tr' post) adl))%type.
+      (tr (λ '(trp -:: adl), trans_upper' trp (tr' post) adl)).
   Proof.
-    iIntros (-> Alv ToEfp ?? InTk). iApply typed_body_tctx_incl; [done|].
+    move=> -> Alv ToEfp ?? InTk. iApply typed_body_tctx_incl; [done|].
     iIntros (?[? adπl]). move: (papp_ex adπl)=> [aπl[dπl->]].
     iIntros "/= #LFT #TIME #PROPH #UNIQ #E Na L C [p[ql T']] Obs".
     iMod (lctx_lft_alive_tok_list with "E L") as (?) "(κL & L & ToL)"; [done|done|].
@@ -272,7 +271,7 @@ Section typing.
     iApply ("Body" with "LFT TIME PROPH UNIQ Efp Na [ϝ] [C ToκL L ToL]
       [$ityl $T'] Obs").
     { iSplitL; [|done]. iExists _. iSplit; [by rewrite/= left_id|]. by iFrame "ϝ". }
-    rewrite cctx_interp_singleton. iIntros (v[bπ ?]). inv_vec v=> v.
+    rewrite cctx_interp_singleton. iIntros (v[??]). inv_vec v=> v.
     iIntros "Na [(%& %Eq & ϝ &_) _] [oty Tk] Obs". rewrite/= left_id in Eq.
     rewrite -Eq. wp_rec. wp_bind Skip. iSpecialize ("To†ϝ" with "ϝ").
     iApply (wp_mask_mono _ (↑lftN ∪ ↑lft_userN)); [done|].
@@ -295,7 +294,7 @@ Section typing.
     typed_body E L C T (letcall: b := p ql in e)
       (tr (λ '(trp -:: adl), trans_upper' trp post adl)).
   Proof.
-    iIntros (->?? Clql ???) "e". iApply type_cont_norec.
+    move=> ->?? Clql ???. iIntros "e". iApply type_cont_norec.
     - (* TODO : make [solve_closed] work here. *)
       eapply is_closed_weaken; [done|]. set_solver+.
     - (* TODO : make [solve_closed] work here. *)

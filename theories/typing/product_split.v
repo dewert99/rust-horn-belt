@@ -1,5 +1,3 @@
-From iris.algebra Require Import numbers.
-From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
 From lrust.typing Require Import type_context
   mod_ty uninit product own uniq_bor shr_bor.
