@@ -222,6 +222,16 @@ Proof.
   move: Xl Yl e xl. fix FIX 1. case=> [|??]; case=>//= ???[??]/=. by rewrite FIX.
 Qed.
 
+Class IntoPlistc {A} `{Xl: _ B} (xl: list A) (yl: plistc A Xl) :=
+  into_plistc: xl = yl.
+
+Global Instance into_plistc_nil {A B} : @IntoPlistc A B [] [] -[].
+Proof. done. Qed.
+
+Global Instance into_plistc_cons {A B X Xl} x xl yl :
+  IntoPlistc xl yl → @IntoPlistc A B (X :: Xl) (x :: xl) (x -:: yl).
+Proof. by move=> ->. Qed.
+
 (** * Vector *)
 
 Fixpoint pvec A n : Type := match n with 0 => :1 | S m => A :* pvec A m end.

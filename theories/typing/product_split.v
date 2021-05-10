@@ -56,7 +56,7 @@ Section product_split.
     iDestruct (JLoc with "ptr") as %[?[=->]].
     iMod (IH _ _ _ -[_] (λ π bl, postπ π (aπ π -:: bl)) with
       "LFT PROPH UNIQ E L [$p'] Obs") as (?) "($ & T & Obs)". iModIntro.
-    rewrite hasty_ptr_offsets_offset; [|done]. iExists (_ -:: _).
+    rewrite hasty_ptr_offsets_offset; [|done]. iExists (_-::_).
     iFrame "Obs T". iExists _, _. iSplit; [by rewrite/= Ev|].
     rewrite shift_loc_0. iFrame. } by move=>/= ?[[??][]].
   Qed.
@@ -88,7 +88,7 @@ Section product_split.
     have Ne: 𝔅l ≠ [] by done. iDestruct (JLoc with "ptr") as %[l[=->]].
     have ?: eval_path p = Some #l. { move: Ev=>/=. case (eval_path p)=>//.
     (do 2 case=>//)=> ?. by rewrite shift_loc_0=> [=->]. }
-    iMod (IH Ne _ _ _ (_ -:: _) (λ π '-[bl], postπ π -[aπ π; bl]) with
+    iMod (IH Ne _ _ _ (_-::_) (λ π '-[bl], postπ π -[aπ π; bl]) with
     "LFT PROPH UNIQ E L [T] Obs") as ([?[]]) "($ & T & Obs)". { unlock.
     by rewrite -hasty_ptr_offsets_offset. } iModIntro. iExists -[_; _].
     iFrame "Obs T". iExists _, _. by iFrame. } by move=> ?[?[??]].
@@ -299,7 +299,7 @@ Section product_split.
     iDestruct "p" as ([[]|]? Ev) "[⧖ [In uniq]]"=>//.
     iMod (IH _ _ _ -[_] (λ π bl, postπ π (aa'π π -:: bl)) with
       "LFT PROPH UNIQ E L [$p'] Obs") as (?) "($ & T & Obs)". iModIntro.
-    rewrite hasty_uniq_offsets_offset; [|done]. iExists (_ -:: _).
+    rewrite hasty_uniq_offsets_offset; [|done]. iExists (_-::_).
     iFrame "Obs T". iExists _, _. iSplit; [by rewrite/= Ev|].
     rewrite shift_loc_0. iFrame. } by move=>/= ?[[[??][??]][]].
   Qed.

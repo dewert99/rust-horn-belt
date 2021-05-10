@@ -133,13 +133,13 @@ Section typing.
     TCHForall (λ _, TypeLftMorphism) Tl →
     TypeLftMorphism (λ (ty: _ 𝔅), Σ! (Tl +$ ty))%T.
   Proof.
-    move=> All. set s := λ ty, Σ!%T (Tl +$ ty).
+    move=> All. set T := λ ty, Σ!%T (Tl +$ ty).
     have [[?[?[?[??]]]]|[?[?[??]]]]:
-      (∃α βs E, (∀ty, ⊢ ty_lft (s ty) ≡ₗ α ⊓ ty_lft ty) ∧
-        (∀ty, elctx_interp (s ty).(ty_E) ⊣⊢
+      (∃α βs E, (∀ty, ⊢ ty_lft (T ty) ≡ₗ α ⊓ ty_lft ty) ∧
+        (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢
           elctx_interp E ∗ elctx_interp ty.(ty_E) ∗ [∗ list] β ∈ βs, β ⊑ ty_lft ty)) ∨
-      (∃α E, (∀ty, ⊢ ty_lft (s ty) ≡ₗ α) ∧
-        (∀ty, elctx_interp (s ty).(ty_E) ⊣⊢ elctx_interp E)); [|by eleft|by eright].
+      (∃α E, (∀ty, ⊢ ty_lft (T ty) ≡ₗ α) ∧
+        (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢ elctx_interp E)); [|by eleft|by eright].
     dependent induction All=>/=.
     { right. exists static, []. split=> ?; by [|apply lft_equiv_refl]. }
     setoid_rewrite lft_intersect_list_app.

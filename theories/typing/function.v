@@ -57,12 +57,12 @@ Section fn.
       pt_size := 1;
       pt_own (tr: (predₛ _ → predlₛ _)%ST) tid vl := tc_opaque
         (∃fb kb (bl: plistc _ _) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
-        ▷ □ ∀x ϝ k ℭl (T: _ ℭl) pre (wl: plistc _ _),
+        ▷ □ ∀x ϝ k ℭl (T: _ ℭl) post (wl: plistc _ _),
           typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
-            [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, vhd v ◁ box (fp x).(fp_oty) +:: T} pre]
+            [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, vhd v ◁ box (fp x).(fp_oty) +:: T} post]
             (hzip_with (λ _ ty (w: val), w ◁ box ty) (fp x).(fp_ityl) wl h++ T)
             (subst' fb (RecV fb (kb :: bl) e) $ subst' kb k $ subst_plv bl wl e)
-            (trans_upper' tr pre))
+            (trans_upper' tr post))
     |}%I.
   Next Obligation. rewrite /tc_opaque. apply _. Qed.
   Next Obligation. move=> *. by iDestruct 1 as (?????->) "?". Qed.
@@ -170,7 +170,7 @@ Section typing.
       subtypel E' L (fp' x).(fp_ityl) (fp x).(fp_ityl) fl ∧
       subtype E' L (fp x).(fp_oty) (fp' x).(fp_oty) g) →
     subtype E L (fn fp) (fn fp')
-     (λ tr (pre: predₛ _) (al': Π!%ST _), tr (pre ∘ g) (plist_map fl al')).
+     (λ tr (post: predₛ _) (al': Π!%ST _), tr (post ∘ g) (plist_map fl al')).
   Proof.
     move=> Big. apply subtype_plain_type=>/= ?. iIntros "L".
     iAssert (∀x ϝ, □ (elctx_interp (E ++ fp_E (fp' x) ϝ) -∗
@@ -187,18 +187,18 @@ Section typing.
     iIntros (tr _ vl). iDestruct 1 as (fb kb bl e H ->) "#fn".
     set eq := plist2_eq_nat_len fl. set bl' := plistc_renew (symmetry eq) bl.
     have Eq: (bl: list _) = bl' by rewrite plistc_renew_eq.
-    iExists fb, kb, bl', e, (rew [λ bl₀, _ (_ :b: _ :b: bl₀ +b+ _) _] Eq in H).
+    iExists fb, kb, bl', e, (rew [λ bl₀, _ (_:b:_:b: bl₀ +b+_) _] Eq in H).
     simpl_eq. iSplit; [done|]. iNext. rewrite /typed_body.
-    iIntros (x ϝ ??? pre wl') "!> % %acπl LFT TIME PROPH UNIQ #Efp' Na L C T Obs".
+    iIntros (x ϝ ??? post wl') "!> % %acπl LFT TIME PROPH UNIQ #Efp' Na L C T Obs".
     move: (papp_ex acπl)=> [aπl[cπl->]].
     rewrite subst_plv_renew. set wl := plistc_renew _ wl'.
     iDestruct ("Big" with "[$E $Efp']") as "(Efp & InIl & InO)".
-    iApply ("fn" $! _ _ _ _ _ (λ '(b -:: cl), pre (g b -:: cl)) _
+    iApply ("fn" $! _ _ _ _ _ (λ '(b -:: cl), post (g b -:: cl)) _
       _ (plist_map_with (λ _ _, (∘)) fl aπl -++ cπl) with
       "LFT TIME PROPH UNIQ Efp Na L [C] [T] [Obs]").
     - rewrite !cctx_interp_singleton. iRevert "InO C". iClear "#".
       iIntros "#(_&_& InO &_) C". iIntros (?[??]) "Na L /=[(%&%&%& ⧖ & oty) Tf] Obs".
-      iApply ("C" $! _ (_ -:: _) with "Na L [⧖ oty $Tf] Obs").
+      iApply ("C" $! _ (_-::_) with "Na L [⧖ oty $Tf] Obs").
       iExists _, _. iSplitR; [done|]. iFrame "⧖". by iApply "InO".
     - iRevert "InIl T". iClear "#". iIntros "?". iStopProof. rewrite /wl.
       move: (fp x).(fp_ityl) (fp' x).(fp_ityl)=> tyl tyl'. clear.
@@ -237,20 +237,20 @@ Section typing.
     have ->: fill_item (AppRCtx f (r :: vl) pl') w =
       App f (of_val r :: map of_val (vl ++ [w]) ++ pl') by rewrite map_app -assoc.
     iApply (IH with "pl'"). iIntros (?) "pl'". rewrite -assoc.
-    iApply ("ToWp" $! (_ -:: _)). iFrame "pl'". iExists w, _. iFrame "⧖ p".
+    iApply ("ToWp" $! (_-::_)). iFrame "pl'". iExists w, _. iFrame "⧖ p".
     by rewrite eval_path_of_val.
   Qed.
 
   Lemma type_call {A 𝔄l 𝔅 ℭl 𝔇l 𝔈l} x (fp: A → _ 𝔄l 𝔅) p (ql: list _)
-    (ql': plistc _ _) (T: _ ℭl) (T': _ 𝔇l) tr k (Tk: _ → _ 𝔈l) pre tr' E L C :
-    ql = ql' → Forall (lctx_lft_alive E L) L.*1 →
+    (ql': plistc _ _) (T: _ ℭl) (T': _ 𝔇l) tr k (Tk: _ → _ 𝔈l) post tr' E L C :
+    IntoPlistc ql ql' → Forall (lctx_lft_alive E L) L.*1 →
     (∀ϝ, elctx_sat (map (λ κ, ϝ ⊑ₑ κ) L.*1 ++ E) L (fp_E (fp x) ϝ)) →
     tctx_extract_ctx E L (p ◁ fn fp +::
       hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') T T' tr →
-    k ◁cont{L, Tk} pre ∈ C →
+    k ◁cont{L, Tk} post ∈ C →
     (∀ret: val, tctx_incl E L (ret ◁ box (fp x).(fp_oty) +:: T') (Tk [#ret]) tr') →
     ⊢ typed_body E L C T (call: p ql → k)
-      (tr (λ '(trp -:: adl), trans_upper' trp (tr' pre) adl))%type.
+      (tr (λ '(trp -:: adl), trans_upper' trp (tr' post) adl))%type.
   Proof.
     iIntros (-> Alv ToEfp ?? InTk). iApply typed_body_tctx_incl; [done|].
     iIntros (?[? adπl]). move: (papp_ex adπl)=> [aπl[dπl->]].
@@ -279,21 +279,21 @@ Section typing.
     iApply (wp_step_fupd with "To†ϝ"); [set_solver|]. wp_seq. iIntros "†ϝ !>".
     wp_seq. iMod ("ToκL" with "†ϝ") as "> κL". iMod ("ToL" with "κL L") as "L".
     iSpecialize ("C" with "[//]"). have ->: [v: expr] = map of_val ([#v]) by done.
-    iMod (InTk _ _ _ (_ -:: _) with "LFT PROPH UNIQ E L [$oty $Tk] Obs")
+    iMod (InTk _ _ _ (_-::_) with "LFT PROPH UNIQ E L [$oty $Tk] Obs")
     as (?) "(L & Tk & Obs)". iApply ("C" with "Na L Tk Obs").
   Qed.
 
   Lemma type_letcall {A 𝔄l 𝔅 ℭl 𝔇l} x (fp: A → _ 𝔄l 𝔅) p (ql: list _)
-    (ql': plistc _ _) (T: _ ℭl) (T': _ 𝔇l) b e tr pre E L C :
-    ql = ql' → Closed (b :b: []) e → Closed [] p → Forall (Closed []) ql →
-    Forall (lctx_lft_alive E L) L.*1 →
+    (ql': plistc _ _) (T: _ ℭl) (T': _ 𝔇l) b e tr post E L C :
+    IntoPlistc ql ql' → Closed (b :b: []) e → Closed [] p →
+    Forall (Closed []) ql → Forall (lctx_lft_alive E L) L.*1 →
     (∀ϝ, elctx_sat (map (λ κ, ϝ ⊑ₑ κ) L.*1 ++ E) L (fp_E (fp x) ϝ)) →
     tctx_extract_ctx E L (p ◁ fn fp +::
       hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') T T' tr →
     (∀ret: val, typed_body E L C
-      (ret ◁ box (fp x).(fp_oty) +:: T') (subst' b ret e) pre) -∗
+      (ret ◁ box (fp x).(fp_oty) +:: T') (subst' b ret e) post) -∗
     typed_body E L C T (letcall: b := p ql in e)
-      (tr (λ '(trp -:: adl), trans_upper' trp pre adl)).
+      (tr (λ '(trp -:: adl), trans_upper' trp post adl)).
   Proof.
     iIntros (->?? Clql ???) "e". iApply type_cont_norec.
     - (* TODO : make [solve_closed] work here. *)
@@ -312,7 +312,7 @@ Section typing.
       { clear -Clql. elim Clql; [done|]=>/= ????->. by rewrite is_closed_nil_subst. }
       iApply typed_body_eq; last first. { iApply type_call=>//; [constructor|]=> v.
       have {1}->: v = vhd [#v] by done. move: [#v]=> ?. apply tctx_incl_refl. } done.
-    - iIntros (k ret). inv_vec ret=>ret. rewrite /subst_v /=.
+    - iIntros (? ret). inv_vec ret=> ret. rewrite /subst_v /=.
       rewrite (is_closed_subst []); [| |set_solver+]; last first.
       { apply subst'_is_closed; [|done]. apply is_closed_of_val. } iApply "e".
   Qed.
@@ -320,21 +320,21 @@ Section typing.
   Lemma type_fnrec_instr {A 𝔄l 𝔅} (tr: pred' 𝔅 → predl 𝔄l) (fp: A → _)
     fb (bl: plistc _ _) e E L :
     Closed (fb :b: "return" :: bl +b+ []) e →
-    □ (∀x ϝ (f: val) k ℭl (T: _ ℭl) pre (wl: plistc _ 𝔄l),
+    □ (∀x ϝ (f: val) k ℭl (T: _ ℭl) post (wl: plistc _ 𝔄l),
       typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
-        [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, vhd v ◁ box (fp x).(fp_oty) +:: T} pre]
+        [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, vhd v ◁ box (fp x).(fp_oty) +:: T} post]
         (f ◁ fn fp +:: hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl h++ T)
         (subst' fb f $ subst "return" k $ subst_plv bl wl e)
-        (λ '(tr' -:: acl), tr' = tr ∧ trans_upper' tr pre acl)%type) -∗
+        (λ '(tr' -:: acl), tr' = tr ∧ trans_upper' tr post acl)%type) -∗
     typed_instr_ty E L +[] (fnrec: fb bl := e) (fn fp) (λ post _, post tr).
   Proof.
-    iIntros (Cl) "#Body %%% _ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "#⧖".
+    iIntros "% #Body %%% _ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "#⧖".
     have ?: Closed (fb :b: ("return" :: bl)%binder +b+ []) e by done.
     iApply (wp_value _ _ _ _ (RecV _ _ _)); [done|]. iExists -[const tr]. iFrame "Obs".
     iSplit; [|done]. iLöb as "IH". iExists _, 0. iSplit; [by rewrite/= decide_left|].
     iFrame "⧖". iExists tr=>/=. iSplit; [done|]. iExists fb, "return", bl, e, _.
     iSplit; [done|]. iIntros "!>!> * %% LFT TIME PROPH UNIQ Efp Na L C T ?".
-    iApply ("Body" $! _ _ (RecV _ _ _) _ _ _ _ _ _ (_ -:: _) with
+    iApply ("Body" $! _ _ (RecV _ _ _) _ _ _ _ _ _ (_-::_) with
       "LFT TIME PROPH UNIQ Efp Na L C [$T $IH]").
     by iApply proph_obs_impl; [|done]=>/= ??.
   Qed.
@@ -342,11 +342,11 @@ Section typing.
   Lemma type_fn_instr {A 𝔄l 𝔅} (tr: pred' 𝔅 → predl 𝔄l) (fp: A → _)
     (bl: plistc _ _) e E L :
     Closed ("return" :: bl +b+ []) e →
-    □ (∀x ϝ k ℭl (T: _ ℭl) pre (wl: plistc _ 𝔄l),
+    □ (∀x ϝ k ℭl (T: _ ℭl) post (wl: plistc _ 𝔄l),
       typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
-        [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, vhd v ◁ box (fp x).(fp_oty) +:: T} pre]
+        [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, vhd v ◁ box (fp x).(fp_oty) +:: T} post]
         (hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl h++ T)
-        (subst "return" k $ subst_plv bl wl e) (trans_upper' tr pre)) -∗
+        (subst "return" k $ subst_plv bl wl e) (trans_upper' tr post)) -∗
     typed_instr_ty E L +[] (fn: bl := e) (fn fp) (λ post _, post tr).
   Proof.
     iIntros (?) "#?". iApply type_fnrec_instr. iIntros "!> *".
