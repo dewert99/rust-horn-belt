@@ -22,7 +22,7 @@ Section product_split.
     tctx_interp tid (hasty_ptr_offsets ptr p tyl off) vπl.
   Proof.
     move=> ?. rewrite -{2}(Nat.add_0_r off). move: off 0.
-    induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl assoc_L].
+    induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl Nat.add_assoc].
     apply tctx_elt_interp_hasty_path=>/=. case (eval_path p)=>//.
     (do 2 case=>//)=> ?. by rewrite shift_loc_assoc Nat2Z.inj_add.
   Qed.
@@ -277,7 +277,7 @@ Section product_split.
     tctx_interp tid (hasty_uniq_offsets κ p tyl off) vπl.
   Proof.
     move=> ?. rewrite -{2}(Nat.add_0_r off). move: off 0.
-    induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl assoc_L].
+    induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl Nat.add_assoc].
     apply tctx_elt_interp_hasty_path=>/=. case (eval_path p)=>//.
     (do 2 case=>//)=> ?. by rewrite shift_loc_assoc Nat2Z.inj_add.
   Qed.
