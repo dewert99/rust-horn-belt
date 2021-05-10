@@ -24,8 +24,8 @@ Definition predl 𝔄l := pred' (plist of_syn_type 𝔄l).
 Definition predl_trans 𝔄l 𝔅l := predl 𝔅l → predl 𝔄l.
 
 Definition trans_app {𝔄l 𝔅l ℭl 𝔇l} (tr: predl_trans 𝔄l 𝔅l) (tr': predl_trans ℭl 𝔇l)
-  : predl_trans (𝔄l ++ ℭl) (𝔅l ++ 𝔇l) := λ post bdl,
-  let '(bl, dl) := psep bdl in tr (λ al, tr' (λ cl, post (al -++ cl)) dl) bl.
+  : predl_trans (𝔄l ++ ℭl) (𝔅l ++ 𝔇l) := λ post acl,
+  let '(al, cl) := psep acl in tr (λ bl, tr' (λ dl, post (bl -++ dl)) cl) al.
 
 Definition trans_lower {𝔄l 𝔅l ℭl} (tr: predl_trans 𝔄l 𝔅l)
   : predl_trans (ℭl ++ 𝔄l) (ℭl ++ 𝔅l) := λ post cal,
@@ -43,8 +43,8 @@ Section type_context.
   Context `{!typeG Σ}.
 
   Fixpoint eval_path (p: path) : option val := match p with
-    | BinOp OffsetOp e (Lit (LitInt n)) => match eval_path e with
-        Some (#(LitLoc l)) => Some (#(l +ₗ n)) | _ => None end
+    | BinOp OffsetOp e (#(LitInt n))%E => match eval_path e with
+        Some #(LitLoc l) => Some #(l +ₗ n) | _ => None end
     | e => to_val e end.
 
   Lemma eval_path_of_val (v: val) : eval_path v = Some v.
@@ -107,7 +107,7 @@ Section lemmas.
     by rewrite eval_path_of_val.
   Qed.
 
-  Lemma wp_hasty {𝔄} E tid p (ty : type 𝔄) vπ Φ :
+  Lemma wp_hasty {𝔄} E tid p (ty: _ 𝔄) vπ Φ :
     tctx_elt_interp tid (p ◁ ty) vπ -∗
     (∀v d, ⌜Some v = eval_path p⌝ -∗ ⧖d -∗ ty.(ty_own) vπ d tid [v] -∗ Φ v) -∗
     WP p @ E {{ Φ }}.
