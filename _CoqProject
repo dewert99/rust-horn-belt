@@ -54,14 +54,13 @@ theories/typing/own.v
 theories/typing/uniq_bor.v
 theories/typing/shr_bor.v
 theories/typing/product.v
-theories/typing/product_split.v
 theories/typing/sum.v
+theories/typing/array.v
 theories/typing/bool.v
 theories/typing/int.v
 theories/typing/function.v
 theories/typing/programs.v
 theories/typing/borrow.v
-# theories/typing/array.v
 theories/typing/cont.v
 theories/typing/fixpoint.v
 # theories/typing/type_sum.v

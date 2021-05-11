@@ -6,7 +6,7 @@ Set Default Proof Using "Type".
 (** * Syntax for Coq type *)
 
 Inductive syn_type := Zₛ | boolₛ | unitₛ | Empty_setₛ | Propₛ
-| optionₛ (_: syn_type) | listₛ (_: syn_type)
+| optionₛ (_: syn_type) | listₛ (_: syn_type) | vecₛ (_: syn_type) (_: nat)
 | prodₛ (_ _: syn_type) | sumₛ (_ _: syn_type) | funₛ (_ _: syn_type)
 | xprodₛ (_: list syn_type) | xsumₛ (_: list syn_type).
 
@@ -28,6 +28,7 @@ Definition predlₛ 𝔄l : syn_type := predₛ (Π! 𝔄l).
 Fixpoint of_syn_type (𝔄: syn_type) : Type := match 𝔄 with
   | Zₛ => Z | boolₛ => bool | unitₛ => () | Empty_setₛ => ∅ | Propₛ => Prop
   | optionₛ 𝔄₀ => option (of_syn_type 𝔄₀) | listₛ 𝔄₀ => list (of_syn_type 𝔄₀)
+  | vecₛ 𝔄₀ n => vec (of_syn_type 𝔄₀) n
   | prodₛ 𝔄₀ 𝔄₁ => of_syn_type 𝔄₀ * of_syn_type 𝔄₁
   | sumₛ 𝔄₀ 𝔄₁ => of_syn_type 𝔄₀ + of_syn_type 𝔄₁
   | funₛ 𝔄₀ 𝔄₁ => of_syn_type 𝔄₀ → of_syn_type 𝔄₁
@@ -41,6 +42,7 @@ Coercion of_syn_type: syn_type >-> Sortclass.
 Fixpoint syn_type_beq 𝔄 𝔅 : bool := match 𝔄, 𝔅 with
   | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Empty_setₛ, Empty_setₛ | Propₛ, Propₛ => true
   | optionₛ 𝔄₀, optionₛ 𝔅₀ | listₛ 𝔄₀, listₛ 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀
+  | vecₛ 𝔄₀ n, vecₛ 𝔅₀ m => syn_type_beq 𝔄₀ 𝔅₀ && bool_decide (n = m)
   | 𝔄₀ * 𝔄₁, 𝔅₀ * 𝔅₁ | 𝔄₀ + 𝔄₁, 𝔅₀ + 𝔅₁ | 𝔄₀ → 𝔄₁, 𝔅₀ → 𝔅₁
     => syn_type_beq 𝔄₀ 𝔅₀ && syn_type_beq 𝔄₁ 𝔅₁
   | Π! 𝔄l, Π! 𝔅l | Σ! 𝔄l, Σ! 𝔅l => forall2b syn_type_beq 𝔄l 𝔅l
@@ -53,8 +55,9 @@ Proof.
   have FIXl: ∀𝔄l 𝔅l, forall2b syn_type_beq 𝔄l 𝔅l ↔ 𝔄l = 𝔅l.
   { elim=> [|?? IH][|??]//. rewrite andb_True FIX IH.
     split; by [move=> [->->]|move=> [=]]. }
-  move=> [|||||?|?|??|??|??|?|?] [|||||?|?|??|??|??|?|?]//=;
-  rewrite ?andb_True ?FIX ?FIXl; try (by split; [move=> ->|move=> [=]]);
+  case=> [|||||?|?|??|??|??|??|?|?] [|||||?|?|??|??|??|??|?|?] //=;
+  rewrite ?andb_True ?FIX ?FIXl ?bool_decide_spec;
+  try (by split; [move=> ->|move=> [=]]);
   by split; [move=> [->->]|move=> [=]].
 Qed.
 Instance syn_type_beq_dec: EqDecision syn_type.
@@ -66,6 +69,7 @@ Qed.
 (** Decidable Inhabitedness *)
 
 Fixpoint inh_syn_type 𝔄 : bool := match 𝔄 with
+  | vecₛ 𝔄₀ n => bool_decide (n = 0) || inh_syn_type 𝔄₀
   | prodₛ 𝔄₀ 𝔄₁ => inh_syn_type 𝔄₀ && inh_syn_type 𝔄₁
   | sumₛ 𝔄₀ 𝔄₁ => inh_syn_type 𝔄₀ || inh_syn_type 𝔄₁
   | funₛ 𝔄₀ 𝔄₁ => negb (inh_syn_type 𝔄₀) || inh_syn_type 𝔄₁
@@ -79,6 +83,9 @@ Local Lemma of_just_and_neg_inh_syn_type {𝔄} :
 Proof.
   move: 𝔄. fix FIX 1. move=> 𝔄. split.
   - case: 𝔄=>//=; try by (move=> *; exact inhabitant).
+    + move=> ? n. case Eq: (bool_decide (n = 0))=>/=.
+      { move: Eq=> /bool_decide_eq_true ->?. exact [#]. }
+      { move=> ?. by apply (vreplicate n), FIX. }
     + move=> ?? /andb_True[??]. constructor; by apply FIX.
     + move=> 𝔄?. case Eq: (inh_syn_type 𝔄)=>/= H.
       { apply inl, FIX. by rewrite Eq. } { by apply inr, FIX. }
@@ -88,14 +95,19 @@ Proof.
       split; by [apply FIX|apply IH].
     + elim; [done|]=>/= 𝔄 ? IH. case Eq: (inh_syn_type 𝔄)=>/= H.
       { left. apply FIX. by rewrite Eq. } { right. by apply IH. }
-  - case: 𝔄=>//= [𝔄?|𝔄?|𝔄?|𝔄l|𝔄l].
-    + rewrite negb_andb. case Eq: (inh_syn_type 𝔄)=>/= ?[a?]; [by eapply FIX|].
+  - case: 𝔄=>//=.
+    + move=> ?[|?]; rewrite negb_orb=> /andb_True[/negb_True/bool_decide_spec ??] v;
+      [lia|]. by eapply FIX, vhd.
+    + move=> 𝔄?. rewrite negb_andb.
+      case Eq: (inh_syn_type 𝔄)=>/= ?[a?]; [by eapply FIX|].
       eapply FIX; [|apply a]. by rewrite Eq.
-    + by rewrite negb_orb=> /andb_True[??] [a|b]; eapply FIX; [|apply a| |apply b].
-    + rewrite negb_negb_orb=> /andb_True[??] f. eapply FIX; [done|]. by apply f, FIX.
-    + elim 𝔄l; [done|]=> 𝔄 ? IH. rewrite negb_andb. case Eq: (inh_syn_type 𝔄)
+    + move=> ??. by rewrite negb_orb=> /andb_True[??] [a|b];
+      eapply FIX; [|apply a| |apply b].
+    + move=> ??. rewrite negb_negb_orb=> /andb_True[??] f. eapply FIX; [done|].
+      by apply f, FIX.
+    + elim; [done|]=> 𝔄 ? IH. rewrite negb_andb. case Eq: (inh_syn_type 𝔄)
       =>/= ?[??]; [by apply IH|]. eapply FIX; [|done]. by rewrite Eq.
-    + elim 𝔄l; [move=> ?; by apply absurd|]=> ?? IH.
+    + elim; [move=> ?; by apply absurd|]=> ?? IH.
       rewrite negb_orb=> /andb_True[??] [?|?]; by [eapply FIX|apply IH].
 Qed.
 Lemma of_inh_syn_type {𝔄} : inh_syn_type 𝔄 → 𝔄.

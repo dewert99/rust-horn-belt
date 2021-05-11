@@ -12,8 +12,7 @@ Section product.
       ty.(ty_own) vπ d tid wl ∗ ty'.(ty_own) vπ' d' tid wl')%I ⊣⊢
     l ↦∗{q}: ty.(ty_own) vπ d tid ∗
       (l +ₗ ty.(ty_size)) ↦∗{q}: ty'.(ty_own) vπ' d' tid.
-  Proof.
-    iSplit.
+  Proof. iSplit.
     - iIntros "(%& ↦ &%&%&->& ty & ty')". rewrite heap_mapsto_vec_app.
       iDestruct "↦" as "[↦ ↦']". iDestruct (ty_size_eq with "ty") as %->.
       iSplitL "↦ ty"; iExists _; iFrame.
@@ -33,11 +32,8 @@ Section product.
   Next Obligation.
     iIntros "* (%&%&->& H)". rewrite app_length !ty_size_eq. by iDestruct "H" as "[->->]".
   Qed.
-  Next Obligation.
-    iIntros "*% (%&%&->& ty &?)". iExists wl, wl'. iSplit; [done|].
-    by iSplitL "ty"; iApply ty_own_depth_mono.
-  Qed.
-  Next Obligation. iIntros "*%[??]". iSplit; by iApply ty_shr_depth_mono. Qed.
+  Next Obligation. move=>/= *. do 6 f_equiv; by apply ty_own_depth_mono. Qed.
+  Next Obligation. move=>/= *. f_equiv; by apply ty_shr_depth_mono. Qed.
   Next Obligation.
     iIntros "* In [??]". iSplit; by iApply (ty_shr_lft_mono with "In").
   Qed.
@@ -173,10 +169,10 @@ Section typing.
   Global Instance prod_copy {𝔄 𝔅} (ty: _ 𝔄) (ty': _ 𝔅) :
     Copy ty → Copy ty' → Copy (ty * ty').
   Proof.
-    move=> ??. split; [by apply _|]=>/= > ? HF. iIntros "#LFT [ty ty'] Na [κ κ']".
+    move=> ??. split; [by apply _|]=>/= > ? HF. iIntros "#LFT [ty ty'] Na [κ κ+]".
     iMod (copy_shr_acc with "LFT ty Na κ") as (q wl) "(Na & ↦ & #ty & Toκ)";
     first done. { rewrite <-HF. apply shr_locsE_subseteq=>/=. lia. }
-    iMod (copy_shr_acc with "LFT ty' Na κ'") as (q' wl') "(Na & ↦' & #ty' & Toκ')";
+    iMod (copy_shr_acc with "LFT ty' Na κ+") as (q' wl') "(Na & ↦' & #ty' & Toκ+)";
     first done. { apply subseteq_difference_r. { symmetry. apply shr_locsE_disj. }
       move: HF. rewrite -plus_assoc shr_locsE_shift. set_solver. }
     iDestruct (na_own_acc with "Na") as "[$ ToNa]".
@@ -186,7 +182,7 @@ Section typing.
     iDestruct "↦" as "[$ ↦r]". iDestruct "↦'" as "[$ ↦r']". iSplitR.
     { iIntros "!>!>". iExists wl, wl'. iSplit; by [|iSplit]. }
     iIntros "!> Na [↦ ↦']". iDestruct ("ToNa" with "Na") as "Na".
-    iMod ("Toκ'" with "Na [$↦' $↦r']") as "[Na $]".
+    iMod ("Toκ+" with "Na [$↦' $↦r']") as "[Na $]".
     iApply ("Toκ" with "Na [$↦ $↦r]").
   Qed.
 

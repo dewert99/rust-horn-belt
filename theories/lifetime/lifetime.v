@@ -180,6 +180,13 @@ Proof.
   by iMod (bor_persistent with "LFT Bor κ") as "[$$]".
 Qed.
 
+Lemma bor_big_sepL {A} E κ Φ (xl: _ A) : ↑lftN ⊆ E → lft_ctx -∗
+  &{κ} ([∗ list] i ↦ x ∈ xl, Φ i x) ={E}=∗ [∗ list] i ↦ x ∈ xl, &{κ} (Φ i x).
+Proof.
+  iIntros (?) "#LFT Bor". iInduction xl as [|] "IH" forall (Φ); [by iModIntro|]=>/=.
+  iMod (bor_sep with "LFT Bor") as "[$ Bor']"; [done|]. iApply ("IH" with "Bor'").
+Qed.
+
 Lemma later_bor_static E P :
   ↑lftN ⊆ E →
   lft_ctx -∗ ▷ P ={E}=∗ &{static} P.

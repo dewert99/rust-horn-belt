@@ -78,6 +78,12 @@ Proof.
   move=> ??. rewrite (surjective_pairing_fun vπ). by apply proph_dep_constr2.
 Qed.
 
+Lemma proph_dep_vcons {A n} ξl ζl (vπ: _ → vec A (S n)) :
+  vhd ∘ vπ ./ ξl → vtl ∘ vπ ./ ζl → vπ ./ ξl ++ ζl.
+Proof.
+  move=> ??. rewrite (surjective_vcons_fun vπ). by apply proph_dep_constr2.
+Qed.
+
 (** * Prophecy Log *)
 
 Record proph_log_item :=
