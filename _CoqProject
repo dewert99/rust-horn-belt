@@ -45,9 +45,9 @@ theories/typing/uniq_cmra.v
 theories/typing/type.v
 theories/typing/lft_contexts.v
 theories/typing/type_context.v
-theories/typing/empty.v
 theories/typing/cont_context.v
 theories/typing/uninit.v
+theories/typing/base_type.v
 theories/typing/maybe_uninit.v
 theories/typing/mod_ty.v
 theories/typing/own.v

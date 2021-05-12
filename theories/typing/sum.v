@@ -1,10 +1,12 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import mod_ty empty.
+From lrust.typing Require Import mod_ty base_type.
 Set Default Proof Using "Type".
 
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
+
+Local Instance base_empty `{!typeG Σ} : Empty (type ∅) := base.
 
 Section sum.
   Context `{!typeG Σ}.
@@ -118,13 +120,14 @@ End sum.
 
 Notation "Σ!" := xsum_ty : lrust_type_scope.
 Notation "ty + ty'" := (sum_ty ty%T ty'%T) : lrust_type_scope.
+Notation empty := (xsum_ty +[]).
 
 Section typing.
   Context `{!typeG Σ}.
 
   Lemma xsum_lft_morph {𝔅 𝔄l} (Tl: _ 𝔄l) :
     TCHForall (λ _, TypeLftMorphism) Tl →
-    TypeLftMorphism (λ (ty: _ 𝔅), Σ! (Tl +$ ty))%T.
+    TypeLftMorphism (λ ty: _ 𝔅, Σ! (Tl +$ ty))%T.
   Proof.
     move=> All. set T := λ ty, Σ!%T (Tl +$ ty).
     have [[?[?[?[??]]]]|[?[?[??]]]]:
@@ -297,6 +300,8 @@ Section typing.
   Proof. move=> [??][??]. split; by apply sum_subtype. Qed.
 
 End typing.
+
+Global Instance empty_empty `{!typeG Σ} : Empty (type ∅) := empty.
 
 Global Hint Resolve xsum_leak sum_leak | 1 : lrust_typing.
 Global Hint Resolve xsum_subtype xsum_eqtype sum_subtype sum_eqtype : lrust_typing.

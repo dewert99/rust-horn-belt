@@ -5,15 +5,13 @@ Set Default Proof Using "Type".
 
 (** * Syntax for Coq type *)
 
-Inductive syn_type := Zₛ | boolₛ | unitₛ | Empty_setₛ | Propₛ
+Inductive syn_type := Zₛ | boolₛ | unitₛ | Propₛ
 | optionₛ (_: syn_type) | listₛ (_: syn_type) | vecₛ (_: syn_type) (_: nat)
 | prodₛ (_ _: syn_type) | sumₛ (_ _: syn_type) | funₛ (_ _: syn_type)
 | xprodₛ (_: list syn_type) | xsumₛ (_: list syn_type).
 
 Notation syn_typel := (list syn_type).
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
-
-Global Instance Empty_setₛ_empty: Empty syn_type := Empty_setₛ.
 
 Declare Scope syn_type_scope.
 Bind Scope syn_type_scope with syn_type.
@@ -22,11 +20,17 @@ Notation "()" := unitₛ : syn_type_scope.
 Infix "*" := prodₛ : syn_type_scope. Infix "+" := sumₛ : syn_type_scope.
 Infix "→" := funₛ : syn_type_scope.
 Notation "Π!" := xprodₛ : syn_type_scope. Notation "Σ!" := xsumₛ : syn_type_scope.
+(* We use the following notation because
+  [psum of_syn_type []] is equal to [Empty_set] *)
+Notation Empty_setₛ := (xsumₛ []).
+
+Global Instance Empty_setₛ_empty: Empty syn_type := Empty_setₛ.
+
 Definition predₛ 𝔄 : syn_type := 𝔄 → Propₛ.
 Definition predlₛ 𝔄l : syn_type := predₛ (Π! 𝔄l).
 
 Fixpoint of_syn_type (𝔄: syn_type) : Type := match 𝔄 with
-  | Zₛ => Z | boolₛ => bool | unitₛ => () | Empty_setₛ => ∅ | Propₛ => Prop
+  | Zₛ => Z | boolₛ => bool | unitₛ => () | Propₛ => Prop
   | optionₛ 𝔄₀ => option (of_syn_type 𝔄₀) | listₛ 𝔄₀ => list (of_syn_type 𝔄₀)
   | vecₛ 𝔄₀ n => vec (of_syn_type 𝔄₀) n
   | prodₛ 𝔄₀ 𝔄₁ => of_syn_type 𝔄₀ * of_syn_type 𝔄₁
@@ -40,7 +44,7 @@ Coercion of_syn_type: syn_type >-> Sortclass.
 (** Decidable Equality *)
 
 Fixpoint syn_type_beq 𝔄 𝔅 : bool := match 𝔄, 𝔅 with
-  | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Empty_setₛ, Empty_setₛ | Propₛ, Propₛ => true
+  | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Propₛ, Propₛ => true
   | optionₛ 𝔄₀, optionₛ 𝔅₀ | listₛ 𝔄₀, listₛ 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀
   | vecₛ 𝔄₀ n, vecₛ 𝔅₀ m => syn_type_beq 𝔄₀ 𝔅₀ && bool_decide (n = m)
   | 𝔄₀ * 𝔄₁, 𝔅₀ * 𝔅₁ | 𝔄₀ + 𝔄₁, 𝔅₀ + 𝔅₁ | 𝔄₀ → 𝔄₁, 𝔅₀ → 𝔅₁
@@ -55,7 +59,7 @@ Proof.
   have FIXl: ∀𝔄l 𝔅l, forall2b syn_type_beq 𝔄l 𝔅l ↔ 𝔄l = 𝔅l.
   { elim=> [|?? IH][|??]//. rewrite andb_True FIX IH.
     split; by [move=> [->->]|move=> [=]]. }
-  case=> [|||||?|?|??|??|??|??|?|?] [|||||?|?|??|??|??|??|?|?] //=;
+  move=> 𝔄 𝔅. case 𝔄; case 𝔅=>//= *;
   rewrite ?andb_True ?FIX ?FIXl ?bool_decide_spec;
   try (by split; [move=> ->|move=> [=]]);
   by split; [move=> [->->]|move=> [=]].
@@ -75,7 +79,7 @@ Fixpoint inh_syn_type 𝔄 : bool := match 𝔄 with
   | funₛ 𝔄₀ 𝔄₁ => negb (inh_syn_type 𝔄₀) || inh_syn_type 𝔄₁
   | xprodₛ 𝔄l => forallb inh_syn_type 𝔄l
   | xsumₛ 𝔄l => existsb inh_syn_type 𝔄l
-  | Empty_setₛ => false | _ => true
+  | _ => true
   end.
 
 Local Lemma of_just_and_neg_inh_syn_type {𝔄} :
