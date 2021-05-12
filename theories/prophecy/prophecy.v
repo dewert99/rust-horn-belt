@@ -152,8 +152,8 @@ Local Definition add_line ξ it (S: proph_smryUR) : proph_smryUR :=
   .<[ξ.(pv_ty) := <[ξ.(pv_id) := it]> (S ξ.(pv_ty))]> S.
 
 Definition prophΣ: gFunctors := #[GFunctor prophUR].
-Class prophPreG Σ := ProphPreG { proph_preG_inG:> inG Σ prophUR }.
-Class prophG Σ := ProphG { proph_inG:> prophPreG Σ; proph_name: gname }.
+Class prophPreG Σ := ProphPreG { proph_preG_inG :> inG Σ prophUR }.
+Class prophG Σ := ProphG { proph_inG :> prophPreG Σ; proph_name: gname }.
 Global Instance subG_prophPreG Σ : subG prophΣ Σ → prophPreG Σ.
 Proof. solve_inG. Qed.
 

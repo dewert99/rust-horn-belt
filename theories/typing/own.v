@@ -2,7 +2,6 @@ From lrust.lang.lib Require Import memcpy.
 From lrust.typing Require Export type.
 From lrust.typing Require Import uninit type_context programs.
 Set Default Proof Using "Type".
-Open Scope nat_scope.
 
 Implicit Type 𝔄 𝔅: syn_type.
 
@@ -10,7 +9,7 @@ Section own.
   Context `{!typeG Σ}.
 
   Definition freeable_sz (n sz: nat) (l: loc) : iProp Σ :=
-    match sz, n with 0, _ => True | _, 0 => False |
+    match sz, n with 0%nat, _ => True | _, 0%nat => False |
       sz, n => †{pos_to_Qp (Pos.of_nat sz) / pos_to_Qp (Pos.of_nat n)}l…sz end.
   Arguments freeable_sz: simpl never.
 
@@ -213,25 +212,25 @@ Section typing.
   Qed.
 
   Lemma type_new_instr n E L :
-    (0 ≤ n)%Z → let n' := Z.to_nat n in
+    0 ≤ n → let n' := Z.to_nat n in
     ⊢ typed_instr_ty E L +[] (new [ #n])%E (own_ptr n' (↯ n')) (λ post _, post ()).
   Proof.
     iIntros (?????) "_ TIME _ _ _ $$ _ ?". iMod persist_time_rcpt_0 as "⧖".
     iApply (wp_persist_time_rcpt with "TIME ⧖"); [done|].
     iApply wp_new=>//. iIntros "!>" (l) "(† & ↦) #⧖". iExists -[const ()].
     iSplit; [|done]. rewrite/= right_id (tctx_hasty_val #l).
-    iExists 1. iFrame "⧖". rewrite/= freeable_sz_full Z2Nat.id; [|done].
+    iExists 1%nat. iFrame "⧖". rewrite/= freeable_sz_full Z2Nat.id; [|done].
     iFrame "†". iNext. iExists _. iFrame "↦". by rewrite repeat_length.
   Qed.
 
   Lemma type_new {𝔄l} (n: Z) n' x e pre E L C (T: _ 𝔄l) :
-    Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n →
+    Closed (x :b: []) e → 0 ≤ n → n' = Z.to_nat n →
     (∀v: val, typed_body E L C (v ◁ own_ptr n' (↯ n') +:: T) (subst' x v e) pre) -∗
     typed_body E L C T (let: x := new [ #n] in e) (λ al, pre (() -:: al)).
   Proof. iIntros. subst. iApply type_let; by [apply type_new_instr|solve_typing]. Qed.
 
   Lemma type_new_subtype {𝔄 𝔄l} (ty: _ 𝔄) n' (n: Z) (T: _ 𝔄l) f e pre x E L C :
-    Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n → subtype E L (↯ n') ty f →
+    Closed (x :b: []) e → 0 ≤ n → n' = Z.to_nat n → subtype E L (↯ n') ty f →
     (∀v: val, typed_body E L C (v ◁ own_ptr n' ty +:: T) (subst' x v e) pre) -∗
     typed_body E L C T (let: x := new [ #n] in e) (λ al, pre (f () -:: al)).
   Proof.
@@ -265,7 +264,7 @@ Section typing.
   Lemma type_letalloc_1 {𝔄 𝔄l 𝔅l} (ty: _ 𝔄) (x: string) p e
     (T: _ 𝔄l) (T': _ 𝔅l) tr pre E L C :
     Closed [] p → Closed [x] e →
-    tctx_extract_ctx E L +[p ◁ ty] T T' tr → ty.(ty_size) = 1 →
+    tctx_extract_ctx E L +[p ◁ ty] T T' tr → ty.(ty_size) = 1%nat →
     (∀v: val, typed_body E L C (v ◁ box ty +:: T') (subst x v e) pre) -∗
     typed_body E L C T (letalloc: x <- p in e) (tr pre).
   Proof.

@@ -1,4 +1,5 @@
-From lrust.typing Require Export type.
+From lrust.lang Require Import proofmode.
+From lrust.typing Require Export lft_contexts type bool.
 From lrust.typing Require Import empty.
 Import uPred.
 Set Default Proof Using "Type".
@@ -40,7 +41,7 @@ Section S.
     iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const (S n) 0) as "[_ $]".
   Qed.
 
-  Lemma Tn_cauchy n i : n ≤ i →
+  Lemma Tn_cauchy n i : (n ≤ i)%nat →
     (∀vπ d tid vl, dist_later n
       ((Tn (2 + i)).(ty_own) vπ d tid vl) ((Tn (2 + n)).(ty_own) vπ d tid vl)) ∧
     (∀vπ d κ tid l,
@@ -301,8 +302,8 @@ Section subtyping.
     (* FIXME : change the definition of limit_preserving so that it
        applies even if the limti is not computed with compl. *)
     apply and_intro; [|apply and_intro; [|apply and_intro]].
-    - iIntros "H". iDestruct ("H" $! 0) as "($&_)".
-    - iIntros "H". iDestruct ("H" $! 0) as "(_&$&_)".
+    - iIntros "H". iDestruct ("H" $! 0%nat) as "($&_)".
+    - iIntros "H". iDestruct ("H" $! 0%nat) as "(_&$&_)".
     - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
       apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
     - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
@@ -321,8 +322,8 @@ Section subtyping.
       move: qL. apply Loop. elim n=> [|??]; [solve_typing|by apply Loop]. }
     rewrite Incl /type_incl -!persistent_and_sep /=. do 2 f_equiv.
     apply and_intro; [|apply and_intro; [|apply and_intro]].
-    - iIntros "H". iDestruct ("H" $! 0) as "($&_)".
-    - iIntros "H". iDestruct ("H" $! 0) as "(_&$&_)".
+    - iIntros "H". iDestruct ("H" $! 0%nat) as "($&_)".
+    - iIntros "H". iDestruct ("H" $! 0%nat) as "(_&$&_)".
     - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
       apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
     - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.

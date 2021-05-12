@@ -330,7 +330,7 @@ Section typing.
     iIntros "% #Body %%% _ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "#⧖".
     have ?: Closed (fb :b: ("return" :: bl)%binder +b+ []) e by done.
     iApply (wp_value _ _ _ _ (RecV _ _ _)); [done|]. iExists -[const tr]. iFrame "Obs".
-    iSplit; [|done]. iLöb as "IH". iExists _, 0. iSplit; [by rewrite/= decide_left|].
+    iSplit; [|done]. iLöb as "IH". iExists _, 0%nat. iSplit; [by rewrite/= decide_left|].
     iFrame "⧖". iExists tr=>/=. iSplit; [done|]. iExists fb, "return", bl, e, _.
     iSplit; [done|]. iIntros "!>!> * %% LFT TIME PROPH UNIQ Efp Na L C T ?".
     iApply ("Body" $! _ _ (RecV _ _ _) _ _ _ _ _ _ (_-::_) with

@@ -1,4 +1,5 @@
-From lrust.typing Require Export type.
+From iris.proofmode Require Import tactics.
+From lrust.typing Require Import type lft_contexts.
 Set Default Proof Using "Type".
 
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl 𝔇l: syn_typel).
@@ -348,7 +349,7 @@ Section lemmas.
 
   Global Instance unblock_tctx_nil κ E L : UnblockTctx E L κ +[] +[].
   Proof.
-    iIntros (??[]) "_ _ L _ _". iMod persist_time_rcpt_0. iExists 0, -[].
+    iIntros (??[]) "_ _ L _ _". iMod persist_time_rcpt_0. iExists 0%nat, -[].
     iModIntro. iSplit; [done|]. iIntros "!>!>!>!>". iFrame "L".
     iSplit; [|done]. by iApply proph_obs_true.
   Qed.

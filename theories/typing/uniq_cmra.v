@@ -22,8 +22,8 @@ Local Definition add_line ξ q vπ d (S: uniq_smryUR) : uniq_smryUR :=
   .<[ξ.(pv_ty) := <[ξ.(pv_id) := item q vπ d]> (S ξ.(pv_ty))]> S.
 
 Definition uniqΣ: gFunctors := #[GFunctor uniqUR].
-Class uniqPreG Σ := UniqPreG { uniq_preG_inG:> inG Σ uniqUR }.
-Class uniqG Σ := UniqG { uniq_inG:> uniqPreG Σ; uniq_name: gname }.
+Class uniqPreG Σ := UniqPreG { uniq_preG_inG :> inG Σ uniqUR }.
+Class uniqG Σ := UniqG { uniq_inG :> uniqPreG Σ; uniq_name: gname }.
 Global Instance subG_uniqPreG Σ : subG uniqΣ Σ → uniqPreG Σ.
 Proof. solve_inG. Qed.
 

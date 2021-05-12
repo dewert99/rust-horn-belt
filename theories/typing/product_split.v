@@ -1,6 +1,7 @@
+From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
-From lrust.typing Require Import type_context
-  mod_ty uninit product own uniq_bor shr_bor.
+From lrust.typing Require Import type_context lft_contexts product own uniq_bor.
+From lrust.typing Require Import shr_bor mod_ty uninit.
 Set Default Proof Using "Type".
 
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl: syn_typel).
@@ -21,7 +22,7 @@ Section product_split.
     tctx_interp tid (hasty_ptr_offsets ptr (p +ₗ #off) tyl 0) vπl ⊣⊢
     tctx_interp tid (hasty_ptr_offsets ptr p tyl off) vπl.
   Proof.
-    move=> ?. rewrite -{2}(Nat.add_0_r off). move: off 0.
+    move=> ?. rewrite -{2}(Nat.add_0_r off). move: off 0%nat.
     induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl Nat.add_assoc].
     apply tctx_elt_interp_hasty_path=>/=. case (eval_path p)=>//.
     (do 2 case=>//)=> ?. by rewrite shift_loc_assoc Nat2Z.inj_add.
@@ -276,7 +277,7 @@ Section product_split.
     tctx_interp tid (hasty_uniq_offsets κ (p +ₗ #off) tyl 0) vπl ⊣⊢
     tctx_interp tid (hasty_uniq_offsets κ p tyl off) vπl.
   Proof.
-    move=> ?. rewrite -{2}(Nat.add_0_r off). move: off 0.
+    move=> ?. rewrite -{2}(Nat.add_0_r off). move: off 0%nat.
     induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl Nat.add_assoc].
     apply tctx_elt_interp_hasty_path=>/=. case (eval_path p)=>//.
     (do 2 case=>//)=> ?. by rewrite shift_loc_assoc Nat2Z.inj_add.

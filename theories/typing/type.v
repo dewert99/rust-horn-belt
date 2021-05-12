@@ -1,18 +1,22 @@
 From iris.algebra Require Import numbers list.
-From iris.base_logic Require Export na_invariants.
+From iris.base_logic.lib Require Export na_invariants.
 From lrust.util Require Export basic update fancy_lists.
 From lrust.prophecy Require Export prophecy.
 From lrust.lifetime Require Export frac_borrow.
 From lrust.lang Require Export proofmode notation.
-From lrust.typing Require Export base lft_contexts uniq_cmra.
+From lrust.typing Require Export base uniq_cmra.
+From lrust.typing Require Import lft_contexts.
 Set Default Proof Using "Type".
-Open Scope nat_scope.
 
 Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Class typeG Σ := TypeG {
-  type_lrustG:> lrustG Σ;  type_prophG:> prophG Σ;  type_uniqG:> uniqG Σ;
-  type_lftG:> lftG Σ;  type_na_invG:> na_invG Σ;  type_frac_borG:> frac_borG Σ;
+  type_lrustG :> lrustG Σ;
+  type_prophG :> prophG Σ;
+  type_uniqG :> uniqG Σ;
+  type_lftG :> lftG Σ;
+  type_na_invG :> na_invG Σ;
+  type_frac_borG :> frac_borG Σ;
 }.
 
 Definition lrustN := nroot .@ "lrust".
@@ -31,9 +35,9 @@ Record type `{!typeG Σ} 𝔄 := {
 
   ty_size_eq vπ d tid vl : ty_own vπ d tid vl -∗ ⌜length vl = ty_size⌝;
   ty_own_depth_mono d d' vπ tid vl :
-    d ≤ d' → ty_own vπ d tid vl -∗ ty_own vπ d' tid vl;
+    (d ≤ d')%nat → ty_own vπ d tid vl -∗ ty_own vπ d' tid vl;
   ty_shr_depth_mono d d' vπ κ tid l :
-    d ≤ d' → ty_shr vπ d κ tid l -∗ ty_shr vπ d' κ tid l;
+    (d ≤ d')%nat → ty_shr vπ d κ tid l -∗ ty_shr vπ d' κ tid l;
   ty_shr_lft_mono κ κ' vπ d tid l :
     κ' ⊑ κ -∗ ty_shr vπ d κ tid l -∗ ty_shr vπ d κ' tid l;
 
@@ -64,25 +68,30 @@ Record type `{!typeG Σ} 𝔄 := {
       q':+[ξl] ∗ (q':+[ξl] ={E}=∗ ty_shr vπ d κ tid l ∗ q.[κ']);
 }.
 Existing Instance ty_shr_persistent.
-Instance: Params (@ty_size) 3 := {}.  Instance: Params (@ty_lfts) 3 := {}.
+Instance: Params (@ty_size) 3 := {}.
+Instance: Params (@ty_lfts) 3 := {}.
 Instance: Params (@ty_E) 3 := {}.
-Instance: Params (@ty_own) 3 := {}.  Instance: Params (@ty_shr) 3 := {}.
+Instance: Params (@ty_own) 3 := {}.
+Instance: Params (@ty_shr) 3 := {}.
 Arguments ty_size {_ _ _} _ / : simpl nomatch.
 Arguments ty_lfts {_ _ _} _ / : simpl nomatch.
 Arguments ty_E {_ _ _} _ / : simpl nomatch.
 Arguments ty_own {_ _ _} _ _ _ _ / : simpl nomatch.
 Arguments ty_shr {_ _ _} _ _ _ _ _ / : simpl nomatch.
-Arguments ty_size_eq {_ _ _}. Arguments ty_own_depth_mono {_ _ _}.
-Arguments ty_shr_depth_mono {_ _ _}. Arguments ty_shr_lft_mono {_ _ _}.
+Arguments ty_size_eq {_ _ _}.
+Arguments ty_own_depth_mono {_ _ _}.
+Arguments ty_shr_depth_mono {_ _ _}.
+Arguments ty_shr_lft_mono {_ _ _}.
 Arguments ty_share {_ _ _}.
-Arguments ty_own_proph {_ _ _}. Arguments ty_shr_proph {_ _ _}.
+Arguments ty_own_proph {_ _ _}.
+Arguments ty_shr_proph {_ _ _}.
 
 Notation ty_lft ty := (lft_intersect_list ty.(ty_lfts)).
 
 Notation typel := (hlist type).
 
 Lemma ty_own_mt_depth_mono `{!typeG Σ} {𝔄} (ty: _ 𝔄) d d' vπ tid l :
-  d ≤ d' → l ↦∗: ty.(ty_own) vπ d tid -∗ l ↦∗: ty.(ty_own) vπ d' tid.
+  (d ≤ d')%nat → l ↦∗: ty.(ty_own) vπ d tid -∗ l ↦∗: ty.(ty_own) vπ d' tid.
 Proof.
   iIntros (Le) "[%vl[↦ ?]]". iExists vl. iFrame "↦".
   iApply ty_own_depth_mono; by [apply Le|].
@@ -132,10 +141,6 @@ Proof.
   - apply IH; [|done]. etrans; [|by apply Outlv]. by apply submseteq_inserts_l.
 Qed.
 
-Declare Scope lrust_type_scope.
-Delimit Scope lrust_type_scope with T.
-Bind Scope lrust_type_scope with type.
-
 (** Simple Type *)
 
 Record simple_type `{!typeG Σ} 𝔄 := {
@@ -144,15 +149,17 @@ Record simple_type `{!typeG Σ} 𝔄 := {
   st_own_persistent vπ d tid vl : Persistent (st_own vπ d tid vl);
   st_size_eq vπ d tid vl : st_own vπ d tid vl -∗ ⌜length vl = st_size⌝;
   st_own_depth_mono d d' vπ tid vl :
-    d ≤ d' → st_own vπ d tid vl -∗ st_own vπ d' tid vl;
+    (d ≤ d')%nat → st_own vπ d tid vl -∗ st_own vπ d' tid vl;
   st_own_proph E vπ d tid vl κ q : ↑lftN ⊆ E → lft_ctx -∗
     κ ⊑ lft_intersect_list st_lfts -∗ st_own vπ d tid vl -∗ q.[κ]
     ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vπ ./ ξl⌝ ∗
       q':+[ξl] ∗ (q':+[ξl] ={E}=∗ st_own vπ d tid vl ∗ q.[κ]);
 }.
 Existing Instance st_own_persistent.
-Instance: Params (@st_size) 3 := {}.  Instance: Params (@st_lfts) 3 := {}.
-Instance: Params (@st_E) 3 := {}.  Instance: Params (@st_own) 3 := {}.
+Instance: Params (@st_size) 3 := {}.
+Instance: Params (@st_lfts) 3 := {}.
+Instance: Params (@st_E) 3 := {}.
+Instance: Params (@st_own) 3 := {}.
 Arguments st_size {_ _ _} _ / : simpl nomatch.
 Arguments st_lfts {_ _ _} _ / : simpl nomatch.
 Arguments st_E {_ _ _} _ / : simpl nomatch.
@@ -195,12 +202,14 @@ Coercion ty_of_st: simple_type >-> type.
 (** Plain Type *)
 
 Record plain_type `{!typeG Σ} 𝔄 := {
-  pt_size: nat;  pt_own: 𝔄 → thread_id → list val → iProp Σ;
+  pt_size: nat;
+  pt_own: 𝔄 → thread_id → list val → iProp Σ;
   pt_own_persistent v tid vl : Persistent (pt_own v tid vl);
   pt_size_eq v tid vl : pt_own v tid vl -∗ ⌜length vl = pt_size⌝;
 }.
 Existing Instance pt_own_persistent.
-Instance: Params (@pt_size) 3 := {}.  Instance: Params (@pt_own) 3 := {}.
+Instance: Params (@pt_size) 3 := {}.
+Instance: Params (@pt_own) 3 := {}.
 Arguments pt_size {_ _ _} _ / : simpl nomatch.
 Arguments pt_own {_ _ _} _ _ _ _ / : simpl nomatch.
 
@@ -217,6 +226,10 @@ Next Obligation.
 Qed.
 
 Coercion st_of_pt: plain_type >-> simple_type.
+
+Declare Scope lrust_type_scope.
+Delimit Scope lrust_type_scope with T.
+Bind Scope lrust_type_scope with type.
 
 (** * OFE Structures on Types *)
 
@@ -498,7 +511,7 @@ Qed.
 End type_lft_morph.
 
 Class TypeNonExpansive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Prop := {
-  type_ne_type_lft_morph:> TypeLftMorphism T;
+  type_ne_type_lft_morph :> TypeLftMorphism T;
   type_ne_ty_size ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (T ty).(ty_size) = (T ty').(ty_size);
   type_ne_ty_own n ty ty' :
@@ -517,7 +530,7 @@ Class TypeNonExpansive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : P
 }.
 
 Class TypeContractive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Prop := {
-  type_contr_type_lft_morph:> TypeLftMorphism T;
+  type_contr_type_lft_morph :> TypeLftMorphism T;
   type_contr_ty_size ty ty' : (T ty).(ty_size) = (T ty').(ty_size);
   type_contr_ty_own n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
@@ -606,7 +619,7 @@ End type_contr.
 (** * Traits *)
 
 Fixpoint shr_locsE (l: loc) (n: nat) : coPset :=
-  match n with 0 => ∅ | S n => ↑shrN.@l ∪ shr_locsE (l +ₗ 1) n end.
+  match n with O => ∅ | S n => ↑shrN.@l ∪ shr_locsE (l +ₗ 1) n end.
 
 Class Copy `{!typeG Σ} {𝔄} (ty: type 𝔄) := {
   copy_persistent vπ d tid vl : Persistent (ty.(ty_own) vπ d tid vl);
@@ -658,7 +671,7 @@ Section traits.
     clear IHn. move: n. elim m; [set_solver+|]=> ? IHm n.
     rewrite/= shift_loc_assoc. apply disjoint_union_r. split.
     - apply ndot_ne_disjoint. case l=> * [=]. lia.
-    - rewrite -Z.add_assoc. move: (IHm (n + 1)). by rewrite Nat2Z.inj_add.
+    - rewrite -Z.add_assoc. move: (IHm (n + 1)%nat). by rewrite Nat2Z.inj_add.
   Qed.
 
   Lemma shr_locsE_shrN l n : shr_locsE l n ⊆ ↑shrN.
@@ -666,7 +679,7 @@ Section traits.
     move: l. elim n; [set_solver+|]=>/= *. apply union_least; [solve_ndisj|done].
   Qed.
 
-  Lemma shr_locsE_subseteq l n m : n ≤ m → shr_locsE l n ⊆ shr_locsE l m.
+  Lemma shr_locsE_subseteq l n m : (n ≤ m)%nat → shr_locsE l n ⊆ shr_locsE l m.
   Proof.
     elim; [done|]=> > ? In. etrans; [by apply In|].
     rewrite -Nat.add_1_r shr_locsE_shift. set_solver+.

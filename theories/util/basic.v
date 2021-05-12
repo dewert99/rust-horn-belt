@@ -51,7 +51,7 @@ Lemma semi_iso' {A B} f g `{!@SemiIso A B f g} x : g (f x) = x.
 Proof. have ->: g (f x) = (g ∘ f) x by done. by rewrite semi_iso. Qed.
 
 Class Iso {A B} (f: A → B) (g: B → A) :=
-  { iso_semi_iso_l:> SemiIso f g; iso_semi_iso_r:> SemiIso g f }.
+  { iso_semi_iso_l :> SemiIso f g; iso_semi_iso_r :> SemiIso g f }.
 
 Global Instance iso_id {A} : Iso (@id A) id. Proof. done. Qed.
 

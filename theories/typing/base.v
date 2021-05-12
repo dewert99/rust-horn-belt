@@ -1,8 +1,10 @@
-From lrust.lang Require Import proofmode.
+From lrust.lang Require Export proofmode.
 
 (* Last, so that we make sure we shadow the defintion of delete for
    sets coming from the prelude. *)
 From lrust.lang.lib Require Export new_delete.
+
+Open Scope Z_scope.
 
 Create HintDb lrust_typing.
 Create HintDb lrust_typing_merge.

@@ -1,3 +1,6 @@
+From iris.proofmode Require Import tactics.
+From iris.algebra Require Import list numbers.
+From lrust.typing Require Import lft_contexts.
 From lrust.typing Require Export type.
 From lrust.typing Require Import uninit mod_ty.
 Set Default Proof Using "Type".

@@ -1,5 +1,5 @@
-From lrust.lang Require Import memcpy.
-From lrust.typing Require Export type_context cont_context.
+From lrust.lang Require Import proofmode memcpy.
+From lrust.typing Require Export type lft_contexts type_context cont_context.
 Set Default Proof Using "Type".
 
 Section typing.
@@ -217,7 +217,7 @@ Section typing.
   Qed.
 
   Lemma type_deref_instr {𝔄 𝔅 𝔄'} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄') gt st p E L :
-    tyb.(ty_size) = 1 → typed_read E L ty tyb ty' gt st →
+    tyb.(ty_size) = 1%nat → typed_read E L ty tyb ty' gt st →
     ⊢ typed_instr E L +[p ◁ ty] (!p) (λ v, +[v ◁ tyb; p ◁ ty'])
       (λ post '-[a], post -[gt a; st a]).
   Proof.
@@ -234,7 +234,7 @@ Section typing.
   Lemma type_deref {𝔄 𝔅 𝔄' 𝔄l 𝔅l} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄') gt st
     (T: _ 𝔄l) (T': _ 𝔅l) p x e tr pre E L C :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p ◁ ty] T T' tr →
-    typed_read E L ty tyb ty' gt st → tyb.(ty_size) = 1 →
+    typed_read E L ty tyb ty' gt st → tyb.(ty_size) = 1%nat →
     (∀v: val, typed_body E L C (v ◁ tyb +:: p ◁ ty' +:: T') (subst' x v e) pre) -∗
     typed_body E L C T (let: x := !p in e)
       (tr (λ '(a -:: al), pre (gt a -:: st a -:: al))).

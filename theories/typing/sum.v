@@ -1,5 +1,6 @@
+From iris.proofmode Require Import tactics.
+From lrust.typing Require Import lft_contexts mod_ty empty.
 From lrust.typing Require Export type.
-From lrust.typing Require Import mod_ty empty.
 Set Default Proof Using "Type".
 
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
