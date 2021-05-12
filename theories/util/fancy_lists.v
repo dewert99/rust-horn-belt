@@ -71,8 +71,8 @@ Infix ":*" := cons_prod (at level 60, right associativity) : type_scope.
 Notation "-[ ]" := nil_tt (at level 1, format "-[ ]").
 Infix "-::" := cons_pair (at level 60, right associativity).
 Notation "(-::)" := cons_pair (only parsing).
-Notation "-[ X ; .. ; z ]" := (X -:: .. (z -:: -[]) ..)
-  (at level 1, format "-[ X ;  .. ;  z ]").
+Notation "-[ x ; .. ; z ]" := (x -:: .. (z -:: -[]) ..)
+  (at level 1, format "-[ x ;  .. ;  z ]").
 
 Definition to_cons_prod {A B} : A * B → A :* B := λ '(a, al), a -:: al.
 Definition of_cons_prod {A B} : A :* B → A * B := λ '(a -:: al), (a, al).
@@ -231,64 +231,6 @@ Proof. done. Qed.
 Global Instance into_plistc_cons {A B X Xl} x xl yl :
   IntoPlistc xl yl → @IntoPlistc A B (X :: Xl) (x :: xl) (x -:: yl).
 Proof. by move=> ->. Qed.
-
-(** * Vector *)
-
-Fixpoint pvec A n : Type := match n with 0 => :1 | S m => A :* pvec A m end.
-
-Fixpoint pvec_to_list {A n} (xl: pvec A n) : list A := match n, xl with
-  0, _ => [] | S _, x -:: xl' => x :: pvec_to_list xl' end.
-Coercion pvec_to_list: pvec >-> list.
-
-Fixpoint pvmap {A B n} (f: A → B) : pvec A n → pvec B n :=
-  match n with 0 => id | S _ => λ '(x -:: xl'), f x -:: pvmap f xl' end.
-Infix "-v<$>" := pvmap (at level 61, left associativity).
-Notation "( f -v<$>.)" := (pvmap f) (only parsing).
-
-Fixpoint pvrepeat {A} (x: A) n : pvec A n :=
-  match n with 0 => -[] | S m => x -:: pvrepeat x m end.
-
-Fixpoint pvapp {A m n} (xl: pvec A m) (yl: pvec A n) : pvec A (m + n) :=
-  match m, xl with 0, _ => yl | S _, x -:: xl' => x -:: pvapp xl' yl end.
-Infix "-v++" := pvapp (at level 60, right associativity).
-
-Fixpoint pvsepl {A m n} (xl: pvec A (m + n)) : pvec A m :=
-  match m, xl with 0, _ => -[] | S _, x -:: xl' => x -:: pvsepl xl' end.
-Fixpoint pvsepr {A m n} (xl: pvec A (m + n)) : pvec A n :=
-  match m, xl with 0, _ => xl | S _, x -:: xl' => pvsepr xl' end.
-Notation pvsep := (λ xl, (pvsepl xl, pvsepr xl)).
-
-Lemma pvapp_sepl {A m n} (xl: _ A m) (yl: _ n) : pvsepl (xl -v++ yl) = xl.
-Proof. move: xl yl. elim m; [by case|]=>/= > IH [??]?. by rewrite IH. Qed.
-Lemma pvapp_sepr {A m n} (xl: _ A m) (yl: _ n) : pvsepr (xl -v++ yl) = yl.
-Proof. move: xl yl. elim m; [by case|]=>/= > IH [??]?. by rewrite IH. Qed.
-
-Lemma pvsep_app {A m n} (xl: _ A (m + n)) : pvsepl xl -v++ pvsepr xl = xl.
-Proof. move: xl. elim m; [done|]=>/= > IH [??]. by rewrite IH. Qed.
-Lemma pvapp_ex {A m n} (xl: _ A _) : ∃(yl: _ m) (zl: _ n), xl = yl -v++ zl.
-Proof. exists (pvsepl xl), (pvsepr xl). by rewrite pvsep_app. Qed.
-
-Global Instance pvapp_pvsep_iso {A m n} : Iso (curry (@pvapp A m n)) pvsep.
-Proof. split; fun_ext.
-  - case=>/= [??]. by rewrite pvapp_sepl pvapp_sepr.
-  - move=>/= ?. by rewrite pvsep_app.
-Qed.
-
-Program Global Instance pvec_unique `{!Unique A} n
-  : Unique (pvec A n) := {| unique := pvrepeat unique n |}.
-Next Obligation.
-  move=> ?? n. elim n; [by case|]=> ? IH [x xl]. by rewrite (eq_unique x) (IH xl).
-Qed.
-
-Fixpoint vec_to_pvec {A n} (xl: vec A n) : pvec A n :=
-  match xl with [#] => -[] | x ::: xl' => x -:: vec_to_pvec xl' end.
-Fixpoint pvec_to_vec {A n} (xl: pvec A n) : vec A n :=
-  match n, xl with 0, _ => [#] | S _, x -:: xl' => x ::: pvec_to_vec xl' end.
-Global Instance vec_pvec_iso {A n} : Iso (@vec_to_pvec A n) pvec_to_vec.
-Proof.
-  split; fun_ext. { by elim; [done|]=>/= > ->. }
-  elim n; [by case|]=>/= > IH [??]. by rewrite/= IH.
-Qed.
 
 (** * Sum *)
 

@@ -56,18 +56,11 @@ Section sum.
       (hnthe tyl i).(ty_shr) vπ' d κ tid (l +ₗ 1)
   |}%I.
   Next Obligation. move=> *. by iDestruct 1 as (????(_&_&?)) "_". Qed.
+  Next Obligation. move=>/= *. do 9 f_equiv. by apply ty_own_depth_mono. Qed.
+  Next Obligation. move=>/= *. do 6 f_equiv. by apply ty_shr_depth_mono. Qed.
   Next Obligation.
-    move=> *. iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "?".
-    iExists i, vπ', vl', vl''. iSplit; [done|]. by iApply ty_own_depth_mono.
-  Qed.
-  Next Obligation.
-    move=> *. iDestruct 1 as (i vπ' ->) "[??]". iExists i, vπ'.
-    do 2 (iSplit; [done|]). by iApply ty_shr_depth_mono.
-  Qed.
-  Next Obligation.
-    move=> *. iIntros "In". iDestruct 1 as (i vπ' ->) "[??]". iExists i, vπ'.
-    iSplit; [done|]. iSplit;
-      by [iApply (frac_bor_shorten with "In")|iApply (ty_shr_lft_mono with "In")].
+    move=> *. iIntros "In (%&%&->&?&?)". iExists _, _. iSplit; [done|].
+    iSplit; by [iApply (frac_bor_shorten with "In")|iApply (ty_shr_lft_mono with "In")].
   Qed.
   Next Obligation.
     move=> *. iIntros "#LFT #? Bor κ". rewrite split_sum_mt.
@@ -206,11 +199,11 @@ Section typing.
     move=> ?. have Copy: ∀i, Copy (hnthe tyl i).
     { move=> *. apply (TCHForall_nth _); by [apply _|]. }
     split; [apply _|]. move=>/= ?????? l ?? SubF.
-    iIntros "#LFT (%i &%&->& Bor & ty) Na [κ κ']".
+    iIntros "#LFT (%i &%&->& Bor & ty) Na [κ κ+]".
     iMod (frac_bor_acc with "LFT Bor κ") as (q) "[>[↦i ↦pad] Toκ]";
     [solve_ndisj|]. iDestruct "↦pad" as (vl') "[↦pad %]".
-    iMod (copy_shr_acc with "LFT ty Na κ'") as
-      (q' vl) "(Na & ↦ & #ty & Toκ')"; [done| |].
+    iMod (copy_shr_acc with "LFT ty Na κ+") as
+      (q' vl) "(Na & ↦ & #ty & Toκ+)"; [done| |].
     { rewrite <-SubF, <-union_subseteq_r. apply shr_locsE_subseteq. lia. }
     iDestruct (na_own_acc with "Na") as "[$ ToNa]".
     { apply difference_mono_l. trans (shr_locsE (l +ₗ 1) (max_ty_size tyl));
@@ -225,7 +218,7 @@ Section typing.
     { iIntros "!>!>". iExists i, _, vl, vl'. iFrame "ty". iPureIntro.
       do 2 (split; [done|]). rewrite/= app_length Eq. by f_equal. }
     iIntros "!> Na (↦i' & ↦' & ↦pad')". iDestruct ("ToNa" with "Na") as "Na".
-    iMod ("Toκ'" with "Na [$↦ $↦']") as "[$$]". iApply "Toκ".
+    iMod ("Toκ+" with "Na [$↦ $↦']") as "[$$]". iApply "Toκ".
     iFrame "↦i ↦i'". iExists vl'. by iFrame.
   Qed.
 

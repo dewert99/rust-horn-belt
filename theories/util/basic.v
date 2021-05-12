@@ -40,6 +40,29 @@ End forall2b.
 
 Notation vhd := Vector.hd.
 Notation vtl := Vector.tl.
+Notation vzip := (vzip_with pair).
+Notation vsepat := Vector.splitat.
+
+Fixpoint vfunsep {A B n} : (B → vec A n) → vec (B → A) n :=
+  match n with 0 => λ _, [#] | S _ => λ f, (vhd ∘ f) ::: vfunsep (vtl ∘ f) end.
+
+Definition vapply {A B n} (fl: vec (B → A) n) (x: B) : vec A n := vmap (.$ x) fl.
+
+Lemma surjective_vcons {A n} (xl: vec A (S n)) : xl = vhd xl ::: vtl xl.
+Proof. by inv_vec xl. Qed.
+
+Lemma vsepat_app {A m n} (xl: _ A (m + n)) :
+  xl = (vsepat m xl).1 +++ (vsepat m xl).2.
+Proof.
+  induction m; [done|]=>/=.
+  by rewrite [vsepat _ _]surjective_pairing /= -IHm -surjective_vcons.
+Qed.
+Lemma vapp_ex {A m n} (xl: _ A (m + n)) : ∃yl zl, xl = yl +++ zl.
+Proof. eexists _, _. apply vsepat_app. Qed.
+
+Lemma vzip_with_app {A B C m n} (f: A → B → C) (xl: _ m) (xl': _ n) yl yl' :
+  vzip_with f (xl +++ xl') (yl +++ yl') = vzip_with f xl yl +++ vzip_with f xl' yl'.
+Proof. induction xl; inv_vec yl; [done|]=>/= ??. by rewrite IHxl. Qed.
 
 (** * Utility for Point-Free Style *)
 
@@ -69,6 +92,10 @@ Typeclasses Transparent s_comb.
 Lemma surjective_pairing_fun {A B C} (f: A → B * C) : f = pair ∘ (fst ∘ f) ⊛ (snd ∘ f).
 Proof. fun_ext=> ?/=. by rewrite -surjective_pairing. Qed.
 
+Lemma surjective_vcons_fun {A B n} (f: B → vec A (S n)) :
+  f = (λ a, vcons a) ∘ (vhd ∘ f) ⊛ (vtl ∘ f).
+Proof. fun_ext=>/= ?. by rewrite -surjective_vcons. Qed.
+
 Definition prod_assoc {A B C} '(x, (y, z)) : (A * B) * C := ((x, y), z).
 Definition prod_assoc' {A B C} '((x, y), z) : A * (B * C) := (x, (y, z)).
 Global Instance prod_assoc_iso {A B C} : Iso (@prod_assoc A B C) prod_assoc'.
@@ -97,6 +124,19 @@ Definition option_to_list {A} (o: option (A * list A)) : list A :=
   match o with None => [] | Some (x, xl') => x :: xl' end.
 Global Instance list_option_iso {A} : Iso (@list_to_option A) option_to_list.
 Proof. split; fun_ext; case=>//; by case. Qed.
+
+Global Instance vapp_vsepat_iso {A} m n : Iso (curry vapp) (@vsepat A m n).
+Proof. split; fun_ext.
+  - move=> [xl ?]. by elim xl; [done|]=>/= ???->.
+  - move=>/= ?. rewrite [vsepat _ _]surjective_pairing /=. induction m; [done|]=>/=.
+    by rewrite [vsepat _ _]surjective_pairing /= IHm -surjective_vcons.
+Qed.
+
+Global Instance vapply_vfunsep_iso {A B n} : Iso vapply (@vfunsep A B n).
+Proof.
+  split; fun_ext; [by elim; [done|]=>/= ???->|]. move=> f. fun_ext=>/= x.
+  induction n=>/=; [|rewrite IHn /=]; move: (f x)=> xl; by inv_vec xl.
+Qed.
 
 (* * Utility for Singleton Types *)
 
