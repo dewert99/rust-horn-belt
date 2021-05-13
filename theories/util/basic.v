@@ -194,3 +194,8 @@ Proof.
   - iIntros "[? To]" (?[->|?]); by [|iApply "To"].
   - iIntros "To". iSplit; [|iIntros (??)]; iApply "To"; by [iLeft|iRight].
 Qed.
+
+Lemma big_sepL_vlookup_acc {A n} {PROP: bi} (Φ: _ → _ → PROP) (xl: vec A n) (i: fin n) :
+  ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊢
+  Φ i (xl !!! i) ∗ (Φ i (xl !!! i) -∗ [∗ list] k ↦ x ∈ xl, Φ k x).
+Proof. by apply big_sepL_lookup_acc, vlookup_lookup. Qed.
