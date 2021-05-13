@@ -183,6 +183,10 @@ Global Instance pure_minus z1 z2 :
   PureExec True 1 (BinOp MinusOp (Lit $ LitInt z1) (Lit $ LitInt z2)) (Lit $ LitInt $ z1 - z2).
 Proof. solve_pure_exec. Qed.
 
+Global Instance pure_mult z1 z2 :
+  PureExec True 1 (BinOp MultOp (Lit $ LitInt z1) (Lit $ LitInt z2)) (Lit $ LitInt $ z1 * z2).
+Proof. solve_pure_exec. Qed.
+
 Global Instance pure_offset l z  :
   PureExec True 1 (BinOp OffsetOp (Lit $ LitLoc l) (Lit $ LitInt z)) (Lit $ LitLoc $ l +ₗ z).
 Proof. solve_pure_exec. Qed.

@@ -33,6 +33,8 @@ Notation "e1 + e2" := (BinOp PlusOp e1%E e2%E)
   (at level 50, left associativity) : expr_scope.
 Notation "e1 - e2" := (BinOp MinusOp e1%E e2%E)
   (at level 50, left associativity) : expr_scope.
+Notation "e1 * e2" := (BinOp MultOp e1%E e2%E)
+  (at level 40, left associativity) : expr_scope.
 Notation "e1 ≤ e2" := (BinOp LeOp e1%E e2%E)
   (at level 70) : expr_scope.
 Notation "e1 = e2" := (BinOp EqOp e1%E e2%E)

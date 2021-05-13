@@ -73,6 +73,27 @@ Section int.
     f_equal. fun_ext. by case=> [?[??]].
   Qed.
 
+  Lemma type_mult_instr E L p1 p2 :
+    ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 * p2) int
+      (λ post '-[z; z'], post (z * z')).
+  Proof.
+    iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
+    wp_apply (wp_hasty with "p1"). iIntros (? d _) "⧖". iIntros ((z &->&[=->])).
+    wp_apply (wp_hasty with "p2"). iIntros (?? _) "_". iIntros ((z' &->&[=->])).
+    wp_op. iExists -[const (z * z')]. iFrame "Obs". rewrite right_id
+    tctx_hasty_val'; [|done]. iExists d. iFrame "⧖". by iExists (z * z').
+  Qed.
+
+  Lemma type_mult {𝔄l 𝔅l} E L C (T: _ 𝔄l) (T': _ 𝔅l) p1 p2 x e tr pre :
+    Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' tr →
+    (∀v: val, typed_body E L C (v ◁ int +:: T') (subst' x v e) pre) -∗
+    typed_body E L C T (let: x := p1 * p2 in e)
+      (tr (λ '(z -:: z' -:: bl), pre (z * z' -:: bl))).
+  Proof.
+    iIntros. iApply type_let; [iApply type_mult_instr|solve_typing| |done].
+    f_equal. fun_ext. by case=> [?[??]].
+  Qed.
+
   Lemma type_le_instr E L p1 p2 :
     ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 ≤ p2) bool_ty
       (λ post '-[z; z'], post (bool_decide (z ≤ z'))).
