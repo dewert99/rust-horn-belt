@@ -64,6 +64,10 @@ Lemma vzip_with_app {A B C m n} (f: A → B → C) (xl: _ m) (xl': _ n) yl yl' :
   vzip_with f (xl +++ xl') (yl +++ yl') = vzip_with f xl yl +++ vzip_with f xl' yl'.
 Proof. induction xl; inv_vec yl; [done|]=>/= ??. by rewrite IHxl. Qed.
 
+Lemma vapply_lookup {A B n} (fl: _ (B → A) n) (i: fin n) :
+  (.!!! i) ∘ vapply fl = fl !!! i.
+Proof. by induction fl; inv_fin i. Qed.
+
 (** * Utility for Point-Free Style *)
 
 Ltac fun_ext := apply functional_extensionality.
@@ -138,6 +142,13 @@ Proof.
   induction n=>/=; [|rewrite IHn /=]; move: (f x)=> xl; by inv_vec xl.
 Qed.
 
+Lemma vapply_funsep {A B n} (f: B → _ A n) : vapply (vfunsep f) = f.
+Proof. by rewrite semi_iso'. Qed.
+
+Lemma vfunsep_lookup {A B n} (f: B → _ A n) (i: fin n) :
+  vfunsep f !!! i = (.!!! i) ∘ f.
+Proof. by rewrite -{2}[f]vapply_funsep vapply_lookup. Qed.
+
 (* * Utility for Singleton Types *)
 
 Class Unique A := { unique: A; eq_unique: ∀x: A, x = unique }.
@@ -199,3 +210,8 @@ Lemma big_sepL_vlookup_acc {A n} {PROP: bi} (Φ: _ → _ → PROP) (xl: vec A n)
   ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊢
   Φ i (xl !!! i) ∗ (Φ i (xl !!! i) -∗ [∗ list] k ↦ x ∈ xl, Φ k x).
 Proof. by apply big_sepL_lookup_acc, vlookup_lookup. Qed.
+
+Lemma big_sepL_vlookup {A n} {PROP: bi} (Φ: nat → _ → PROP)
+  (xl: vec A n) (i: fin n) `{!Absorbing (Φ i (xl !!! i))} :
+  ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊢ Φ i (xl !!! i).
+Proof. rewrite big_sepL_vlookup_acc. apply bi.sep_elim_l, _. Qed.

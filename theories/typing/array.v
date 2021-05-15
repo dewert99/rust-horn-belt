@@ -27,9 +27,6 @@ Section array.
       iFrame "↦ ↦s". iExists (_:::_). iSplit; [done|]. iFrame.
   Qed.
 
-  Lemma vapply_funsep {A B n} (f: B → _ A n) : vapply (vfunsep f) = f.
-  Proof. by rewrite semi_iso'. Qed.
-
   Program Definition array {𝔄} n (ty: type 𝔄) : type (vecₛ 𝔄 n) := {|
     ty_size := n * ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own vπ d tid vl := ∃wll: vec _ _, ⌜vl = concat wll⌝ ∗

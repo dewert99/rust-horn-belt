@@ -57,6 +57,7 @@ theories/typing/product.v
 theories/typing/product_split.v
 theories/typing/sum.v
 theories/typing/array.v
+theories/typing/array_idx.v
 theories/typing/bool.v
 theories/typing/int.v
 theories/typing/function.v
