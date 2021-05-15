@@ -77,7 +77,7 @@ Section fn.
       case=>/= [??]. rewrite /tctx_elt_interp. do 12 f_equiv. apply Eq.
     - move: (Eq x)=> [_[+ _]]. rewrite {1}/dist.
       move: (fp x).(fp_ityl) (fp' x).(fp_ityl)=> ??. clear=> Eq.
-      dependent induction Eq; [done|]. case wl=> ??. case vπl=> ??/=.
+      induction Eq; [done|]. case wl=> ??. case vπl=> ??/=.
       f_equiv; [|by apply IHEq]. rewrite /tctx_elt_interp. by do 8 f_equiv.
   Qed.
 
@@ -164,6 +164,19 @@ Section typing.
     iDestruct ("IH" with "E") as "$".
   Qed.
 
+
+Ltac inv_hlist xl := let A := type of xl in
+match eval hnf in A with hlist _ ?Xl =>
+  match eval hnf in Xl with
+  | [] => revert dependent xl;
+      match goal with |- ∀xl, @?P xl => apply (hlist_nil_inv P) end
+  | _ :: _ => revert dependent xl;
+      match goal with |- ∀xl, @?P xl => apply (hlist_cons_inv P) end;
+      (* Try going on recursively. *)
+      try (let x := fresh "x" in intros x xl; inv_hlist xl; revert x)
+  end
+end.
+
   Lemma fn_subtype {A 𝔄l 𝔄l' 𝔅 𝔅'} (fp: A → _) fp' (fl: _ 𝔄l' 𝔄l) (g: 𝔅 → 𝔅') E L :
     (∀x ϝ, let E' := E ++ fp_E (fp' x) ϝ in elctx_sat E' L (fp_E (fp x) ϝ) ∧
       subtypel E' L (fp' x).(fp_ityl) (fp x).(fp_ityl) fl ∧
@@ -201,9 +214,9 @@ Section typing.
       iExists _, _. iSplitR; [done|]. iFrame "⧖". by iApply "InO".
     - iRevert "InIl T". iClear "#". iIntros "?". iStopProof. rewrite /wl.
       move: (fp x).(fp_ityl) (fp' x).(fp_ityl)=> tyl tyl'. clear.
-      move: 𝔄l 𝔄l' tyl tyl' fl eq wl' aπl. fix FIX 1. case=> [|??]; case=>//=;
-      dependent destruction tyl; dependent destruction tyl'; [by iIntros|].
-      iIntros ([]?[][]) "/= #[(_&_& In &_) ?] [t ?]".
+      move: 𝔄l 𝔄l' tyl tyl' fl eq wl' aπl. fix FIX 1. case=> [|??]; case=> [|??]//=
+      tyl tyl'; inv_hlist tyl; inv_hlist tyl'; [by iIntros|].
+      iIntros (????[]?[][]) "/= #[(_&_& In &_) ?] [t ?]".
       iSplitL "t"; [|by iApply FIX]. iDestruct "t" as (???) "[⧖ ?]".
       iExists _, _. iSplit; [done|]. iFrame "⧖". by iApply "In".
     - iApply proph_obs_eq; [|done]=>/= ?. rewrite /trans_upper' !papply_app
@@ -227,8 +240,8 @@ Section typing.
       WP f (of_val r :: map of_val (vl ++ wl)) {{ Φ }}) -∗
     WP f (of_val r :: map of_val vl ++ pl) {{ Φ }}.
   Proof.
-    move: tyl pl vπl vl. elim 𝔄l=> [|?? IH]; dependent destruction tyl.
-    { iIntros "* _ Wp". iSpecialize ("Wp" $! -[] with "[//]"). by rewrite !right_id. }
+    move: tyl pl vπl vl. elim=> [|???? IH]. { iIntros "* _ Wp".
+    iSpecialize ("Wp" $! -[] with "[//]"). by rewrite !right_id. }
     iIntros ([p pl'][??]vl) "/= [p pl'] ToWp".
     have ->: App f (of_val r :: map of_val vl ++ p :: pl') =
       fill_item (AppRCtx f (r :: vl) pl') p by done.

@@ -136,7 +136,7 @@ Section typing.
           elctx_interp E ∗ elctx_interp ty.(ty_E) ∗ [∗ list] β ∈ βs, β ⊑ ty_lft ty)) ∨
       (∃α E, (∀ty, ⊢ ty_lft (T ty) ≡ₗ α) ∧
         (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢ elctx_interp E)); [|by eleft|by eright].
-    dependent induction All=>/=.
+    induction All=>/=.
     { right. exists static, []. split=> ?; by [|apply lft_equiv_refl]. }
     setoid_rewrite lft_intersect_list_app.
     case IHAll=> [[α[βs[E[Hα HE]]]]|[α[E[Hα HE]]]];

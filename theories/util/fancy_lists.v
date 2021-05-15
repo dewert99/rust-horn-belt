@@ -17,6 +17,28 @@ Notation "+[ x ; .. ; z ]" := (x +:: .. (z +:: +[]) ..)
 Notation "+[ x ; .. ; z ]@{ F }" := (x +:: .. (z +:: +[]@{F}) ..)
   (at level 1, only parsing).
 
+Definition hlist_nil_inv `{F: A → _}
+  (P: hlist F [] → Type) (H: P +[]) xl : P xl :=
+  match xl with +[] => H end.
+
+Definition hlist_cons_inv `{F: A → _} {X Xl'}
+  (P: hlist F (X :: Xl') → Type) (H: ∀x xl', P (x +:: xl')) xl : P xl.
+Proof.
+  move: P H. refine match xl with x +:: xl' => λ _ H, H x xl' end.
+Defined.
+
+Ltac inv_hlist xl := let A := type of xl in
+  match eval hnf in A with hlist _ ?Xl =>
+    match eval hnf in Xl with
+    | [] => revert dependent xl;
+        match goal with |- ∀xl, @?P xl => apply (hlist_nil_inv P) end
+    | _ :: _ => revert dependent xl;
+        match goal with |- ∀xl, @?P xl => apply (hlist_cons_inv P) end;
+        (* Try going on recursively. *)
+        try (let x := fresh "x" in intros x xl; inv_hlist xl; revert x)
+    end
+  end.
+
 Fixpoint happ `{F: A → _} {Xl Yl} (xl: hlist F Xl) (yl: hlist F Yl)
   : hlist F (Xl ++ Yl) :=
   match xl with +[] => yl | x +:: xl' => x +:: happ xl' yl end.
@@ -331,7 +353,7 @@ Inductive HForall2_2flip `{F: A → _} {G H K} (Φ: ∀X Y, F X → G Y → H X 
 Inductive HForallTwo `{F: A → _} {G} (Φ: ∀X, F X → G X → Prop)
   : ∀{Xl}, hlist F Xl → hlist G Xl → Prop :=
 | HForallTwo_nil: HForallTwo Φ +[] +[]
-| HForallTwo_cons {X Xl} (x y: _ X) (xl yl: _ Xl) :
+| HForallTwo_cons {X Xl} (x: _ X) y (xl: _ Xl) yl :
     Φ _ x y → HForallTwo Φ xl yl → HForallTwo Φ (x +:: xl) (y +:: yl).
 
 Lemma TCHForall_impl `{F: A → _} {Xl} (Φ Ψ: ∀X, F X → Prop) (xl: _ Xl) :
@@ -361,7 +383,7 @@ Lemma HForallTwo_forall `{!Inhabited Y} `{F: A → _} {G Xl}
   (∀z, HForallTwo (λ X, Φ X z) xl yl) ↔ HForallTwo (λ X x y, ∀z, Φ _ z x y) xl yl.
 Proof.
   split; [|elim; by constructor]. move=> All. set One := All inhabitant.
-  dependent induction One; [by constructor|]. constructor.
+  induction One; [by constructor|]. constructor.
   { move=> z. move/(.$ z) in All. by dependent destruction All. }
   have All': ∀z, HForallTwo (λ X, Φ X z) xl yl.
   { move=> z. move/(.$ z) in All. by dependent destruction All. } auto.
