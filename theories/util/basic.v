@@ -129,6 +129,13 @@ Definition option_to_list {A} (o: option (A * list A)) : list A :=
 Global Instance list_option_iso {A} : Iso (@list_to_option A) option_to_list.
 Proof. split; fun_ext; case=>//; by case. Qed.
 
+Global Instance vhd_vsingleton_iso {A} : Iso vhd (λ x: A, [#x]).
+Proof. split; [|done]. fun_ext=> v. by inv_vec v. Qed.
+
+Global Instance vhd_vtl_vcons_iso {A n} :
+  Iso (λ v: _ A (S n), (vhd v, vtl v)) (curry (λ x, vcons x)).
+Proof. split; fun_ext; [|by case]=> v. by inv_vec v. Qed.
+
 Global Instance vapp_vsepat_iso {A} m n : Iso (curry vapp) (@vsepat A m n).
 Proof. split; fun_ext.
   - move=> [xl ?]. by elim xl; [done|]=>/= ???->.
@@ -163,6 +170,9 @@ Next Obligation. move=> ????. case=> *; f_equal; apply eq_unique. Qed.
 Program Global Instance fun_unique {B} `{!Unique A}
   : Unique (B → A) := {| unique := const unique |}.
 Next Obligation. move=> *. fun_ext=>/= ?. apply eq_unique. Qed.
+
+Program Global Instance vec_0_unique {A} : Unique (vec A 0) := {| unique := [#] |}.
+Next Obligation. move=> ? v. by inv_vec v. Qed.
 
 Global Instance unique_iso `{!Unique A, !Unique B} : @Iso A B unique unique.
 Proof. split; fun_ext=>/= ?; symmetry; apply eq_unique. Qed.

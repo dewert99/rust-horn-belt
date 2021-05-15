@@ -154,11 +154,24 @@ Section typing.
       iIntros "[#ty #tys]". rewrite Sz. setoid_rewrite <-shift_loc_assoc_nat.
       iSplitL "ty"; by [iApply "InShr"|iApply "IH"].
   Qed.
-  Lemma array_eqtype {𝔄 𝔅} E L n (f: 𝔄 → 𝔅) g ty ty' :
+  Lemma array_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' n E L :
     eqtype E L ty ty' f g → eqtype E L [ty; n] [ty'; n] (vmap f) (vmap g).
   Proof. move=> [??]. split; by apply array_subtype. Qed.
 
-  Lemma array_plus_prod {𝔄} E L m n (ty: _ 𝔄) :
+  Lemma array_one {𝔄} (ty: _ 𝔄) E L : eqtype E L [ty; 1] ty vhd (λ x, [#x]).
+  Proof.
+    apply eqtype_unfold; [apply _|]. iIntros "% _!>_".
+    iSplit; [by rewrite/= Nat.add_0_r|]. iSplit; [iApply lft_equiv_refl|].
+    have Eq: ∀vπ, vhd ∘ vπ = vhd (vfunsep vπ). { move=> ??? vπ.
+    rewrite -{1}[vπ]vapply_funsep. move: (vfunsep vπ)=> aπl. by inv_vec aπl. }
+    iSplit; iIntros "!> %vπ */="; rewrite Eq;
+    move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl; inv_vec aπl=> ?; [iSplit|].
+    - iIntros "(%wll &->&?)". inv_vec wll=>/= ?. by do 2 rewrite right_id.
+    - iIntros "?". iExists [# _]=>/=. do 2 rewrite right_id. by iSplit.
+    - rewrite right_id shift_loc_0. by iApply bi.equiv_iff.
+  Qed.
+
+  Lemma array_plus_prod {𝔄} m n (ty: _ 𝔄) E L :
     eqtype E L [ty; m + n] ([ty; m] * [ty; n]) (vsepat m) (curry vapp).
   Proof.
     apply eqtype_symm, eqtype_unfold; [apply _|]. iIntros (?) "_!>_".
@@ -176,9 +189,16 @@ Section typing.
     - iIntros "(%wll &->& tys)". move: (vapp_ex wll)=> [?[?->]].
       rewrite vzip_with_app !vec_to_list_app concat_app. iExists _, _. iSplit; [done|].
       iDestruct "tys" as "[tys tys']". iSplitL "tys"; iExists _; by iFrame.
-    - iStopProof. apply bi.equiv_iff.
+    - iApply bi.equiv_iff.
       rewrite vec_to_list_app big_sepL_app vec_to_list_length. do 5 f_equiv.
       by rewrite shift_loc_assoc_nat -Nat.mul_add_distr_r.
+  Qed.
+
+  Lemma array_succ_prod {𝔄} n (ty: _ 𝔄) E L :
+    eqtype E L [ty; S n] (ty * [ty; n]) (λ v, (vhd v, vtl v)) (curry (λ x, vcons x)).
+  Proof.
+    eapply eqtype_eq. { eapply eqtype_trans; [apply (array_plus_prod 1)|].
+    apply prod_eqtype; [apply array_one|solve_typing]. } { done. } { fun_ext. by case. }
   Qed.
 
 End typing.

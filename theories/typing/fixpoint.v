@@ -172,8 +172,8 @@ Proof.
       rewrite assoc. iApply lft_intersect_equiv_proper; [|iApply lft_equiv_refl].
       iApply lft_equiv_sym. iApply lft_intersect_equiv_idemp.
     + iApply lft_equiv_trans; [iApply Hα|iApply lft_equiv_sym; iApply Hα].
-  - rewrite EqOwn'. by iApply (bi.iff_refl True%I).
-  - rewrite EqShr'. by iApply (bi.iff_refl True%I).
+  - rewrite EqOwn'. by iApply bi.equiv_iff.
+  - rewrite EqShr'. by iApply bi.equiv_iff.
 Qed.
 
 Lemma fix_ty_ne `{!typeG Σ} {𝔄} (T T': _ → _ 𝔄)

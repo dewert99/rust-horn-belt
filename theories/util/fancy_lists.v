@@ -125,6 +125,32 @@ Fixpoint pnth `{F: A → _} {Xl D} (d: F D) (xl: plist F Xl) : ∀i, F (lnth D X
   match Xl, xl with [], _ => λ _, d |
     _::_, x -:: xl' => λ i, match i with 0 => x | S j => pnth d xl' j end end.
 
+Fixpoint papply `{F: A → _} {B Xl} (fl: plist (λ X, B → F X) Xl) (x: B)
+  : plist F Xl := match Xl, fl with
+    [], _ => -[] | _::_, f -:: fl' => f x -:: papply fl' x end.
+Infix "-$" := papply (at level 61, left associativity).
+Notation "( fl -$.)" := (papply fl) (only parsing).
+
+Lemma papply_app `{F: A → _} {B Xl Yl}
+  (fl: plist (λ X, B → F X) Xl) (gl: _ Yl) (x: B) :
+  (fl -++ gl) -$ x = (fl -$ x) -++ (gl -$ x).
+Proof. move: fl. elim Xl; [done|]=>/= ?? IH [??]. by rewrite IH. Qed.
+
+Fixpoint hzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
+  (xl: hlist F Xl) (yl: plist G Xl) : hlist H Xl :=
+  match xl, yl with +[], _ => +[] |
+    x +:: xl', y -:: yl' => f _ x y +:: hzip_with f xl' yl' end.
+Notation hzip := (hzip_with (λ _, pair)).
+
+Fixpoint pzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
+  (xl: plist F Xl) (yl: plist G Xl) : plist H Xl :=
+  match Xl, xl, yl with [], _, _ => -[] |
+    _::_, x -:: xl', y -:: yl' => f _ x y -:: pzip_with f xl' yl' end.
+Notation pzip := (pzip_with (λ _, pair)).
+
+Fixpoint ptrans `{F: A → B} {G Xl} (xl: plist (G ∘ F) Xl) : plist G (map F Xl) :=
+  match Xl, xl with [], _ => -[] | _::_, x -:: xl' => x -:: ptrans xl' end.
+
 Fixpoint hlist_to_plist `{F: A → _} {Xl} (xl: hlist F Xl) : plist F Xl :=
   match xl with +[] => -[] | x +:: xl' => x -:: hlist_to_plist xl' end.
 Fixpoint plist_to_hlist `{F: A → _} {Xl} (xl: plist F Xl) : hlist F Xl :=
@@ -135,6 +161,11 @@ Proof. split.
   - fun_ext. by elim; [done|]=>/= > ->.
   - fun_ext. elim Xl; [by case|]=>/= ?? IH [??] /=. by rewrite IH.
 Qed.
+
+Fixpoint vec_to_plist `{F: A → _} {X n} (xl: vec (F X) n) : plist F (replicate n X) :=
+  match xl with [#] => -[] | x ::: xl' => x -:: vec_to_plist xl' end.
+
+(** * Passive Heterogeneous List over Two Lists *)
 
 Section plist2. Context {A} (F: A → A → Type).
 Fixpoint plist2 Xl Yl : Type :=
@@ -156,16 +187,13 @@ Fixpoint p2nth `{F: A → _} {Xl Yl D D'} (d: F D D')
       λ '(x -:: xl') i, match i with 0 => x | S j => p2nth d xl' j end
   | _, _ => absurd end.
 
-Fixpoint papply `{F: A → _} {B Xl} (fl: plist (λ X, B → F X) Xl) (x: B)
-  : plist F Xl := match Xl, fl with
-    [], _ => -[] | _::_, f -:: fl' => f x -:: papply fl' x end.
-Infix "-$" := papply (at level 61, left associativity).
-Notation "( fl -$.)" := (papply fl) (only parsing).
+Fixpoint plist2_eq_nat_len `{F: A → _} {Xl Yl} :
+  plist2 F Xl Yl → eq_nat (length Xl) (length Yl) :=
+  match Xl, Yl with [], [] => λ _, I |
+    _::_, _::_ => λ '(_ -:: xl'), plist2_eq_nat_len xl' | _, _ => absurd end.
 
-Lemma papply_app `{F: A → _} {B Xl Yl}
-  (fl: plist (λ X, B → F X) Xl) (gl: _ Yl) (x: B) :
-  (fl -++ gl) -$ x = (fl -$ x) -++ (gl -$ x).
-Proof. move: fl. elim Xl; [done|]=>/= ?? IH [??]. by rewrite IH. Qed.
+Lemma plist2_eq_len `{F: A → _} {Xl Yl} : plist2 F Xl Yl → length Xl = length Yl.
+Proof. by move=> /plist2_eq_nat_len/eq_nat_is_eq ?. Qed.
 
 Fixpoint plist_map `{F: A → _} {Xl Yl} :
   plist2 (λ X Y, F X → F Y) Xl Yl → plist F Xl → plist F Yl :=
@@ -179,30 +207,7 @@ Fixpoint plist_map_with `{F: A → _} {G} {Xl Yl} (h: ∀X Y, G X Y → F X → 
   | _::_, _::_ => λ '(f -:: fl') '(x -:: xl'), h _ _ f x -:: plist_map_with h fl' xl'
   | _, _ => absurd end.
 
-Fixpoint hzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
-  (xl: hlist F Xl) (yl: plist G Xl) : hlist H Xl :=
-  match xl, yl with +[], _ => +[] |
-    x +:: xl', y -:: yl' => f _ x y +:: hzip_with f xl' yl' end.
-Notation hzip := (hzip_with (λ _, pair)).
-
-Fixpoint pzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
-  (xl: plist F Xl) (yl: plist G Xl) : plist H Xl :=
-  match Xl, xl, yl with [], _, _ => -[] |
-    _::_, x -:: xl', y -:: yl' => f _ x y -:: pzip_with f xl' yl' end.
-Notation pzip := (pzip_with (λ _, pair)).
-
-Fixpoint ptrans `{F: A → B} {G Xl} (xl: plist (G ∘ F) Xl) : plist G (map F Xl) :=
-  match Xl, xl with [], _ => -[] | _::_, x -:: xl' => x -:: ptrans xl' end.
-
-Fixpoint plist2_eq_nat_len `{F: A → _} {Xl Yl} :
-  plist2 F Xl Yl → eq_nat (length Xl) (length Yl) :=
-  match Xl, Yl with [], [] => λ _, I |
-    _::_, _::_ => λ '(_ -:: xl'), plist2_eq_nat_len xl' | _, _ => absurd end.
-
-Lemma plist2_eq_len `{F: A → _} {Xl Yl} : plist2 F Xl Yl → length Xl = length Yl.
-Proof. by move=> /plist2_eq_nat_len/eq_nat_is_eq ?. Qed.
-
-(** * Uniform plist *)
+(** * [plist] with a Constant Functor *)
 
 Definition plistc {B} (A: Type) (Xl: list B) : Type := plist (const A) Xl.
 

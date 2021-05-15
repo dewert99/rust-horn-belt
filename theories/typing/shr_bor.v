@@ -48,6 +48,9 @@ Section typing.
   Global Instance shr_send {𝔄} κ (ty: _ 𝔄) : Sync ty → Send (&shr{κ} ty).
   Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
 
+  Global Instance shr_just_loc {𝔄} κ (ty: _ 𝔄) : JustLoc (&shr{κ} ty).
+  Proof. iIntros (?[|]?[|[[]|][]]) "? //". by iExists _. Qed.
+
   Lemma shr_type_incl {𝔄 𝔅} κ κ' (f: 𝔄 → 𝔅) ty ty' :
     κ' ⊑ κ -∗ type_incl ty ty' f -∗ type_incl (&shr{κ} ty) (&shr{κ'} ty') f.
   Proof.

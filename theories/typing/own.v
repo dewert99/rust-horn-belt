@@ -114,6 +114,9 @@ Section own.
   Global Instance own_sync {𝔄} n (ty: _ 𝔄) : Sync ty → Sync (own_ptr n ty).
   Proof. move=> >/=. by do 6 f_equiv. Qed.
 
+  Global Instance own_just_loc {𝔄} n (ty: _ 𝔄) : JustLoc (own_ptr n ty).
+  Proof. iIntros (?[|]?[|[[]|][]]) "? //". by iExists _. Qed.
+
   Lemma own_leak {𝔄} E L n (ty: _ 𝔄) Φ :
     leak E L ty Φ → leak E L (own_ptr n ty) Φ.
   Proof.

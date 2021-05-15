@@ -240,6 +240,22 @@ Section lemmas.
     iExists (vπ -:: vπ -:: wπl). iFrame "Obs T". by iSplit.
   Qed.
 
+  Lemma tctx_to_shift_loc_0 {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) E L : JustLoc ty →
+    tctx_incl E L (p ◁ ty +:: T) (p +ₗ #0 ◁ ty +:: T) id.
+  Proof.
+    iIntros (JLoc ??[??]?) "_ _ _ _ $ [(%&%& %Ev & ⧖ & ty) T] Obs !>".
+    iExists (_-::_). iDestruct (JLoc with "ty") as %[?[=->]]. iFrame "T Obs".
+    iExists _, _. iFrame "⧖ ty". by rewrite/= Ev shift_loc_0.
+  Qed.
+
+  Lemma tctx_of_shift_loc_0 {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) E L :
+    tctx_incl E L (p +ₗ #0 ◁ ty +:: T) (p ◁ ty +:: T) id.
+  Proof.
+    iIntros (??[??]?) "_ _ _ _ $ [(%&%& %Ev & ⧖ty) T] Obs !>". iExists (_-::_).
+    iFrame "T Obs". iExists _, _. iFrame "⧖ty". iPureIntro. move: Ev=>/=.
+    case (eval_path p)=>//. (do 2 (case=>//))=> ?. by rewrite shift_loc_0.
+  Qed.
+
   Lemma subtype_tctx_incl {𝔄 𝔅 𝔄l} ty ty' (f: 𝔄 → 𝔅) (T: _ 𝔄l) p E L :
     subtype E L ty ty' f →
     tctx_incl E L (p ◁ ty +:: T) (p ◁ ty' +:: T)

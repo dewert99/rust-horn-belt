@@ -267,7 +267,7 @@ Section typing.
       iSplit; [by rewrite assoc|]. iFrame "Own3". iExists wl1, wl2. by iFrame.
     - iIntros "(%& %wl3 &->& (%wl1 & %wl2 &->& Own1 &?) &?)". iExists wl1, (wl2 ++ wl3).
       iSplit; [by rewrite assoc|]. iFrame "Own1". iExists wl2, wl3. by iFrame.
-    - rewrite -assoc shift_loc_assoc_nat. by iApply (bi.iff_refl True%I).
+    - rewrite -assoc shift_loc_assoc_nat. by iApply bi.equiv_iff.
   Qed.
 
   Lemma prod_ty_left_id {𝔄} E L (ty: _ 𝔄) :
@@ -279,7 +279,7 @@ Section typing.
     { move=> vπ. fun_ext=>/= π. by case (vπ π)=> [[]?]. }
     iSplit; iIntros "!>*"; rewrite Eq.
     - iSplit; [by iDestruct 1 as ([|]?->?) "?"|]. iIntros. iExists [], _. by iFrame.
-    - rewrite left_id shift_loc_0. by iApply (bi.iff_refl True%I).
+    - rewrite left_id shift_loc_0. by iApply bi.equiv_iff.
   Qed.
 
   Lemma prod_ty_right_id {𝔄} E L (ty: _ 𝔄) :
@@ -292,7 +292,7 @@ Section typing.
     iSplit; iIntros "!>*"; rewrite Eq; [iSplit|].
     - iDestruct 1 as (?[|]->) "[?%]"; by [rewrite right_id|].
     - iIntros. iExists _, []. rewrite right_id. by iFrame.
-    - rewrite right_id. by iApply (bi.iff_refl True%I).
+    - rewrite right_id. by iApply bi.equiv_iff.
   Qed.
 
   Lemma xprod_ty_app_prod {𝔄l 𝔅l} E L (tyl: _ 𝔄l) (tyl': _ 𝔅l) :
