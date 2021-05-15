@@ -36,8 +36,8 @@ Section int.
       (λ post '-[z; z'], post (z + z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
-    wp_apply (wp_hasty with "p1"). iIntros (? d _) "⧖". iIntros ((z &->&[=->])).
-    wp_apply (wp_hasty with "p2"). iIntros (?? _) "_". iIntros ((z' &->&[=->])).
+    wp_apply (wp_hasty with "p1"). iIntros "% %d _ ⧖" ((z &->&[=->])).
+    wp_apply (wp_hasty with "p2"). iIntros "%% _ _" ((z' &->&[=->])).
     wp_op. iExists -[const (z + z')]. iFrame "Obs". rewrite right_id
     tctx_hasty_val'; [|done]. iExists d. iFrame "⧖". by iExists (z + z').
   Qed.
@@ -48,7 +48,7 @@ Section int.
     typed_body E L C T (let: x := p1 + p2 in e)
       (tr (λ '(z -:: z' -:: bl), pre (z + z' -:: bl))).
   Proof.
-    iIntros. iApply type_let; [iApply type_plus_instr|solve_typing| |done].
+    iIntros. iApply type_let; [by apply type_plus_instr|solve_typing| |done].
     f_equal. fun_ext. by case=> [?[??]].
   Qed.
 
@@ -57,8 +57,8 @@ Section int.
       (λ post '-[z; z'], post (z - z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
-    wp_apply (wp_hasty with "p1"). iIntros (? d _) "⧖". iIntros ((z &->&[=->])).
-    wp_apply (wp_hasty with "p2"). iIntros (?? _) "_". iIntros ((z' &->&[=->])).
+    wp_apply (wp_hasty with "p1"). iIntros "% %d _ ⧖" ((z &->&[=->])).
+    wp_apply (wp_hasty with "p2"). iIntros "%% _ _" ((z' &->&[=->])).
     wp_op. iExists -[const (z - z')]. iFrame "Obs". rewrite right_id
     tctx_hasty_val'; [|done]. iExists d. iFrame "⧖". by iExists (z - z').
   Qed.
@@ -69,7 +69,7 @@ Section int.
     typed_body E L C T (let: x := p1 - p2 in e)
       (tr (λ '(z -:: z' -:: bl), pre (z - z' -:: bl))).
   Proof.
-    iIntros. iApply type_let; [iApply type_minus_instr|solve_typing| |done].
+    iIntros. iApply type_let; [by apply type_minus_instr|solve_typing| |done].
     f_equal. fun_ext. by case=> [?[??]].
   Qed.
 
@@ -78,8 +78,8 @@ Section int.
       (λ post '-[z; z'], post (z * z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
-    wp_apply (wp_hasty with "p1"). iIntros (? d _) "⧖". iIntros ((z &->&[=->])).
-    wp_apply (wp_hasty with "p2"). iIntros (?? _) "_". iIntros ((z' &->&[=->])).
+    wp_apply (wp_hasty with "p1"). iIntros "% %d _ ⧖" ((z &->&[=->])).
+    wp_apply (wp_hasty with "p2"). iIntros "%% _ _" ((z' &->&[=->])).
     wp_op. iExists -[const (z * z')]. iFrame "Obs". rewrite right_id
     tctx_hasty_val'; [|done]. iExists d. iFrame "⧖". by iExists (z * z').
   Qed.
@@ -90,7 +90,7 @@ Section int.
     typed_body E L C T (let: x := p1 * p2 in e)
       (tr (λ '(z -:: z' -:: bl), pre (z * z' -:: bl))).
   Proof.
-    iIntros. iApply type_let; [iApply type_mult_instr|solve_typing| |done].
+    iIntros. iApply type_let; [by apply type_mult_instr|solve_typing| |done].
     f_equal. fun_ext. by case=> [?[??]].
   Qed.
 
@@ -99,8 +99,8 @@ Section int.
       (λ post '-[z; z'], post (bool_decide (z ≤ z'))).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
-    wp_apply (wp_hasty with "p1"). iIntros (? d _) "⧖". iIntros ((z &->&[=->])).
-    wp_apply (wp_hasty with "p2"). iIntros (?? _) "_". iIntros ((z' &->&[=->])).
+    wp_apply (wp_hasty with "p1"). iIntros "% %d _ ⧖" ((z &->&[=->])).
+    wp_apply (wp_hasty with "p2"). iIntros "%% _ _" ((z' &->&[=->])).
     wp_op. iExists -[const (bool_decide (z <= z'))]. iFrame "Obs".
     rewrite right_id tctx_hasty_val'; [|done]. iExists d.
     iFrame "⧖". by iExists (bool_decide (z <= z')).
@@ -112,7 +112,7 @@ Section int.
     typed_body E L C T (let: x := p1 ≤ p2 in e)
       (tr (λ '(z -:: z' -:: bl), pre (bool_decide (z ≤ z') -:: bl))).
   Proof.
-    iIntros. iApply type_let; [iApply type_le_instr|solve_typing| |done].
+    iIntros. iApply type_let; [by apply type_le_instr|solve_typing| |done].
     f_equal. fun_ext. by case=> [?[??]].
   Qed.
 

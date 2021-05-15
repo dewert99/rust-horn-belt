@@ -7,6 +7,18 @@ Implicit Type 𝔄: syn_type.
 Section lemmas.
   Context `{!typeG Σ}.
 
+  Lemma tctx_array_shr_idx {𝔄 𝔅l} (ty: _ 𝔄) n κ (p: path) (i: fin n) (T: _ 𝔅l) E L :
+    tctx_incl E L (p ◁ &shr{κ} [ty; n] +:: T)
+      (p +ₗ #(i * ty.(ty_size))%nat ◁ &shr{κ} ty +:: T)
+      (λ post '(xl -:: bl), post (xl !!! i -:: bl))%type.
+  Proof.
+    iIntros (??[vπ?]?) "LFT PROPH _ _ $ [p T] Obs !>".
+    iExists ((.!!! i) ∘ vπ -:: _). iFrame "Obs T".
+    iDestruct "p" as ([[]|][|]Ev) "[⧖ shrs]"=>//=.
+    iExists _, _. iSplit; [by rewrite/= Ev|]. iFrame "⧖".
+    by rewrite big_sepL_vlookup vfunsep_lookup.
+  Qed.
+
   Lemma array_shr_idx_instr {𝔄} (ty: _ 𝔄) n κ p q E L :
     ⊢ typed_instr_ty E L +[p ◁ &shr{κ} [ty; n]; q ◁ int]
       (p +ₗ q * #ty.(ty_size))%E (&shr{κ} ty)
@@ -31,7 +43,7 @@ Section lemmas.
     typed_body E L C T (let: x := p +ₗ q * #ty.(ty_size) in e)
       (tr (λ '(xl -:: z -:: bl), ∃i: fin n, z = i ∧ pre (xl !!! i -:: bl)))%type.
   Proof.
-    iIntros. iApply type_let; [iApply array_shr_idx_instr|solve_typing| |done].
+    iIntros. iApply type_let; [by apply array_shr_idx_instr|solve_typing| |done].
     f_equal. fun_ext. by case=> [?[??]].
   Qed.
 
