@@ -72,9 +72,9 @@ Section lemmas.
     move=>/= n IH p. eapply tctx_incl_eq. { eapply tctx_incl_trans;
     [eapply tctx_uniq_eqtype; by [apply array_succ_prod|apply _|]|].
     eapply tctx_incl_trans. { eapply (tctx_incl_frame_r +[_]).
-    by eapply tctx_split_uniq_prod. } eapply (tctx_incl_app +[_] +[_]);
-    [apply tctx_to_shift_loc_0, _|]. eapply (tctx_incl_trans _ _ _ _ id); [apply IH|].
-    iIntros (???vπl?) "_ _ _ _ $ T Obs !>". iExists _. iFrame "Obs". clear.
+    by eapply tctx_split_uniq_prod. } apply (tctx_incl_app +[_] +[_]);
+    [apply tctx_to_shift_loc_0, _|]. eapply (tctx_incl_trans _ id); [apply IH|].
+    iIntros (?? vπl ?) "_ _ _ _ $ T Obs !>". iExists _. iFrame "Obs". clear.
     move: 0=> k. iInduction n as [|] "IH" forall (p k); [done|]. case vπl=>/= ??.
     iDestruct "T" as "[p T]". iSplitL "p"; [|by iApply "IH"].
     rewrite tctx_elt_interp_hasty_path; [done|]=>/=. case (eval_path p)=>//.
@@ -82,6 +82,20 @@ Section lemmas.
     move=> ?[[v v'][]]. inv_vec v. by inv_vec v'.
   Qed.
 
+  Lemma tctx_extract_split_uniq_array {𝔄 𝔅 ℭl 𝔇l} (t: _ 𝔄) κ (ty: _ 𝔅) n
+    (T: _ ℭl) (T': _ 𝔇l) tr p E L :
+    lctx_lft_alive E L κ →
+    tctx_extract_elt E L t (hasty_uniq_idxs p κ ty n 0) T' tr →
+    tctx_extract_elt E L t (p ◁ &uniq{κ} [ty; n] +:: T) (T' h++ T)
+      (λ post '((bl, bl') -:: cl),
+        tr (λ '(a -:: dl), post (a -:: dl -++ cl)) (vec_to_plist (vzip bl bl'))).
+  Proof.
+    move=> ??. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+    eapply tctx_incl_trans; by [apply tctx_split_uniq_array|]. }
+    move=>/= ?[[??]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
+  Qed.
+
 End lemmas.
 
-Global Hint Resolve tctx_extract_idx_shr_array | 5 : lrust_typing.
+Global Hint Resolve tctx_extract_idx_shr_array tctx_extract_split_uniq_array
+  | 5 : lrust_typing.

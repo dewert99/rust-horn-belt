@@ -167,7 +167,7 @@ Section lemmas.
   Lemma tctx_incl_refl {𝔄l} (T: _ 𝔄l) E L : tctx_incl E L T T id.
   Proof. move=> ?? vπl ?. iIntros. iExists vπl. by iFrame. Qed.
 
-  Lemma tctx_incl_trans 𝔄l 𝔅l ℭl tr tr' (T1: _ 𝔄l) (T2: _ 𝔅l) (T3: _ ℭl) E L :
+  Lemma tctx_incl_trans {𝔄l 𝔅l ℭl} tr tr' (T1: _ 𝔄l) (T2: _ 𝔅l) (T3: _ ℭl) E L :
     tctx_incl E L T1 T2 tr → tctx_incl E L T2 T3 tr' → tctx_incl E L T1 T3 (tr ∘ tr').
   Proof.
     move=> In In' >. iIntros "#LFT #PROPH #UNIQ #E L T Obs".
@@ -243,7 +243,7 @@ Section lemmas.
   Lemma tctx_to_shift_loc_0 {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) E L : JustLoc ty →
     tctx_incl E L (p ◁ ty +:: T) (p +ₗ #0 ◁ ty +:: T) id.
   Proof.
-    iIntros (JLoc ??[??]?) "_ _ _ _ $ [(%&%& %Ev & ⧖ & ty) T] Obs !>".
+    iIntros (JLoc ??[??]?) "_ _ _ _ $ /=[(%&%& %Ev & ⧖ & ty) T] Obs !>".
     iExists (_-::_). iDestruct (JLoc with "ty") as %[?[=->]]. iFrame "T Obs".
     iExists _, _. iFrame "⧖ ty". by rewrite/= Ev shift_loc_0.
   Qed.
@@ -251,9 +251,25 @@ Section lemmas.
   Lemma tctx_of_shift_loc_0 {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) E L :
     tctx_incl E L (p +ₗ #0 ◁ ty +:: T) (p ◁ ty +:: T) id.
   Proof.
-    iIntros (??[??]?) "_ _ _ _ $ [(%&%& %Ev & ⧖ty) T] Obs !>". iExists (_-::_).
+    iIntros (??[??]?) "_ _ _ _ $ /=[(%&%& %Ev & ⧖ty) T] Obs !>". iExists (_-::_).
     iFrame "T Obs". iExists _, _. iFrame "⧖ty". iPureIntro. move: Ev=>/=.
     case (eval_path p)=>//. (do 2 (case=>//))=> ?. by rewrite shift_loc_0.
+  Qed.
+
+  Lemma tctx_shift_loc_assoc {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) (z z': Z) E L :
+    tctx_incl E L (p +ₗ #z +ₗ #z' ◁ ty +:: T) (p +ₗ #(z + z') ◁ ty +:: T) id.
+  Proof.
+    iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs !>". iExists (_-::_). iFrame "T Obs".
+    rewrite tctx_elt_interp_hasty_path; [done|]=>/=. case (eval_path p)=>//.
+    (do 2 case=>//)=> ?. by rewrite shift_loc_assoc.
+  Qed.
+
+  Lemma tctx_shift_loc_assoc' {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) (z z': Z) E L :
+    tctx_incl E L (p +ₗ #(z + z') ◁ ty +:: T) (p +ₗ #z +ₗ #z' ◁ ty +:: T) id.
+  Proof.
+    iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs !>". iExists (_-::_). iFrame "T Obs".
+    rewrite tctx_elt_interp_hasty_path; [done|]=>/=. case (eval_path p)=>//.
+    (do 2 case=>//)=> ?. by rewrite shift_loc_assoc.
   Qed.
 
   Lemma subtype_tctx_incl {𝔄 𝔅 𝔄l} ty ty' (f: 𝔄 → 𝔅) (T: _ 𝔄l) p E L :
