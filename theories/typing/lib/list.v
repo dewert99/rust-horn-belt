@@ -15,7 +15,7 @@ Section list.
     leak E L ty Φ → leak E L (list_ty ty) (lforall Φ).
   Proof.
     move=> ?. apply fix_leak=> ??. eapply leak_impl. { apply mod_ty_leak,
-    option_leak, prod_leak, own_leak; by [apply _| |]. } by case.
+    option_leak, prod_leak, own_leak; solve_typing. } by case.
   Qed.
 
   Lemma list_subtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty ty' :
@@ -31,5 +31,4 @@ Section list.
 
 End list.
 
-Global Hint Resolve list_leak | 1 : lrust_typing.
-Global Hint Resolve list_subtype list_eqtype : lrust_typing.
+Global Hint Resolve list_leak list_subtype list_eqtype : lrust_typing.

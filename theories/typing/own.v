@@ -280,7 +280,7 @@ Section typing.
       have ->: (subst x xv (x <- p;; e))%E = (xv <- p;; subst x xv e)%E.
       { rewrite /subst /=. repeat f_equal;
         [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
-      iApply type_assign; [|solve_typing|by eapply write_own|apply leak_just|done].
+      iApply type_assign; [|solve_typing|by eapply write_own|solve_typing|done].
       apply subst_is_closed; [|done]. apply is_closed_of_val. }
     by move=>/= [??]??.
   Qed.
@@ -305,16 +305,15 @@ Section typing.
         - eapply (is_closed_subst []); [apply is_closed_of_val|set_solver].
         - by rewrite bool_decide_true.
         - eapply is_closed_subst; [done|set_solver]. } rewrite Nat2Z.id.
-      iApply type_memcpy; [|solve_typing| |apply leak_just|done|done|done];
-      [|by apply write_own]. apply subst_is_closed; [|done].
+      iApply type_memcpy; [|solve_typing| | |done|done|done];
+      [|by apply write_own|solve_typing]. apply subst_is_closed; [|done].
       apply is_closed_of_val. } by move=>/= [??]??.
   Qed.
 
 End typing.
 
-Global Hint Resolve own_leak | 1 : lrust_typing.
-Global Hint Resolve own_subtype own_eqtype box_subtype box_eqtype
-            write_own read_own_copy : lrust_typing.
+Global Hint Resolve own_leak own_subtype own_eqtype box_subtype box_eqtype
+  write_own read_own_copy : lrust_typing.
 (* By setting the priority high, we make sure copying is tried before
    moving. *)
 Global Hint Resolve read_own_move | 100 : lrust_typing.

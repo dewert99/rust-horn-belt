@@ -12,6 +12,9 @@ Section int.
 
   Global Instance int_send: Send int. Proof. done. Qed.
 
+  Lemma int_leak E L : leak E L int (const True).
+  Proof. apply leak_just. Qed.
+
   Lemma bool_ty_to_int E L : subtype E L bool_ty int Z_of_bool.
   Proof.
     apply subtype_plain_type. iIntros "*_!>_/=". iSplit; [done|].
@@ -117,3 +120,5 @@ Section int.
   Qed.
 
 End int.
+
+Global Hint Resolve int_leak : lrust_typing.

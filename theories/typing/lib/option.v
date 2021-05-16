@@ -14,16 +14,11 @@ Section option.
   Lemma option_leak {𝔄} E L (ty: _ 𝔄) Φ :
     leak E L ty Φ →
     leak E L (option_ty ty) (λ o, match o with None => True | Some o => Φ o end).
-  Proof.
-    move=> ?. eapply leak_impl. { apply mod_ty_leak, sum_leak;
-    [apply _|apply leak_just|done]. } by case.
-  Qed.
+  Proof. move=> ?. eapply leak_impl; [solve_typing|]. by case. Qed.
 
   Lemma option_subtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty ty' :
     subtype E L ty ty' f → subtype E L (option_ty ty) (option_ty ty') (option_map f).
-  Proof.
-    move=> ?. eapply subtype_eq; [solve_typing|]. fun_ext. by case.
-  Qed.
+  Proof. move=> ?. eapply subtype_eq; [solve_typing|]. fun_ext. by case. Qed.
 
   Lemma option_eqtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) g ty ty' :
     eqtype E L ty ty' f g →
@@ -120,5 +115,4 @@ Section option.
 
 End option.
 
-Global Hint Resolve option_leak | 1 : lrust_typing.
-Global Hint Resolve option_subtype option_eqtype : lrust_typing.
+Global Hint Resolve option_leak option_subtype option_eqtype : lrust_typing.

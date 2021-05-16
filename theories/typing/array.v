@@ -201,4 +201,14 @@ Section typing.
     apply prod_eqtype; [apply array_one|solve_typing]. } { done. } { fun_ext. by case. }
   Qed.
 
+  Lemma array_leak {𝔄} (ty: _ 𝔄) n Φ E L :
+    leak E L ty Φ → leak E L [ty; n] (λ al, lforall Φ al).
+  Proof.
+    move=> ?. elim n. { eapply leak_impl; [apply leak_just|]=> v. by inv_vec v. }
+    move=> ? IH. eapply leak_impl. { eapply leak_subtype; [by eapply proj1,
+    array_succ_prod|]. solve_typing. } move=> v. by inv_vec v.
+  Qed.
+
 End typing.
+
+Global Hint Resolve array_leak array_subtype array_eqtype : lrust_typing.

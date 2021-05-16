@@ -769,6 +769,13 @@ Definition subtype_id `{!typeG Σ} {𝔄} E L (ty ty': type 𝔄) : Prop
 Definition eqtype_id `{!typeG Σ} {𝔄} E L (ty ty': type 𝔄) : Prop
   := eqtype E L ty ty' id id.
 
+Definition subtypel `{!typeG Σ} {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l)
+  (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) : Prop :=
+  HForall2_1 (λ _ _ ty ty' f, subtype E L ty ty' f) tyl tyl' fl.
+Definition eqtypel `{!typeG Σ} {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l)
+  (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) (gl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔅l 𝔄l) : Prop :=
+  HForall2_2flip (λ _ _ ty ty' f g, eqtype E L ty ty' f g) tyl tyl' fl gl.
+
 Section subtyping.
   Context `{!typeG Σ}.
 
@@ -894,13 +901,6 @@ Section subtyping.
 
   (** List *)
 
-  Definition subtypel {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l)
-    (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) : Prop :=
-    HForall2_1 (λ _ _ ty ty' f, subtype E L ty ty' f) tyl tyl' fl.
-  Definition eqtypel {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l)
-    (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) (gl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔅l 𝔄l) : Prop :=
-    HForall2_2flip (λ _ _ ty ty' f g, eqtype E L ty ty' f g) tyl tyl' fl gl.
-
   Lemma subtypel_nil E L : subtypel E L +[] +[] -[].
   Proof. constructor. Qed.
 
@@ -982,6 +982,16 @@ Section subtyping.
     by iApply type_incl_plain_type.
   Qed.
 
+  (** Leak *)
+
+  Lemma leak_subtype {𝔄 𝔅} E L ty ty' (f: 𝔄 → 𝔅) Φ :
+    subtype E L ty ty' f → leak E L ty' Φ → leak E L ty (Φ ∘ f).
+  Proof.
+    iIntros (Sub Lk) "* LFT PROPH E L ty". iDestruct (Sub with "L") as "#Sub".
+    iDestruct ("Sub" with "E") as "#(_&_& #InOwn &_)".
+    iDestruct ("InOwn" with "ty") as "ty'". by iApply (Lk with "LFT PROPH E L ty'").
+  Qed.
+
 End subtyping.
 
 (** * Utility *)
@@ -1047,7 +1057,6 @@ Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
   right associativity, format "[loc[ l ]  :=  vl ]  P") : bi_scope.
 
 Global Hint Resolve ty_outlv_E_elctx_sat tyl_outlv_E_elctx_sat : lrust_typing.
-Global Hint Resolve leak_just | 100 : lrust_typing.
 Global Hint Resolve leakl_nil subtype_refl eqtype_refl subtypel_nil eqtypel_nil
   : lrust_typing.
 (** We use [Hint Extern] instead of [Hint Resolve] here, because

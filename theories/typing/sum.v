@@ -239,13 +239,13 @@ Section typing.
     iApply (step_fupdN_wand with "ToObs"). iIntros "!> >[Obs $] !>".
     iApply proph_obs_impl; [|done]=> ?. by rewrite [const _]eq_unique pinj_to_xsum.
   Qed.
+  Hint Resolve xsum_leak : lrust_typing.
 
   Lemma sum_leak {𝔄 𝔅} E L (ty: _ 𝔄) (ty': _ 𝔅) Φ Φ' :
     leak E L ty Φ → leak E L ty' Φ' →
     leak E L (ty + ty') (λ s, match s with inl a => Φ a | inr b => Φ' b end).
   Proof.
-    move=> ??. eapply leak_impl; [apply mod_ty_leak, xsum_leak;
-    [apply _|solve_typing]|]. by case.
+    move=> ??. eapply leak_impl; [solve_typing|]. by case.
   Qed.
 
   Lemma xsum_subtype {𝔄l 𝔅l} E L (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl :
@@ -303,5 +303,5 @@ End typing.
 
 Global Instance empty_empty `{!typeG Σ} : Empty (type ∅) := empty.
 
-Global Hint Resolve xsum_leak sum_leak | 1 : lrust_typing.
-Global Hint Resolve xsum_subtype xsum_eqtype sum_subtype sum_eqtype : lrust_typing.
+Global Hint Resolve xsum_leak sum_leak xsum_subtype xsum_eqtype
+  sum_subtype sum_eqtype : lrust_typing.

@@ -146,5 +146,5 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve maybe_uninit_leak | 1 : lrust_typing.
-Global Hint Resolve maybe_uninit_subtype maybe_uninit_eqtype : lrust_typing.
+Global Hint Resolve maybe_uninit_leak maybe_uninit_subtype maybe_uninit_eqtype
+  : lrust_typing.

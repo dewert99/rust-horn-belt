@@ -162,6 +162,4 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve mod_ty_leak | 1 : lrust_typing.
-Global Hint Resolve mod_ty_leak' | 10 : lrust_typing.
-Global Hint Resolve mod_ty_subtype mod_ty_eqtype : lrust_typing.
+Global Hint Resolve mod_ty_leak mod_ty_subtype mod_ty_eqtype : lrust_typing.

@@ -12,6 +12,9 @@ Section bool.
 
   Global Instance bool_send: Send bool_ty. Proof. done. Qed.
 
+  Lemma bool_leak E L : leak E L bool_ty (const True).
+  Proof. apply leak_just. Qed.
+
   Lemma type_bool_instr (b: bool) : typed_val #b bool_ty (λ post, post b).
   Proof.
     iIntros (?????) "_ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "⧖".
@@ -40,3 +43,5 @@ Section bool.
   Qed.
 
 End bool.
+
+Global Hint Resolve bool_leak : lrust_typing.
