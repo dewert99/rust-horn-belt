@@ -39,10 +39,10 @@ Section product_split.
   Proof.
     move=> HSub Split. elim: tyl. { move=> ?. by eapply tctx_incl_eq;
     [apply tctx_incl_leak_head|]=>/= ?[[][]]. } move=>/= ??? tyl IH ?.
-    eapply tctx_incl_eq. { eapply tctx_incl_trans; [eapply subtype_tctx_incl,
-    HSub, mod_ty_out, _|]. eapply tctx_incl_trans; [apply Split|].
-    apply (tctx_incl_app +[_] +[_]); [apply tctx_to_shift_loc_0, _|].
-    eapply tctx_incl_trans; [apply IH|]. rewrite -{2}[ty_size _]Nat.add_0_r.
+    eapply tctx_incl_eq. { eapply tctx_incl_trans; [by eapply subtype_tctx_incl,
+    HSub, mod_ty_out, _|]. eapply tctx_incl_trans; [by apply Split|].
+    apply (tctx_incl_app +[_] +[_]); [by apply tctx_to_shift_loc_0, _|].
+    eapply tctx_incl_trans; [by apply IH|]. rewrite -{2}[ty_size _]Nat.add_0_r.
     eapply proj1, hasty_ptr_offsets_equiv. } by move=>/= ?[[??][]].
   Qed.
 
@@ -60,10 +60,10 @@ Section product_split.
     subtype_trans, mod_ty_in. eapply subtype_trans; [apply prod_ty_right_id|].
     apply prod_subtype, mod_ty_in. solve_typing. } by move=> ?[?[]]. }
     move=> ???? IH _ ?. eapply tctx_incl_eq. { eapply tctx_incl_trans;
-    [|eapply subtype_tctx_incl, HSub, mod_ty_in]. eapply tctx_incl_trans;
-    [|apply Merge]. apply (tctx_incl_app +[_] +[_]); [apply tctx_of_shift_loc_0|].
-    eapply tctx_incl_trans; [|by apply IH].
-    apply (tctx_incl_app +[_] +[_]); [apply tctx_to_shift_loc_0, _|].
+    [|by eapply subtype_tctx_incl, HSub, mod_ty_in]. eapply tctx_incl_trans;
+    [|by apply Merge]. apply (tctx_incl_app +[_] +[_]);
+    [by apply tctx_of_shift_loc_0|]. eapply tctx_incl_trans; [|by apply IH].
+    apply (tctx_incl_app +[_] +[_]); [by apply tctx_to_shift_loc_0, _|].
     eapply proj2, hasty_ptr_offsets_equiv. } by move=>/= ?[?[??]].
   Qed.
 
@@ -239,8 +239,8 @@ Section product_split.
     [apply tctx_incl_leak_head|]=>/= ?[[][]]_[]. } move=>/= 𝔄 𝔅l ty tyl IH p.
     eapply tctx_incl_eq. { eapply tctx_incl_trans; [apply tctx_uniq_mod_ty_out;
     by [apply _|]|]. eapply tctx_incl_trans; [by apply tctx_split_uniq_prod|].
-    apply (tctx_incl_app +[_] +[_]); [apply tctx_to_shift_loc_0, _|].
-    eapply tctx_incl_trans; [apply IH|]. eapply proj1, get_tctx_equiv=> ? vπl.
+    apply (tctx_incl_app +[_] +[_]); [by apply tctx_to_shift_loc_0, _|].
+    eapply tctx_incl_trans; [by apply IH|]. eapply proj1, get_tctx_equiv=> ? vπl.
     move: (ty_size _)=> off. rewrite -{2}(Nat.add_0_r off). move: off 0. clear.
     induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl Nat.add_assoc].
     apply tctx_elt_interp_hasty_path=>/=. case (eval_path p)=>//.

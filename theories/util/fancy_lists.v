@@ -185,6 +185,8 @@ Qed.
 
 Fixpoint vec_to_plist `{F: A → _} {X n} (xl: vec (F X) n) : plist F (replicate n X) :=
   match xl with [#] => -[] | x ::: xl' => x -:: vec_to_plist xl' end.
+Fixpoint plist_to_vec `{F: A → _} {X n} (xl: plist F (replicate n X)) : vec (F X) n :=
+  match n, xl with 0, _ => [#] | S _, x -:: xl' => x ::: plist_to_vec xl' end.
 
 (** * Passive Heterogeneous List over Two Lists *)
 
