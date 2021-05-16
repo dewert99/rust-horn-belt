@@ -43,18 +43,18 @@ Section fn.
     f_equiv. do 2 (f_equiv; [by rewrite Eqi|]). by rewrite Eqo.
   Qed.
 
-  Definition trans_upper' {𝔄l 𝔅 ℭl} (tr: pred' 𝔅 → predl 𝔄l)
+  Definition trans_upper' {𝔄l 𝔅 ℭl} (tr: predl_trans' 𝔄l 𝔅)
     : predl_trans (𝔄l ++ ℭl) (𝔅 :: ℭl) := λ post acl,
     let '(al, cl) := psep acl in tr (λ b, post (b -:: cl)) al.
 
-  Program Definition fn (fp: A → fn_params) : type (predₛ 𝔅 → predlₛ 𝔄l) :=
+  Program Definition fn (fp: A → fn_params) : type (predl_trans'ₛ 𝔄l 𝔅) :=
     {| (* FIXME : The definition of ty_lfts is less restrictive than the one
           used in Rust. In Rust, the type of parameters are taken into account
           for well-formedness, and all the liftime constrains relating a
           generalized liftime are ignored. For simplicity, we ignore all of
           them, but this is not very faithful. *)
       pt_size := 1;
-      pt_own (tr: (predₛ _ → predlₛ _)%ST) tid vl := tc_opaque
+      pt_own (tr: predl_trans'ₛ _ _) tid vl := tc_opaque
         (∃fb kb (bl: plistc _ _) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
         ▷ □ ∀x ϝ k ℭl (T: _ ℭl) post (wl: plistc _ _),
           typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
@@ -163,19 +163,6 @@ Section typing.
     iIntros "!> #E /=". iDestruct ("Sub" with "E") as "$".
     iDestruct ("IH" with "E") as "$".
   Qed.
-
-
-Ltac inv_hlist xl := let A := type of xl in
-match eval hnf in A with hlist _ ?Xl =>
-  match eval hnf in Xl with
-  | [] => revert dependent xl;
-      match goal with |- ∀xl, @?P xl => apply (hlist_nil_inv P) end
-  | _ :: _ => revert dependent xl;
-      match goal with |- ∀xl, @?P xl => apply (hlist_cons_inv P) end;
-      (* Try going on recursively. *)
-      try (let x := fresh "x" in intros x xl; inv_hlist xl; revert x)
-  end
-end.
 
   Lemma fn_subtype {A 𝔄l 𝔄l' 𝔅 𝔅'} (fp: A → _) fp' (fl: _ 𝔄l' 𝔄l) (g: 𝔅 → 𝔅') E L :
     (∀x ϝ, let E' := E ++ fp_E (fp' x) ϝ in elctx_sat E' L (fp_E (fp x) ϝ) ∧
@@ -329,7 +316,7 @@ end.
       { apply subst'_is_closed; [|done]. apply is_closed_of_val. } iApply "e".
   Qed.
 
-  Lemma type_fnrec_instr {A 𝔄l 𝔅} (tr: pred' 𝔅 → predl 𝔄l) (fp: A → _)
+  Lemma type_fnrec_instr {A 𝔄l 𝔅} (tr: predl_trans' 𝔄l 𝔅) (fp: A → _)
     fb (bl: plistc _ _) e E L :
     Closed (fb :b: "return" :: bl +b+ []) e →
     □ (∀x ϝ (f: val) k ℭl (T: _ ℭl) post (wl: plistc _ 𝔄l),
@@ -351,7 +338,7 @@ end.
     by iApply proph_obs_impl; [|done]=>/= ??.
   Qed.
 
-  Lemma type_fn_instr {A 𝔄l 𝔅} (tr: pred' 𝔅 → predl 𝔄l) (fp: A → _)
+  Lemma type_fn_instr {A 𝔄l 𝔅} (tr: predl_trans' 𝔄l 𝔅) (fp: A → _)
     (bl: plistc _ _) e E L :
     Closed ("return" :: bl +b+ []) e →
     □ (∀x ϝ k ℭl (T: _ ℭl) post (wl: plistc _ 𝔄l),
