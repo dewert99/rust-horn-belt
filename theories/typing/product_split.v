@@ -1,6 +1,6 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import type_context
-  mod_ty uninit product own uniq_bor shr_bor.
+  product mod_ty uninit own uniq_bor shr_bor.
 Set Default Proof Using "Type".
 
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl: syn_typel).
@@ -16,12 +16,12 @@ Section product_split.
       p +ₗ #off ◁ ptr _ ty +:: hasty_ptr_offsets p ptr tyl' (off + ty.(ty_size))
     end.
 
-  Lemma hasty_ptr_offsets_offset {𝔄l} ptr p (tyl: _ 𝔄l) (off off': nat) tid vπl :
-    tctx_interp tid (hasty_ptr_offsets (p +ₗ #off) ptr tyl off') vπl ⊣⊢
-    tctx_interp tid (hasty_ptr_offsets p ptr tyl (off + off')) vπl.
+  Lemma hasty_ptr_offsets_equiv {𝔄l} ptr p (tyl: _ 𝔄l) (off off': nat) :
+    tctx_equiv (hasty_ptr_offsets (p +ₗ #off) ptr tyl off')
+      (hasty_ptr_offsets p ptr tyl (off + off')).
   Proof.
-    move: p off off'. induction tyl, vπl; [done|]=>/= p ??.
-    f_equiv; [|by rewrite IHtyl Nat.add_assoc].
+    apply get_tctx_equiv=> ? vπl. move: p off off'.
+    induction tyl, vπl; [done|]=>/= p ??. f_equiv; [|by rewrite IHtyl Nat.add_assoc].
     apply tctx_elt_interp_hasty_path=>/=. case (eval_path p)=>//.
     (do 2 case=>//)=> ?. by rewrite shift_loc_assoc -Nat2Z.inj_add.
   Qed.
@@ -42,9 +42,8 @@ Section product_split.
     eapply tctx_incl_eq. { eapply tctx_incl_trans; [eapply subtype_tctx_incl,
     HSub, mod_ty_out, _|]. eapply tctx_incl_trans; [apply Split|].
     apply (tctx_incl_app +[_] +[_]); [apply tctx_to_shift_loc_0, _|].
-    eapply (tctx_incl_trans _ id); [apply IH|].
-    iIntros (?? vπl ?) "_ _ _ _ $ T Obs !>". iExists vπl. iFrame "Obs".
-    by rewrite hasty_ptr_offsets_offset Nat.add_0_r. } by move=>/= ?[[??][]].
+    eapply tctx_incl_trans; [apply IH|]. rewrite -{2}[ty_size _]Nat.add_0_r.
+    eapply proj1, hasty_ptr_offsets_equiv. } by move=>/= ?[[??][]].
   Qed.
 
   Lemma tctx_merge_ptr_xprod {𝔄l} ptr (tyl: _ 𝔄l) E L
@@ -64,9 +63,8 @@ Section product_split.
     [|eapply subtype_tctx_incl, HSub, mod_ty_in]. eapply tctx_incl_trans;
     [|apply Merge]. apply (tctx_incl_app +[_] +[_]); [apply tctx_of_shift_loc_0|].
     eapply tctx_incl_trans; [|by apply IH].
-    apply (tctx_incl_app +[_] +[_] _ _ id id); [apply tctx_to_shift_loc_0, _|].
-    iIntros (?? vπl ?) "_ _ _ _ $ T Obs !>". iExists vπl. iFrame "Obs".
-    by rewrite hasty_ptr_offsets_offset. } by move=>/= ?[?[??]].
+    apply (tctx_incl_app +[_] +[_]); [apply tctx_to_shift_loc_0, _|].
+    eapply proj2, hasty_ptr_offsets_equiv. } by move=>/= ?[?[??]].
   Qed.
 
 End product_split.
@@ -232,16 +230,6 @@ Section product_split.
       p +ₗ #off ◁ &uniq{κ} ty +:: hasty_uniq_offsets p κ tyl' (off + ty.(ty_size))
     end.
 
-  Lemma hasty_uniq_offsets_offset {𝔄l} κ p (tyl: _ 𝔄l) (off: nat) tid vπl :
-    tctx_interp tid (hasty_uniq_offsets (p +ₗ #off) κ tyl 0) vπl ⊣⊢
-    tctx_interp tid (hasty_uniq_offsets p κ tyl off) vπl.
-  Proof.
-    rewrite -{2}(Nat.add_0_r off). move: off 0.
-    induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl Nat.add_assoc].
-    apply tctx_elt_interp_hasty_path=>/=. case (eval_path p)=>//.
-    (do 2 case=>//)=> ?. by rewrite shift_loc_assoc Nat2Z.inj_add.
-  Qed.
-
   Lemma tctx_split_uniq_xprod {𝔄l} κ (tyl: _ 𝔄l) E L p :
     lctx_lft_alive E L κ →
     tctx_incl E L +[p ◁ &uniq{κ} (Π! tyl)%T] (hasty_uniq_offsets p κ tyl 0)
@@ -252,9 +240,12 @@ Section product_split.
     eapply tctx_incl_eq. { eapply tctx_incl_trans; [apply tctx_uniq_mod_ty_out;
     by [apply _|]|]. eapply tctx_incl_trans; [by apply tctx_split_uniq_prod|].
     apply (tctx_incl_app +[_] +[_]); [apply tctx_to_shift_loc_0, _|].
-    eapply (tctx_incl_trans _ id); [apply IH|].
-    iIntros (?? vπl ?) "_ _ _ _ $ T Obs !>". iExists vπl. iFrame "Obs".
-    by rewrite hasty_uniq_offsets_offset. } by move=>/= ?[[[??][??]][]].
+    eapply tctx_incl_trans; [apply IH|]. eapply proj1, get_tctx_equiv=> ? vπl.
+    move: (ty_size _)=> off. rewrite -{2}(Nat.add_0_r off). move: off 0. clear.
+    induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl Nat.add_assoc].
+    apply tctx_elt_interp_hasty_path=>/=. case (eval_path p)=>//.
+    (do 2 case=>//)=> ?. by rewrite shift_loc_assoc Nat2Z.inj_add. }
+    by move=>/= ?[[[??][??]][]].
   Qed.
 
   (** * Splitting with [tctx_extract_elt]. *)

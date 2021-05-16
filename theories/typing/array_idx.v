@@ -73,10 +73,9 @@ Section lemmas.
     [eapply tctx_uniq_eqtype; by [apply array_succ_prod|apply _|]|].
     eapply tctx_incl_trans. { eapply (tctx_incl_frame_r +[_]).
     by eapply tctx_split_uniq_prod. } apply (tctx_incl_app +[_] +[_]);
-    [apply tctx_to_shift_loc_0, _|]. eapply (tctx_incl_trans _ id); [apply IH|].
-    iIntros (?? vπl ?) "_ _ _ _ $ T Obs !>". iExists _. iFrame "Obs". clear.
-    move: 0=> k. iInduction n as [|] "IH" forall (p k); [done|]. case vπl=>/= ??.
-    iDestruct "T" as "[p T]". iSplitL "p"; [|by iApply "IH"].
+    [apply tctx_to_shift_loc_0, _|]. eapply tctx_incl_trans; [apply IH|].
+    eapply proj1, get_tctx_equiv=> ? vπl. move: p 0. clear.
+    induction n; [done|]=> p ?. case vπl=>/= ??. f_equiv; [|done].
     rewrite tctx_elt_interp_hasty_path; [done|]=>/=. case (eval_path p)=>//.
     (do 2 (case=>//))=> ?. by rewrite shift_loc_assoc -Nat2Z.inj_add. }
     move=> ?[[v v'][]]. inv_vec v. by inv_vec v'.

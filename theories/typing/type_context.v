@@ -238,6 +238,16 @@ Section lemmas.
     iApply proph_obs_eq; [|done]=> ?. by rewrite/= papply_app papp_sepl.
   Qed.
 
+  Definition tctx_equiv {𝔄l} (T T': tctx 𝔄l) : Prop :=
+    ∀E L, tctx_incl E L T T' id ∧ tctx_incl E L T' T id.
+
+  Lemma get_tctx_equiv {𝔄l} (T T': _ 𝔄l) :
+    (∀tid vπl, tctx_interp tid T vπl ⊣⊢ tctx_interp tid T' vπl) → tctx_equiv T T'.
+  Proof.
+    move=> Eq ??; split; iIntros (????) "_ _ _ _ $ T Obs !>"; iExists _;
+    rewrite Eq; iFrame.
+  Qed.
+
   Lemma copy_tctx_incl {𝔄 𝔄l} (ty: _ 𝔄) `{!Copy ty} (T: _ 𝔄l) p E L :
     tctx_incl E L (p ◁ ty +:: T) (p ◁ ty +:: p ◁ ty +:: T)
       (λ post '(a -:: al), post (a -:: a -:: al)).
@@ -262,18 +272,10 @@ Section lemmas.
     case (eval_path p)=>//. (do 2 (case=>//))=> ?. by rewrite shift_loc_0.
   Qed.
 
-  Lemma tctx_shift_loc_assoc {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) (z z': Z) E L :
-    tctx_incl E L (p +ₗ #z +ₗ #z' ◁ ty +:: T) (p +ₗ #(z + z') ◁ ty +:: T) id.
+  Lemma tctx_shift_loc_assoc {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) (z z': Z) :
+    tctx_equiv (p +ₗ #z +ₗ #z' ◁ ty +:: T) (p +ₗ #(z + z') ◁ ty +:: T).
   Proof.
-    iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs !>". iExists (_-::_). iFrame "T Obs".
-    rewrite tctx_elt_interp_hasty_path; [done|]=>/=. case (eval_path p)=>//.
-    (do 2 case=>//)=> ?. by rewrite shift_loc_assoc.
-  Qed.
-
-  Lemma tctx_shift_loc_assoc' {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) (z z': Z) E L :
-    tctx_incl E L (p +ₗ #(z + z') ◁ ty +:: T) (p +ₗ #z +ₗ #z' ◁ ty +:: T) id.
-  Proof.
-    iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs !>". iExists (_-::_). iFrame "T Obs".
+    apply get_tctx_equiv=>/= ?[??]. f_equiv.
     rewrite tctx_elt_interp_hasty_path; [done|]=>/=. case (eval_path p)=>//.
     (do 2 case=>//)=> ?. by rewrite shift_loc_assoc.
   Qed.
