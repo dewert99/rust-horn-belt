@@ -18,9 +18,10 @@ Notation "p ◁ ty" := (TCtx_hasty _ p ty%T) (at level 55).
 Notation "p ◁{ κ } ty" := (TCtx_blocked _ p κ ty%T)
    (at level 55, format "p  ◁{ κ }  ty").
 
-Definition pred' A := A → Prop.
-Definition predl 𝔄l := pred' (plist of_syn_type 𝔄l).
-Definition predl_trans 𝔄l 𝔅l := predl 𝔅l → predl 𝔄l.
+Notation pred' A := (A → Prop) (only parsing).
+Notation predl 𝔄l := (pred' (plist of_syn_type 𝔄l)).
+Notation predl_trans 𝔄l 𝔅l := (predl 𝔅l → predl 𝔄l).
+Notation predl_trans' 𝔄l 𝔅 := (pred' 𝔅 → predl 𝔄l).
 
 Definition trans_app {𝔄l 𝔅l ℭl 𝔇l} (tr: predl_trans 𝔄l 𝔅l) (tr': predl_trans ℭl 𝔇l)
   : predl_trans (𝔄l ++ ℭl) (𝔅l ++ 𝔇l) := λ post acl,

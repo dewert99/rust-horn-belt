@@ -43,16 +43,16 @@ Section lemmas.
     by rewrite/= -Nat2Z.inj_mul big_sepL_vlookup vfunsep_lookup.
   Qed.
 
-  Lemma type_idx_shr_array {𝔄 𝔄l 𝔅l} (ty: _ 𝔄) n κ p q
-    (T: _ 𝔄l) (T': _ 𝔅l) tr pre x e E L C :
+  Lemma type_idx_shr_array {𝔄 𝔄l 𝔅l ℭ} (ty: _ 𝔄) n κ p q
+    (T: _ 𝔄l) (T': _ 𝔅l) trx tr x e E L (C: cctx ℭ) :
     Closed (x :b: []) e →
-    tctx_extract_ctx E L +[p ◁ &shr{κ} [ty; n]; q ◁ int] T T' tr →
-    (∀v: val, typed_body E L C (v ◁ &shr{κ} ty +:: T') (subst' x v e) pre) -∗
-    typed_body E L C T (let: x := p +ₗ q * #ty.(ty_size) in e)
-      (tr (λ '(xl -:: z -:: bl), ∃i: fin n, z = i ∧ pre (xl !!! i -:: bl)))%type.
+    tctx_extract_ctx E L +[p ◁ &shr{κ} [ty; n]; q ◁ int] T T' trx →
+    (∀v: val, typed_body E L C (v ◁ &shr{κ} ty +:: T') (subst' x v e) tr) -∗
+    typed_body E L C T (let: x := p +ₗ q * #ty.(ty_size) in e) (trx ∘
+      (λ post '(xl -:: z -:: bl), ∃i: fin n, z = i ∧ tr post (xl !!! i -:: bl)))%type.
   Proof.
     iIntros. iApply type_let; [by apply type_idx_shr_array_instr|solve_typing| |done].
-    f_equal. fun_ext. by case=> [?[??]].
+    f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
   Qed.
 
   Fixpoint hasty_uniq_idxs {𝔄} (p: path) (κ: lft) (ty: type 𝔄) (n: nat)

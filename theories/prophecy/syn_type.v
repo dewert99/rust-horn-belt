@@ -26,8 +26,9 @@ Notation Empty_setₛ := (xsumₛ []).
 
 Global Instance Empty_setₛ_empty: Empty syn_type := Empty_setₛ.
 
-Definition predₛ 𝔄 : syn_type := 𝔄 → Propₛ.
-Definition predlₛ 𝔄l : syn_type := predₛ (Π! 𝔄l).
+Notation predₛ 𝔄 := (𝔄 → Propₛ)%ST.
+Notation predlₛ 𝔄l := (predₛ (Π! 𝔄l))%ST.
+Notation predl_trans'ₛ 𝔄l 𝔅 := (predₛ 𝔅 → predlₛ 𝔄l)%ST.
 
 Fixpoint of_syn_type (𝔄: syn_type) : Type := match 𝔄 with
   | Zₛ => Z | boolₛ => bool | unitₛ => () | Propₛ => Prop
