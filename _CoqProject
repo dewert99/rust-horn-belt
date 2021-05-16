@@ -6,6 +6,7 @@
 -arg -w -arg -redundant-canonical-projection
 
 theories/util/basic.v
+theories/util/vector.v
 theories/util/update.v
 theories/util/discrete_fun.v
 theories/util/fancy_lists.v

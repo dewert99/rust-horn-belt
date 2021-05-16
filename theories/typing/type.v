@@ -1,6 +1,6 @@
 From iris.algebra Require Import numbers list.
 From iris.base_logic Require Export na_invariants.
-From lrust.util Require Export basic update fancy_lists.
+From lrust.util Require Export basic vector update fancy_lists.
 From lrust.prophecy Require Export prophecy.
 From lrust.lifetime Require Export frac_borrow.
 From lrust.lang Require Export proofmode notation.

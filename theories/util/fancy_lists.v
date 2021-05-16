@@ -1,4 +1,3 @@
-From stdpp Require Import prelude.
 From iris.algebra Require Import ofe.
 From iris.proofmode Require Import tactics.
 From lrust.util Require Import basic.

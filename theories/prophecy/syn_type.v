@@ -1,6 +1,5 @@
-Require Import ssreflect.
-From stdpp Require Import prelude.
-From lrust.util Require Import basic fancy_lists.
+From iris.prelude Require Import prelude.
+From lrust.util Require Import basic vector fancy_lists.
 Set Default Proof Using "Type".
 
 (** * Syntax for Coq type *)
