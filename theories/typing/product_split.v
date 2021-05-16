@@ -290,23 +290,29 @@ Section product_split.
     (ty: _ 𝔅) (ty': _ ℭ) (T: _ 𝔇l) (T': _ 𝔈l) tr p E L :
     tctx_extract_elt E L t
       +[p ◁ &shr{κ} ty; p +ₗ #ty.(ty_size) ◁ &shr{κ} ty'] T' tr →
-    tctx_extract_elt E L t (p ◁ &shr{κ} (ty * ty') +:: T) (T' h++ T)
-      (λ post '((b, c) -:: dl), tr (λ '(a -:: el), post (a -:: el -++ dl)) -[b; c]).
+    tctx_extract_elt E L t (p ◁ &shr{κ} (ty * ty') +:: T)
+      (p ◁ &shr{κ} (ty * ty') +:: T' h++ T) (λ post '((b, c) -:: dl),
+        tr (λ '(a -:: el), post (a -:: (b, c) -:: el -++ dl)) -[b; c]).
   Proof.
-    move=> ?. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+    move=> ?. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_+::_+::_)).
+    eapply tctx_incl_trans; [apply copy_tctx_incl, _|]. eapply tctx_incl_trans;
+    [|apply tctx_incl_swap]. apply (tctx_incl_frame_l _ _ +[_]).
     eapply tctx_incl_trans; by [apply tctx_split_shr_prod|]. }
-    move=>/= ?[[??]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
+    move=>/= ?[[??]?]. by rewrite /trans_upper /trans_lower.
   Qed.
 
   Lemma tctx_extract_split_shr_xprod {𝔄 𝔄l 𝔅l ℭl} (t: _ 𝔄) κ (tyl: _ 𝔄l)
     (T: _ 𝔅l) (T': _ ℭl) tr p E L :
     tctx_extract_elt E L t (hasty_shr_offsets p κ tyl 0) T' tr →
-    tctx_extract_elt E L t (p ◁ &shr{κ} (Π! tyl) +:: T) (T' h++ T)
-      (λ post '(al -:: bl), tr (λ '(a -:: cl), post (a -:: cl -++ bl)) al).
+    tctx_extract_elt E L t (p ◁ &shr{κ} (Π! tyl) +:: T)
+      (p ◁ &shr{κ} (Π! tyl) +:: T' h++ T) (λ post '(al -:: bl),
+        tr (λ '(a -:: cl), post (a -:: al -:: cl -++ bl)) al).
   Proof.
-    move=> ?. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+    move=> ?. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_+::_+::_)).
+    eapply tctx_incl_trans; [apply copy_tctx_incl, _|]. eapply tctx_incl_trans;
+    [|apply tctx_incl_swap]. apply (tctx_incl_frame_l _ _ +[_]).
     eapply tctx_incl_trans; by [apply tctx_split_shr_xprod|]. }
-    move=>/= ?[??]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
+    move=>/= ?[??]. by rewrite /trans_upper /trans_lower.
   Qed.
 
   Lemma tctx_extract_split_uniq_prod {𝔄 𝔅 ℭ 𝔇l 𝔈l} (t: _ 𝔄) κ
