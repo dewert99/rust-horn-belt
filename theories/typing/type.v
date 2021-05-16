@@ -1050,8 +1050,8 @@ Section type_util.
 
 End type_util.
 
-Notation "[S d' := d ] P" := (by_succ d (λ d', P)) (at level 200,
-  right associativity, format "[S  d'  :=  d ]  P") : bi_scope.
+Notation "[S( d' ) := d ] P" := (by_succ d (λ d', P)) (at level 200,
+  right associativity, format "[S( d' )  :=  d ]  P") : bi_scope.
 
 Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
   right associativity, format "[loc[ l ]  :=  vl ]  P") : bi_scope.

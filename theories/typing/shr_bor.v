@@ -9,7 +9,7 @@ Section shr_bor.
 
   Program Definition shr_bor {𝔄} (κ: lft) (ty: type 𝔄) : type 𝔄 := {|
     st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlv_E ty κ;
-    st_own vπ d tid vl := [S d' := d] [loc[l] := vl] ty.(ty_shr) vπ d' κ tid l
+    st_own vπ d tid vl := [S(d') := d] [loc[l] := vl] ty.(ty_shr) vπ d' κ tid l
   |}%I.
   Next Obligation.
     move=> ????[|?]*/=; [by iIntros|]. rewrite by_just_loc_ex. by iIntros "[%[->?]]".

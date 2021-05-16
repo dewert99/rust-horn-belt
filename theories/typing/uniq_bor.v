@@ -16,7 +16,7 @@ Section uniq_bor.
       let ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i in
       ⌜S d' ≤ d ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ) d' ∗
       &{κ} (∃vπ' d', l ↦∗: ty.(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ξ] vπ' d');
-    ty_shr vπ d κ' tid l := [S d' := d] ∃(l': loc) ξ, ⌜snd ∘ vπ ./ [ξ]⌝ ∗
+    ty_shr vπ d κ' tid l := [S(d') := d] ∃(l': loc) ξ, ⌜snd ∘ vπ ./ [ξ]⌝ ∗
       &frac{κ'}(λ q', l ↦{q'} #l') ∗ &frac{κ'} (λ q, q:[ξ]) ∗
       ▷ ty.(ty_shr) (fst ∘ vπ) d' κ' tid l';
   |}%I.
@@ -329,7 +329,7 @@ Section typing.
     tctx_incl E L (p ◁ &uniq{κ} ty +:: T) (p ◁ &uniq{κ} ty' +:: T)
       (λ post '((a, a') -:: cl), post ((f a, f a') -:: cl)).
   Proof.
-    iIntros ([ Sub Sub'] ? Alv ??[vπ ?]?) "LFT #PROPH UNIQ E L /=[p T] Obs".
+    iIntros ([Sub Sub'] ? Alv ??[vπ ?]?) "LFT #PROPH UNIQ E L /=[p T] Obs".
     iDestruct (Sub with "L") as "#Sub". iDestruct (Sub' with "L") as "#Sub'".
     iDestruct ("Sub" with "E") as "#(_& _ & #InOwn &_)".
     iDestruct ("Sub'" with "E") as "#(_& ? & #InOwn' &_)".

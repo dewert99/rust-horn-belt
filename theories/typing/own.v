@@ -46,9 +46,9 @@ Section own.
 
   Program Definition own_ptr {𝔄} (n: nat) (ty: type 𝔄) : type 𝔄 := {|
     ty_size := 1;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
-    ty_own vπ d tid vl := [S d' := d] [loc[l] := vl]
+    ty_own vπ d tid vl := [S(d') := d] [loc[l] := vl]
       ▷ l ↦∗: ty.(ty_own) vπ d' tid ∗ freeable_sz n ty.(ty_size) l;
-    ty_shr vπ d κ tid l := [S d' := d]
+    ty_shr vπ d κ tid l := [S(d') := d]
       ∃l': loc, &frac{κ}(λ q', l ↦{q'} #l') ∗ ▷ ty.(ty_shr) vπ d' κ tid l';
   |}%I.
   Next Obligation.
