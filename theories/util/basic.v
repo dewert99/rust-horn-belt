@@ -135,6 +135,13 @@ Fixpoint lnth {A} (d: A) (xl: list A) (i: nat) : A := match xl with
   [] => d | x :: xl' => match i with 0 => x | S j => lnth d xl' j end end.
 Notation lnthe := (lnth ∅).
 
+Lemma lnth_default {A} D (As : list A) i :
+  length As <= i → D = lnth D As i.
+Proof.
+  generalize dependent As.
+  induction i; destruct As; simpl; intros; auto with lia.
+Qed.
+
 (** Fixpoint version of List.Forall *)
 Fixpoint lforall {A} (Φ: A → Prop) (xl: list A) : Prop :=
   match xl with [] => True | x :: xl' => Φ x ∧ lforall Φ xl' end.

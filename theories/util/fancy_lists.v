@@ -78,6 +78,15 @@ Lemma hnth_apply `{F: A → _} {Xl Y D} (g: Y → F D)
   hnth (g x) (fl +$ x) i = hnth g fl i x.
 Proof. move: i. elim fl; [done|]=> > ?. by case. Qed.
 
+Lemma hnth_default `{!EqDecision A} {D As} {F : A → _} (d : F D) (l : hlist F As) i :
+  ∀ (H : D = lnth D As i),
+    length As <= i →
+    hnth d l i = eq_rect D _ d _ H.
+Proof. generalize dependent i. induction l.
+- move => /= ? H. by rewrite (proof_irrel H eq_refl).
+- move => /= [|?] *; auto with lia.
+Qed.
+
 (** * Passive Heterogeneous List *)
 
 Inductive nil_unit: Set := nil_tt: nil_unit.
@@ -396,6 +405,19 @@ Lemma TCHForall_impl `{F: A → _} {Xl} (Φ Ψ: ∀X, F X → Prop) (xl: _ Xl) :
   (∀X x, Φ X x → Ψ _ x) → TCHForall Φ xl → TCHForall Ψ xl.
 Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
 
+Inductive IxHForall3 `{F: A → _} {G H D} :
+  ∀ {Xl}  (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop),
+  hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
+| HForall3_nil : IxHForall3 (λ _ _ _ _, True) +[] +[] +[]
+| HForall3_cons {X Xl}
+  (Φ : ∀ i, F (lnth D (X :: Xl) i) →
+            G (lnth D (X :: Xl) i) →
+            H (lnth D (X :: Xl) i) → Prop)
+  (x y z: _ X)
+  (xl yl zl: _ Xl) :
+    Φ 0 x y z → IxHForall3 (λ i, Φ (S i)) xl yl zl →
+  IxHForall3 Φ (x +:: xl) (y +:: yl) (z +:: zl).
+
 Lemma HForallTwo_impl `{F: A → _} {G Xl} (Φ Ψ: ∀X, F X → G X → Prop) (xl yl: _ Xl) :
   (∀X x y, Φ X x y → Ψ _ x y) → HForallTwo Φ xl yl → HForallTwo Ψ xl yl.
 Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
@@ -413,6 +435,13 @@ Lemma HForallTwo_nth `{F: A → _} {G Xl D}
   (Φ: ∀X, F X → G X → Prop) (d: _ D) d' (xl: _ Xl) yl i :
   Φ _ d d' → HForallTwo Φ xl yl → Φ _ (hnth d xl i) (hnth d' yl i).
 Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
+
+Lemma IxHForall3_nth `{F: A → _} {G H Xl D}
+  (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop)
+  (d d' d'': _ D)
+  (xl yl zl: _ Xl) i :
+  IxHForall3 Φ xl yl zl → Φ i (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
+Proof. move=> All. move: i. elim All; [done|] => > ???. by case. Qed.
 
 Lemma HForallTwo_forall `{!Inhabited Y} `{F: A → _} {G Xl}
   (Φ: ∀X, Y → F X → G X → Prop) (xl yl: _ Xl) :
