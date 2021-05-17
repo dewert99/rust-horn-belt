@@ -188,6 +188,34 @@ Fixpoint vec_to_plist `{F: A → _} {X n} (xl: vec (F X) n) : plist F (replicate
 Fixpoint plist_to_vec `{F: A → _} {X n} (xl: plist F (replicate n X)) : vec (F X) n :=
   match n, xl with 0, _ => [#] | S _, x -:: xl' => x ::: plist_to_vec xl' end.
 
+Fixpoint hlist_to_list {T A Xl} (xl: @hlist T (const A) Xl) : list A :=
+  match xl with +[] => [] | x +:: xl' => x :: hlist_to_list xl' end.
+
+Fixpoint list_to_hlist {T A Xl} (xl: list A) : option (hlist (λ _: T,  A) Xl) :=
+  match xl, Xl with
+  | [], [] => mret +[]
+  | x :: xl',  X :: Xl' => list_to_hlist xl' ≫= λ tl, mret (x +:: tl)
+  | _, _ => None
+  end.
+
+Lemma list_to_hlist_length {A T Xl} (l : list A) (l' : hlist (λ _: T, A) Xl) :
+  list_to_hlist l = Some l' →
+  length l = length Xl.
+Proof.
+  revert l'. generalize dependent Xl.
+  induction l => - [|? ?] //= ?; destruct (list_to_hlist (Xl := _) _) eqn: X; rewrite ?(IHl _ h) //.
+Qed.
+
+Lemma list_to_hlist_hnth_nth {A T Xl} (t: T) (d : A) i (l : list A) (l' : hlist (λ _: T, A) Xl) :
+  list_to_hlist l = Some l' →
+  hnth (D := t) d l' i = nth i l d.
+Proof.
+    generalize dependent Xl. revert i.
+    induction l => i [| ? Xl] ? //=.
+    - case: i => [|?] [= <-] //=.
+    - destruct (list_to_hlist (Xl := _) _) eqn:X, i => //= [= <-] //=. auto.
+Qed.
+
 (** * Passive Heterogeneous List over Two Lists *)
 
 Section plist2. Context {A} (F: A → A → Type).
