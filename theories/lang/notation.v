@@ -83,6 +83,8 @@ Notation "let: x := e1 'in' e2" :=
 Notation "e1 ;; e2" := (let: <> := e1 in e2)%V
   (at level 100, e2 at level 200, format "e1  ;;  e2") : val_scope.
 
+Notation "'jump' k : el" := (App (Seq Skip k%V) el%E)
+  (at level 100, k at level 1, el at level 10, format "'jump'  k :  el") : expr_scope.
 Notation "letcont: k xl := e1 'in' e2" :=
   ((Lam (@cons binder k%binder nil) e2%E) [Rec k%binder xl%binder e1%E])
   (at level 102, k, xl at level 1, e1, e2 at level 150) : expr_scope.
