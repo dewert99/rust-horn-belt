@@ -308,6 +308,13 @@ Proof.
   apply IH in Eq. move: Eq=> [??]. split; by [f_equal|].
 Qed.
 
+Global Instance pinj_Inj {A} `{F : A → _} {Xl D} `{!Void (F D)} i : Inj eq eq (@pinj A F Xl D _ i).
+Proof.
+  revert i. elim Xl.
+  - move => i /= ?? _. by apply absurd.
+  - move => a l IH /= [|i] x y; case => //. by apply IH.
+Qed.
+
 Inductive xsum {A} D (F: A → _) (Xl: list A) :=
   xinj i : F (lnth D Xl i) → xsum D F Xl.
 Arguments xinj {_ _ _ _} _ _.
