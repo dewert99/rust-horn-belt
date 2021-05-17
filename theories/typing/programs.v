@@ -7,29 +7,30 @@ Section typing.
 
   (** Function Body *)
   (* This is an iProp because it is also used by the function type. *)
-  Definition typed_body {𝔄l} (E: elctx) (L: llctx)
-    (C: cctx) (T: tctx 𝔄l) (e: expr) (pre: predl 𝔄l) : iProp Σ :=
-    ∀tid vπl, lft_ctx -∗ time_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗
-      na_own tid ⊤ -∗ llctx_interp L 1 -∗ cctx_interp tid C -∗ tctx_interp tid T vπl -∗
-      ⟨π, pre (vπl -$ π)⟩ -∗ WP e {{ _, cont_postcondition }}.
-  Global Arguments typed_body {_} _ _ _ _ _%E _%type.
+  Definition typed_body {𝔄l 𝔅} (E: elctx) (L: llctx) (C: cctx 𝔅) (T: tctx 𝔄l)
+    (e: expr) (tr: predl_trans' 𝔄l 𝔅) : iProp Σ := ∀tid vπl postπ,
+    lft_ctx -∗ time_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
+    llctx_interp L 1 -∗ cctx_interp tid postπ C -∗ tctx_interp tid T vπl -∗
+      ⟨π, tr (postπ π) (vπl -$ π)⟩ -∗ WP e {{ _, cont_postcondition }}.
+  Global Arguments typed_body {_ _} _ _ _ _ _%E _%type.
 
-  Lemma typed_body_eq {𝔄l} pre pre' E L C (T: _ 𝔄l) e :
-    pre = pre' → typed_body E L C T e pre' -∗ typed_body E L C T e pre.
+  Lemma typed_body_eq {𝔄l 𝔅} tr tr' E L (C: cctx 𝔅) (T: _ 𝔄l) e :
+    tr = tr' → typed_body E L C T e tr' -∗ typed_body E L C T e tr.
   Proof. by move=> ->. Qed.
 
-  Lemma typed_body_impl {𝔄l} (pre pre': predl 𝔄l) E L C T e :
-    (∀vl, pre vl → pre' vl) → typed_body E L C T e pre' -∗ typed_body E L C T e pre.
+  Lemma typed_body_impl {𝔄l 𝔅} (tr tr': _ → predl 𝔄l) E L (C: cctx 𝔅) T e :
+    (∀post vl, tr post vl → tr' post vl) →
+    typed_body E L C T e tr' -∗ typed_body E L C T e tr.
   Proof.
-    move=> Imp. rewrite /typed_body. do 14 f_equiv=>/=. do 2 f_equiv. move=> ?.
+    move=> Imp. rewrite /typed_body. do 16 f_equiv=>/=. do 2 f_equiv. move=> ?.
     by apply Imp.
   Qed.
 
-  Lemma typed_body_tctx_incl {𝔄l 𝔅l} (T: _ 𝔄l) (T': _ 𝔅l) tr pre E L C e :
-    tctx_incl E L T T' tr →
-    typed_body E L C T' e pre -∗ typed_body E L C T e (tr pre).
+  Lemma typed_body_tctx_incl {𝔄l 𝔅l ℭ} tr' tr (T: _ 𝔄l) (T': _ 𝔅l) E L (C: cctx ℭ) e :
+    tctx_incl E L T T' tr' →
+    typed_body E L C T' e tr -∗ typed_body E L C T e (tr' ∘ tr).
   Proof.
-    iIntros (In) "e". iIntros (??) "#LFT TIME #PROPH #UNIQ #E Na L C T Obs".
+    iIntros (In) "e". iIntros (???) "#LFT TIME #PROPH #UNIQ #E Na L C T Obs".
     iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & T' & Obs)".
     iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T' Obs").
   Qed.
@@ -79,34 +80,35 @@ Section typing.
 
   (* This lemma is helpful when switching from proving unsafe code in Iris
      back to proving it in the type system. *)
-  Lemma type_type {𝔄l} E L C (T: tctx 𝔄l) e p:
-    typed_body E L C T e p -∗ typed_body E L C T e p.
+  Lemma type_type {𝔄l 𝔅} E L (C: cctx 𝔅) (T: _ 𝔄l) e tr :
+    typed_body E L C T e tr -∗ typed_body E L C T e tr.
   Proof. done. Qed.
 
   (* TODO: Proof a version of this that substitutes into a compatible context...
      if we really want to do that. *)
-  Lemma type_equivalize_lft {𝔄l} E L C (T: _ 𝔄l) κ κ' e pre :
-    typed_body (κ ⊑ₑ κ' :: κ' ⊑ₑ κ :: E) L C T e pre -∗
-    typed_body E (κ ⊑ₗ [κ'] :: L) C T e pre.
+  Lemma type_equivalize_lft {𝔄l 𝔅} E L (C: cctx 𝔅) (T: _ 𝔄l) κ κ' e tr :
+    typed_body (κ ⊑ₑ κ' :: κ' ⊑ₑ κ :: E) L C T e tr -∗
+    typed_body E (κ ⊑ₗ [κ'] :: L) C T e tr.
   Proof.
-    iIntros "e" (??) "#LFT TIME PROPH UNIQ E Na [Eq L] C T".
+    iIntros "e" (???) "#LFT TIME PROPH UNIQ E Na [Eq L] C T".
     iMod (lctx_equalize_lft with "LFT Eq") as "[In In']".
     iApply ("e" with "LFT TIME PROPH UNIQ [$E $In $In'] Na L C T").
   Qed.
 
-  Lemma type_let' {𝔄l 𝔅l ℭl} E L (T1: _ 𝔄l) (T2: _ → _ 𝔅l) (T: _ ℭl) C xb e e' tr pre:
+  Lemma type_let' {𝔄l 𝔅l ℭl 𝔇} E L (T1: _ 𝔄l) (T2: _ → _ 𝔅l) (T: _ ℭl)
+    (C: cctx 𝔇) xb e e' tr tr' :
     Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr -∗
-    (∀v: val, typed_body E L C (T2 v h++ T) (subst' xb v e') pre) -∗
-    typed_body E L C (T1 h++ T) (let: xb := e in e')
-      (λ acl, let '(al, cl) := psep acl in tr (λ bl, pre (bl -++ cl)) al).
+    (∀v: val, typed_body E L C (T2 v h++ T) (subst' xb v e') tr') -∗
+    typed_body E L C (T1 h++ T) (let: xb := e in e') (λ post acl,
+      let '(al, cl) := psep acl in tr (λ bl, tr' post (bl -++ cl)) al).
   Proof.
-    iIntros (?) "e e'". iIntros (tid vπl2). move: (papp_ex vπl2)=> [vπl[vπl'->]].
+    iIntros "% e e'" (? vπl2 ?). move: (papp_ex vπl2)=> [vπl[vπl'->]].
     iIntros "#LFT #TIME #PROPH #UNIQ #E Na L C [T1 T] Obs". wp_bind e.
     iApply (wp_wand with "[e L T1 Na Obs]").
     { iApply ("e" with "LFT TIME PROPH UNIQ E Na L T1").
       iApply proph_obs_eq; [|done]=> ?. by rewrite /trans_upper papply_app papp_sepl. }
-    iIntros (v). iIntros "(%vπ & Na & L & T2 & ?)". wp_let. iCombine "T2 T" as "T2T".
-    iApply ("e'" $! v tid (vπ -++ vπl') with "LFT TIME PROPH UNIQ E Na L C T2T").
+    iIntros "% (%& Na & L & T2 &?)". wp_let. iCombine "T2 T" as "T2T".
+    iApply ("e'" with "LFT TIME PROPH UNIQ E Na L C T2T").
     iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app papp_sepr.
   Qed.
 
@@ -115,40 +117,40 @@ Section typing.
      hypotheses. The is important, since proving [typed_instr]
      will instantiate [T1] and [T2], and hence we know what to search
      for the following hypothesis. *)
-  Lemma type_let {𝔄l 𝔅l ℭl 𝔇l} (T1: _ 𝔄l) (T2: _ → _ 𝔅l)
-    (T: _ ℭl) (T': _ 𝔇l) E L C xb e e' tr tr' pre (tr_res: predl _) :
+  Lemma type_let {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: _ 𝔄l) (T2: _ → _ 𝔅l)
+    (T: _ ℭl) (T': _ 𝔇l) E L (C: cctx 𝔈) xb e e' tr tr' trx tr_res :
     Closed (xb :b: []) e' → (⊢ typed_instr E L T1 e T2 tr) →
-    tctx_extract_ctx E L T1 T T' tr' → tr_res = tr' (trans_upper tr pre) →
-    (∀v: val, typed_body E L C (T2 v h++ T') (subst' xb v e') pre) -∗
+    tctx_extract_ctx E L T1 T T' trx → tr_res = trx ∘ (trans_upper tr ∘ tr') →
+    (∀v: val, typed_body E L C (T2 v h++ T') (subst' xb v e') tr') -∗
     typed_body E L C T (let: xb := e in e') tr_res.
   Proof.
-    rewrite /tctx_extract_ctx=> ??? ->.
-    rewrite -typed_body_tctx_incl; [|done]. by iApply type_let'.
+    iIntros (???->) "?". iApply (typed_body_tctx_incl trx); [done|].
+    by iApply type_let'.
   Qed.
 
-  Lemma type_seq {𝔄l 𝔅l ℭl 𝔇l} (T1: _ 𝔄l) (T2: _ 𝔅l)
-    (T: _ ℭl) (T': _ 𝔇l) E L C e e' tr tr' pre (tr_res: predl _) :
+  Lemma type_seq {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: _ 𝔄l) (T2: _ 𝔅l)
+    (T: _ ℭl) (T': _ 𝔇l) E L (C: cctx 𝔈) e e' tr tr' trx tr_res :
     Closed [] e' → (⊢ typed_instr E L T1 e (const T2) tr) →
-    tctx_extract_ctx E L T1 T T' tr' → tr_res = tr' (trans_upper tr pre) →
-    typed_body E L C (T2 h++ T') e' pre -∗ typed_body E L C T (e;; e') tr_res.
+    tctx_extract_ctx E L T1 T T' trx → tr_res = trx ∘ (trans_upper tr ∘ tr') →
+    typed_body E L C (T2 h++ T') e' tr' -∗ typed_body E L C T (e;; e') tr_res.
   Proof. iIntros. iApply (type_let _ (const T2))=>//. by iIntros. Qed.
 
-  Lemma type_newlft {𝔄l} κs E L C (T: _ 𝔄l) e pre :
-    Closed [] e → (∀κ, typed_body E (κ ⊑ₗ κs :: L) C T e pre) -∗
-    typed_body E L C T (Newlft;; e) pre.
+  Lemma type_newlft {𝔄l 𝔅} κl E L (C: cctx 𝔅) (T: _ 𝔄l) e tr :
+    Closed [] e → (∀κ, typed_body E (κ ⊑ₗ κl :: L) C T e tr) -∗
+    typed_body E L C T (Newlft;; e) tr.
   Proof.
-    iIntros (?) "e". iIntros (??) "#LFT TIME PROPH UNIQ E Na L C T Obs".
+    iIntros (?) "e %%% #LFT TIME PROPH UNIQ E Na L C T Obs".
     iMod (lft_create with "LFT") as (Λ) "[Λ #Hinh]"; [done|].
-    set κ' := lft_intersect_list κs. wp_seq.
+    set κ' := lft_intersect_list κl. wp_seq.
     iApply ("e" $! κ' ⊓ Λ with "LFT TIME PROPH UNIQ E Na [Λ $L] C T Obs").
     rewrite /llctx_interp. iExists Λ. iFrame "Λ". by iSplit.
   Qed.
 
-  Lemma type_endlft {𝔄l} (T T': _ 𝔄l) κ κs pre e E L C :
+  Lemma type_endlft {𝔄l 𝔅} (T T': _ 𝔄l) κ κl tr e E L (C: cctx 𝔅) :
     Closed [] e → UnblockTctx E L κ T T' →
-    typed_body E L C T' e pre -∗ typed_body E (κ ⊑ₗ κs :: L) C T (Endlft;; e) pre.
+    typed_body E L C T' e tr -∗ typed_body E (κ ⊑ₗ κl :: L) C T (Endlft;; e) tr.
   Proof.
-    iIntros (? Un) "e". iIntros (??) "#LFT #TIME PROPH UNIQ #E Na
+    iIntros (? Un) "e %%% #LFT #TIME PROPH UNIQ #E Na
     [(%&%& κ' & To†) L] C T Obs". iSpecialize ("To†" with "κ'").
     wp_bind Skip. iApply (wp_mask_mono _ (↑lftN ∪ ↑lft_userN)); [done|].
     iApply (wp_step_fupd with "To†"); [set_solver|]. wp_seq. iIntros "#? !>".
@@ -169,13 +171,14 @@ Section typing.
     rewrite eval_path_of_val. by iFrame.
   Qed.
 
-  Lemma type_letpath {𝔄 𝔅l ℭl} E L (ty: _ 𝔄) C (T: _ 𝔅l) (T': _ ℭl) x p e tr pre :
-    Closed (x :b: []) e → tctx_extract_ctx E L +[p ◁ ty] T T' tr →
-    (∀v: val, typed_body E L C (v ◁ ty +:: T') (subst' x v e) pre) -∗
-    typed_body E L C T (let: x := p in e) (tr pre).
+  Lemma type_letpath {𝔄 𝔅l ℭl 𝔇} E L (ty: _ 𝔄) (T: _ 𝔅l) (T': _ ℭl)
+    (C: cctx 𝔇) x p e trx tr :
+    Closed (x :b: []) e → tctx_extract_ctx E L +[p ◁ ty] T T' trx →
+    (∀v: val, typed_body E L C (v ◁ ty +:: T') (subst' x v e) tr) -∗
+    typed_body E L C T (let: x := p in e) (trx ∘ tr).
   Proof.
-    iIntros. iApply type_let; [by apply (@type_path_instr 𝔄)|done| |done].
-    f_equal. fun_ext. by case.
+    iIntros. iApply type_let; [by eapply type_path_instr|done| |done].
+    f_equal. fun_ext=> ?. fun_ext. by case.
   Qed.
 
   Lemma type_assign_instr {𝔄 𝔅 𝔄' 𝔅'} (ty: _ 𝔄) (tyb: _ 𝔅)
@@ -204,16 +207,16 @@ Section typing.
     - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
   Qed.
 
-  Lemma type_assign {𝔄 𝔅 𝔄' 𝔅' 𝔄l 𝔅l} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄')
-    (tyb': _ 𝔅') gt st Φ p pb E L C (T: _ 𝔄l) (T': _ 𝔅l) tr e pre:
-    Closed [] e → tctx_extract_ctx E L +[p ◁ ty; pb ◁ tyb'] T T' tr →
+  Lemma type_assign {𝔄 𝔅 𝔄' 𝔅' 𝔄l 𝔅l ℭ} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄')
+    (tyb': _ 𝔅') gt st Φ p pb E L (C: cctx ℭ) (T: _ 𝔄l) (T': _ 𝔅l) trx tr e :
+    Closed [] e → tctx_extract_ctx E L +[p ◁ ty; pb ◁ tyb'] T T' trx →
     typed_write E L ty tyb ty' tyb' gt st → leak E L tyb Φ →
-    typed_body E L C (p ◁ ty' +:: T') e pre -∗
-    typed_body E L C T (p <- pb;; e)
-      (tr (λ '(a -:: b -:: bl), Φ (gt a) → pre (st a b -:: bl)))%type.
+    typed_body E L C (p ◁ ty' +:: T') e tr -∗
+    typed_body E L C T (p <- pb;; e) (trx ∘
+      (λ post '(a -:: b -:: bl), Φ (gt a) → tr post (st a b -:: bl)))%type.
   Proof.
     iIntros. iApply type_seq; [by eapply type_assign_instr|done| |done].
-    f_equal. fun_ext. by case=> [?[??]].
+    f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
   Qed.
 
   Lemma type_deref_instr {𝔄 𝔅 𝔄'} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄') gt st p E L :
@@ -231,16 +234,16 @@ Section typing.
     tctx_hasty_val tctx_hasty_val'; [|done]. iSplitL "tyb"; iExists d; by iSplit.
   Qed.
 
-  Lemma type_deref {𝔄 𝔅 𝔄' 𝔄l 𝔅l} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄') gt st
-    (T: _ 𝔄l) (T': _ 𝔅l) p x e tr pre E L C :
-    Closed (x :b: []) e → tctx_extract_ctx E L +[p ◁ ty] T T' tr →
+  Lemma type_deref {𝔄 𝔅 𝔄' 𝔄l 𝔅l ℭ} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄') gt st
+    (T: _ 𝔄l) (T': _ 𝔅l) p x e trx tr E L (C: cctx ℭ) :
+    Closed (x :b: []) e → tctx_extract_ctx E L +[p ◁ ty] T T' trx →
     typed_read E L ty tyb ty' gt st → tyb.(ty_size) = 1 →
-    (∀v: val, typed_body E L C (v ◁ tyb +:: p ◁ ty' +:: T') (subst' x v e) pre) -∗
+    (∀v: val, typed_body E L C (v ◁ tyb +:: p ◁ ty' +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := !p in e)
-      (tr (λ '(a -:: al), pre (gt a -:: st a -:: al))).
+      (trx ∘ (λ post '(a -:: al), tr post (gt a -:: st a -:: al))).
   Proof.
     iIntros. iApply type_let; [by eapply type_deref_instr|done| |done].
-    f_equal. fun_ext. by case.
+    f_equal. fun_ext=> ?. fun_ext. by case.
   Qed.
 
   Lemma type_memcpy_instr {𝔄 𝔄' 𝔅 𝔅' ℭ ℭ'} (tyw: _ 𝔄) (tyw': _ 𝔄') (tyr: _ 𝔅)
@@ -263,8 +266,8 @@ Section typing.
     [set_solver|]. iApply (wp_step_fupdN_persist_time_rcpt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
     with "TIME ⧖ [ToObs]")=>//; [by iApply step_fupdN_with_emp|].
     iApply (wp_persist_time_rcpt with "TIME ⧖'"); [solve_ndisj|].
-    iApply (wp_memcpy with "[$↦ $↦']"); [congruence|congruence|]. iNext.
-    iIntros "[↦ ↦'] #⧖'S [Obs' $]". iCombine "Obs Obs'" as "Obs".
+    iApply (wp_memcpy with "[$↦ $↦']"); [congruence|congruence|].
+    iIntros "!> [↦ ↦'] #⧖'S [Obs' $]". iCombine "Obs Obs'" as "Obs".
     iMod ("Totyw" with "[↦ tyb'] ⧖'S") as "[$ tyw']". { iExists vlb. iFrame. }
     iMod ("Totyr'" with "↦'") as "($&$& tyr')". iModIntro. iExists -[_; _].
     iSplit; [rewrite right_id|].
@@ -272,18 +275,18 @@ Section typing.
     - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
   Qed.
 
-  Lemma type_memcpy {𝔄 𝔄' 𝔅 𝔅' ℭ ℭ' 𝔄l 𝔅l} (tyw: _ 𝔄) (tyw': _ 𝔄') (tyr: _ 𝔅)
-    (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str Φ
-    (n: Z) pw pr E L C (T: _ 𝔄l) (T': _ 𝔅l) e tr pre :
-    Closed [] e → tctx_extract_ctx E L +[pw ◁ tyw; pr ◁ tyr] T T' tr →
+  Lemma type_memcpy {𝔄 𝔄' 𝔅 𝔅' ℭ ℭ' 𝔄l 𝔅l 𝔇} (tyw: _ 𝔄) (tyw': _ 𝔄')
+    (tyr: _ 𝔅) (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str Φ
+    (n: Z) pw pr E L (C: cctx 𝔇) (T: _ 𝔄l) (T': _ 𝔅l) e trx tr :
+    Closed [] e → tctx_extract_ctx E L +[pw ◁ tyw; pr ◁ tyr] T T' trx →
     typed_write E L tyw tyb tyw' tyb' gtw stw → leak E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
-    typed_body E L C (pw ◁ tyw' +:: pr ◁ tyr' +:: T') e pre -∗
-    typed_body E L C T (pw <-{n} !pr;; e) (tr (λ '(a -:: b -:: bl),
-      Φ (gtw a) → pre (stw a (gtr b) -:: str b -:: bl)))%type.
+    typed_body E L C (pw ◁ tyw' +:: pr ◁ tyr' +:: T') e tr -∗
+    typed_body E L C T (pw <-{n} !pr;; e) (trx ∘ (λ post '(a -:: b -:: bl),
+      Φ (gtw a) → tr post (stw a (gtr b) -:: str b -:: bl)))%type.
   Proof.
     iIntros. iApply type_seq; [by eapply type_memcpy_instr|done| |done].
-    f_equal. fun_ext. by case=> [?[??]].
+    f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
   Qed.
 
 End typing.

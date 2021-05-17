@@ -22,20 +22,20 @@ Section bool.
     rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "⧖". by iExists b.
   Qed.
 
-  Lemma type_bool {𝔄l} (b: bool) (T: _ 𝔄l) x e tr E L C :
+  Lemma type_bool {𝔄l 𝔅} (b: bool) (T: _ 𝔄l) x e tr E L (C: cctx 𝔅) :
     Closed (x :b: []) e →
     (∀v: val, typed_body E L C (v ◁ bool_ty +:: T) (subst' x v e) tr) -∗
-    typed_body E L C T (let: x := #b in e) (λ al, tr (b -:: al)).
+    typed_body E L C T (let: x := #b in e) (λ post al, tr post (b -:: al)).
   Proof. iIntros. iApply type_let; by [apply type_bool_instr|solve_typing]. Qed.
 
-  Lemma type_if {𝔄l 𝔅l} p (T: _ 𝔄l) (T': _ 𝔅l) e1 e2 pre1 pre2 tr E L C :
-    tctx_extract_ctx E L +[p ◁ bool_ty] T T' tr →
-    typed_body E L C T' e1 pre1 -∗ typed_body E L C T' e2 pre2 -∗
-    typed_body E L C T (if: p then e1 else e2)
-      (tr (λ '(b -:: vl), if b then pre1 vl else pre2 vl)).
+  Lemma type_if {𝔄l 𝔅l ℭ} p (T: _ 𝔄l) (T': _ 𝔅l) e1 e2 tr1 tr2 trx E L (C: cctx ℭ) :
+    tctx_extract_ctx E L +[p ◁ bool_ty] T T' trx →
+    typed_body E L C T' e1 tr1 -∗ typed_body E L C T' e2 tr2 -∗
+    typed_body E L C T (if: p then e1 else e2) (trx ∘
+      (λ post '(b -:: vl), if b then tr1 post vl else tr2 post vl)).
   Proof.
     iIntros (?) "e1 e2". iApply typed_body_tctx_incl; [done|]=>/=.
-    iIntros (?[??]) "/= #LFT #TIME #PROPH #UNIQ #E Na L C [p T] Obs".
+    iIntros (?[??]?) "/= #LFT #TIME #PROPH #UNIQ #E Na L C [p T] Obs".
     wp_bind p. iApply (wp_hasty with "p"). iIntros (?? _) "_".
     iDestruct 1 as ([|]->) "%Eq"; move: Eq=> [=->]; wp_case.
     - by iApply ("e1" with "LFT TIME PROPH UNIQ E Na L C T").

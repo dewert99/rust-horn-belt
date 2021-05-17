@@ -227,16 +227,17 @@ Section typing.
     iFrame "†". iNext. iExists _. iFrame "↦". by rewrite repeat_length.
   Qed.
 
-  Lemma type_new {𝔄l} (n: Z) n' x e pre E L C (T: _ 𝔄l) :
+  Lemma type_new {𝔄l 𝔅} (n: Z) n' x e tr E L (C: cctx 𝔅) (T: _ 𝔄l) :
     Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n →
-    (∀v: val, typed_body E L C (v ◁ own_ptr n' (↯ n') +:: T) (subst' x v e) pre) -∗
-    typed_body E L C T (let: x := new [ #n] in e) (λ al, pre (() -:: al)).
+    (∀v: val, typed_body E L C (v ◁ own_ptr n' (↯ n') +:: T) (subst' x v e) tr) -∗
+    typed_body E L C T (let: x := new [ #n] in e) (λ post al, tr post (() -:: al)).
   Proof. iIntros. subst. iApply type_let; by [apply type_new_instr|solve_typing]. Qed.
 
-  Lemma type_new_subtype {𝔄 𝔄l} (ty: _ 𝔄) n' (n: Z) (T: _ 𝔄l) f e pre x E L C :
+  Lemma type_new_subtype {𝔄 𝔅l ℭ} (ty: _ 𝔄) n' (n: Z)
+    (T: _ 𝔅l) f e tr x E L (C: cctx ℭ) :
     Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n → subtype E L (↯ n') ty f →
-    (∀v: val, typed_body E L C (v ◁ own_ptr n' ty +:: T) (subst' x v e) pre) -∗
-    typed_body E L C T (let: x := new [ #n] in e) (λ al, pre (f () -:: al)).
+    (∀v: val, typed_body E L C (v ◁ own_ptr n' ty +:: T) (subst' x v e) tr) -∗
+    typed_body E L C T (let: x := new [ #n] in e) (λ post al, tr post (f () -:: al)).
   Proof.
     iIntros (??->Sub) "?". iApply type_let; [by apply type_new_instr|solve_typing| |];
     last first. { iIntros (?). iApply typed_body_tctx_incl;
@@ -256,21 +257,22 @@ Section typing.
     { iIntros "!>_". iExists -[]. by iSplit. }
   Qed.
 
-  Lemma type_delete {𝔄 𝔄l 𝔅l} (ty: _ 𝔄) n' (n: Z) p e E L C (T: _ 𝔄l) (T': _ 𝔅l) tr pre :
-    Closed [] e → tctx_extract_ctx E L +[p ◁ own_ptr n' ty] T T' tr →
-    n' = ty.(ty_size) → n = n' → typed_body E L C T' e pre -∗
-    typed_body E L C T (delete [ #n; p ];; e) (tr (λ '(_ -:: al), pre al)).
+  Lemma type_delete {𝔄 𝔅l ℭl 𝔇} (ty: _ 𝔄) n' (n: Z) p e
+    E L (C: cctx 𝔇) (T: _ 𝔅l) (T': _ ℭl) trx tr :
+    Closed [] e → tctx_extract_ctx E L +[p ◁ own_ptr n' ty] T T' trx →
+    n' = ty.(ty_size) → n = n' → typed_body E L C T' e tr -∗
+    typed_body E L C T (delete [ #n; p ];; e) (trx ∘ (λ post '(_ -:: al), tr post al)).
   Proof.
     iIntros (??->?) "?". iApply type_seq; [by eapply type_delete_instr|done| |done].
-    f_equal. fun_ext. by case.
+    f_equal. fun_ext=> ?. fun_ext. by case.
   Qed.
 
-  Lemma type_letalloc_1 {𝔄 𝔄l 𝔅l} (ty: _ 𝔄) (x: string) p e
-    (T: _ 𝔄l) (T': _ 𝔅l) tr pre E L C :
+  Lemma type_letalloc_1 {𝔄 𝔅l ℭl 𝔇} (ty: _ 𝔄) (x: string) p e
+    (T: _ 𝔅l) (T': _ ℭl) trx tr E L (C: cctx 𝔇) :
     Closed [] p → Closed [x] e →
-    tctx_extract_ctx E L +[p ◁ ty] T T' tr → ty.(ty_size) = 1 →
-    (∀v: val, typed_body E L C (v ◁ box ty +:: T') (subst x v e) pre) -∗
-    typed_body E L C T (letalloc: x <- p in e) (tr pre).
+    tctx_extract_ctx E L +[p ◁ ty] T T' trx → ty.(ty_size) = 1 →
+    (∀v: val, typed_body E L C (v ◁ box ty +:: T') (subst x v e) tr) -∗
+    typed_body E L C T (letalloc: x <- p in e) (trx ∘ tr).
   Proof.
     iIntros (??? Sz) "?". iApply typed_body_tctx_incl; [done|].
     iApply typed_body_impl; last first. { iApply type_new; [|done|done|].
@@ -282,17 +284,16 @@ Section typing.
         [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
       iApply type_assign; [|solve_typing|by eapply write_own|solve_typing|done].
       apply subst_is_closed; [|done]. apply is_closed_of_val. }
-    by move=>/= [??]??.
+    by move=>/= ?[??]??.
   Qed.
 
-  Lemma type_letalloc_n {𝔄 𝔅 𝔅' 𝔄l 𝔅l} (ty: _ 𝔄) (tyr: _ 𝔅) (tyr': _ 𝔅')
-    gt st (T: _ 𝔄l) (T': _ 𝔅l) tr pre (x: string) p e E L C :
-    Closed [] p → Closed [x] e → tctx_extract_ctx E L +[p ◁ tyr] T T' tr →
+  Lemma type_letalloc_n {𝔄 𝔅 𝔅' ℭl 𝔇l 𝔈} (ty: _ 𝔄) (tyr: _ 𝔅) (tyr': _ 𝔅')
+    gt st (T: _ ℭl) (T': _ 𝔇l) trx tr (x: string) p e E L (C: cctx 𝔈) :
+    Closed [] p → Closed [x] e → tctx_extract_ctx E L +[p ◁ tyr] T T' trx →
     typed_read E L tyr ty tyr' gt st →
-    (∀v: val, typed_body E L C
-      (v ◁ box ty +:: p ◁ tyr' +:: T') (subst x v e) pre) -∗
-    typed_body E L C T (letalloc: x <-{ty.(ty_size)} !p in e)
-      (tr (λ '(b -:: bl), pre (gt b -:: st b -:: bl))).
+    (∀v: val, typed_body E L C (v ◁ box ty +:: p ◁ tyr' +:: T') (subst x v e) tr) -∗
+    typed_body E L C T (letalloc: x <-{ty.(ty_size)} !p in e) (trx ∘
+      (λ post '(b -:: bl), tr post (gt b -:: st b -:: bl))).
   Proof.
     iIntros. iApply typed_body_tctx_incl; [done|].
     iApply typed_body_impl; last first. { iApply type_new; [|lia|done|]=>/=.
@@ -307,7 +308,7 @@ Section typing.
         - eapply is_closed_subst; [done|set_solver]. } rewrite Nat2Z.id.
       iApply type_memcpy; [|solve_typing| | |done|done|done];
       [|by apply write_own|solve_typing]. apply subst_is_closed; [|done].
-      apply is_closed_of_val. } by move=>/= [??]??.
+      apply is_closed_of_val. } by move=>/= ?[??]??.
   Qed.
 
 End typing.
