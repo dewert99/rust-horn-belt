@@ -36,7 +36,7 @@ Section sum.
       do 2 (split; [done|]). rewrite/= app_length Eq. by f_equal.
   Qed.
 
-  Local Lemma ty_lfts_nth_incl {𝔄l} (tyl: _ 𝔄l) i :
+  Lemma ty_lfts_nth_incl {𝔄l} (tyl: _ 𝔄l) i :
     ⊢ tyl_lft tyl ⊑ ty_lft (hnthe tyl i).
   Proof.
     elim: tyl i. { move=> ?. apply lft_incl_refl. } move=> ?? ty tyl IH i.
