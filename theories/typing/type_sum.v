@@ -254,28 +254,33 @@ Section case.
   Proof.
     iIntros (??->) "* **". rewrite -(Z2Nat.id i) //.
     iApply type_seq; [by eapply type_sum_assign_instr|done|done].
-  Qed.
+  Qed. *)
 
-  Lemma type_sum_unit_instr {E L} (i : nat) tyl ty1 ty2 p :
-    tyl !! i = Some unit →
-    (⊢ typed_write E L ty1 (sum tyl) ty2) →
-    ⊢ typed_instr E L [p ◁ ty1] (p <-{Σ i} ()) (λ _, [p ◁ ty2]).
+  Lemma type_sum_unit_instr {E L 𝔄 𝔅 As} (i : nat) (tyl : _ As) (ty1 : _ 𝔄) (ty2 : _ 𝔅) p gt st eq:
+    hnthe tyl i = eq_rect _ _ unit_ty _ eq →
+    typed_write E L ty1 (xsum_ty tyl) ty2 (xsum_ty tyl) gt st →
+    ⊢ typed_instr E L +[p ◁ ty1] (p <-{Σ i} ())
+    (λ _, +[p ◁ ty2]) (λ post '-[a], post -[st a (pinj i (eq_rect unitₛ _ () _ eq))]).
   Proof.
-    iIntros (Hty Hw tid) "#LFT #TIME #HE $ HL Hp". rewrite tctx_interp_singleton.
-    wp_apply (wp_hasty with "Hp"). iIntros (depth v) "Hdepth". iIntros (Hv) "Hty".
-    rewrite typed_write_eq in Hw.
-    iMod (Hw with "[] LFT HE HL Hty") as (l vl) "(H & H↦ & Hw)"; first done.
-    simpl. destruct vl as [|? vl]; iDestruct "H" as %[[= Hlen] ->].
+    iIntros (Hty [Eq Hw] tid postπ [vπ []]) "#LFT #TIME #PROPH #UNIQ #HE $ HL [Hp _] Hproph".
+    wp_apply (wp_hasty with "Hp"). iIntros (depth v) "%Hv Hdepth Hty".
+    iMod (Hw with "LFT UNIQ HE HL Hty") as (l ->) "(H & Hw)". clear Hw.
+    iDestruct "H" as (vl) "(>H↦ & H)".
+    iDestruct "H" as (?) "H"; iMod (bi.later_exist_except_0 with "H") as (?) "H";iDestruct "H" as (??) "(>(% & % & H) & _)".
+    destruct vl as [|? vl]; iDestruct "H" as %[= Hlen].
     rewrite heap_mapsto_vec_cons -wp_fupd. iDestruct "H↦" as "[H↦0 H↦vl]".
     iApply (wp_persist_time_rcpt with "TIME Hdepth")=>//.
-    wp_write. iIntros "#Hdepth". rewrite tctx_interp_singleton tctx_hasty_val' //.
-    rewrite -(bi.exist_intro (S _)). iFrame "Hdepth".
-    iApply ("Hw" with "[-] Hdepth"). iModIntro. iExists (_::_).
-    rewrite heap_mapsto_vec_cons. iFrame.
-    iExists i, [], _. rewrite -Hlen nth_lookup Hty. auto.
+    wp_write. iIntros "#Hdepth". iExists -[_]. rewrite right_id bi.sep_assoc tctx_hasty_val' //.
+    iSplitR "Hproph".
+    - rewrite -(bi.exist_intro (S _)). iFrame "Hdepth".
+      iApply ("Hw" with "[-] Hdepth"). iModIntro. iExists (_::_).
+      rewrite heap_mapsto_vec_cons. iFrame.
+      iExists i, (λ _, eq_rect _ _ () _ eq), [], _. rewrite Hty -Hlen.
+      iSplit; [done|]. clear Hty; by destruct eq.
+    - by iApply (proph_obs_impl with "Hproph").
   Qed.
 
-  Lemma type_sum_unit {E L} sty tyl i ty1 ty1' C T T' p e:
+  (* Lemma type_sum_unit {E L} sty tyl i ty1 ty1' C T T' p e:
     Closed [] e →
     0 ≤ i →
     sty = sum tyl →
