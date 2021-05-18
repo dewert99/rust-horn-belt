@@ -227,19 +227,19 @@ Section typing.
     iFrame "†". iNext. iExists _. iFrame "↦". by rewrite repeat_length.
   Qed.
 
-  Lemma type_new {𝔄l 𝔅} (n: Z) n' x e tr E L (C: cctx 𝔅) (T: _ 𝔄l) :
-    Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n →
+  Lemma type_new {𝔄l 𝔅} n x e tr E L (C: cctx 𝔅) (T: _ 𝔄l) :
+    Closed (x :b: []) e → (0 ≤ n)%Z → let n' := Z.to_nat n in
     (∀v: val, typed_body E L C (v ◁ own_ptr n' (↯ n') +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := new [ #n] in e) (λ post al, tr post (() -:: al)).
   Proof. iIntros. subst. iApply type_let; by [apply type_new_instr|solve_typing]. Qed.
 
-  Lemma type_new_subtype {𝔄 𝔅l ℭ} (ty: _ 𝔄) n' (n: Z)
-    (T: _ 𝔅l) f e tr x E L (C: cctx ℭ) :
-    Closed (x :b: []) e → (0 ≤ n)%Z → n' = Z.to_nat n → subtype E L (↯ n') ty f →
+  Lemma type_new_subtype {𝔄 𝔅l ℭ} (ty: _ 𝔄) n (T: _ 𝔅l) f e tr x E L (C: cctx ℭ) :
+    Closed (x :b: []) e → (0 ≤ n)%Z → let n' := Z.to_nat n in
+    subtype E L (↯ n') ty f →
     (∀v: val, typed_body E L C (v ◁ own_ptr n' ty +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := new [ #n] in e) (λ post al, tr post (f () -:: al)).
   Proof.
-    iIntros (??->Sub) "?". iApply type_let; [by apply type_new_instr|solve_typing| |];
+    iIntros (??? Sub) "?". iApply type_let; [by apply type_new_instr|solve_typing| |];
     last first. { iIntros (?). iApply typed_body_tctx_incl;
     [eapply subtype_tctx_incl, own_subtype, Sub|done]. } done.
   Qed.
@@ -275,15 +275,15 @@ Section typing.
     typed_body E L C T (letalloc: x <- p in e) (trx ∘ tr).
   Proof.
     iIntros (??? Sz) "?". iApply typed_body_tctx_incl; [done|].
-    iApply typed_body_impl; last first. { iApply type_new; [|done|done|].
+    iApply typed_body_impl; last first. { iApply type_new; [|done|].
     - rewrite /Closed /= !andb_True. split; [done|]. split; [|done].
       split; [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
     - iIntros (xv) "/=".
       have ->: (subst x xv (x <- p;; e))%E = (xv <- p;; subst x xv e)%E.
       { rewrite /subst /=. repeat f_equal;
         [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
-      iApply type_assign; [|solve_typing|by eapply write_own|solve_typing|done].
-      apply subst_is_closed; [|done]. apply is_closed_of_val. }
+      iApply type_assign; [|solve_typing|by eapply write_own|solve_typing|
+      by rewrite /box Sz]. apply subst_is_closed; [apply is_closed_of_val|done]. }
     by move=>/= ?[??]??.
   Qed.
 
@@ -296,7 +296,7 @@ Section typing.
       (λ post '(b -:: bl), tr post (gt b -:: st b -:: bl))).
   Proof.
     iIntros. iApply typed_body_tctx_incl; [done|].
-    iApply typed_body_impl; last first. { iApply type_new; [|lia|done|]=>/=.
+    iApply typed_body_impl; last first. { iApply type_new; [|lia|]=>/=.
     - rewrite /Closed /= !andb_True !right_id. split; [done|].
       split; [by apply is_closed_of_val|]. split;
       [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.

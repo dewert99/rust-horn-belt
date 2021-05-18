@@ -176,25 +176,6 @@ Section typing.
     eqtype E L (&uniq{κ} ty) (&uniq{κ} ty') id id.
   Proof. move=> [??][??]. by split; apply uniq_subtype. Qed.
 
-  Lemma read_uniq {𝔄} E L κ (ty: _ 𝔄):
-    Copy ty → lctx_lft_alive E L κ →
-    typed_read E L (&uniq{κ} ty) ty (&uniq{κ} ty) fst id.
-  Proof.
-    iIntros (? Alv vπ ?[[]|]??) "#LFT E Na L [In uniq] //".
-    have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
-    iDestruct "uniq" as (??[Le ?]) "[Vo Bor]". case d as [|]; [lia|].
-    iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
-    iMod (bor_acc with "LFT Bor κ") as
-      "[(%&%&(%& >↦ & #ty)& #>⧖ & Pc) ToBor]"; [done|].
-    iMod (uniq_strip_later with "Vo Pc") as (<-<-) "[Vo Pc]".
-    iDestruct (ty_size_eq with "ty") as "#>%". iIntros "!>".
-    iExists _, _, _. iSplit; [done|]. iFrame "↦ Na". iSplitR.
-    { iApply ty_own_depth_mono; [|done]. lia. }
-    iIntros "↦". iMod ("ToBor" with "[↦ Pc]") as "[? κ]".
-    { iNext. iExists _, _. iFrame "Pc ⧖". iExists _. by iFrame. }
-    iMod ("ToL" with "κ") as "$". iFrame "In". iExists _, _. by iFrame.
-  Qed.
-
   Lemma write_uniq {𝔄} E L κ (ty: _ 𝔄):
     lctx_lft_alive E L κ →
     typed_write E L (&uniq{κ} ty) ty (&uniq{κ} ty) ty fst (λ v w, (w, v.2)).
@@ -213,6 +194,25 @@ Section typing.
     { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. }
     iMod ("ToL" with "κ") as "$". iFrame "In". iExists _, _.
     rewrite (proof_irrel (prval_to_inh' _) (prval_to_inh' vπ)). by iFrame.
+  Qed.
+
+  Lemma read_uniq {𝔄} E L κ (ty: _ 𝔄):
+    Copy ty → lctx_lft_alive E L κ →
+    typed_read E L (&uniq{κ} ty) ty (&uniq{κ} ty) fst id.
+  Proof.
+    iIntros (? Alv vπ ?[[]|]??) "#LFT E Na L [In uniq] //".
+    have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
+    iDestruct "uniq" as (??[Le ?]) "[Vo Bor]". case d as [|]; [lia|].
+    iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
+    iMod (bor_acc with "LFT Bor κ") as
+      "[(%&%&(%& >↦ & #ty)& #>⧖ & Pc) ToBor]"; [done|].
+    iMod (uniq_strip_later with "Vo Pc") as (<-<-) "[Vo Pc]".
+    iDestruct (ty_size_eq with "ty") as "#>%". iIntros "!>".
+    iExists _, _, _. iSplit; [done|]. iFrame "↦ Na". iSplitR.
+    { iApply ty_own_depth_mono; [|done]. lia. }
+    iIntros "↦". iMod ("ToBor" with "[↦ Pc]") as "[? κ]".
+    { iNext. iExists _, _. iFrame "Pc ⧖". iExists _. by iFrame. }
+    iMod ("ToL" with "κ") as "$". iFrame "In". iExists _, _. by iFrame.
   Qed.
 
   Lemma tctx_reborrow_uniq {𝔄} E L p (ty: _ 𝔄) κ κ' :
@@ -361,6 +361,14 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve uniq_leak uniq_subtype uniq_eqtype write_uniq read_uniq
-  : lrust_typing.
+Global Hint Resolve uniq_leak uniq_subtype uniq_eqtype : lrust_typing.
+
+(* Registering [write_uniq]/[read_uniq] to [Hint Resolve]
+  doesnt't help automation in some situations,
+  but the following hints let automation work *)
+Global Hint Extern 0 (typed_write _ _ (&uniq{_} _) _ _ _ _ _) =>
+  simple apply write_uniq : lrust_typing.
+Global Hint Extern 0 (typed_read _ _ (&uniq{_} _) _ _ _ _) =>
+  simple apply read_uniq : lrust_typing.
+
 Global Hint Resolve tctx_extract_hasty_reborrow | 10 : lrust_typing.

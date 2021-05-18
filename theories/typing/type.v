@@ -1059,11 +1059,11 @@ Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
 Global Hint Resolve ty_outlv_E_elctx_sat tyl_outlv_E_elctx_sat : lrust_typing.
 Global Hint Resolve leakl_nil subtype_refl eqtype_refl subtypel_nil eqtypel_nil
   : lrust_typing.
-(** We use [Hint Extern] instead of [Hint Resolve] here, because
+(* We use [Hint Extern] instead of [Hint Resolve] here, because
   [into_plistc_cons], [leakl_cons], [subtypel_cons] and [eqtypel_cons]
   work with [apply] but not with [simple apply] *)
 Global Hint Extern 0 (IntoPlistc _ _) => apply into_plistc_cons : lrust_typing.
 Global Hint Extern 0 (leakl _ _ _ _) => apply leakl_cons : lrust_typing.
 Global Hint Extern 0 (subtypel _ _ _ _ _) => apply subtypel_cons : lrust_typing.
 Global Hint Extern 0 (eqtypel _ _ _ _ _ _) => apply eqtypel_cons : lrust_typing.
-Global Hint Opaque subtype eqtype : lrust_typing.
+Global Hint Opaque leak subtype eqtype : lrust_typing.

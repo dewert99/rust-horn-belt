@@ -147,7 +147,7 @@ Section typing.
   Qed.
 
   Lemma type_endlft {𝔄l 𝔅} (T T': _ 𝔄l) κ κl tr e E L (C: cctx 𝔅) :
-    Closed [] e → UnblockTctx E L κ T T' →
+    Closed [] e → unblock_tctx E L κ T T' →
     typed_body E L C T' e tr -∗ typed_body E (κ ⊑ₗ κl :: L) C T (Endlft;; e) tr.
   Proof.
     iIntros (? Un) "e %%% #LFT #TIME PROPH UNIQ #E Na
@@ -290,3 +290,7 @@ Section typing.
   Qed.
 
 End typing.
+
+Ltac intro_subst := iIntros (?); simpl_subst.
+
+Global Hint Opaque typed_instr typed_write typed_read : lrust_typing.

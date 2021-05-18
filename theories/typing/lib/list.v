@@ -14,8 +14,7 @@ Section list.
   Lemma list_leak {𝔄} E L (ty: _ 𝔄) Φ :
     leak E L ty Φ → leak E L (list_ty ty) (lforall Φ).
   Proof.
-    move=> ?. apply fix_leak=> ??. eapply leak_impl. { apply mod_ty_leak,
-    option_leak, prod_leak, own_leak; solve_typing. } by case.
+    move=> ?. apply fix_leak=> ??. eapply leak_impl; [solve_typing|]. by case.
   Qed.
 
   Lemma list_subtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty ty' :

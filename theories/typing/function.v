@@ -146,6 +146,9 @@ Section typing.
   Global Instance fn_send {A 𝔄l 𝔅} (fp: A → _ 𝔄l 𝔅) : Send (fn fp).
   Proof. done. Qed.
 
+  Lemma fn_leak {A 𝔄l 𝔅} (fp: A → _ 𝔄l 𝔅) E L : leak E L (fn fp) (const True).
+  Proof. apply leak_just. Qed.
+
   Local Lemma subtypel_llctx_big_sep_box {𝔄l 𝔅l} (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl q E L :
     subtypel E L tyl tyl' fl →
     llctx_interp L q -∗ □ (elctx_interp E -∗
@@ -234,15 +237,15 @@ Section typing.
   Lemma type_call {A 𝔄l 𝔅 ℭl 𝔇l 𝔈l 𝔉} x (fp: A → _ 𝔄l 𝔅) p ql ql' k trx trk tri
     E L (C: cctx 𝔉) (T: _ ℭl) (T': _ 𝔇l) (Tk: _ → _ 𝔈l) :
     IntoPlistc ql ql' → Forall (lctx_lft_alive E L) L.*1 →
-    (∀ϝ, elctx_sat (map (λ κ, ϝ ⊑ₑ κ) L.*1 ++ E) L (fp_E (fp x) ϝ)) →
     tctx_extract_ctx E L (p ◁ fn fp +::
       hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') T T' trx →
+    (∀ϝ, elctx_sat (map (λ κ, ϝ ⊑ₑ κ) L.*1 ++ E) L (fp_E (fp x) ϝ)) →
     k ◁cont{L, Tk} trk ∈ C →
     (∀ret: val, tctx_incl E L (ret ◁ box (fp x).(fp_oty) +:: T') (Tk [#ret]) tri) →
     ⊢ typed_body E L C T (call: p ql → k) (trx ∘ (λ post '(trp -:: adl),
       let '(al, dl) := psep adl in trp (λ b: 𝔅, tri (trk post) (b -:: dl)) al)).
   Proof.
-    move=> -> Alv ToEfp ?? InTk. iApply typed_body_tctx_incl; [done|].
+    move=> -> Alv ? ToEfp ? InTk. iApply typed_body_tctx_incl; [done|].
     iIntros (?[? adπl]?). move: (papp_ex adπl)=> [aπl[dπl->]].
     iIntros "/= #LFT #TIME #PROPH #UNIQ #E Na L C [p[ql T']] Obs".
     iMod (lctx_lft_alive_tok_list with "E L") as (?) "(κL & L & ToL)"; [done|done|].
@@ -255,7 +258,7 @@ Section typing.
       iSplit. { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
       iApply "IH". iModIntro. iApply lft_incl_trans; [done|].
       iApply lft_intersect_incl_r. }
-    rewrite /call_def. wp_apply (wp_hasty with "p"). iIntros (???) "_".
+    wp_apply (wp_hasty with "p"). iIntros (???) "_".
     iDestruct 1 as (trp->?????[=->]) "Body".
     have ->: (λ: ["_r"], Skip;; k ["_r"])%E = (λ: ["_r"], Skip;; k ["_r"])%V by unlock.
     iApply (wp_app_hasty_box [] with "ql")=>/=. iIntros (?) "ityl". wp_rec.
@@ -278,9 +281,9 @@ Section typing.
     (T': _ 𝔇l) b e trx tr E L (C: cctx 𝔈)
     `{!IntoPlistc ql ql', !Closed (b :b: []) e, !Closed [] p} :
     TCForall (Closed []) ql → Forall (lctx_lft_alive E L) L.*1 →
-    (∀ϝ, elctx_sat (map (λ κ, ϝ ⊑ₑ κ) L.*1 ++ E) L (fp_E (fp x) ϝ)) →
     tctx_extract_ctx E L (p ◁ fn fp +::
       hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') T T' trx →
+    (∀ϝ, elctx_sat (map (λ κ, ϝ ⊑ₑ κ) L.*1 ++ E) L (fp_E (fp x) ϝ)) →
     (∀ret: val, typed_body E L C
       (ret ◁ box (fp x).(fp_oty) +:: T') (subst' b ret e) tr) -∗
     typed_body E L C T (letcall: b := p ql in e) (trx ∘ (λ post '(trp -:: adl),
@@ -344,4 +347,4 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve fn_subtype : lrust_typing.
+Global Hint Resolve fn_leak fn_subtype : lrust_typing.

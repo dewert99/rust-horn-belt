@@ -423,20 +423,20 @@ Section lemmas.
      E.g., if [p ◁ &uniq{κ} ty] should be removed, because this is now
      useless. *)
 
-  Class UnblockTctx {𝔄l} (E: elctx) (L: llctx) (κ: lft) (T T': tctx 𝔄l) : Prop :=
-    unblock_tctx: ∀qL tid vπl, lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
+  Definition unblock_tctx {𝔄l} (E: elctx) (L: llctx) (κ: lft) (T T': tctx 𝔄l) : Prop :=
+    ∀qL tid vπl, lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
       [†κ] -∗ tctx_interp tid T vπl ={⊤}=∗ ∃d vπl', ⧖d ∗ |={⊤}▷=> |={⊤}▷=>^d |={⊤}=>
         llctx_interp L qL ∗ ⟨π, vπl -$ π = vπl' -$ π⟩ ∗ tctx_interp tid T' vπl'.
 
-  Global Instance unblock_tctx_nil κ E L : UnblockTctx E L κ +[] +[].
+  Lemma unblock_tctx_nil κ E L : unblock_tctx E L κ +[] +[].
   Proof.
     iIntros (??[]) "_ _ $ _ _". iMod persist_time_rcpt_0 as "⧖". iExists 0, -[].
     iFrame "⧖". iIntros "!>!>!>!>!>". iSplit; [|done]. by iApply proph_obs_true.
   Qed.
 
-  Global Instance unblock_tctx_cons_unblock {𝔄 𝔄l} p (ty: _ 𝔄) (T T': _ 𝔄l) κ E L :
-    lctx_lft_alive E L ty.(ty_lft) → UnblockTctx E L κ T T' →
-    UnblockTctx E L κ (p ◁{κ} ty +:: T) (p ◁ ty +:: T').
+  Lemma unblock_tctx_cons_unblock {𝔄 𝔄l} p (ty: _ 𝔄) (T T': _ 𝔄l) κ E L :
+    lctx_lft_alive E L ty.(ty_lft) → unblock_tctx E L κ T T' →
+    unblock_tctx E L κ (p ◁{κ} ty +:: T) (p ◁ ty +:: T').
   Proof.
     iIntros (Alv Un ??[??]) "#LFT #E [L L'] #†κ /=[(%v &%& Upd) T]".
     iMod ("Upd" with "†κ") as (vπ' dp) "(Eqz & #⧖dp & ty)".
@@ -453,8 +453,8 @@ Section lemmas.
     iExists v, dp. iSplit; [done|]. by iFrame.
   Qed.
 
-  Global Instance unblock_tctx_cons {𝔄 𝔄l} (t: _ 𝔄) (T T': _ 𝔄l) κ E L :
-    UnblockTctx E L κ T T' → UnblockTctx E L κ (t +:: T) (t +:: T') | 100.
+  Lemma unblock_tctx_cons_just {𝔄 𝔄l} (t: _ 𝔄) (T T': _ 𝔄l) κ E L :
+    unblock_tctx E L κ T T' → unblock_tctx E L κ (t +:: T) (t +:: T').
   Proof.
     iIntros (Un ??[vπ ?]) "LFT E L †κ /=[t T]".
     iMod (Un with "LFT E L †κ T") as (d vπl') "[⧖ Upd]". iModIntro.
@@ -462,15 +462,39 @@ Section lemmas.
     iIntros "!> >($&?&$) !>". iFrame "t". by iApply proph_obs_impl; [|done]=>/= ?->.
   Qed.
 
+  Lemma unblock_tctx_cons_just_hasty {𝔄 𝔄l} p (ty: _ 𝔄) (T T': _ 𝔄l) κ E L :
+    unblock_tctx E L κ T T' → unblock_tctx E L κ (p ◁ ty +:: T) (p ◁ ty +:: T').
+  Proof. apply unblock_tctx_cons_just. Qed.
+
+  Lemma unblock_tctx_cons_just_blocked {𝔄 𝔄l} p (ty: _ 𝔄) (T T': _ 𝔄l) κ κ' E L :
+    κ ≠ κ' → unblock_tctx E L κ T T' →
+    unblock_tctx E L κ (p ◁{κ'} ty +:: T) (p ◁{κ'} ty +:: T').
+  Proof. move=> ?. apply unblock_tctx_cons_just. Qed.
+
 End lemmas.
 
-Global Hint Resolve leak_tctx_nil leak_tctx_cons_hasty leak_tctx_cons_blocked
-  : slrust_typing.
+Global Hint Resolve leak_tctx_nil : lrust_typing.
+(* Mysteriously, registering [leak_tctx_cons_hasty]/[leak_tctx_cons_blocked]
+  to [Global Hint Resolve] does not help automation in some situations,
+  but the following hints let automation work *)
+Global Hint Extern 0 (leak_tctx _ _ _ _) =>
+  simple apply leak_tctx_cons_hasty : lrust_typing.
+Global Hint Extern 0 (leak_tctx _ _ _ _) =>
+  simple apply leak_tctx_cons_blocked : lrust_typing.
+
 Global Hint Resolve tctx_extract_elt_here_copy | 1 : lrust_typing.
 Global Hint Resolve tctx_extract_elt_here_exact | 2 : lrust_typing.
 Global Hint Resolve tctx_extract_elt_here tctx_extract_elt_here_blocked | 20
   : lrust_typing.
-Global Hint Resolve tctx_extract_elt_further | 50 : lrust_typing.
+(* We need [eapply] to use [tctx_extract_elt_further] *)
+Global Hint Extern 50 (tctx_extract_elt _ _ _ _ _ _) =>
+  eapply tctx_extract_elt_further : lrust_typing.
+
 Global Hint Resolve tctx_extract_ctx_nil tctx_extract_ctx_elt
-                    tctx_extract_ctx_incl : lrust_typing.
-Global Hint Opaque tctx_extract_ctx tctx_extract_elt tctx_incl : lrust_typing.
+  tctx_extract_ctx_incl : lrust_typing.
+
+Global Hint Resolve unblock_tctx_nil unblock_tctx_cons_unblock
+  unblock_tctx_cons_just_hasty unblock_tctx_cons_just_blocked : lrust_typing.
+
+Global Hint Opaque leak_tctx tctx_incl tctx_extract_elt tctx_extract_ctx
+  unblock_tctx : lrust_typing.
