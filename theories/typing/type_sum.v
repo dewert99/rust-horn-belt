@@ -284,55 +284,57 @@ Section case.
   Proof.
     iIntros (??->) "* **". rewrite -(Z2Nat.id i) //.
     iApply type_seq; [by eapply type_sum_unit_instr|solve_typing|done].
-  Qed.
+  Qed. *)
 
-  Lemma type_sum_memcpy_instr {E L} (i : nat) tyl ty1 ty1' ty2 ty2' ty p1 p2 :
-    tyl !! i = Some ty →
-    (⊢ typed_write E L ty1 (sum tyl) ty1') →
-    (⊢ typed_read E L ty2 ty ty2') →
-    ⊢ typed_instr E L [p1 ◁ ty1; p2 ◁ ty2]
-               (p1 <-{ty.(ty_size),Σ i} !p2) (λ _, [p1 ◁ ty1'; p2 ◁ ty2']).
+  Lemma type_sum_memcpy_instr {E L As 𝔄 𝔄' 𝔅 𝔅'} (i : nat) (tyl : typel As)
+    (ty1 : _ 𝔄) (ty1' : _ 𝔄') (ty2 : _ 𝔅) (ty2' : _ 𝔅') p1 p2 gt st rd wt:
+    let ty := hnthe tyl i in
+    (typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st) →
+    (typed_read E L ty2 ty ty2' rd wt) →
+    ⊢ typed_instr E L +[p1 ◁ ty1; p2 ◁ ty2]
+               (p1 <-{ty.(ty_size),Σ i} !p2) (λ _, +[p1 ◁ ty1'; p2 ◁ ty2'])
+               (λ post '-[a; b], post -[st a (pinj i (rd b)); wt b]).
   Proof.
-    iIntros (Hty Hw Hr tid) "#LFT #TIME #HE Htl [HL1 HL2] Hp".
-    rewrite tctx_interp_cons tctx_interp_singleton.
-    iDestruct "Hp" as "[Hp1 Hp2]". iDestruct (closed_hasty with "Hp1") as "%".
-    iDestruct (closed_hasty with "Hp2") as "%". wp_apply (wp_hasty with "Hp1").
-    iIntros (depth1 v1) "Hdepth1". iIntros (Hv1) "Hty1".
-    iDestruct "Hp2" as (v2 depth2) "(Hdepth2 & H)". iDestruct "H" as (Hv2) "Hty2".
-    iCombine "Hdepth1 Hdepth2" as "Hdepth". rewrite -persist_time_rcpt_sep.
+    iIntros (ty [Eq Hw] Hr tid postπ (vπ & wπ & [])) "#LFT #TIME #PROPH #UNIQ #HE Htl [HL1 HL2] (Hp1 & Hp2 & _) Hproph".
+    iDestruct (closed_hasty with "Hp1") as "%". iDestruct (closed_hasty with "Hp2") as "%".
+    wp_apply (wp_hasty with "Hp1"). iIntros (v1 depth1) "%Hv1 Hdepth1 Hty1".
+    iDestruct "Hp2" as (v2 depth2) "(%Hv2 & Hdepth2 & Hty2)".
+    iCombine "Hdepth1 Hdepth2" as "Hdepth".
     rewrite !(ty_own_depth_mono _ _ (depth1 `max` depth2)); [|lia..].
-    rewrite typed_write_eq in Hw.
-    iMod (Hw with "[] LFT HE HL1 Hty1") as (l1 vl1) "(H & H↦ & Hw)"=>//=.
-    clear Hw. destruct vl1 as [|? vl1]; iDestruct "H" as %[[= Hlen] ->].
+    iMod (Hw with "LFT UNIQ HE HL1 Hty1") as (l1 ->) "(H & Hw)".
+    iDestruct "H" as (?) "(>H↦ & H)".
+    iMod (bi.later_exist_except_0 with "H") as (?) "H";
+    iMod (bi.later_exist_except_0 with "H") as (?) "H";
+    iDestruct "H" as (??) "(>(% & % & H) & _)".
+    clear Hw. destruct vl as [|? vl]; iDestruct "H" as %[= Hlen].
     rewrite heap_mapsto_vec_cons -wp_fupd. iDestruct "H↦" as "[H↦0 H↦vl1]". wp_write.
     wp_bind p1. iApply (wp_wand with "[]"); first by iApply (wp_eval_path). iIntros (? ->).
     wp_op. wp_bind p2. iApply (wp_wand with "[]"); first by iApply (wp_eval_path). iIntros (? ->).
-    rewrite typed_read_eq in Hr.
-    iMod (Hr with "[] LFT HE Htl HL2 Hty2") as (l2 vl2 q) "(% & H↦2 & Hty & Hr)"=>//=.
-    clear Hr. subst. assert (ty.(ty_size) ≤ length vl1).
-    { revert i Hty. rewrite Hlen. clear. induction tyl=>//= -[|i] /=.
-      - intros [= ->]. lia.
-      - specialize (IHtyl i). intuition lia. }
-    rewrite -(take_drop (ty.(ty_size)) vl1) heap_mapsto_vec_app.
+    iMod (Hr with "LFT HE Htl HL2 Hty2") as (l2 vl2 q) "(% & H↦2 & Hty & Hr)" => //=.
+    clear Hr. subst. assert (ty.(ty_size) ≤ length vl).
+    { rewrite Hlen. clear. generalize dependent i. induction tyl => //= - [|i]; [lia|].
+      specialize (IHtyl i). intuition lia. }
+    rewrite -(take_drop (ty.(ty_size)) vl) heap_mapsto_vec_app.
     iDestruct "H↦vl1" as "[H↦vl1 H↦pad]".
-    iDestruct (ty_size_eq with "Hty") as "#>%".
+    iDestruct (ty_size_eq with "Hty") as "#>%Hvl2Len".
     iApply (wp_persist_time_rcpt with "TIME Hdepth")=>//.
     iApply (wp_memcpy with "[$H↦vl1 $H↦2]"); [|lia|].
     { rewrite take_length. lia. }
-    iNext; iIntros "[H↦vl1 H↦2] #Hdepth".
-    rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val' //.
+    iNext; iIntros "[H↦vl1 H↦2] #Hdepth". iExists -[_; _].
+    rewrite right_id !tctx_hasty_val' //.
     iMod ("Hr" with "H↦2") as "($ & $ & Hty2)".
-    iMod ("Hw" with "[-Hty2] Hdepth") as "[$ Hty]"; last first.
+    iMod ("Hw" with "[-Hty2 Hproph] Hdepth") as "[$ Hty]"; last first. iSplitR "Hproph".
     { iSplitL "Hty"; [eauto with iFrame|]. iExists _. iFrame.
       iApply persist_time_rcpt_mono; [|done]. lia. }
-    iNext. rewrite split_sum_mt /is_pad. iExists i. rewrite nth_lookup Hty. iFrame.
-    iSplitL "H↦pad".
+    { iApply (proph_obs_impl with "Hproph") => /= π post; apply post. }
+    iNext. rewrite split_sum_mt /is_pad. iExists i, _.  iFrame.
+    iSplitR; [done|iSplitL "H↦pad"].
     - rewrite (shift_loc_assoc_nat _ 1) take_length Nat.min_l; last lia.
-      iExists _. iFrame. rewrite /= drop_length. iPureIntro. lia.
+      iExists _. iFrame. rewrite /= drop_length. iPureIntro. rewrite -Hvl2Len. lia.
     - iExists _. iFrame.
   Qed.
 
-  Lemma type_sum_memcpy {E L} sty tyl i ty1 ty2 ty n ty1' ty2' C T T' p1 p2 e:
+  (* Lemma type_sum_memcpy {E L} sty tyl i ty1 ty2 ty n ty1' ty2' C T T' p1 p2 e:
     Closed [] e →
     0 ≤ i →
     sty = sum tyl →
@@ -346,9 +348,9 @@ Section case.
   Proof.
     iIntros (?? -> ??? Hr ?) "?". subst. rewrite -(Z2Nat.id i) //.
     by iApply type_seq; [eapply type_sum_memcpy_instr, Hr|done|done].
-  Qed.
+  Qed. *)
 
-  Lemma ty_outlv_E_elctx_sat_sum E L tyl α:
+  (* Lemma ty_outlv_E_elctx_sat_sum E L tyl α:
     elctx_sat E L (tyl_outlv_E tyl α) →
     elctx_sat E L (ty_outlv_E (sum tyl) α).
   Proof.
