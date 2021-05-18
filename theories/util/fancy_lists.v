@@ -178,7 +178,9 @@ Fixpoint pzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
     _::_, x -:: xl', y -:: yl' => f _ x y -:: pzip_with f xl' yl' end.
 Notation pzip := (pzip_with (λ _, pair)).
 
-Fixpoint ptrans `{F: A → B} {G Xl} (xl: plist (G ∘ F) Xl) : plist G (map F Xl) :=
+(* We don't use [∘] here because [∘] is universe-monomorphic
+  and thus causes universe inconsistency *)
+Fixpoint ptrans `{F: A → B} {G Xl} (xl: plist (λ X, G (F X)) Xl) : plist G (map F Xl) :=
   match Xl, xl with [], _ => -[] | _::_, x -:: xl' => x -:: ptrans xl' end.
 
 Fixpoint hlist_to_plist `{F: A → _} {Xl} (xl: hlist F Xl) : plist F Xl :=

@@ -32,9 +32,9 @@ Section product_split.
 
   Lemma tctx_split_ptr_xprod {𝔄l} ptr (tyl: _ 𝔄l) E L
     `{∀𝔄 (ty: _ 𝔄), JustLoc (ptr _ ty)} : ptr_homo_sub ptr →
-    (∀p 𝔄 𝔅 (ty: _ 𝔄) (ty': _ 𝔅), tctx_incl E L +[p ◁ ptr _ (ty * ty')%T]
+    (∀p 𝔄 𝔅 (ty: _ 𝔄) (ty': _ 𝔅), tctx_incl E L +[p ◁ ptr _ (ty * ty')]
       +[p ◁ ptr _ ty; p +ₗ #ty.(ty_size) ◁ ptr _ ty'] (λ post '-[(a, b)], post -[a; b])) →
-    ∀p, tctx_incl E L +[p ◁ ptr _ (Π! tyl)%T] (hasty_ptr_offsets p ptr tyl 0)
+    ∀p, tctx_incl E L +[p ◁ ptr _ (Π! tyl)] (hasty_ptr_offsets p ptr tyl 0)
       (λ post '-[al], post al).
   Proof.
     move=> HSub Split. elim: tyl. { move=> ?. by eapply tctx_incl_eq;
@@ -52,7 +52,7 @@ Section product_split.
       +[p ◁ ptr _ ty; p +ₗ #ty.(ty_size) ◁ ptr _ ty'] +[p ◁ ptr _ (ty * ty')]
       (λ post '-[a; b], post -[(a, b)])) →
     𝔄l ≠ [] → ∀p, tctx_incl E L (hasty_ptr_offsets p ptr tyl 0)
-      +[p ◁ ptr _ (Π! tyl)%T] (λ post al, post -[al]).
+      +[p ◁ ptr _ (Π! tyl)] (λ post al, post -[al]).
   Proof.
     move=> HSub Merge. elim: tyl; [done|]=> ?? ty. case=>/=.
     { move=> _ _ ?. eapply tctx_incl_eq. { eapply tctx_incl_trans;
@@ -232,7 +232,7 @@ Section product_split.
 
   Lemma tctx_split_uniq_xprod {𝔄l} κ (tyl: _ 𝔄l) E L p :
     lctx_lft_alive E L κ →
-    tctx_incl E L +[p ◁ &uniq{κ} (Π! tyl)%T] (hasty_uniq_offsets p κ tyl 0)
+    tctx_incl E L +[p ◁ &uniq{κ} (Π! tyl)] (hasty_uniq_offsets p κ tyl 0)
       (λ post '-[(al, al')], post (ptrans (pzip al al'))).
   Proof.
     move=> ?. move: p. elim: tyl. { move=>/= ?. by eapply tctx_incl_eq;
