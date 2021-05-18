@@ -29,8 +29,11 @@ Notation "()" := unit_ty : lrust_type_scope.
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance uninit_send n : Send (uninit n). Proof. done. Qed.
-  Global Instance uninit_sync n : Sync (uninit n). Proof. done. Qed.
+  Global Instance uninit_send n : Send (↯ n). Proof. done. Qed.
+  Global Instance uninit_sync n : Sync (↯ n). Proof. done. Qed.
+
+  Lemma uninit_leak n E L : leak E L (↯ n) (const True).
+  Proof. apply leak_just. Qed.
 
   Global Instance unit_ty_copy: Copy ().
   Proof.
@@ -41,3 +44,5 @@ Section typing.
   Qed.
 
 End typing.
+
+Global Hint Resolve uninit_leak : lrust_typing.

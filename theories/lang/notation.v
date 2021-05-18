@@ -33,6 +33,8 @@ Notation "e1 + e2" := (BinOp PlusOp e1%E e2%E)
   (at level 50, left associativity) : expr_scope.
 Notation "e1 - e2" := (BinOp MinusOp e1%E e2%E)
   (at level 50, left associativity) : expr_scope.
+Notation "e1 * e2" := (BinOp MultOp e1%E e2%E)
+  (at level 40, left associativity) : expr_scope.
 Notation "e1 ≤ e2" := (BinOp LeOp e1%E e2%E)
   (at level 70) : expr_scope.
 Notation "e1 = e2" := (BinOp EqOp e1%E e2%E)
@@ -67,7 +69,6 @@ Notation "fn: xl := e" := (fnrec: <> xl := e)%E
   (at level 102, xl at level 1, e at level 200) : expr_scope.
 Notation "fn: xl := e" := (fnrec: <> xl := e)%V
   (at level 102, xl at level 1, e at level 200) : val_scope.
-Notation "return:" := "return" : expr_scope.
 
 Notation "let: x := e1 'in' e2" :=
   ((Lam (@cons binder x%binder nil) e2%E) (@cons expr e1%E nil))
@@ -81,6 +82,10 @@ Notation "let: x := e1 'in' e2" :=
 Notation "e1 ;; e2" := (let: <> := e1 in e2)%V
   (at level 100, e2 at level 200, format "e1  ;;  e2") : val_scope.
 
+Notation "jump: k el" := (App (Seq Skip k%V) el%E)
+  (at level 100, k at level 1, el at level 10) : expr_scope.
+Notation "return: el" := (jump: (Var "return") el%E)%E
+  (at level 100, el at level 10) : expr_scope.
 Notation "letcont: k xl := e1 'in' e2" :=
   ((Lam (@cons binder k%binder nil) e2%E) [Rec k%binder xl%binder e1%E])
   (at level 102, k, xl at level 1, e1, e2 at level 150) : expr_scope.
@@ -88,13 +93,12 @@ Notation "withcont: k1 : e1 cont: k2 xl := e2" :=
   ((Lam (@cons binder k1%binder nil) e1%E) [Rec k2%binder ((fun _ : eq k1%binder k2%binder => xl%binder) eq_refl) e2%E])
   (only parsing, at level 151, k1, k2, xl at level 1, e2 at level 150) : expr_scope.
 
-Definition call_def (f: expr) (args: list expr) (k: expr) : expr :=
-  (f ((λ: ["_r"], Skip ;; k ["_r"]) :: args))%E.
-Notation "call: f args → k" := (call_def f%E args%E k%E)
+Notation "call: f args → k" :=
+  (App f%E ((λ: [BNamed "_r"], Seq Skip (App k%E [Var "_r"]))%E :: args%E))
   (at level 102, f, args, k at level 1) : expr_scope.
-Definition letcall_def (x: binder) (f: expr) (args: list expr) (e: expr) : expr :=
-  (letcont: "_k" [ x ] := e in call: f args → "_k")%E.
-Notation "letcall: x := f args 'in' e" := (letcall_def x%binder f%E args%E e%E)
+Notation "letcall: x := f args 'in' e" :=
+  (letcont: (BNamed "_k") (@cons binder x%binder nil) := e%E in
+    call: f%E args%E → (Var "_k"))%E
   (at level 102, x, f, args at level 1, e at level 150) : expr_scope.
 
 (* These notations unfortunately do not print.  Also, I don't think

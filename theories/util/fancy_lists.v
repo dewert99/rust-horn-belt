@@ -1,4 +1,3 @@
-From stdpp Require Import prelude.
 From iris.algebra Require Import ofe.
 From iris.proofmode Require Import tactics.
 From lrust.util Require Import basic.
@@ -16,6 +15,28 @@ Notation "+[ x ; .. ; z ]" := (x +:: .. (z +:: +[]) ..)
   (at level 1, format "+[ x ;  .. ;  z ]").
 Notation "+[ x ; .. ; z ]@{ F }" := (x +:: .. (z +:: +[]@{F}) ..)
   (at level 1, only parsing).
+
+Definition hlist_nil_inv `{F: A → _}
+  (P: hlist F [] → Type) (H: P +[]) xl : P xl :=
+  match xl with +[] => H end.
+
+Definition hlist_cons_inv `{F: A → _} {X Xl'}
+  (P: hlist F (X :: Xl') → Type) (H: ∀x xl', P (x +:: xl')) xl : P xl.
+Proof.
+  move: P H. refine match xl with x +:: xl' => λ _ H, H x xl' end.
+Defined.
+
+Ltac inv_hlist xl := let A := type of xl in
+  match eval hnf in A with hlist _ ?Xl =>
+    match eval hnf in Xl with
+    | [] => revert dependent xl;
+        match goal with |- ∀xl, @?P xl => apply (hlist_nil_inv P) end
+    | _ :: _ => revert dependent xl;
+        match goal with |- ∀xl, @?P xl => apply (hlist_cons_inv P) end;
+        (* Try going on recursively. *)
+        try (let x := fresh "x" in intros x xl; inv_hlist xl; revert x)
+    end
+  end.
 
 Fixpoint happ `{F: A → _} {Xl Yl} (xl: hlist F Xl) (yl: hlist F Yl)
   : hlist F (Xl ++ Yl) :=
@@ -56,6 +77,15 @@ Lemma hnth_apply `{F: A → _} {Xl Y D} (g: Y → F D)
   (fl: _ (λ X, Y → F X) Xl) (x: Y) i :
   hnth (g x) (fl +$ x) i = hnth g fl i x.
 Proof. move: i. elim fl; [done|]=> > ?. by case. Qed.
+
+Lemma hnth_default `{!EqDecision A} {D As} {F : A → _} (d : F D) (l : hlist F As) i :
+  ∀ (H : D = lnth D As i),
+    length As <= i →
+    hnth d l i = eq_rect D _ d _ H.
+Proof. generalize dependent i. induction l.
+- move => /= ? H. by rewrite (proof_irrel H eq_refl).
+- move => /= [|?] *; auto with lia.
+Qed.
 
 (** * Passive Heterogeneous List *)
 
@@ -125,6 +155,34 @@ Fixpoint pnth `{F: A → _} {Xl D} (d: F D) (xl: plist F Xl) : ∀i, F (lnth D X
   match Xl, xl with [], _ => λ _, d |
     _::_, x -:: xl' => λ i, match i with 0 => x | S j => pnth d xl' j end end.
 
+Fixpoint papply `{F: A → _} {B Xl} (fl: plist (λ X, B → F X) Xl) (x: B)
+  : plist F Xl := match Xl, fl with
+    [], _ => -[] | _::_, f -:: fl' => f x -:: papply fl' x end.
+Infix "-$" := papply (at level 61, left associativity).
+Notation "( fl -$.)" := (papply fl) (only parsing).
+
+Lemma papply_app `{F: A → _} {B Xl Yl}
+  (fl: plist (λ X, B → F X) Xl) (gl: _ Yl) (x: B) :
+  (fl -++ gl) -$ x = (fl -$ x) -++ (gl -$ x).
+Proof. move: fl. elim Xl; [done|]=>/= ?? IH [??]. by rewrite IH. Qed.
+
+Fixpoint hzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
+  (xl: hlist F Xl) (yl: plist G Xl) : hlist H Xl :=
+  match xl, yl with +[], _ => +[] |
+    x +:: xl', y -:: yl' => f _ x y +:: hzip_with f xl' yl' end.
+Notation hzip := (hzip_with (λ _, pair)).
+
+Fixpoint pzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
+  (xl: plist F Xl) (yl: plist G Xl) : plist H Xl :=
+  match Xl, xl, yl with [], _, _ => -[] |
+    _::_, x -:: xl', y -:: yl' => f _ x y -:: pzip_with f xl' yl' end.
+Notation pzip := (pzip_with (λ _, pair)).
+
+(* We don't use [∘] here because [∘] is universe-monomorphic
+  and thus causes universe inconsistency *)
+Fixpoint ptrans `{F: A → B} {G Xl} (xl: plist (λ X, G (F X)) Xl) : plist G (map F Xl) :=
+  match Xl, xl with [], _ => -[] | _::_, x -:: xl' => x -:: ptrans xl' end.
+
 Fixpoint hlist_to_plist `{F: A → _} {Xl} (xl: hlist F Xl) : plist F Xl :=
   match xl with +[] => -[] | x +:: xl' => x -:: hlist_to_plist xl' end.
 Fixpoint plist_to_hlist `{F: A → _} {Xl} (xl: plist F Xl) : hlist F Xl :=
@@ -135,6 +193,41 @@ Proof. split.
   - fun_ext. by elim; [done|]=>/= > ->.
   - fun_ext. elim Xl; [by case|]=>/= ?? IH [??] /=. by rewrite IH.
 Qed.
+
+Fixpoint vec_to_plist `{F: A → _} {X n} (xl: vec (F X) n) : plist F (replicate n X) :=
+  match xl with [#] => -[] | x ::: xl' => x -:: vec_to_plist xl' end.
+Fixpoint plist_to_vec `{F: A → _} {X n} (xl: plist F (replicate n X)) : vec (F X) n :=
+  match n, xl with 0, _ => [#] | S _, x -:: xl' => x ::: plist_to_vec xl' end.
+
+Fixpoint hlist_to_list {T A Xl} (xl: @hlist T (const A) Xl) : list A :=
+  match xl with +[] => [] | x +:: xl' => x :: hlist_to_list xl' end.
+
+Fixpoint list_to_hlist {T A Xl} (xl: list A) : option (hlist (λ _: T,  A) Xl) :=
+  match xl, Xl with
+  | [], [] => mret +[]
+  | x :: xl',  X :: Xl' => list_to_hlist xl' ≫= λ tl, mret (x +:: tl)
+  | _, _ => None
+  end.
+
+Lemma list_to_hlist_length {A T Xl} (l : list A) (l' : hlist (λ _: T, A) Xl) :
+  list_to_hlist l = Some l' →
+  length l = length Xl.
+Proof.
+  revert l'. generalize dependent Xl.
+  induction l => - [|? ?] //= ?; destruct (list_to_hlist (Xl := _) _) eqn: X; rewrite ?(IHl _ h) //.
+Qed.
+
+Lemma list_to_hlist_hnth_nth {A T Xl} (t: T) (d : A) i (l : list A) (l' : hlist (λ _: T, A) Xl) :
+  list_to_hlist l = Some l' →
+  hnth (D := t) d l' i = nth i l d.
+Proof.
+    generalize dependent Xl. revert i.
+    induction l => i [| ? Xl] ? //=.
+    - case: i => [|?] [= <-] //=.
+    - destruct (list_to_hlist (Xl := _) _) eqn:X, i => //= [= <-] //=. auto.
+Qed.
+
+(** * Passive Heterogeneous List over Two Lists *)
 
 Section plist2. Context {A} (F: A → A → Type).
 Fixpoint plist2 Xl Yl : Type :=
@@ -156,16 +249,13 @@ Fixpoint p2nth `{F: A → _} {Xl Yl D D'} (d: F D D')
       λ '(x -:: xl') i, match i with 0 => x | S j => p2nth d xl' j end
   | _, _ => absurd end.
 
-Fixpoint papply `{F: A → _} {B Xl} (fl: plist (λ X, B → F X) Xl) (x: B)
-  : plist F Xl := match Xl, fl with
-    [], _ => -[] | _::_, f -:: fl' => f x -:: papply fl' x end.
-Infix "-$" := papply (at level 61, left associativity).
-Notation "( fl -$.)" := (papply fl) (only parsing).
+Fixpoint plist2_eq_nat_len `{F: A → _} {Xl Yl} :
+  plist2 F Xl Yl → eq_nat (length Xl) (length Yl) :=
+  match Xl, Yl with [], [] => λ _, I |
+    _::_, _::_ => λ '(_ -:: xl'), plist2_eq_nat_len xl' | _, _ => absurd end.
 
-Lemma papply_app `{F: A → _} {B Xl Yl}
-  (fl: plist (λ X, B → F X) Xl) (gl: _ Yl) (x: B) :
-  (fl -++ gl) -$ x = (fl -$ x) -++ (gl -$ x).
-Proof. move: fl. elim Xl; [done|]=>/= ?? IH [??]. by rewrite IH. Qed.
+Lemma plist2_eq_len `{F: A → _} {Xl Yl} : plist2 F Xl Yl → length Xl = length Yl.
+Proof. by move=> /plist2_eq_nat_len/eq_nat_is_eq ?. Qed.
 
 Fixpoint plist_map `{F: A → _} {Xl Yl} :
   plist2 (λ X Y, F X → F Y) Xl Yl → plist F Xl → plist F Yl :=
@@ -179,30 +269,7 @@ Fixpoint plist_map_with `{F: A → _} {G} {Xl Yl} (h: ∀X Y, G X Y → F X → 
   | _::_, _::_ => λ '(f -:: fl') '(x -:: xl'), h _ _ f x -:: plist_map_with h fl' xl'
   | _, _ => absurd end.
 
-Fixpoint hzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
-  (xl: hlist F Xl) (yl: plist G Xl) : hlist H Xl :=
-  match xl, yl with +[], _ => +[] |
-    x +:: xl', y -:: yl' => f _ x y +:: hzip_with f xl' yl' end.
-Notation hzip := (hzip_with (λ _, pair)).
-
-Fixpoint pzip_with `{F: A → _} {G H Xl} (f: ∀X, F X → G X → H X)
-  (xl: plist F Xl) (yl: plist G Xl) : plist H Xl :=
-  match Xl, xl, yl with [], _, _ => -[] |
-    _::_, x -:: xl', y -:: yl' => f _ x y -:: pzip_with f xl' yl' end.
-Notation pzip := (pzip_with (λ _, pair)).
-
-Fixpoint ptrans `{F: A → B} {G Xl} (xl: plist (G ∘ F) Xl) : plist G (map F Xl) :=
-  match Xl, xl with [], _ => -[] | _::_, x -:: xl' => x -:: ptrans xl' end.
-
-Fixpoint plist2_eq_nat_len `{F: A → _} {Xl Yl} :
-  plist2 F Xl Yl → eq_nat (length Xl) (length Yl) :=
-  match Xl, Yl with [], [] => λ _, I |
-    _::_, _::_ => λ '(_ -:: xl'), plist2_eq_nat_len xl' | _, _ => absurd end.
-
-Lemma plist2_eq_len `{F: A → _} {Xl Yl} : plist2 F Xl Yl → length Xl = length Yl.
-Proof. by move=> /plist2_eq_nat_len/eq_nat_is_eq ?. Qed.
-
-(** * Uniform plist *)
+(** * [plist] with a Constant Functor *)
 
 Definition plistc {B} (A: Type) (Xl: list B) : Type := plist (const A) Xl.
 
@@ -250,6 +317,13 @@ Proof.
   move: Xl i j x y. elim. { move=>/= ???. by apply absurd. }
   move=>/= ?? IH. case=> [|?]; case=>//; [by move=> ??[=->]|]=> ???[=Eq].
   apply IH in Eq. move: Eq=> [??]. split; by [f_equal|].
+Qed.
+
+Global Instance pinj_Inj {A} `{F : A → _} {Xl D} `{!Void (F D)} i : Inj eq eq (@pinj A F Xl D _ i).
+Proof.
+  revert i. elim Xl.
+  - move => i /= ?? _. by apply absurd.
+  - move => a l IH /= [|i] x y; case => //. by apply IH.
 Qed.
 
 Inductive xsum {A} D (F: A → _) (Xl: list A) :=
@@ -326,12 +400,25 @@ Inductive HForall2_2flip `{F: A → _} {G H K} (Φ: ∀X Y, F X → G Y → H X 
 Inductive HForallTwo `{F: A → _} {G} (Φ: ∀X, F X → G X → Prop)
   : ∀{Xl}, hlist F Xl → hlist G Xl → Prop :=
 | HForallTwo_nil: HForallTwo Φ +[] +[]
-| HForallTwo_cons {X Xl} (x y: _ X) (xl yl: _ Xl) :
+| HForallTwo_cons {X Xl} (x: _ X) y (xl: _ Xl) yl :
     Φ _ x y → HForallTwo Φ xl yl → HForallTwo Φ (x +:: xl) (y +:: yl).
 
 Lemma TCHForall_impl `{F: A → _} {Xl} (Φ Ψ: ∀X, F X → Prop) (xl: _ Xl) :
   (∀X x, Φ X x → Ψ _ x) → TCHForall Φ xl → TCHForall Ψ xl.
 Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
+
+Inductive IxHForall3 `{F: A → _} {G H D} :
+  ∀ {Xl}  (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop),
+  hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
+| HForall3_nil : IxHForall3 (λ _ _ _ _, True) +[] +[] +[]
+| HForall3_cons {X Xl}
+  (Φ : ∀ i, F (lnth D (X :: Xl) i) →
+            G (lnth D (X :: Xl) i) →
+            H (lnth D (X :: Xl) i) → Prop)
+  (x y z: _ X)
+  (xl yl zl: _ Xl) :
+    Φ 0 x y z → IxHForall3 (λ i, Φ (S i)) xl yl zl →
+  IxHForall3 Φ (x +:: xl) (y +:: yl) (z +:: zl).
 
 Lemma HForallTwo_impl `{F: A → _} {G Xl} (Φ Ψ: ∀X, F X → G X → Prop) (xl yl: _ Xl) :
   (∀X x y, Φ X x y → Ψ _ x y) → HForallTwo Φ xl yl → HForallTwo Ψ xl yl.
@@ -351,12 +438,19 @@ Lemma HForallTwo_nth `{F: A → _} {G Xl D}
   Φ _ d d' → HForallTwo Φ xl yl → Φ _ (hnth d xl i) (hnth d' yl i).
 Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
 
+Lemma IxHForall3_nth `{F: A → _} {G H Xl D}
+  (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop)
+  (d d' d'': _ D)
+  (xl yl zl: _ Xl) i :
+  IxHForall3 Φ xl yl zl → Φ i (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
+Proof. move=> All. move: i. elim All; [done|] => > ???. by case. Qed.
+
 Lemma HForallTwo_forall `{!Inhabited Y} `{F: A → _} {G Xl}
   (Φ: ∀X, Y → F X → G X → Prop) (xl yl: _ Xl) :
   (∀z, HForallTwo (λ X, Φ X z) xl yl) ↔ HForallTwo (λ X x y, ∀z, Φ _ z x y) xl yl.
 Proof.
   split; [|elim; by constructor]. move=> All. set One := All inhabitant.
-  dependent induction One; [by constructor|]. constructor.
+  induction One; [by constructor|]. constructor.
   { move=> z. move/(.$ z) in All. by dependent destruction All. }
   have All': ∀z, HForallTwo (λ X, Φ X z) xl yl.
   { move=> z. move/(.$ z) in All. by dependent destruction All. } auto.

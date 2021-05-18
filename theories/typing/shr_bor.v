@@ -9,7 +9,7 @@ Section shr_bor.
 
   Program Definition shr_bor {𝔄} (κ: lft) (ty: type 𝔄) : type 𝔄 := {|
     st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlv_E ty κ;
-    st_own vπ d tid vl := [S d' := d] [loc[l] := vl] ty.(ty_shr) vπ d' κ tid l
+    st_own vπ d tid vl := [S(d') := d] [loc[l] := vl] ty.(ty_shr) vπ d' κ tid l
   |}%I.
   Next Obligation.
     move=> ????[|?]*/=; [by iIntros|]. rewrite by_just_loc_ex. by iIntros "[%[->?]]".
@@ -47,6 +47,12 @@ Section typing.
 
   Global Instance shr_send {𝔄} κ (ty: _ 𝔄) : Sync ty → Send (&shr{κ} ty).
   Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
+
+  Global Instance shr_just_loc {𝔄} κ (ty: _ 𝔄) : JustLoc (&shr{κ} ty).
+  Proof. iIntros (?[|]?[|[[]|][]]) "? //". by iExists _. Qed.
+
+  Lemma shr_leak {𝔄} κ (ty: _ 𝔄) E L : leak E L (&shr{κ} ty) (const True).
+  Proof. apply leak_just. Qed.
 
   Lemma shr_type_incl {𝔄 𝔅} κ κ' (f: 𝔄 → 𝔅) ty ty' :
     κ' ⊑ κ -∗ type_incl ty ty' f -∗ type_incl (&shr{κ} ty) (&shr{κ'} ty') f.
@@ -87,4 +93,4 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve shr_subtype shr_eqtype read_shr : lrust_typing.
+Global Hint Resolve shr_leak shr_subtype shr_eqtype read_shr : lrust_typing.

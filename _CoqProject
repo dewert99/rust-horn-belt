@@ -6,6 +6,7 @@
 -arg -w -arg -redundant-canonical-projection
 
 theories/util/basic.v
+theories/util/vector.v
 theories/util/update.v
 theories/util/discrete_fun.v
 theories/util/fancy_lists.v
@@ -45,17 +46,19 @@ theories/typing/uniq_cmra.v
 theories/typing/type.v
 theories/typing/lft_contexts.v
 theories/typing/type_context.v
-theories/typing/empty.v
 theories/typing/cont_context.v
 theories/typing/uninit.v
+theories/typing/base_type.v
 theories/typing/maybe_uninit.v
 theories/typing/mod_ty.v
 theories/typing/own.v
 theories/typing/uniq_bor.v
 theories/typing/shr_bor.v
 theories/typing/product.v
+theories/typing/product_split.v
 theories/typing/sum.v
 theories/typing/array.v
+theories/typing/array_idx.v
 theories/typing/bool.v
 theories/typing/int.v
 theories/typing/function.v
@@ -63,8 +66,8 @@ theories/typing/programs.v
 theories/typing/borrow.v
 theories/typing/cont.v
 theories/typing/fixpoint.v
-# theories/typing/type_sum.v
-# theories/typing/typing.v
+theories/typing/type_sum.v
+theories/typing/typing.v
 # theories/typing/soundness.v
 # theories/typing/lib/panic.v
 theories/typing/lib/option.v
@@ -93,6 +96,7 @@ theories/typing/lib/list.v
 # theories/typing/lib/rwlock/rwlock_code.v
 # theories/typing/lib/rwlock/rwlockreadguard_code.v
 # theories/typing/lib/rwlock/rwlockwriteguard_code.v
+theories/typing/examples/inc_max.v
 # theories/typing/examples/get_x.v
 # theories/typing/examples/rebor.v
 # theories/typing/examples/unbox.v

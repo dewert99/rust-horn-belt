@@ -1,11 +1,13 @@
 From iris.proofmode Require Import tactics.
-From lrust.typing Require Import lft_contexts mod_ty empty.
+From lrust.typing Require Import lft_contexts mod_ty base_type.
 From lrust.typing Require Export type.
 Set Default Proof Using "Type".
 
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
+
+Local Instance base_empty `{!typeG Σ} : Empty (type ∅) := base.
 
 Section sum.
   Context `{!typeG Σ}.
@@ -35,7 +37,7 @@ Section sum.
       do 2 (split; [done|]). rewrite/= app_length Eq. by f_equal.
   Qed.
 
-  Local Lemma ty_lfts_nth_incl {𝔄l} (tyl: _ 𝔄l) i :
+  Lemma ty_lfts_nth_incl {𝔄l} (tyl: _ 𝔄l) i :
     ⊢ tyl_lft tyl ⊑ ty_lft (hnthe tyl i).
   Proof.
     elim: tyl i. { move=> ?. apply lft_incl_refl. } move=> ?? ty tyl IH i.
@@ -119,13 +121,14 @@ End sum.
 
 Notation "Σ!" := xsum_ty : lrust_type_scope.
 Notation "ty + ty'" := (sum_ty ty%T ty'%T) : lrust_type_scope.
+Notation empty := (xsum_ty +[]).
 
 Section typing.
   Context `{!typeG Σ}.
 
   Lemma xsum_lft_morph {𝔅 𝔄l} (Tl: _ 𝔄l) :
     TCHForall (λ _, TypeLftMorphism) Tl →
-    TypeLftMorphism (λ (ty: _ 𝔅), Σ! (Tl +$ ty))%T.
+    TypeLftMorphism (λ ty: _ 𝔅, Σ! (Tl +$ ty))%T.
   Proof.
     move=> All. set T := λ ty, Σ!%T (Tl +$ ty).
     have [[?[?[?[??]]]]|[?[?[??]]]]:
@@ -134,7 +137,7 @@ Section typing.
           elctx_interp E ∗ elctx_interp ty.(ty_E) ∗ [∗ list] β ∈ βs, β ⊑ ty_lft ty)) ∨
       (∃α E, (∀ty, ⊢ ty_lft (T ty) ≡ₗ α) ∧
         (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢ elctx_interp E)); [|by eleft|by eright].
-    dependent induction All=>/=.
+    induction All=>/=.
     { right. exists static, []. split=> ?; by [|apply lft_equiv_refl]. }
     setoid_rewrite lft_intersect_list_app.
     case IHAll=> [[α[βs[E[Hα HE]]]]|[α[E[Hα HE]]]];
@@ -237,13 +240,13 @@ Section typing.
     iApply (step_fupdN_wand with "ToObs"). iIntros "!> >[Obs $] !>".
     iApply proph_obs_impl; [|done]=> ?. by rewrite [const _]eq_unique pinj_to_xsum.
   Qed.
+  Hint Resolve xsum_leak : lrust_typing.
 
   Lemma sum_leak {𝔄 𝔅} E L (ty: _ 𝔄) (ty': _ 𝔅) Φ Φ' :
     leak E L ty Φ → leak E L ty' Φ' →
     leak E L (ty + ty') (λ s, match s with inl a => Φ a | inr b => Φ' b end).
   Proof.
-    move=> ??. eapply leak_impl; [apply mod_ty_leak, xsum_leak;
-    [apply _|solve_typing]|]. by case.
+    move=> ??. eapply leak_impl; [solve_typing|]. by case.
   Qed.
 
   Lemma xsum_subtype {𝔄l 𝔅l} E L (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl :
@@ -299,5 +302,7 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve xsum_leak sum_leak | 1 : lrust_typing.
-Global Hint Resolve xsum_subtype xsum_eqtype sum_subtype sum_eqtype : lrust_typing.
+Global Instance empty_empty `{!typeG Σ} : Empty (type ∅) := empty.
+
+Global Hint Resolve xsum_leak sum_leak xsum_subtype xsum_eqtype
+  sum_subtype sum_eqtype : lrust_typing.

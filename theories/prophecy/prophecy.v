@@ -4,7 +4,7 @@ From iris.algebra Require Import auth cmra functions gmap csum frac agree.
 From iris.bi Require Import fractional.
 From iris.proofmode Require Import tactics.
 From iris.base_logic Require Import invariants.
-From lrust.util Require Import basic discrete_fun.
+From lrust.util Require Import basic vector discrete_fun.
 From lrust.prophecy Require Export syn_type.
 
 (** * Basic Notions *)

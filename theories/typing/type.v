@@ -1,6 +1,6 @@
 From iris.algebra Require Import numbers list.
 From iris.base_logic.lib Require Export na_invariants.
-From lrust.util Require Export basic update fancy_lists.
+From lrust.util Require Export basic vector update fancy_lists.
 From lrust.prophecy Require Export prophecy.
 From lrust.lifetime Require Export frac_borrow.
 From lrust.lang Require Export proofmode notation.
@@ -291,12 +291,12 @@ Section ofe.
   Global Instance tyl_lfts_ne {𝔄l} n : Proper ((≡{n}@{_ 𝔄l}≡) ==> (=)) tyl_lfts.
   Proof.
     rewrite /tyl_lfts /dist=> tyl tyl' Eq. f_equal.
-    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+    induction Eq; [done|]. by rewrite/= H IHEq.
   Qed.
   Global Instance tyl_lfts_proper {𝔄l} : Proper ((≡@{_ 𝔄l}) ==> (=)) tyl_lfts.
   Proof.
     rewrite /tyl_lfts /equiv=> tyl tyl' Eq. f_equal.
-    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+    induction Eq; [done|]. by rewrite/= H IHEq.
   Qed.
   Global Instance tyl_lft_ne {𝔄l} n : Proper ((≡{n}@{_ 𝔄l}≡) ==> (=)) tyl_lft.
   Proof. rewrite /tyl_lft. by move=> ??->. Qed.
@@ -305,24 +305,24 @@ Section ofe.
   Global Instance tyl_E_ne {𝔄l} n : Proper ((≡{n}@{_ 𝔄l}≡) ==> (=)) tyl_E.
   Proof.
     rewrite /tyl_E /dist=> tyl tyl' Eq.
-    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+    induction Eq; [done|]. by rewrite/= H IHEq.
   Qed.
   Global Instance tyl_E_proper {𝔄l} : Proper ((≡@{_ 𝔄l}) ==> (=)) tyl_E.
   Proof.
     rewrite /tyl_E /equiv=> tyl tyl' Eq.
-    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+    induction Eq; [done|]. by rewrite/= H IHEq.
   Qed.
   Global Instance tyl_outlv_E_ne {𝔄l} n :
     Proper ((≡{n}@{_ 𝔄l}≡) ==> (=) ==> (=)) tyl_outlv_E.
   Proof.
     rewrite /tyl_outlv_E /dist=> tyl tyl' Eq ??->.
-    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+    induction Eq; [done|]. by rewrite/= H IHEq.
   Qed.
   Global Instance tyl_outlv_E_proper {𝔄l} :
     Proper ((≡@{_ 𝔄l}) ==> (=) ==> (=)) tyl_outlv_E.
   Proof.
     rewrite /tyl_outlv_E /equiv=> tyl tyl' Eq ??->.
-    dependent induction Eq; [done|]. by rewrite/= H IHEq.
+    induction Eq; [done|]. by rewrite/= H IHEq.
   Qed.
 
   Global Instance ty_own_ne {𝔄} n:
@@ -650,6 +650,9 @@ Instance: Params (@Sync) 3 := {}.
 
 Notation ListSync := (TCHForall (λ 𝔄, @Sync _ _ 𝔄)).
 
+Class JustLoc `{!typeG Σ} {𝔄} (ty: type 𝔄) : Prop := just_loc:
+  ∀vπ d tid vl, ty.(ty_own) vπ d tid vl -∗ ⌜∃l: loc, vl = [ #l]⌝.
+
 Section traits.
   Context `{!typeG Σ}.
 
@@ -779,6 +782,13 @@ Definition subtype_id `{!typeG Σ} {𝔄} E L (ty ty': type 𝔄) : Prop
 Definition eqtype_id `{!typeG Σ} {𝔄} E L (ty ty': type 𝔄) : Prop
   := eqtype E L ty ty' id id.
 
+Definition subtypel `{!typeG Σ} {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l)
+  (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) : Prop :=
+  HForall2_1 (λ _ _ ty ty' f, subtype E L ty ty' f) tyl tyl' fl.
+Definition eqtypel `{!typeG Σ} {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l)
+  (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) (gl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔅l 𝔄l) : Prop :=
+  HForall2_2flip (λ _ _ ty ty' f g, eqtype E L ty ty' f g) tyl tyl' fl gl.
+
 Section subtyping.
   Context `{!typeG Σ}.
 
@@ -904,13 +914,6 @@ Section subtyping.
 
   (** List *)
 
-  Definition subtypel {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l)
-    (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) : Prop :=
-    HForall2_1 (λ _ _ ty ty' f, subtype E L ty ty' f) tyl tyl' fl.
-  Definition eqtypel {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l)
-    (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) (gl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔅l 𝔄l) : Prop :=
-    HForall2_2flip (λ _ _ ty ty' f g, eqtype E L ty ty' f g) tyl tyl' fl gl.
-
   Lemma subtypel_nil E L : subtypel E L +[] +[] -[].
   Proof. constructor. Qed.
 
@@ -992,6 +995,16 @@ Section subtyping.
     by iApply type_incl_plain_type.
   Qed.
 
+  (** Leak *)
+
+  Lemma leak_subtype {𝔄 𝔅} E L ty ty' (f: 𝔄 → 𝔅) Φ :
+    subtype E L ty ty' f → leak E L ty' Φ → leak E L ty (Φ ∘ f).
+  Proof.
+    iIntros (Sub Lk) "* LFT PROPH E L ty". iDestruct (Sub with "L") as "#Sub".
+    iDestruct ("Sub" with "E") as "#(_&_& #InOwn &_)".
+    iDestruct ("InOwn" with "ty") as "ty'". by iApply (Lk with "LFT PROPH E L ty'").
+  Qed.
+
 End subtyping.
 
 (** * Utility *)
@@ -1050,20 +1063,20 @@ Section type_util.
 
 End type_util.
 
-Notation "[S d' := d ] P" := (by_succ d (λ d', P)) (at level 200,
-  right associativity, format "[S  d'  :=  d ]  P") : bi_scope.
+Notation "[S( d' ) := d ] P" := (by_succ d (λ d', P)) (at level 200,
+  right associativity, format "[S( d' )  :=  d ]  P") : bi_scope.
 
 Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
   right associativity, format "[loc[ l ]  :=  vl ]  P") : bi_scope.
 
 Global Hint Resolve ty_outlv_E_elctx_sat tyl_outlv_E_elctx_sat : lrust_typing.
-Global Hint Resolve leak_just | 100 : lrust_typing.
 Global Hint Resolve leakl_nil subtype_refl eqtype_refl subtypel_nil eqtypel_nil
   : lrust_typing.
-(** We use [Hint Extern] instead of [Hint Resolve] here, because
-  [leakl_cons], [subtypel_cons] and [eqtypel_cons] work with [apply]
-  but not with weaker tactics like [simple apply] *)
+(* We use [Hint Extern] instead of [Hint Resolve] here, because
+  [into_plistc_cons], [leakl_cons], [subtypel_cons] and [eqtypel_cons]
+  work with [apply] but not with [simple apply] *)
+Global Hint Extern 0 (IntoPlistc _ _) => apply into_plistc_cons : lrust_typing.
 Global Hint Extern 0 (leakl _ _ _ _) => apply leakl_cons : lrust_typing.
 Global Hint Extern 0 (subtypel _ _ _ _ _) => apply subtypel_cons : lrust_typing.
 Global Hint Extern 0 (eqtypel _ _ _ _ _ _) => apply eqtypel_cons : lrust_typing.
-Global Hint Opaque subtype eqtype : lrust_typing.
+Global Hint Opaque leak subtype eqtype : lrust_typing.

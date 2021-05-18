@@ -1,6 +1,6 @@
 From lrust.lang Require Import proofmode.
 From lrust.typing Require Export lft_contexts type bool.
-From lrust.typing Require Import empty.
+From lrust.typing Require Import base_type.
 Import uPred.
 Set Default Proof Using "Type".
 
@@ -11,7 +11,7 @@ Module fix_defs.
 Section S.
   Context `{!typeG Σ} {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T}.
 
-  Definition Tn n := Nat.iter (S n) T empty.
+  Definition Tn n := Nat.iter (S n) T base.
 
   Lemma Tn_ty_lft_const n n' : ⊢ (Tn n).(ty_lft) ≡ₗ (Tn n').(ty_lft).
   Proof using HT.
@@ -173,8 +173,8 @@ Proof.
       rewrite assoc. iApply lft_intersect_equiv_proper; [|iApply lft_equiv_refl].
       iApply lft_equiv_sym. iApply lft_intersect_equiv_idemp.
     + iApply lft_equiv_trans; [iApply Hα|iApply lft_equiv_sym; iApply Hα].
-  - rewrite EqOwn'. by iApply (bi.iff_refl True%I).
-  - rewrite EqShr'. by iApply (bi.iff_refl True%I).
+  - rewrite EqOwn'. by iApply bi.equiv_iff.
+  - rewrite EqShr'. by iApply bi.equiv_iff.
 Qed.
 
 Lemma fix_ty_ne `{!typeG Σ} {𝔄} (T T': _ → _ 𝔄)
@@ -186,7 +186,7 @@ Proof. move=> Eq.
     { rewrite /Tn. elim (S (3 + n)); [done|]=> ? IH. by rewrite !Nat_iter_S IH Eq. }
     etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
     split; repeat move=> ? /=; apply Eq''. }
-  split=>/=; try apply Eq; try apply Eq'. by rewrite /Tn /= (Eq empty) Eq.
+  split=>/=; try apply Eq; try apply Eq'. by rewrite /Tn /= (Eq base) Eq.
 Qed.
 
 Lemma fix_type_ne `{!typeG Σ} {𝔄 𝔅} (T : _ 𝔄 → _ → _ 𝔅)
@@ -272,7 +272,7 @@ Section lemmas.
     (∀ty, leak E L ty Φ → leak E L (T ty) Φ) → leak E L (fix_ty T) Φ.
   Proof.
     move=> Loop. have Lk: ∀n, leak E L (Tn T n) Φ. { elim=> [|? H]; apply Loop;
-    [apply empty_leak|apply H]. } rewrite /fix_ty=> > /=.
+    [apply base_leak|apply H]. } rewrite /fix_ty=> > /=.
     eapply @limit_preserving; [|move=> ?; by apply Lk].
     apply limit_preserving_forall=> ?.
     apply limit_preserving_entails; [done|]=> ??? Eq. do 4 f_equiv. apply Eq.

@@ -10,8 +10,7 @@ Section array.
   Lemma split_array_mt {𝔄 n} (ty: type 𝔄) l q (aπl: _ n) d tid :
     (l ↦∗{q}: λ vl, ∃wll: vec _ _, ⌜vl = concat wll⌝ ∗
       [∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2)%I ⊣⊢
-    [∗ list] i ↦ aπ ∈ aπl,
-      (l +ₗ (i * ty.(ty_size))%nat) ↦∗{q}: ty.(ty_own) aπ d tid.
+    [∗ list] i ↦ aπ ∈ aπl, (l +ₗ (i * ty.(ty_size))%nat) ↦∗{q}: ty.(ty_own) aπ d tid.
   Proof. iSplit.
     - iIntros "(%& ↦s &%&->& tys)". iInduction aπl as [] "IH" forall (l);
       inv_vec wll; [done|]=>/= ??. iRevert "↦s tys".
@@ -28,17 +27,16 @@ Section array.
       iFrame "↦ ↦s". iExists (_:::_). iSplit; [done|]. iFrame.
   Qed.
 
-  Definition vfunsep' {𝔄 n} : proph (vecₛ 𝔄 n) → vec (proph 𝔄) n := vfunsep.
-
   Program Definition array {𝔄} n (ty: type 𝔄) : type (vecₛ 𝔄 n) := {|
     ty_size := n * ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own vπ d tid vl := ∃wll: vec _ _, ⌜vl = concat wll⌝ ∗
-      [∗ list] aπwl ∈ vzip (vfunsep' vπ) wll, ty.(ty_own) aπwl.1 d tid aπwl.2;
-    ty_shr vπ d κ tid l := [∗ list] i ↦ aπ ∈ vfunsep' vπ,
+      [∗ list] aπwl ∈ vzip (vfunsep vπ) wll, ty.(ty_own) aπwl.1 d tid aπwl.2;
+    ty_shr vπ d κ tid l := [∗ list] i ↦ aπ ∈ vfunsep vπ,
       ty.(ty_shr) aπ d κ tid (l +ₗ (i * ty.(ty_size))%nat);
   |}%I.
   Next Obligation.
-    iIntros "* (%&->& All)". setoid_rewrite ty_size_eq. move: {vπ}(vfunsep' vπ)=> aπl.
+    iIntros "* (%&->& All)". setoid_rewrite ty_size_eq.
+    move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
     iInduction aπl as [] "IH"; inv_vec wll; [done|]=>/= ??. rewrite/= app_length.
     iDestruct "All" as "[-> All]". by iDestruct ("IH" with "All") as %->.
   Qed.
@@ -51,7 +49,7 @@ Section array.
   Next Obligation.
     iIntros (??????? l ? q ?) "#LFT #In Bor κ". rewrite split_array_mt.
     iMod (bor_big_sepL with "LFT Bor") as "Bors"; [done|].
-    move: {vπ}(vfunsep' vπ)=> aπl. iInduction aπl as [|] "IH" forall (l q)=>/=.
+    move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl. iInduction aπl as [|] "IH" forall (l q)=>/=.
     { iApply step_fupdN_full_intro. by iFrame. }
     iDestruct "κ" as "[κ κ+]". iDestruct "Bors" as "[Bor Bors]".
     iMod (ty_share with "LFT In Bor κ") as "Toshr"; [done|].
@@ -61,8 +59,8 @@ Section array.
   Qed.
   Next Obligation.
     iIntros (????????? q ?) "#LFT #In (%&->& tys) κ".
-    have <-: vapply (vfunsep' vπ) = vπ by rewrite semi_iso'.
-    move: {vπ}(vfunsep' vπ)=> aπl. iInduction aπl as [] "IH" forall (q); inv_vec wll=>/=.
+    rewrite -{2}[vπ]vapply_funsep. move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
+    iInduction aπl as [] "IH" forall (q); inv_vec wll=>/=.
     { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
       do 2 (iSplitR; [done|]). iIntros "_!>". iFrame "κ". by iExists [#]=>/=. }
     move=> ??. iDestruct "κ" as "[κ κ+]". iDestruct "tys" as "[ty tys]".
@@ -79,8 +77,8 @@ Section array.
   Qed.
   Next Obligation.
     iIntros (???????? l ? q ?) "#LFT #In #In' tys κ'".
-    have <-: vapply (vfunsep' vπ) = vπ by rewrite semi_iso'.
-    move: {vπ}(vfunsep' vπ)=> aπl. iInduction aπl as [] "IH" forall (q l)=>/=.
+    rewrite -{2}[vπ]vapply_funsep. move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
+    iInduction aπl as [] "IH" forall (q l)=>/=.
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
       do 2 (iSplitR; [done|]). iIntros "_!>". iFrame. }
     iDestruct "κ'" as "[κ' κ'+]". iDestruct "tys" as "[ty tys]".
@@ -114,7 +112,7 @@ Section typing.
   Global Instance array_copy {𝔄} n (ty: _ 𝔄) : Copy ty → Copy [ty; n].
   Proof.
     split; [apply _|]=>/= vπ ???? F l q ? HF. iIntros "#LFT tys Na κ".
-    move: {vπ}(vfunsep' vπ)=> aπl. iInduction aπl as [] "IH" forall (q l F HF)=>/=.
+    move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl. iInduction aπl as [] "IH" forall (q l F HF)=>/=.
     { iModIntro. iExists 1%Qp, []. rewrite difference_empty_L heap_mapsto_vec_nil.
       iFrame "Na κ". iSplitR; [by iExists [#]=>/=|]. by iIntros. }
     rewrite shift_loc_0. iDestruct "tys" as "[ty tys]". iDestruct "κ" as "[κ κ+]".
@@ -145,10 +143,10 @@ Section typing.
     iIntros (Sub ?) "L". iDestruct (Sub with "L") as "#Sub".
     iIntros "!> E". iDestruct ("Sub" with "E") as "(%Sz & ? & #InOwn & #InShr)".
     iSplit; [by rewrite/= Sz|]. iSplit; [done|].
-    have Eq: ∀vπ, vfunsep' (vmap f ∘ vπ) = vmap (f ∘.) (vfunsep' vπ).
-    { move=> ? vπ. have {1}<-: vapply (vfunsep' vπ) = vπ by rewrite semi_iso'.
-      move: (vfunsep' vπ)=> aπl. by elim aπl; [done|]=>/= ???<-. }
-    iSplit; iIntros "!> %vπ %/="; rewrite Eq; move: {vπ}(vfunsep' vπ)=> aπl.
+    have Eq: ∀vπ, vfunsep (vmap f ∘ vπ) = vmap (f ∘.) (vfunsep vπ).
+    { move=> ?? vπ. rewrite -{1}[vπ]vapply_funsep.
+      move: {vπ}(vfunsep vπ)=> aπl. by elim aπl; [done|]=>/= ???<-. }
+    iSplit; iIntros "!> %vπ %/="; rewrite Eq; move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
     - iIntros "* (%wll &->& tys)". iExists _. iSplit; [done|].
       iInduction aπl as [] "IH"; inv_vec wll; [done|]=>/= ??.
       iDestruct "tys" as "[ty tys]". iSplitL "ty"; by [iApply "InOwn"|iApply "IH"].
@@ -156,31 +154,61 @@ Section typing.
       iIntros "[#ty #tys]". rewrite Sz. setoid_rewrite <-shift_loc_assoc_nat.
       iSplitL "ty"; by [iApply "InShr"|iApply "IH"].
   Qed.
-  Lemma array_eqtype {𝔄 𝔅} E L n (f: 𝔄 → 𝔅) g ty ty' :
+  Lemma array_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' n E L :
     eqtype E L ty ty' f g → eqtype E L [ty; n] [ty'; n] (vmap f) (vmap g).
   Proof. move=> [??]. split; by apply array_subtype. Qed.
 
-  Lemma array_plus_prod {𝔄} E L m n (ty: _ 𝔄) :
+  Lemma array_one {𝔄} (ty: _ 𝔄) E L : eqtype E L [ty; 1] ty vhd (λ x, [#x]).
+  Proof.
+    apply eqtype_unfold; [apply _|]. iIntros "% _!>_".
+    iSplit; [by rewrite/= Nat.add_0_r|]. iSplit; [iApply lft_equiv_refl|].
+    have Eq: ∀vπ, vhd ∘ vπ = vhd (vfunsep vπ). { move=> ??? vπ.
+    rewrite -{1}[vπ]vapply_funsep. move: (vfunsep vπ)=> aπl. by inv_vec aπl. }
+    iSplit; iIntros "!> %vπ */="; rewrite Eq;
+    move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl; inv_vec aπl=> ?; [iSplit|].
+    - iIntros "(%wll &->&?)". inv_vec wll=>/= ?. by do 2 rewrite right_id.
+    - iIntros "?". iExists [# _]=>/=. do 2 rewrite right_id. by iSplit.
+    - rewrite right_id shift_loc_0. by iApply bi.equiv_iff.
+  Qed.
+
+  Lemma array_plus_prod {𝔄} m n (ty: _ 𝔄) E L :
     eqtype E L [ty; m + n] ([ty; m] * [ty; n]) (vsepat m) (curry vapp).
   Proof.
     apply eqtype_symm, eqtype_unfold; [apply _|]. iIntros (?) "_!>_".
     iSplit; [iPureIntro=>/=; lia|]. iSplit. { rewrite/= lft_intersect_list_app.
     iApply lft_intersect_equiv_idemp. }
-    have Eq: ∀vπ: proph (vec 𝔄 _ * _), vfunsep' (curry vapp ∘ vπ) =
-      vfunsep' (fst ∘ vπ) +++ vfunsep' (snd ∘ vπ).
-    { move=> ?? vπ. have {1}<-: pair ∘ vapply (vfunsep' $ fst ∘ vπ) ⊛
-      vapply (vfunsep' $ snd ∘ vπ) = vπ by rewrite !semi_iso' -surjective_pairing_fun.
+    have Eq: ∀vπ: proph (vec 𝔄 _ * _), vfunsep (curry vapp ∘ vπ) =
+      vfunsep (fst ∘ vπ) +++ vfunsep (snd ∘ vπ).
+    { move=> ?? vπ. have {1}<-: pair ∘ vapply (vfunsep $ fst ∘ vπ) ⊛
+      vapply (vfunsep $ snd ∘ vπ) = vπ by rewrite !semi_iso' -surjective_pairing_fun.
       move: (_ $ fst ∘ _)=> aπl. by elim aπl; [by rewrite semi_iso'|]=>/= ???<-. }
-    iSplit; iIntros "!> %vπ %/="; rewrite Eq; move: (vfunsep' (fst ∘ vπ))=> aπl;
-    move: {vπ}(vfunsep' (snd ∘ vπ))=> bπl; iIntros "*"; [iSplit|].
+    iSplit; iIntros "!> %vπ %/="; rewrite Eq; move: (vfunsep (fst ∘ vπ))=> aπl;
+    move: {vπ}(vfunsep (snd ∘ vπ))=> bπl; iIntros "*"; [iSplit|].
     - iIntros "(%&%&->&(%&->&?)&(%&->&?))". iExists (_+++_).
       rewrite vzip_with_app !vec_to_list_app concat_app. by iFrame.
     - iIntros "(%wll &->& tys)". move: (vapp_ex wll)=> [?[?->]].
       rewrite vzip_with_app !vec_to_list_app concat_app. iExists _, _. iSplit; [done|].
       iDestruct "tys" as "[tys tys']". iSplitL "tys"; iExists _; by iFrame.
-    - rewrite vec_to_list_app big_sepL_app vec_to_list_length.
-      setoid_rewrite shift_loc_assoc_nat. setoid_rewrite Nat.mul_add_distr_r.
-      by iApply (bi.iff_refl True%I).
+    - iApply bi.equiv_iff.
+      rewrite vec_to_list_app big_sepL_app vec_to_list_length. do 5 f_equiv.
+      by rewrite shift_loc_assoc_nat -Nat.mul_add_distr_r.
+  Qed.
+
+  Lemma array_succ_prod {𝔄} n (ty: _ 𝔄) E L :
+    eqtype E L [ty; S n] (ty * [ty; n]) (λ v, (vhd v, vtl v)) (curry (λ x, vcons x)).
+  Proof.
+    eapply eqtype_eq. { eapply eqtype_trans; [apply (array_plus_prod 1)|].
+    apply prod_eqtype; [apply array_one|solve_typing]. } { done. } { fun_ext. by case. }
+  Qed.
+
+  Lemma array_leak {𝔄} (ty: _ 𝔄) n Φ E L :
+    leak E L ty Φ → leak E L [ty; n] (λ al, lforall Φ al).
+  Proof.
+    move=> ?. elim n. { eapply leak_impl; [apply leak_just|]=> v. by inv_vec v. }
+    move=> ? IH. eapply leak_impl. { eapply leak_subtype; [by eapply proj1,
+    array_succ_prod|]. solve_typing. } move=> v. by inv_vec v.
   Qed.
 
 End typing.
+
+Global Hint Resolve array_leak array_subtype array_eqtype : lrust_typing.
