@@ -21,7 +21,7 @@ Section int.
     iSplit; [iApply lft_incl_refl|]. by iIntros.
   Qed.
 
-  Lemma type_int_instr (z: Z) : typed_val #z int (λ post, post z).
+  Lemma type_int_instr (z: Z) : typed_val #z int z.
   Proof.
     iIntros (?????) "_ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "⧖".
     iApply wp_value. iExists -[const z]. iFrame "Obs". iSplit; [|done].

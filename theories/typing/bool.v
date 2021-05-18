@@ -15,7 +15,7 @@ Section bool.
   Lemma bool_leak E L : leak E L bool_ty (const True).
   Proof. apply leak_just. Qed.
 
-  Lemma type_bool_instr (b: bool) : typed_val #b bool_ty (λ post, post b).
+  Lemma type_bool_instr (b: bool) : typed_val #b bool_ty b.
   Proof.
     iIntros (?????) "_ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "⧖".
     iApply wp_value. iExists -[const b]. iFrame "Obs". iSplit; [|done].

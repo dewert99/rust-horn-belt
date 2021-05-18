@@ -74,8 +74,8 @@ Section typing.
     typed_instr E L T e (λ v, +[v ◁ ty]) (λ post al, tr (λ b, post -[b]) al).
   Global Arguments typed_instr_ty {_ _} _ _ _ _%E _%T _%type.
 
-  Definition typed_val {𝔄} (v: val) (ty: type 𝔄) (tr: pred' (pred' 𝔄)) : Prop :=
-    ∀E L, ⊢ typed_instr_ty E L +[] (of_val v) ty (λ post _, tr post).
+  Definition typed_val {𝔄} (v: val) (ty: type 𝔄) (a: 𝔄) : Prop :=
+    ∀E L, ⊢ typed_instr_ty E L +[] (of_val v) ty (λ post _, post a).
   Global Arguments typed_val {_} _%V _%T _%type.
 
   (* This lemma is helpful when switching from proving unsafe code in Iris

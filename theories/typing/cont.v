@@ -21,7 +21,7 @@ Section typing.
     (T': _ → tctx 𝔅l) tr trx Φ E L (T: tctx 𝔄l) (Tx: tctx ℭl) (C: cctx 𝔇) :
     IntoVecVal el vl → k ◁cont{L, T'} tr ∈ C →
     tctx_extract_ctx E L (T' vl) T Tx trx → leak_tctx E L Tx Φ →
-    ⊢ typed_body E L C T (jump k: el) (trx ∘ (λ post bcl,
+    ⊢ typed_body E L C T (jump: k el) (trx ∘ (λ post bcl,
       let '(bl, cl) := psep bcl in Φ cl → tr post bl))%type.
   Proof.
     move=> -> ? TT' Lk. iApply typed_body_tctx_incl; [done|]. iIntros (? bcπl ?).
