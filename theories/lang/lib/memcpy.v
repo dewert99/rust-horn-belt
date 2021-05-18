@@ -9,13 +9,11 @@ Definition memcpy : val :=
          "memcpy" ["dst" +ₗ #1 ; "len" - #1 ; "src" +ₗ #1].
 
 Notation "e1 <-{ n } ! e2" :=
-  (memcpy (@cons expr e1%E
-          (@cons expr (Lit n)
-          (@cons expr e2%E nil))))
+  (App (of_val memcpy) [e1%E; Lit (LitInt n); e2%E])
   (at level 80, n at next level, format "e1  <-{ n }  ! e2") : expr_scope.
 
 Notation "e1 <-{ n ',Σ' i } ! e2" :=
-  (e1 <-{Σ i} () ;; e1+ₗ#1 <-{n} !e2)%E
+  (e1%E <-{Σ i} ();; e1 +ₗ #(LitInt 1) <-{n} !e2)%E
   (at level 80, n, i at next level,
    format "e1  <-{ n ,Σ  i }  ! e2") : expr_scope.
 

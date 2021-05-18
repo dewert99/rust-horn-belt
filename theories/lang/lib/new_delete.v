@@ -39,10 +39,14 @@ Section specs.
   Qed.
 End specs.
 
-(* FIXME : why are these notations not pretty-printed? *)
-Notation "'letalloc:' x <- e1 'in' e2" :=
-  ((Lam (@cons binder x%E%E%E nil) (x <- e1 ;; e2)) [new [ #1]])%E
+Notation "letalloc: x <- e1 'in' e2" :=
+  ((Lam [BNamed x%string%E] (Seq (Var x <- e1) e2))
+    [App (of_val new) [ #(LitInt 1)]])%E
   (at level 102, x at level 1, e1, e2 at level 150) : expr_scope.
-Notation "'letalloc:' x <-{ n } ! e1 'in' e2" :=
-  ((Lam (@cons binder x%E%E%E nil) (x <-{n%Z%V%L} !e1 ;; e2)) [new [ #n]])%E
-  (at level 102, x at level 1, e1, e2 at level 150) : expr_scope.
+
+Notation "letalloc: x <-{ n } ! e1 'in' e2" :=
+  ((Lam [BNamed x%string%E%E]
+    (Seq (Var x <-{n%Z%E} !e1) e2))
+    [App (of_val new) [ Lit (LitInt n)]])%E
+  (at level 102, x at level 1, e1, e2 at level 150,
+    format "letalloc:  x  <-{ n }  ! e1  'in'  e2") : expr_scope.
