@@ -11,22 +11,25 @@ Class typePreG Σ := PreTypeG {
   type_preG_lftG :> lftPreG Σ;
   type_preG_na_invG :> na_invG Σ;
   type_preG_frac_borG :> frac_borG Σ;
-  type_preG_excl_auth_inG :> inG Σ (excl_authR natO)
+  type_preG_prophG:> prophPreG Σ;
+  type_preG_uniqG:> uniqPreG Σ;
 }.
 
 Definition typeΣ : gFunctors :=
   #[lrustΣ; lftΣ; na_invΣ;
-    GFunctor (constRF fracR); GFunctor (constRF (excl_authR natO))].
+    GFunctor (constRF fracR); uniqΣ; prophΣ].
 Instance subG_typePreG {Σ} : subG typeΣ Σ → typePreG Σ.
 Proof. solve_inG. Qed.
 
 Section type_soundness.
   Definition exit_cont : val := λ: [<>], #☠.
 
-  Definition main_type `{!typeG Σ} := (fn(∅) → unit)%T.
+  Definition main_type `{!typeG Σ} := (fn(∅) → unit_ty)%T.
+
+  Definition main_transformer : predl_trans'ₛ [] () := (λ post '-[], post ()).
 
   Theorem type_soundness `{!typePreG Σ} (main : val) σ t :
-    (∀ `{!typeG Σ}, typed_val main main_type) →
+    (∀ `{!typeG Σ}, typed_val main main_type main_transformer) →
     rtc erased_step ([main [exit_cont]%E], ∅) (t, σ) →
     nonracing_threadpool t σ ∧
     (∀ e, e ∈ t → is_Some (to_val e) ∨ reducible e σ).
@@ -37,31 +40,33 @@ Section type_soundness.
       intros. by eapply (adequate_not_stuck _ (main [exit_cont]%E)). }
     apply: lrust_adequacy=>?. iIntros "#TIME".
     iMod lft_init as (?) "#LFT". done.
-    iMod na_alloc as (tid) "Htl". set (Htype := TypeG _ _ _ _ _ _).
+    iMod na_alloc as (tid) "Htl".
+    iMod proph_init as (?) "#PROPH". done.
+    iMod uniq_init as (?) "#UNIQ". done. set (Htype := TypeG _ _ _ _ _ _ _).
     wp_bind (of_val main). iApply (wp_wand with "[Htl]").
-    iApply (Hmain Htype [] [] $! tid with "LFT TIME [] Htl [] []").
-    { by rewrite /elctx_interp big_sepL_nil. }
+    iApply (Hmain Htype [] [] $! tid (λ _ '-[vπ], vπ (const True) -[]) -[] with "LFT TIME PROPH UNIQ [] Htl [] [$]").
+    { by rewrite /elctx_interp. }
     { by rewrite /llctx_interp big_sepL_nil. }
-    { by rewrite tctx_interp_nil. }
-    clear Hrtc Hmain main. iIntros (main) "(Htl & _ & Hmain & _)".
-    iDestruct "Hmain" as (??) "(? & EQ & Hmain)".
-    rewrite eval_path_of_val. iDestruct "EQ" as %[= <-].
-    iDestruct "Hmain" as (f k x e ?) "(EQ & % & Hmain)". iDestruct "EQ" as %[= ->].
-    destruct x; try done. wp_rec.
+    { by iApply proph_obs_true. }
+    clear Hrtc Hmain main. iIntros (main) "Hmain".
+    iDestruct "Hmain" as ([vπ []]) "/= (Htl & ? & [Hmain _] & ?)".
+    iDestruct "Hmain" as (??) "(EQ & ? & Hmain)". rewrite eval_path_of_val.
+    iDestruct "EQ" as %[= <-]. iDestruct "Hmain" as (?) "/= (-> & Hmain)".
+    iDestruct "Hmain" as (f k _ e ?) "(EQ & Hmain)". iDestruct "EQ" as %[= ->].
+    wp_rec.
     iMod (lft_create with "LFT") as (ϝ) "Hϝ"; first done.
-    iApply ("Hmain" $! () ϝ exit_cont [#] tid with "LFT TIME [] Htl [Hϝ] []");
-      last by rewrite tctx_interp_nil.
+    iApply ("Hmain" $! () ϝ exit_cont nil_tt tid -[] (λ π _, True) with "LFT TIME PROPH UNIQ [] Htl [Hϝ] [] [$] [$]").
     { by rewrite /elctx_interp /=. }
     { rewrite /llctx_interp /=. iSplit; last done. iExists ϝ. iFrame. by rewrite /= left_id. }
-    rewrite cctx_interp_singleton. simpl. iIntros (args) "_ _".
-    inv_vec args. iIntros (x) "_ /=". by wp_lam.
+    rewrite cctx_interp_singleton. simpl. iIntros (args [? []]) "_ _".
+    inv_vec args. iIntros (x) "_ /= ?". by wp_lam.
   Qed.
 End type_soundness.
 
 (* Soundness theorem when no other CMRA is needed. *)
 
 Theorem type_soundness_closed (main : val) σ t :
-  (∀ `{!typeG typeΣ}, typed_val main main_type) →
+  (∀ `{!typeG typeΣ}, typed_val main main_type main_transformer) →
   rtc erased_step ([main [exit_cont]%E], ∅) (t, σ) →
   nonracing_threadpool t σ ∧
   (∀ e, e ∈ t → is_Some (to_val e) ∨ reducible e σ).
