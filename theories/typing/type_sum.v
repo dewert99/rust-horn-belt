@@ -8,8 +8,8 @@ Set Default Proof Using "Type".
 
 Section case.
   Context `{!typeG Σ}.
-  (* TODO FIX THIS *)
-  Local Instance base_empty `{!typeG Σ} : Empty (type ∅) := base.
+
+  Notation hnthb := (hnth (base (𝔄:=@empty _ Empty_setₛ_empty))).
 
   Lemma type_case_own' {Ts ℭ As} E L (C : cctx ℭ) (T : tctx Ts) p n (tyl : typel _) el el' (prel : hlist (λ _, _) _) :
     list_to_hlist el = Some el' →
@@ -37,16 +37,16 @@ Section case.
     { case (decide (i < length As)) => [//| ?].
       rewrite hnth_default; [ apply lnth_default; lia | | lia].
       move => eq. destruct eq; by pose proof (wπ inhabitant). }
-    eapply (IxHForall3_nth _ ∅ _ _ _ _ _ i) in Hel as Hety.
+    eapply (IxHForall3_nth _ base _ _ _ _ _ i) in Hel as Hety.
     wp_read. wp_case.
     { split; [lia|]. destruct (list_to_hlist_length el el'); [done|].
       edestruct (nth_lookup_or_length el i ltac:(done)); [|lia].
-      rewrite Nat2Z.id e -(list_to_hlist_hnth_nth ∅ _ _ _ _ elEl) //. }
+      rewrite Nat2Z.id e. erewrite <-list_to_hlist_hnth_nth; [done|apply elEl]. }
     destruct Hety as [Hety|Hety].
     - iApply (Hety $! tid (const () -:: _ -:: const () -:: _) with "LFT TIME PROPH UNIQ HE Hna HL HC [-Hproph]").
       rewrite /= !tctx_hasty_val' /= -?Hv //=; iFrame "HT".
       + rewrite /own_ptr /=.
-        iDestruct (_.(ty_size_eq) with "Hown") as "%X"; rewrite -X; clear X.
+        iDestruct (_.(ty_size_eq) with "Hown") as "%X". rewrite -X; clear X.
         iSplitL "H↦i Hfi"; last iSplitR "H↦vl'' Hfvl''"; iExists _; iFrame "#"; simpl.
         * rewrite shift_loc_0. iFrame. iExists [ #i]. rewrite heap_mapsto_vec_singleton.
           auto with iFrame.
@@ -107,7 +107,7 @@ Section case.
     wp_read. wp_case.
     { split; [lia|]. destruct (list_to_hlist_length el el'); [done|].
       edestruct (nth_lookup_or_length el i ltac:(done)); [|lia].
-      rewrite Nat2Z.id e -(list_to_hlist_hnth_nth ∅ _ _ _ _ el2el') //. }
+      rewrite Nat2Z.id e. erewrite <-list_to_hlist_hnth_nth; [done|apply el2el']. }
     iDestruct (_.(ty_size_eq) with "Hown") as %EQlenvl'.
     destruct Hety as [Hety|Hety].
     - iMod (uniq_intro wπ depth2 with "PROPH UNIQ") as (ζid) "[ζvo ζpc]"; [done|]; set ζ := PrVar _ ζid.
@@ -115,7 +115,7 @@ Section case.
       iMod (uniq_preresolve ξ _ (λ π, pinj i (π ζ)) with "PROPH ξvo ξpc ζ") as "(#Hproph' & ζ & ξeqz)"; first done.
       { apply proph_dep_constr, proph_dep_one. }
       iDestruct ("Toζpc" with "ζ") as "ζpc".
-      iMod ("Hclose'" $! (∃ vπ' d', (l +ₗ 1) ↦∗: (hnthe tyl i).(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ζ] vπ' d')%I
+      iMod ("Hclose'" $! (∃ vπ' d', (l +ₗ 1) ↦∗: (hnthb tyl i).(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ζ] vπ' d')%I
         with "[ξeqz H↦i H↦vl''] [ ζpc H↦vl' Hown]") as "[Hb Htok]".
       { iIntros "!>Hown". iMod (bi.later_exist_except_0 with "Hown") as (??) "(Hown & #>Hdepth2'' & ζpc)".
         iDestruct "Hown" as (vl'2) "[H↦ Hown]". iExists _, _. iModIntro; iNext.
@@ -186,7 +186,7 @@ Section case.
     wp_read. wp_case.
     { split; [lia|]. destruct (list_to_hlist_length el el'); [done|].
       edestruct (nth_lookup_or_length el i ltac:(done)); [|lia].
-      rewrite Nat2Z.id e -(list_to_hlist_hnth_nth ∅ _ _ _ _ el2el') //. }
+      rewrite Nat2Z.id e. erewrite <-list_to_hlist_hnth_nth; [done|apply el2el']. }
     iMod ("Hclose'" with "[$H↦i $H↦vl'']") as "Htok".
     iMod ("Hclose" with "Htok") as "HL".
     destruct Hety as [Hety|Hety]; iApply (Hety $! _ (_ -:: _) with "LFT TIME PROPH UNIQ HE Hna HL HC [-Hproph]").
@@ -209,7 +209,7 @@ Section case.
 
   Lemma type_sum_assign_instr {E L 𝔄 𝔄' As} (i : nat) (ty1 : type 𝔄) (tyl : typel As) (ty2 : type 𝔄') p1 p2 gt st:
     (typed_write E L ty1 (xsum_ty tyl) ty2 (xsum_ty tyl) gt st)  →
-    ⊢ typed_instr E L +[p1 ◁ ty1; p2 ◁ hnthe tyl i] (p1 <-{Σ i} p2) (λ _, +[p1 ◁ ty2])
+    ⊢ typed_instr E L +[p1 ◁ ty1; p2 ◁ hnthb tyl i] (p1 <-{Σ i} p2) (λ _, +[p1 ◁ ty2])
       (λ post '-[a; b], post -[st a (pinj i b)]).
   Proof.
     iIntros ([Eq Hw] tid postπ (? & ? & [])) "#LFT #TIME #PROPH #UNIQ #HE $ HL (Hp1 & Hp2 & _) Hproph".
@@ -245,7 +245,7 @@ Section case.
     (tyl : typel As) i (ty1 : type 𝔄) (ty : type ℭ) (ty1' : type 𝔄')
     (C : cctx ℭ) (T : tctx Ts) (T' : tctx Ts') p1 p2 e gt st tr fr:
     Closed [] e → (0 ≤ i)%nat →
-    tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ hnthe tyl i] T T' fr →
+    tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ hnthb tyl i] T T' fr →
     typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
     typed_body E L C ((p1 ◁ ty1') +:: T') e tr -∗
     typed_body E L C T (p1 <-{Σ i} p2 ;; e) (fr ∘ ((λ post '(a -:: b -:: f), post (st a (pinj i b) -:: f)) ∘ tr)).
@@ -256,7 +256,7 @@ Section case.
   Qed.
 
   Lemma type_sum_unit_instr {E L 𝔄 𝔅 As} (i : nat) (tyl : _ As) (ty1 : _ 𝔄) (ty2 : _ 𝔅) p gt st eq:
-    hnthe tyl i = eq_rect _ _ unit_ty _ eq →
+    hnthb tyl i = eq_rect _ _ unit_ty _ eq →
     typed_write E L ty1 (xsum_ty tyl) ty2 (xsum_ty tyl) gt st →
     ⊢ typed_instr E L +[p ◁ ty1] (p <-{Σ i} ())
     (λ _, +[p ◁ ty2]) (λ post '-[a], post -[st a (pinj i (eq_rect unitₛ _ () _ eq))]).
@@ -283,7 +283,7 @@ Section case.
     gt st fr tr (eq : ()%ST = lnthe As i):
     Closed [] e → (0 ≤ i)%nat →
     tctx_extract_elt E L (p ◁ ty1) T T' fr →
-    hnthe tyl i = eq_rect _ _ unit_ty _ eq →
+    hnthb tyl i = eq_rect _ _ unit_ty _ eq →
     typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
     typed_body E L C ((p ◁ ty1') +:: T') e tr -∗
     typed_body E L C T (p <-{Σ i} () ;; e)
@@ -297,7 +297,7 @@ Section case.
 
   Lemma type_sum_memcpy_instr {E L As 𝔄 𝔄' 𝔅 𝔅'} (i : nat) (tyl : typel As)
     (ty1 : _ 𝔄) (ty1' : _ 𝔄') (ty2 : _ 𝔅) (ty2' : _ 𝔅') p1 p2 gt st rd wt:
-    let ty := hnthe tyl i in
+    let ty := hnthb tyl i in
     typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
     typed_read E L ty2 ty ty2' rd wt →
     ⊢ typed_instr E L +[p1 ◁ ty1; p2 ◁ ty2]
@@ -345,7 +345,7 @@ Section case.
 
   Lemma type_sum_memcpy {E L As 𝔄 𝔄' 𝔅 𝔅' ℭ Ts Ts'} (tyl : _ As) i (ty1 : _ 𝔄) (ty2 : _ 𝔅) n (ty1' : _ 𝔄') (ty2' : _ 𝔅') (C : cctx ℭ) (T : _ Ts) (T' : _ Ts') p1 p2 e
     fr tr gt st rd wt:
-    let ty := hnthe tyl i in
+    let ty := hnthb tyl i in
     Closed [] e → (0 ≤ i)%nat →
     tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ ty2] T T' fr →
     typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →

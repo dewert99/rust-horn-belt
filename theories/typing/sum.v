@@ -7,21 +7,21 @@ Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
 
-Local Instance base_empty `{!typeG Σ} : Empty (type ∅) := base.
-
 Section sum.
   Context `{!typeG Σ}.
 
+  Notation hnthb := (hnth (base (𝔄:=@empty _ Empty_setₛ_empty))).
+
   Definition is_pad {𝔄l} i (tyl: _ 𝔄l) (vl: list val) : iProp Σ :=
-    ⌜((hnthe tyl i).(ty_size) + length vl)%nat = max_ty_size tyl⌝.
+    ⌜((hnthb tyl i).(ty_size) + length vl)%nat = max_ty_size tyl⌝.
 
   Lemma split_sum_mt {𝔄l} (tyl: _ 𝔄l) vπ d l tid q :
     (l ↦∗{q}: λ vl, ∃i (vπ': proph (lnthe 𝔄l i)) vl' vl'',
       ⌜vπ = pinj i ∘ vπ' ∧ vl = #i :: vl' ++ vl'' ∧ length vl = S (max_ty_size tyl)⌝ ∗
-      (hnthe tyl i).(ty_own) vπ' d tid vl')%I ⊣⊢
+      (hnthb tyl i).(ty_own) vπ' d tid vl')%I ⊣⊢
     ∃i (vπ': proph (lnthe 𝔄l i)), ⌜vπ = pinj i ∘ vπ'⌝ ∗
-      (l ↦{q} #i ∗ (l +ₗ S (hnthe tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
-      (l +ₗ 1) ↦∗{q}: (hnthe tyl i).(ty_own) vπ' d tid.
+      (l ↦{q} #i ∗ (l +ₗ S (hnthb tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
+      (l +ₗ 1) ↦∗{q}: (hnthb tyl i).(ty_own) vπ' d tid.
   Proof. iSplit.
     - iIntros "(%& ↦ & ty)". iDestruct "ty" as (i vπ' vl' vl'' (->&->&[=])) "ty".
       iExists i, vπ'. iSplit; [done|]. iDestruct (ty_size_eq with "ty") as "%Eq'".
@@ -38,7 +38,7 @@ Section sum.
   Qed.
 
   Lemma ty_lfts_nth_incl {𝔄l} (tyl: _ 𝔄l) i :
-    ⊢ tyl_lft tyl ⊑ ty_lft (hnthe tyl i).
+    ⊢ tyl_lft tyl ⊑ ty_lft (hnthb tyl i).
   Proof.
     elim: tyl i. { move=> ?. apply lft_incl_refl. } move=> ?? ty tyl IH i.
     rewrite /tyl_lft lft_intersect_list_app.
@@ -51,11 +51,11 @@ Section sum.
     ty_lfts := tyl_lfts tyl;  ty_E := tyl_E tyl;
     ty_own vπ d tid vl := ∃i (vπ': proph (lnthe 𝔄l i)) vl' vl'',
       ⌜vπ = pinj i ∘ vπ' ∧ vl = #i :: vl' ++ vl'' ∧ length vl = S (max_ty_size tyl)⌝ ∗
-      (hnthe tyl i).(ty_own) vπ' d tid vl';
+      (hnthb tyl i).(ty_own) vπ' d tid vl';
     ty_shr vπ d κ tid l := ∃i (vπ': proph (lnthe 𝔄l i)), ⌜vπ = pinj i ∘ vπ'⌝ ∗
       &frac{κ} (λ q, l ↦{q} #i ∗
-        (l +ₗ S (hnthe tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
-      (hnthe tyl i).(ty_shr) vπ' d κ tid (l +ₗ 1)
+        (l +ₗ S (hnthb tyl i).(ty_size)) ↦∗{q}: is_pad i tyl) ∗
+      (hnthb tyl i).(ty_shr) vπ' d κ tid (l +ₗ 1)
   |}%I.
   Next Obligation. move=> *. by iDestruct 1 as (????(_&_&?)) "_". Qed.
   Next Obligation. move=>/= *. do 9 f_equiv. by apply ty_own_depth_mono. Qed.
@@ -105,7 +105,7 @@ Section sum.
     - rewrite /tyl_E. elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
     - move=> *. rewrite EqMsz. do 10 f_equiv. by apply @hnth_ne.
     - move=> *. f_equiv=> i. rewrite /is_pad EqMsz.
-      have Eqv': hnthe tyl i ≡{n}≡ hnthe tyl' i by apply @hnth_ne.
+      have Eqv': hnthb tyl i ≡{n}≡ hnthb tyl' i by apply @hnth_ne.
       repeat (eapply ty_size_ne || f_equiv)=>//. by rewrite Eqv'.
   Qed.
 
@@ -172,11 +172,11 @@ Section typing.
     split=>/=.
     - apply xsum_lft_morph. eapply TCHForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
-    - move=> *. f_equiv=> i. apply (TCHForall_nth _ (const ∅) _ i) in All;
-      [|apply _]. rewrite !(hnth_apply (const ∅)).
+    - move=> *. f_equiv=> i. eapply (TCHForall_nth _ (const base) _ i) in All;
+      [|apply _]. rewrite !(hnth_apply (const base)).
       do 7 f_equiv; [|by apply All]. do 5 f_equiv. by apply EqMsz.
-    - move=> *. f_equiv=> i. apply (TCHForall_nth _ (const ∅) _ i) in All; [|apply _].
-      rewrite /is_pad !(hnth_apply (const ∅)). do 4 f_equiv; [|by apply All].
+    - move=> *. f_equiv=> i. eapply (TCHForall_nth _ (const base) _ i) in All; [|apply _].
+      rewrite /is_pad !(hnth_apply (const base)). do 4 f_equiv; [|by apply All].
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
   (* TODO : get rid of this duplication *)
@@ -189,17 +189,17 @@ Section typing.
     split=>/=.
     - apply xsum_lft_morph. eapply TCHForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
-    - move=> *. f_equiv=> i. apply (TCHForall_nth _ (const ∅) _ i) in All;
-      [|apply _]. rewrite !(hnth_apply (const ∅)).
+    - move=> *. f_equiv=> i. eapply (TCHForall_nth _ (const base) _ i) in All;
+      [|apply _]. rewrite !(hnth_apply (const base)).
       do 7 f_equiv; [|by apply All]. do 5 f_equiv. by apply EqMsz.
-    - move=> *. f_equiv=> i. apply (TCHForall_nth _ (const ∅) _ i) in All; [|apply _].
-      rewrite /is_pad !(hnth_apply (const ∅)). do 4 f_equiv; [|by apply All].
+    - move=> *. f_equiv=> i. eapply (TCHForall_nth _ (const base) _ i) in All; [|apply _].
+      rewrite /is_pad !(hnth_apply (const base)). do 4 f_equiv; [|by apply All].
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
 
   Global Instance xsum_copy {𝔄l} (tyl: _ 𝔄l) : ListCopy tyl → Copy (Σ! tyl).
   Proof.
-    move=> ?. have Copy: ∀i, Copy (hnthe tyl i).
+    move=> ?. have Copy: ∀i, Copy (hnth base tyl i).
     { move=> *. apply (TCHForall_nth _); by [apply _|]. }
     split; [apply _|]. move=>/= ?????? l ?? SubF.
     iIntros "#LFT (%i &%&->& Bor & ty) Na [κ κ+]".

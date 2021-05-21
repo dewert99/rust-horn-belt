@@ -3,6 +3,13 @@ Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
 
+(* [base] is a version of the empty type used internally in the model, using an
+   arbitrary refinement type. It is used for two purposes:
+     1- as a base case for the fixpoint (empty cannot be used since it is
+        using the empty semantic type).
+     2- as a default type in [sum.v] when performing lookups in lists of types
+ *)
+
 Section base.
   Context `{!typeG Σ}.
 
