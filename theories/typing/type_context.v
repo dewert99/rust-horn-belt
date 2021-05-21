@@ -161,7 +161,7 @@ Section lemmas.
 
   Lemma leak_tctx_just {𝔄l} E L (T: _ 𝔄l) : leak_tctx E L T (const True).
   Proof.
-    move=> *. iMod persist_time_rcpt_0 as "⧖". iIntros "_ _ _ $ _!>". iExists 0.
+    move=> *. iMod persist_time_rcpt_0 as "⧖". iIntros "_ _ _ $ _!>". iExists 0%nat.
     iFrame "⧖". iApply step_fupdN_full_intro. by iApply proph_obs_true.
   Qed.
 

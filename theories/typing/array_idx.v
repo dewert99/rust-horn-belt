@@ -12,7 +12,7 @@ Section lemmas.
 
   Fixpoint hasty_own_idxs {𝔄} (p: path) (k: nat) (ty: type 𝔄) (n: nat)
     (i: nat) : tctx (replicate n 𝔄) :=
-    match n with 0 => +[] | S m =>
+    match n with O => +[] | S m =>
       p +ₗ #(i * ty.(ty_size))%nat ◁ own_ptr k ty +::
       hasty_own_idxs p k ty m (S i) end.
 
@@ -128,7 +128,7 @@ Section lemmas.
 
   Fixpoint hasty_uniq_idxs {𝔄} (p: path) (κ: lft) (ty: type 𝔄) (n: nat)
     (i: nat) : tctx (replicate n (𝔄 * 𝔄)%ST) :=
-    match n with 0 => +[] | S m =>
+    match n with O => +[] | S m =>
       p +ₗ #(i * ty.(ty_size))%nat ◁ &uniq{κ} ty +::
       hasty_uniq_idxs p κ ty m (S i) end.
 
@@ -144,7 +144,7 @@ Section lemmas.
     eapply tctx_incl_trans; [by eapply (tctx_incl_frame_r +[_]),
     tctx_split_uniq_prod|]. apply (tctx_incl_app +[_] +[_]);
     [by apply tctx_to_shift_loc_0, _|]. eapply tctx_incl_trans; [apply IH|].
-    eapply proj1, get_tctx_equiv=> ? vπl. move: p 0. clear.
+    eapply proj1, get_tctx_equiv=> ? vπl. move: p 0%nat. clear.
     induction n; [done|]=> p ?. case vπl=>/= ??. f_equiv; [|done].
     rewrite tctx_elt_interp_hasty_path; [done|]=>/=. case (eval_path p)=>//.
     (do 2 (case=>//))=> ?. by rewrite shift_loc_assoc -Nat2Z.inj_add. }

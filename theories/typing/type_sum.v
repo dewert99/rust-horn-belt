@@ -244,7 +244,7 @@ Section case.
   Lemma type_sum_assign {E L Ts Ts' 𝔄 𝔄' ℭ As}
     (tyl : typel As) i (ty1 : type 𝔄) (ty : type ℭ) (ty1' : type 𝔄')
     (C : cctx ℭ) (T : tctx Ts) (T' : tctx Ts') p1 p2 e gt st tr fr:
-    Closed [] e → 0 ≤ i →
+    Closed [] e → (0 ≤ i)%nat →
     tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ hnthe tyl i] T T' fr →
     typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
     typed_body E L C ((p1 ◁ ty1') +:: T') e tr -∗
@@ -281,7 +281,7 @@ Section case.
 
   Lemma type_sum_unit {E L 𝔄 𝔄' ℭ As Ts Ts'} (tyl : _ As) i (ty1 : _ 𝔄) (ty1' : _ 𝔄') (C : cctx ℭ) (T : _ Ts) (T' : _ Ts') p e
     gt st fr tr (eq : ()%ST = lnthe As i):
-    Closed [] e → 0 ≤ i →
+    Closed [] e → (0 ≤ i)%nat →
     tctx_extract_elt E L (p ◁ ty1) T T' fr →
     hnthe tyl i = eq_rect _ _ unit_ty _ eq →
     typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
@@ -346,7 +346,7 @@ Section case.
   Lemma type_sum_memcpy {E L As 𝔄 𝔄' 𝔅 𝔅' ℭ Ts Ts'} (tyl : _ As) i (ty1 : _ 𝔄) (ty2 : _ 𝔅) n (ty1' : _ 𝔄') (ty2' : _ 𝔅') (C : cctx ℭ) (T : _ Ts) (T' : _ Ts') p1 p2 e
     fr tr gt st rd wt:
     let ty := hnthe tyl i in
-    Closed [] e → 0 ≤ i →
+    Closed [] e → (0 ≤ i)%nat →
     tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ ty2] T T' fr →
     typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
     typed_read E L ty2 ty ty2' rd wt →

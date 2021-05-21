@@ -242,7 +242,7 @@ Section product_split.
     by [apply _|]|]. eapply tctx_incl_trans; [by apply tctx_split_uniq_prod|].
     apply (tctx_incl_app +[_] +[_]); [by apply tctx_to_shift_loc_0, _|].
     eapply tctx_incl_trans; [by apply IH|]. eapply proj1, get_tctx_equiv=> ? vπl.
-    move: (ty_size _)=> off. rewrite -{2}(Nat.add_0_r off). move: off 0. clear.
+    move: (ty_size _)=> off. rewrite -{2}(Nat.add_0_r off). move: off 0%nat. clear.
     induction tyl, vπl; [done|]=>/= ??. f_equiv; [|by rewrite IHtyl Nat.add_assoc].
     apply tctx_elt_interp_hasty_path=>/=. case (eval_path p)=>//.
     (do 2 case=>//)=> ?. by rewrite shift_loc_assoc Nat2Z.inj_add. }
