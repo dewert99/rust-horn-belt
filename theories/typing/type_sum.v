@@ -11,9 +11,9 @@ Section case.
   (* TODO FIX THIS *)
   Local Instance base_empty `{!typeG Σ} : Empty (type ∅) := base.
 
-  Lemma type_case_own' {Ts 𝔅 As} E L (C : cctx 𝔅) (T : tctx Ts) p n (tyl : typel _) el el' (prel : hlist (λ _, _) _) :
+  Lemma type_case_own' {Ts ℭ As} E L (C : cctx ℭ) (T : tctx Ts) p n (tyl : typel _) el el' (prel : hlist (λ _, _) _) :
     list_to_hlist el = Some el' →
-    IxHForall3 (λ i ty e (prei : predl_trans' (Σ!%ST As :: Ts) 𝔅),
+    IxHForall3 (λ i ty e (prei : predl_trans' (Σ!%ST As :: _) _),
       (⊢ typed_body E L C ((p +ₗ #0 ◁ own_ptr n (uninit 1)) +:: (p +ₗ #1 ◁ own_ptr n ty) +::
          (p +ₗ #(S (ty.(ty_size))) ◁
             own_ptr n (uninit (max_ty_size tyl - ty_size ty))) +:: T) e
@@ -61,22 +61,25 @@ Section case.
       + iApply (proph_obs_impl with "Hproph") => π /= ? //.
   Qed.
 
-  (* Lemma type_case_own E L C T T' p n tyl el :
-    tctx_extract_hasty E L p (own_ptr n (sum tyl)) T T' →
-    Forall2 (λ ty e,
-      (⊢ typed_body E L C ((p +ₗ #0 ◁ own_ptr n (uninit 1)) :: (p +ₗ #1 ◁ own_ptr n ty) ::
+  Lemma type_case_own {ℭ As Ts Ts'} E L (C : cctx ℭ) (T : tctx Ts) (T' : tctx Ts') p n (tyl : _ As) el el' fr (prel : hlist (λ _, _) _):
+    list_to_hlist el = Some el' →
+    tctx_extract_elt E L (p ◁ own_ptr n (xsum_ty tyl)) T T' fr →
+    IxHForall3 (λ i ty e (prei : predl_trans' (Σ!%ST As :: _) _),
+      (⊢ typed_body E L C ((p +ₗ #0 ◁ own_ptr n (uninit 1)) +:: (p +ₗ #1 ◁ own_ptr n ty) +::
          (p +ₗ #(S (ty.(ty_size))) ◁
-            own_ptr n (uninit (max_list_with ty_size tyl - ty_size ty))) :: T') e) ∨
-      (⊢ typed_body E L C ((p ◁ own_ptr n (sum tyl)) :: T') e))
-      tyl el →
-    ⊢ typed_body E L C T (case: !p of el).
-  Proof. unfold tctx_extract_hasty=>->. apply type_case_own'. Qed.
-  *)
+            own_ptr n (uninit (max_ty_size tyl - ty_size ty))) +:: T') e
+            (λ post '(_ -:: v -:: _ -:: w), prei post (pinj (D := Empty_setₛ) i v -:: w))) ∨
+      (⊢ typed_body E L C ((p ◁ own_ptr n (xsum_ty tyl)) +:: T') e prei))
+      tyl el' prel →
+    ⊢ typed_body E L C T (case: !p of el)
+      (fr ∘ (λ post '(v -:: w), (∀ i, hnth (D := empty) (λ _ _, False) prel i post (v -:: w)) : Prop)).
+  Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_own'; done. Qed.
 
-  Lemma type_case_uniq' {As 𝔅 Xl} E L (C : cctx 𝔅) (T : tctx Xl) p κ tyl el el' (prel : hlist (λ _, _) _) :
+
+  Lemma type_case_uniq' {As ℭ Ts} E L (C : cctx ℭ) (T : tctx Ts) p κ tyl el el' (prel : hlist (λ _, _) _) :
     list_to_hlist el = Some el' → lctx_lft_alive E L κ →
-    IxHForall3 (D := Empty_setₛ) (λ i ty e (prei : predl_trans' ((Σ! As * Σ! As)%ST :: Xl) 𝔅),
-      (⊢ typed_body E L C ((p +ₗ #1 ◁ &uniq{κ}ty) +:: T) e (λ post '((v, v') -:: w), prei post ((pinj i v : Σ!%ST As, pinj i v' : Σ!%ST As) -:: w))) ∨
+    IxHForall3 (D := Empty_setₛ) (λ i ty e (prei : predl_trans' ((Σ! As * Σ! As)%ST :: _) _),
+      (⊢ typed_body E L C ((p +ₗ #1 ◁ &uniq{κ}ty) +:: T) e (λ post '((v, v') -:: w), prei post ((pinj i v, pinj i v') -:: w))) ∨
       (⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T) e prei)) tyl el' prel →
     ⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T) (case: !p of el)
       (λ post '(v -:: w), (∀ i, hnth (D := Empty_setₛ) (λ _ _, False) prel i post (v -:: w)) : Prop).
@@ -150,19 +153,19 @@ Section case.
       + iApply (proph_obs_impl with "Hproph") => π /= ?; auto.
   Qed.
 
-  (* Lemma type_case_uniq E L C T T' p κ tyl el :
-    tctx_extract_hasty E L p (&uniq{κ}(sum tyl)) T T' →
-    lctx_lft_alive E L κ →
-    Forall2 (λ ty e,
-      (⊢ typed_body E L C ((p +ₗ #1 ◁ &uniq{κ}ty) :: T') e) ∨
-      (⊢ typed_body E L C ((p ◁ &uniq{κ}(sum tyl)) :: T') e)) tyl el →
-    ⊢ typed_body E L C T (case: !p of el).
-  Proof. unfold tctx_extract_hasty=>->. apply type_case_uniq'. Qed. *)
-   (* Lemma hnth_default {A D As} {F : A → _} (d : F D) (l : hlist F As) i : *)
-
-  Lemma type_case_shr' {Xl As 𝔅} E L (C : cctx 𝔅) (T : tctx Xl) p κ tyl el el' (prel : hlist (λ _, _) As) :
+  Lemma type_case_uniq {ℭ As Ts Ts'} E L (C : cctx ℭ) (T : tctx Ts) (T' : tctx Ts') p κ (tyl : _ As) el el' fr (prel : hlist _ _) :
     list_to_hlist el = Some el' → lctx_lft_alive E L κ →
-    IxHForall3 (λ i ty e (prei : predl_trans' (Σ!%ST As :: Xl) 𝔅),
+    tctx_extract_elt E L (p ◁ &uniq{κ}(xsum_ty tyl)) T T' fr →
+    lctx_lft_alive E L κ →
+    IxHForall3 (D := Empty_setₛ) (λ i ty e (prei : predl_trans' ((Σ! As * Σ! As)%ST :: _) _),
+      (⊢ typed_body E L C ((p +ₗ #1 ◁ &uniq{κ}ty) +:: T') e (λ post '((v, v') -:: w), prei post ((pinj i v, pinj i v') -:: w))) ∨
+      (⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T') e prei)) tyl el' prel →
+    ⊢ typed_body E L C T (case: !p of el) (fr ∘ (λ post '(v -:: w), (∀ i, hnth (D := Empty_setₛ) (λ _ _, False) prel i post (v -:: w)) : Prop)).
+  Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_uniq'; done. Qed.
+
+  Lemma type_case_shr' {Ts As ℭ} E L (C : cctx ℭ) (T : tctx Ts) p κ tyl el el' (prel : hlist (λ _, _) As) :
+    list_to_hlist el = Some el' → lctx_lft_alive E L κ →
+    IxHForall3 (λ i ty e (prei : predl_trans' (Σ!%ST As :: _) _),
       (⊢ typed_body E L C ((p +ₗ #1 ◁ &shr{κ}ty) +:: T) e (λ post '(vi -:: w), prei post (pinj (D := Empty_setₛ) i vi -:: w))) ∨
       (⊢ typed_body E L C ((p ◁ &shr{κ}(xsum_ty tyl)) +:: T) e prei)
     ) tyl el' prel →
@@ -187,25 +190,22 @@ Section case.
     iMod ("Hclose'" with "[$H↦i $H↦vl'']") as "Htok".
     iMod ("Hclose" with "Htok") as "HL".
     destruct Hety as [Hety|Hety]; iApply (Hety $! _ (_ -:: _) with "LFT TIME PROPH UNIQ HE Hna HL HC [-Hproph]").
-    - rewrite /= tctx_hasty_val' /= -?H //. iFrame.
-      iExists _. by iFrame.
+    - rewrite /= tctx_hasty_val' /= -?H //. iFrame. iExists _. by iFrame.
     - iApply (proph_obs_impl with "Hproph") => /= ??; subst; eauto.
     - rewrite /= tctx_hasty_val' /= -?H //. iFrame.
       iExists _. iFrame. iExists _, _. by iFrame "%∗".
     - iApply (proph_obs_impl with "Hproph") => /= ??; subst; eauto.
   Qed.
 
-(*
-  Lemma type_case_shr E L C T p κ tyl el prel:
-    p ◁ &shr{κ}(sum tyl) ∈ T →
-    lctx_lft_alive E L κ →
-    Forall3 (λ ty e, ⊢ typed_body E L C ((p +ₗ #1 ◁ &shr{κ}ty) :: T) e) tyl el prel →
-    ⊢ typed_body E L C T (case: !p of el).
-  Proof.
-    intros. rewrite ->copy_elem_of_tctx_incl; last done; last apply _.
-    apply type_case_shr'; first done. eapply Forall2_impl; first done. auto.
-  Qed.
-*)
+  Lemma type_case_shr {ℭ As Ts Ts'} E L (C : cctx ℭ) (T : tctx Ts) (T' : tctx Ts') p κ (tyl : _ As) el el' fr (prel : hlist (λ _, _) _):
+    list_to_hlist el = Some el' → lctx_lft_alive E L κ →
+    tctx_extract_elt E L (p ◁ &shr{κ}(xsum_ty tyl)) T T fr →
+    IxHForall3 (λ i ty e (prei : predl_trans' (Σ!%ST As :: _) _),
+      (⊢ typed_body E L C ((p +ₗ #1 ◁ &shr{κ}ty) +:: T) e (λ post '(vi -:: w), prei post (pinj (D := Empty_setₛ) i vi -:: w))) ∨
+      (⊢ typed_body E L C ((p ◁ &shr{κ}(xsum_ty tyl)) +:: T) e prei)
+    ) tyl el' prel →
+    ⊢ typed_body E L C T (case: !p of el) (fr ∘ (λ post '(v -:: w), (∀ i, hnth (D := Empty_setₛ) (λ _ _, False) prel i post (v -:: w)) : Prop)).
+  Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_shr'; done. Qed.
 
   Lemma type_sum_assign_instr {E L 𝔄 𝔄' As} (i : nat) (ty1 : type 𝔄) (tyl : typel As) (ty2 : type 𝔄') p1 p2 gt st:
     (typed_write E L ty1 (xsum_ty tyl) ty2 (xsum_ty tyl) gt st)  →
@@ -233,28 +233,27 @@ Section case.
     rewrite heap_mapsto_vec_cons -wp_fupd.
     iApply (wp_persist_time_rcpt with "TIME Hdepth")=>//.
     iDestruct "H↦vl" as "[H↦ H↦vl]". wp_write. iIntros "#Hdepth".
-    iExists -[_].
-    rewrite tctx_hasty_val' //.
-    rewrite -(bi.exist_intro (S _)) bi.sep_assoc. iFrame "Hdepth". iSplitR "Hproph".
+    iExists -[_]. rewrite tctx_hasty_val' // -(bi.exist_intro (S _)) bi.sep_assoc.
+    iFrame "Hdepth". iSplitR "Hproph".
     - iApply ("Hw" with "[-] [//]").
       iNext. iExists (_::_::_). rewrite !heap_mapsto_vec_cons. iFrame.
       iExists i, _, [_], _. rewrite -Hlen. auto.
     - iApply (proph_obs_impl with "Hproph") => π /= ? //=.
   Qed.
 
-  (* Lemma type_sum_assign {E L} sty tyl i ty1 ty ty1' C T T' p1 p2 e:
-    Closed [] e →
-    0 ≤ i →
-    sty = sum tyl →
-    tctx_extract E L [p1 ◁ ty1; p2 ◁ ty] T T' →
-    tyl !! (Z.to_nat i) = Some ty →
-    (⊢ typed_write E L ty1 sty ty1') →
-    typed_body E L C ((p1 ◁ ty1') :: T') e -∗
-    typed_body E L C T (p1 <-{Σ i} p2 ;; e).
-  Proof.
-    iIntros (??->) "* **". rewrite -(Z2Nat.id i) //.
-    iApply type_seq; [by eapply type_sum_assign_instr|done|done].
-  Qed. *)
+  Lemma type_sum_assign {E L Ts Ts' 𝔄 𝔄' ℭ As}
+    (tyl : typel As) i (ty1 : type 𝔄) (ty : type ℭ) (ty1' : type 𝔄')
+    (C : cctx ℭ) (T : tctx Ts) (T' : tctx Ts') p1 p2 e gt st tr fr:
+    Closed [] e → 0 ≤ i →
+    tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ hnthe tyl i] T T' fr →
+    typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
+    typed_body E L C ((p1 ◁ ty1') +:: T') e tr -∗
+    typed_body E L C T (p1 <-{Σ i} p2 ;; e) (fr ∘ ((λ post '(a -:: b -:: f), post (st a (pinj i b) -:: f)) ∘ tr)).
+  Proof. iIntros. iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ H1).
+    iApply (typed_body_impl (_ : predl_trans' (_ :: _ :: Ts') _)); last first.
+    iApply type_seq; [by eapply type_sum_assign_instr |solve_typing|done| done ].
+    done.
+  Qed.
 
   Lemma type_sum_unit_instr {E L 𝔄 𝔅 As} (i : nat) (tyl : _ As) (ty1 : _ 𝔄) (ty2 : _ 𝔅) p gt st eq:
     hnthe tyl i = eq_rect _ _ unit_ty _ eq →
@@ -280,25 +279,27 @@ Section case.
     - by iApply (proph_obs_impl with "Hproph").
   Qed.
 
-  (* Lemma type_sum_unit {E L} sty tyl i ty1 ty1' C T T' p e:
-    Closed [] e →
-    0 ≤ i →
-    sty = sum tyl →
-    tctx_extract_hasty E L p ty1 T T' →
-    tyl !! (Z.to_nat i) = Some unit →
-    (⊢ typed_write E L ty1 sty ty1') →
-    typed_body E L C ((p ◁ ty1') :: T') e -∗
-    typed_body E L C T (p <-{Σ i} () ;; e).
+  Lemma type_sum_unit {E L 𝔄 𝔄' ℭ As Ts Ts'} (tyl : _ As) i (ty1 : _ 𝔄) (ty1' : _ 𝔄') (C : cctx ℭ) (T : _ Ts) (T' : _ Ts') p e
+    gt st fr tr (eq : ()%ST = lnthe As i):
+    Closed [] e → 0 ≤ i →
+    tctx_extract_elt E L (p ◁ ty1) T T' fr →
+    hnthe tyl i = eq_rect _ _ unit_ty _ eq →
+    typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
+    typed_body E L C ((p ◁ ty1') +:: T') e tr -∗
+    typed_body E L C T (p <-{Σ i} () ;; e)
+      (fr ∘ (λ post '(a -:: f), post (st a (pinj i (eq_rect unitₛ _ () _ eq)) -:: f) ) ∘ tr).
   Proof.
-    iIntros (??->) "* **". rewrite -(Z2Nat.id i) //.
-    iApply type_seq; [by eapply type_sum_unit_instr|solve_typing|done].
-  Qed. *)
+    iIntros (?? Incl) "* **". iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ Incl).
+    iApply (typed_body_impl (_ : predl_trans' (_:: Ts') _)); last first.
+    iApply type_seq; [by iApply type_sum_unit_instr|solve_typing|done|done].
+    done.
+  Qed.
 
   Lemma type_sum_memcpy_instr {E L As 𝔄 𝔄' 𝔅 𝔅'} (i : nat) (tyl : typel As)
     (ty1 : _ 𝔄) (ty1' : _ 𝔄') (ty2 : _ 𝔅) (ty2' : _ 𝔅') p1 p2 gt st rd wt:
     let ty := hnthe tyl i in
-    (typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st) →
-    (typed_read E L ty2 ty ty2' rd wt) →
+    typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
+    typed_read E L ty2 ty ty2' rd wt →
     ⊢ typed_instr E L +[p1 ◁ ty1; p2 ◁ ty2]
                (p1 <-{ty.(ty_size),Σ i} !p2) (λ _, +[p1 ◁ ty1'; p2 ◁ ty2'])
                (λ post '-[a; b], post -[st a (pinj i (rd b)); wt b]).
@@ -342,30 +343,31 @@ Section case.
     - iExists _. iFrame.
   Qed.
 
-  (* Lemma type_sum_memcpy {E L} sty tyl i ty1 ty2 ty n ty1' ty2' C T T' p1 p2 e:
-    Closed [] e →
-    0 ≤ i →
-    sty = sum tyl →
-    tctx_extract E L [p1 ◁ ty1; p2 ◁ ty2] T T' →
-    tyl !! (Z.to_nat i) = Some ty →
-    (⊢ typed_write E L ty1 sty ty1') →
-    (⊢ typed_read E L ty2 ty ty2') →
+  Lemma type_sum_memcpy {E L As 𝔄 𝔄' 𝔅 𝔅' ℭ Ts Ts'} (tyl : _ As) i (ty1 : _ 𝔄) (ty2 : _ 𝔅) n (ty1' : _ 𝔄') (ty2' : _ 𝔅') (C : cctx ℭ) (T : _ Ts) (T' : _ Ts') p1 p2 e
+    fr tr gt st rd wt:
+    let ty := hnthe tyl i in
+    Closed [] e → 0 ≤ i →
+    tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ ty2] T T' fr →
+    typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
+    typed_read E L ty2 ty ty2' rd wt →
     Z.of_nat (ty.(ty_size)) = n →
-    typed_body E L C ((p1 ◁ ty1') :: (p2 ◁ ty2') :: T') e -∗
-    typed_body E L C T (p1 <-{n,Σ i} !p2 ;; e).
+    typed_body E L C ((p1 ◁ ty1') +:: (p2 ◁ ty2') +:: T') e tr -∗
+    typed_body E L C T (p1 <-{n,Σ i} !p2 ;; e) (fr ∘ (λ post '(a -:: b -:: f), post (st a (pinj i (rd b)) -:: wt b -:: f)) ∘ tr).
   Proof.
-    iIntros (?? -> ??? Hr ?) "?". subst. rewrite -(Z2Nat.id i) //.
-    by iApply type_seq; [eapply type_sum_memcpy_instr, Hr|done|done].
-  Qed. *)
+    iIntros (??? Incl ?? <-) "* **". iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ Incl).
+    iApply (typed_body_impl (_ : predl_trans' (_ :: _ :: Ts') _)); last first.
+    iApply type_seq; [by iApply type_sum_memcpy_instr|solve_typing|done|done].
+    done.
+  Qed.
 
-  (* Lemma ty_outlv_E_elctx_sat_sum E L tyl α:
+  Lemma ty_outlv_E_elctx_sat_sum {As} E L (tyl : _ As) α:
     elctx_sat E L (tyl_outlv_E tyl α) →
-    elctx_sat E L (ty_outlv_E (sum tyl) α).
+    elctx_sat E L (ty_outlv_E (xsum_ty tyl) α).
   Proof.
     intro Hsat. eapply eq_ind; [done|]. clear Hsat.
     rewrite /tyl_outlv_E /ty_outlv_E /=.
-    induction tyl as [|?? IH]=>//=. by rewrite IH fmap_app.
-  Qed. *)
+    induction tyl as [|???? IH]=>//=. by rewrite IH fmap_app.
+  Qed.
 End case.
 
-(* Global Hint Resolve ty_outlv_E_elctx_sat_sum : lrust_typing. *)
+Global Hint Resolve ty_outlv_E_elctx_sat_sum : lrust_typing.
