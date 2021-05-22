@@ -129,6 +129,14 @@ Section typing.
     by iApply type_let'.
   Qed.
 
+  Lemma type_val {𝔄 𝔅l ℭ} v (a: of_syn_type 𝔄) ty (T: _ 𝔅l) E L (C: cctx ℭ) xb e tr :
+    Closed (xb :b: []) e → typed_val v ty a →
+    (∀v': val, typed_body E L C (v' ◁ ty +:: T) (subst' xb v' e) tr) -∗
+    typed_body E L C T (let: xb := v in e) (λ post bl, tr post (a -:: bl)).
+  Proof.
+    iIntros (? Val) "?". iApply type_let; by [apply Val|solve_typing].
+  Qed.
+
   Lemma type_seq {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: _ 𝔄l) (T2: _ 𝔅l)
     (T: _ ℭl) (T': _ 𝔇l) E L (C: cctx 𝔈) e e' tr tr' trx tr_res :
     Closed [] e' → (⊢ typed_instr E L T1 e (const T2) tr) →
@@ -292,7 +300,7 @@ Section typing.
 
 End typing.
 
-Ltac typed_body_impl :=
+Ltac via_tr_impl :=
   iStartProof;
   match goal with |- envs_entails _ (typed_body _ _ ?C ?T _ _) =>
     let TypeT := type of T in let TypeC := type of C in
@@ -301,7 +309,7 @@ Ltac typed_body_impl :=
     end
   end.
 
-Ltac typed_body_impl_as tr :=
+Ltac via_tr_impl_with tr :=
   iStartProof;
   match goal with |- envs_entails _ (typed_body _ _ ?C ?T _ _) =>
     let TypeT := type of T in let TypeC := type of C in
@@ -310,6 +318,10 @@ Ltac typed_body_impl_as tr :=
       iApply (typed_body_impl (𝔄l:=𝔄l) (𝔅:=𝔅) tr); last first
     end
   end.
+
+Ltac cushion_tr := via_tr_impl; [|shelve].
+
+Ltac by_simpl_tr := by move=>/= ??; exact id.
 
 Ltac intro_subst := iIntros (?); simpl_subst.
 Ltac intro_subst_as x := iIntros (x); simpl_subst.
