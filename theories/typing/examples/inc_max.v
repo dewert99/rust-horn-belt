@@ -24,14 +24,11 @@ Section inc_max.
     { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
       typed_body_impl.
       { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
-        iApply type_le; [solve_extract|]. intro_subst. typed_body_impl_as tr.
+        iApply type_le; [solve_extract|]. intro_subst. typed_body_impl.
         { iApply type_if; [solve_extract| |]; (iApply type_assign;
           [solve_extract|solve_typing|solve_typing|]; iApply type_jump;
           [solve_typing|solve_extract|solve_typing]). }
-        move=> ?[ord[?[[??][?[[??][?[?[]]]]]]]] /=.
-        instantiate (tr := (λ post '-[ord; _; (b, b'); _; (a,a'); _; _],
-          if ord then b' = b → post (a, a') else a' = a → post (b, b'))).
-        case ord; rewrite /tr /=; tauto. }
+        move=>/= ??. exact id. }
       move=>/= ??. exact id. }
     move=> ?[[a ?][[b ?][]]] /=. case (bool_decide (b ≤ a)); tauto.
   Qed.
@@ -61,22 +58,23 @@ Section inc_max.
         typed_body_impl.
         { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
           iApply type_int. intro_subst. iApply type_plus; [solve_extract|]. intro_subst.
-          iApply type_assign; [solve_extract|solve_typing|solve_typing|].
-          iApply (type_cont_norec [_;_]
-            (λ vl, +[vhd vl ◁{α} box int; vhd (vtl vl) ◁{α} box int])).
-          { intro_subst. iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
-          iIntros (? vl). inv_vec vl. iIntros. simpl_subst. typed_body_impl_as tr.
-          { iApply type_endlft; [solve_typing|].
-            do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
-            iApply type_minus; [solve_extract|]. intro_subst.
-            iApply type_letalloc_1; [solve_extract|done|]. intro_subst.
-            iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
-          move=> ?[?[?[]]] /=. instantiate (tr := λ post '-[a; b], post (a - b)).
-          rewrite /tr /=. tauto. }
+          typed_body_impl. {
+            iApply type_assign; [solve_extract|solve_typing|solve_typing|].
+            iApply (type_cont_norec [_;_]
+              (λ vl, +[vhd vl ◁{α} box int; vhd (vtl vl) ◁{α} box int])).
+            { intro_subst. iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+            iIntros (? vl). inv_vec vl. iIntros. simpl_subst. typed_body_impl.
+            { iApply type_endlft; [solve_typing|].
+              do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
+              iApply type_minus; [solve_extract|]. intro_subst.
+              iApply type_letalloc_1; [solve_extract|done|]. intro_subst.
+              iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+            move=>/= ??. exact id. }
+          move=>/= ??. exact id. }
         move=>/= ??. exact id. }
       move=>/= ??. exact id. }
     move=>/= ?[a[b[]]] Imp ??. rewrite /trans_upper /=.
-    case Le: (bool_decide (b ≤ a))=> ->_[-> _]; apply Imp; move: Le;
+    case Le: (bool_decide (b ≤ a))=> ->_[-> _]_; apply Imp; move: Le;
     [rewrite bool_decide_eq_true|rewrite bool_decide_eq_false]; lia.
   Qed.
 
