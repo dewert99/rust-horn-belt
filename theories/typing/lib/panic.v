@@ -18,7 +18,7 @@ Section panic.
 
   Lemma panic_type : typed_val panic (fn(∅) → ∅) (λ _ _, False).
   Proof.
-    intros E L. iApply type_fn. iIntros. simpl.
+    eapply type_fn; [solve_typing|]=>/= *.
     iIntros (tid [] postπ) "LFT TIME UNIQ PROPH HE Hna HL Hk HT Hproph /=". simpl_subst.
     by iApply wp_value.
   Qed.
@@ -28,7 +28,7 @@ Section panic.
     (at level 102, e at level 99 ) : expr_scope.
 
   Lemma type_assert_instr {ℭ} E L (C : cctx ℭ) p:
-    ⊢ typed_instr E L +[p ◁ bool_ty] (assert p) (const +[]) (λ post '-[b], if b then post -[] else False : Prop).
+    typed_instr E L +[p ◁ bool_ty] (assert p) (const +[]) (λ post '-[b], if b then post -[] else False : Prop).
   Proof.
     iIntros (? postπ [vπ []]) "LFT TIME #PROPH UNIQ He Hna HL [HT _] #Hproph".
     wp_bind p. iApply (wp_hasty with "HT"). iIntros (???) "⧖ HT".

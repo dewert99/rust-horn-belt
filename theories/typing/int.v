@@ -35,7 +35,7 @@ Section int.
   Proof. iIntros. iApply type_let; by [apply type_int_instr|solve_typing]. Qed.
 
   Lemma type_plus_instr E L p1 p2 :
-    ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 + p2) int
+    typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 + p2) int
       (λ post '-[z; z'], post (z + z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
@@ -56,7 +56,7 @@ Section int.
   Qed.
 
   Lemma type_minus_instr E L p1 p2 :
-    ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 - p2) int
+    typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 - p2) int
       (λ post '-[z; z'], post (z - z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
@@ -77,7 +77,7 @@ Section int.
   Qed.
 
   Lemma type_mult_instr E L p1 p2 :
-    ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 * p2) int
+    typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 * p2) int
       (λ post '-[z; z'], post (z * z')).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
@@ -98,7 +98,7 @@ Section int.
   Qed.
 
   Lemma type_le_instr E L p1 p2 :
-    ⊢ typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 ≤ p2) bool_ty
+    typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 ≤ p2) bool_ty
       (λ post '-[z; z'], post (bool_decide (z ≤ z'))).
   Proof.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".

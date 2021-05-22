@@ -38,7 +38,7 @@ Section typing.
 
   (** Instruction *)
   Definition typed_instr {𝔄l 𝔅l} (E: elctx) (L: llctx)
-    (T: tctx 𝔄l) (e: expr) (T': val → tctx 𝔅l) (tr: predl_trans 𝔄l 𝔅l) : iProp Σ :=
+    (T: tctx 𝔄l) (e: expr) (T': val → tctx 𝔅l) (tr: predl_trans 𝔄l 𝔅l) : Prop :=
     ∀tid postπ vπl, lft_ctx -∗ time_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗
       na_own tid ⊤ -∗ llctx_interp L 1 -∗ tctx_interp tid T vπl -∗
       ⟨π, tr (postπ π) (vπl -$ π)⟩ -∗ WP e {{ v, ∃vπl', na_own tid ⊤ ∗
@@ -71,12 +71,12 @@ Section typing.
   Global Arguments typed_read {_ _ _} _ _ _%T _%T _%T _ _%type.
 
   Definition typed_instr_ty {𝔄l 𝔅} (E: elctx) (L: llctx)
-    (T: tctx 𝔄l) (e: expr) (ty: type 𝔅) (tr: pred' 𝔅 → predl 𝔄l) : iProp Σ :=
+    (T: tctx 𝔄l) (e: expr) (ty: type 𝔅) (tr: pred' 𝔅 → predl 𝔄l) : Prop :=
     typed_instr E L T e (λ v, +[v ◁ ty]) (λ post al, tr (λ b, post -[b]) al).
   Global Arguments typed_instr_ty {_ _} _ _ _ _%E _%T _%type.
 
   Definition typed_val {𝔄} (v: val) (ty: type 𝔄) (a: 𝔄) : Prop :=
-    ∀E L, ⊢ typed_instr_ty E L +[] (of_val v) ty (λ post _, post a).
+    ∀E L, typed_instr_ty E L +[] (of_val v) ty (λ post _, post a).
   Global Arguments typed_val {_} _%V _%T _%type.
 
   (* This lemma is helpful when switching from proving unsafe code in Iris
@@ -98,29 +98,24 @@ Section typing.
 
   Lemma type_let' {𝔄l 𝔅l ℭl 𝔇} E L (T1: _ 𝔄l) (T2: _ → _ 𝔅l) (T: _ ℭl)
     (C: cctx 𝔇) xb e e' tr tr' :
-    Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr -∗
+    Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr →
     (∀v: val, typed_body E L C (T2 v h++ T) (subst' xb v e') tr') -∗
     typed_body E L C (T1 h++ T) (let: xb := e in e') (λ post acl,
       let '(al, cl) := psep acl in tr (λ bl, tr' post (bl -++ cl)) al).
   Proof.
-    iIntros "% e e'" (? vπl2 ?). move: (papp_ex vπl2)=> [vπl[vπl'->]].
+    iIntros "% %Inst e'" (? vπl2 ?). move: (papp_ex vπl2)=> [vπl[vπl'->]].
     iIntros "#LFT #TIME #PROPH #UNIQ #E Na L C [T1 T] Obs". wp_bind e.
-    iApply (wp_wand with "[e L T1 Na Obs]").
-    { iApply ("e" with "LFT TIME PROPH UNIQ E Na L T1").
+    iApply (wp_wand with "[L T1 Na Obs]").
+    { iApply (Inst with "LFT TIME PROPH UNIQ E Na L T1").
       iApply proph_obs_eq; [|done]=> ?. by rewrite /trans_upper papply_app papp_sepl. }
     iIntros "% (%& Na & L & T2 &?)". wp_let. iCombine "T2 T" as "T2T".
     iApply ("e'" with "LFT TIME PROPH UNIQ E Na L C T2T").
     iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app papp_sepr.
   Qed.
 
-  (* We do not make the [typed_instr] hypothesis part of the
-     Iris hypotheses, because we want to preserve the order of the
-     hypotheses. The is important, since proving [typed_instr]
-     will instantiate [T1] and [T2], and hence we know what to search
-     for the following hypothesis. *)
   Lemma type_let {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: _ 𝔄l) (T2: _ → _ 𝔅l)
     (T: _ ℭl) (T': _ 𝔇l) E L (C: cctx 𝔈) xb e e' tr tr' trx tr_res :
-    Closed (xb :b: []) e' → (⊢ typed_instr E L T1 e T2 tr) →
+    Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr →
     tctx_extract_ctx E L T1 T T' trx → tr_res = trx ∘ (trans_upper tr ∘ tr') →
     (∀v: val, typed_body E L C (T2 v h++ T') (subst' xb v e') tr') -∗
     typed_body E L C T (let: xb := e in e') tr_res.
@@ -139,7 +134,7 @@ Section typing.
 
   Lemma type_seq {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: _ 𝔄l) (T2: _ 𝔅l)
     (T: _ ℭl) (T': _ 𝔇l) E L (C: cctx 𝔈) e e' tr tr' trx tr_res :
-    Closed [] e' → (⊢ typed_instr E L T1 e (const T2) tr) →
+    Closed [] e' → typed_instr E L T1 e (const T2) tr →
     tctx_extract_ctx E L T1 T T' trx → tr_res = trx ∘ (trans_upper tr ∘ tr') →
     typed_body E L C (T2 h++ T') e' tr' -∗ typed_body E L C T (e;; e') tr_res.
   Proof. iIntros. iApply (type_let _ (const T2))=>//. by iIntros. Qed.
@@ -173,7 +168,7 @@ Section typing.
   Qed.
 
   Lemma type_path_instr {𝔄} p (ty: _ 𝔄) E L :
-    ⊢ typed_instr_ty E L +[p ◁ ty] p ty (λ post '-[v], post v).
+    typed_instr_ty E L +[p ◁ ty] p ty (λ post '-[v], post v).
   Proof.
     iIntros (??[vπ[]]) "_ _ _ _ _ $$ [T _] Obs". iApply (wp_hasty with "T").
     iIntros (v d _) "??". iExists -[vπ]. do 2 (iSplit; [|done]). iExists v, d.
@@ -193,7 +188,7 @@ Section typing.
   Lemma type_assign_instr {𝔄 𝔅 𝔄' 𝔅'} (ty: _ 𝔄) (tyb: _ 𝔅)
     (ty': _ 𝔄') (tyb': _ 𝔅') gt st Φ p pb E L :
     typed_write E L ty tyb ty' tyb' gt st → leak E L tyb Φ →
-    ⊢ typed_instr E L +[p ◁ ty; pb ◁ tyb'] (p <- pb) (λ _, +[p ◁ ty'])
+    typed_instr E L +[p ◁ ty; pb ◁ tyb'] (p <- pb) (λ _, +[p ◁ ty'])
       (λ post '-[a; b], Φ (gt a) → post -[st a b])%type.
   Proof.
     iIntros ([Eq Wrt] Lk ?? (vπ & wπ &[]))
@@ -230,7 +225,7 @@ Section typing.
 
   Lemma type_deref_instr {𝔄 𝔅 𝔄'} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄') gt st p E L :
     tyb.(ty_size) = 1%nat → typed_read E L ty tyb ty' gt st →
-    ⊢ typed_instr E L +[p ◁ ty] (!p) (λ v, +[v ◁ tyb; p ◁ ty'])
+    typed_instr E L +[p ◁ ty] (!p) (λ v, +[v ◁ tyb; p ◁ ty'])
       (λ post '-[a], post -[gt a; st a]).
   Proof.
     move=> Sz Rd. iIntros (??[vπ[]]) "LFT _ _ _ E Na L [p _] ?".
@@ -259,7 +254,7 @@ Section typing.
     (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str Φ (n: Z) pw pr E L :
     typed_write E L tyw tyb tyw' tyb' gtw stw → leak E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
-    ⊢ typed_instr E L +[pw ◁ tyw; pr ◁ tyr] (pw <-{n} !pr)
+    typed_instr E L +[pw ◁ tyw; pr ◁ tyr] (pw <-{n} !pr)
       (λ _, +[pw ◁ tyw'; pr ◁ tyr'])
       (λ post '-[a; b], Φ (gtw a) → post -[stw a (gtr b); str b])%type.
   Proof.

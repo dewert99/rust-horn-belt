@@ -209,7 +209,7 @@ Section case.
 
   Lemma type_sum_assign_instr {E L 𝔄 𝔄' As} (i : nat) (ty1 : type 𝔄) (tyl : typel As) (ty2 : type 𝔄') p1 p2 gt st:
     (typed_write E L ty1 (xsum_ty tyl) ty2 (xsum_ty tyl) gt st)  →
-    ⊢ typed_instr E L +[p1 ◁ ty1; p2 ◁ hnthb tyl i] (p1 <-{Σ i} p2) (λ _, +[p1 ◁ ty2])
+    typed_instr E L +[p1 ◁ ty1; p2 ◁ hnthb tyl i] (p1 <-{Σ i} p2) (λ _, +[p1 ◁ ty2])
       (λ post '-[a; b], post -[st a (pinj i b)]).
   Proof.
     iIntros ([Eq Hw] tid postπ (? & ? & [])) "#LFT #TIME #PROPH #UNIQ #HE $ HL (Hp1 & Hp2 & _) Hproph".
@@ -249,16 +249,14 @@ Section case.
     typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
     typed_body E L C ((p1 ◁ ty1') +:: T') e tr -∗
     typed_body E L C T (p1 <-{Σ i} p2 ;; e) (fr ∘ ((λ post '(a -:: b -:: f), post (st a (pinj i b) -:: f)) ∘ tr)).
-  Proof. iIntros. iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ H1).
-    iApply (typed_body_impl (_ : predl_trans' (_ :: _ :: Ts') _)); last first.
-    iApply type_seq; [by eapply type_sum_assign_instr |solve_typing|done| done ].
-    done.
+  Proof. iIntros. iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ H1). via_tr_impl.
+    { iApply type_seq; by [eapply type_sum_assign_instr|solve_typing]. } done.
   Qed.
 
   Lemma type_sum_unit_instr {E L 𝔄 𝔅 As} (i : nat) (tyl : _ As) (ty1 : _ 𝔄) (ty2 : _ 𝔅) p gt st eq:
     hnthb tyl i = eq_rect _ _ unit_ty _ eq →
     typed_write E L ty1 (xsum_ty tyl) ty2 (xsum_ty tyl) gt st →
-    ⊢ typed_instr E L +[p ◁ ty1] (p <-{Σ i} ())
+    typed_instr E L +[p ◁ ty1] (p <-{Σ i} ())
     (λ _, +[p ◁ ty2]) (λ post '-[a], post -[st a (pinj i (eq_rect unitₛ _ () _ eq))]).
   Proof.
     iIntros (Hty [Eq Hw] tid postπ [vπ []]) "#LFT #TIME #PROPH #UNIQ #HE $ HL [Hp _] Hproph".
@@ -290,9 +288,8 @@ Section case.
       (fr ∘ (λ post '(a -:: f), post (st a (pinj i (eq_rect unitₛ _ () _ eq)) -:: f) ) ∘ tr).
   Proof.
     iIntros (?? Incl) "* **". iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ Incl).
-    iApply (typed_body_impl (_ : predl_trans' (_:: Ts') _)); last first.
-    iApply type_seq; [by iApply type_sum_unit_instr|solve_typing|done|done].
-    done.
+    via_tr_impl.
+    { iApply type_seq; by [eapply type_sum_unit_instr|solve_typing]. } done.
   Qed.
 
   Lemma type_sum_memcpy_instr {E L As 𝔄 𝔄' 𝔅 𝔅'} (i : nat) (tyl : typel As)
@@ -300,9 +297,9 @@ Section case.
     let ty := hnthb tyl i in
     typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
     typed_read E L ty2 ty ty2' rd wt →
-    ⊢ typed_instr E L +[p1 ◁ ty1; p2 ◁ ty2]
-               (p1 <-{ty.(ty_size),Σ i} !p2) (λ _, +[p1 ◁ ty1'; p2 ◁ ty2'])
-               (λ post '-[a; b], post -[st a (pinj i (rd b)); wt b]).
+    typed_instr E L +[p1 ◁ ty1; p2 ◁ ty2]
+      (p1 <-{ty.(ty_size),Σ i} !p2) (λ _, +[p1 ◁ ty1'; p2 ◁ ty2'])
+      (λ post '-[a; b], post -[st a (pinj i (rd b)); wt b]).
   Proof.
     iIntros (ty [Eq Hw] Hr tid postπ (vπ & wπ & [])) "#LFT #TIME #PROPH #UNIQ #HE Htl [HL1 HL2] (Hp1 & Hp2 & _) Hproph".
     iDestruct (closed_hasty with "Hp1") as "%". iDestruct (closed_hasty with "Hp2") as "%".
@@ -355,9 +352,8 @@ Section case.
     typed_body E L C T (p1 <-{n,Σ i} !p2 ;; e) (fr ∘ (λ post '(a -:: b -:: f), post (st a (pinj i (rd b)) -:: wt b -:: f)) ∘ tr).
   Proof.
     iIntros (??? Incl ?? <-) "* **". iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ Incl).
-    iApply (typed_body_impl (_ : predl_trans' (_ :: _ :: Ts') _)); last first.
-    iApply type_seq; [by iApply type_sum_memcpy_instr|solve_typing|done|done].
-    done.
+    via_tr_impl.
+    { iApply type_seq; by [eapply type_sum_memcpy_instr|solve_typing]. } done.
   Qed.
 
   Lemma ty_outlv_E_elctx_sat_sum {As} E L (tyl : _ As) α:

@@ -97,7 +97,7 @@ Section lemmas.
   Qed.
 
   Lemma type_idx_shr_array_instr {𝔄} (ty: _ 𝔄) n κ p q E L :
-    ⊢ typed_instr_ty E L +[p ◁ &shr{κ} [ty; n]; q ◁ int]
+    typed_instr_ty E L +[p ◁ &shr{κ} [ty; n]; q ◁ int]
       (p +ₗ q * #ty.(ty_size))%E (&shr{κ} ty)
       (λ post '-[xl; z], ∃i: fin n, z = i ∧ post (xl !!! i))%type.
   Proof.

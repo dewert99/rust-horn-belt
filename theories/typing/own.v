@@ -216,7 +216,7 @@ Section typing.
 
   Lemma type_new_instr n E L :
     0 ≤ n → let n' := Z.to_nat n in
-    ⊢ typed_instr_ty E L +[] (new [ #n])%E (own_ptr n' (↯ n')) (λ post _, post ()).
+    typed_instr_ty E L +[] (new [ #n])%E (own_ptr n' (↯ n')) (λ post _, post ()).
   Proof.
     iIntros (?????) "_ TIME _ _ _ $$ _ ?". iMod persist_time_rcpt_0 as "⧖".
     iApply (wp_persist_time_rcpt with "TIME ⧖"); [done|].
@@ -245,7 +245,7 @@ Section typing.
 
   Lemma type_delete_instr {𝔄} (ty: _ 𝔄) (n: Z) p E L :
     let n' := ty.(ty_size) in n = Z.of_nat n' →
-    ⊢ typed_instr E L +[p ◁ own_ptr n' ty] (delete [ #n; p])%E (λ _, +[])
+    typed_instr E L +[p ◁ own_ptr n' ty] (delete [ #n; p])%E (λ _, +[])
       (λ post _, post -[]).
   Proof.
     iIntros (?->??[?[]]) "_ _ _ _ _ $$ [p _] #Obs". wp_bind p.

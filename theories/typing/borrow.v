@@ -34,8 +34,7 @@ Section borrow.
 
   Lemma type_share_instr {𝔄} E L p κ (ty : type 𝔄) :
     lctx_lft_alive E L κ →
-    (* κ ⊑ ty_lft ty  *)
-    ⊢ typed_instr E L +[p ◁ &uniq{κ}ty] Share (const +[p ◁ &shr{κ} ty]) (λ post '-[a], a.1 = a.2 -> post -[a.1]).
+    typed_instr E L +[p ◁ &uniq{κ}ty] Share (const +[p ◁ &shr{κ} ty]) (λ post '-[a], a.1 = a.2 -> post -[a.1]).
   Proof.
     iIntros (Hκ ?? [vπ []]) "#LFT #TIME #PROPH #UNIQ #HE $ HL [Huniq _] Hproph".
     iMod (Hκ with "HE HL") as (q) "[[Htok1 Htok2] Hclose]"; [done..|].
@@ -81,7 +80,7 @@ Section borrow.
     typed_body E L C T (Share;; e) (trx ∘ (λ post '(a -:: bl),
       a.1 = a.2 → tr post (a.1 -:: bl)))%type.
   Proof.
-    iIntros. iApply type_seq; [by iApply type_share_instr|solve_typing|done|done].
+    iIntros. iApply type_seq; by [eapply type_share_instr|solve_typing].
   Qed.
 
   Lemma tctx_extract_hasty_borrow {𝔄 𝔅 As} E L p n (ty : type 𝔄) (ty' : type 𝔅) κ (T : tctx As) f:
@@ -99,7 +98,7 @@ Section borrow.
 
   Lemma type_deref_uniq_own_instr {𝔄} κ p n (ty: type 𝔄) E L :
     lctx_lft_alive E L κ →
-    ⊢ typed_instr_ty E L +[p ◁ &uniq{κ} (own_ptr n ty)]
+    typed_instr_ty E L +[p ◁ &uniq{κ} (own_ptr n ty)]
         (!p) (&uniq{κ} ty) (λ post '-[a], post a).
   Proof.
     iIntros (Alvκ ?? [vπ []]) "#LFT #TIME #PROPH #UNIQ #E $ L [p _] Obs".
@@ -148,7 +147,7 @@ Section borrow.
 
   Lemma type_deref_shr_own_instr {𝔅} {E L} κ p n (ty : type 𝔅) :
     lctx_lft_alive E L κ →
-    ⊢ typed_instr_ty E L +[p ◁ &shr{κ}(own_ptr n ty)] (!p) (&shr{κ} ty) (λ post '-[a], post a).
+    typed_instr_ty E L +[p ◁ &shr{κ}(own_ptr n ty)] (!p) (&shr{κ} ty) (λ post '-[a], post a).
   Proof.
     iIntros (Hκ tid ? [vπ []]) "#LFT #TIME #PROPH #UNIQ HE $ HL [Hp _] /= Hproph".
     iMod (Hκ with "HE HL") as (q) "[[Htok1 Htok2] Hclose]"; first solve_ndisj.
@@ -180,7 +179,7 @@ Section borrow.
 
   Lemma type_deref_uniq_uniq_instr {𝔄 E L} κ κ' p (ty : type 𝔄) :
     lctx_lft_alive E L κ →
-    ⊢ typed_instr_ty E L +[p ◁ &uniq{κ}(&uniq{κ'}ty)] (!p) (&uniq{κ} ty) tr_unnest.
+    typed_instr_ty E L +[p ◁ &uniq{κ}(&uniq{κ'}ty)] (!p) (&uniq{κ} ty) tr_unnest.
   Proof.
     iIntros (Hκ tid ? [vπ []]) "/= #LFT #TIME #PROPH #UNIQ #HE $ HL [Hp _] Hproph".
     iMod (Hκ with "HE HL") as (q) "[Htok Hclose]"; first solve_ndisj.
@@ -282,7 +281,7 @@ Section borrow.
 
   Lemma type_deref_shr_uniq_instr {𝔄} {E L} κ κ' p (ty : type 𝔄) :
     lctx_lft_alive E L κ →
-    ⊢ typed_instr_ty E L +[p ◁ &shr{κ}(&uniq{κ'}ty)] (!p) (&shr{κ}ty) (λ post '-[v], post v.1).
+    typed_instr_ty E L +[p ◁ &shr{κ}(&uniq{κ'}ty)] (!p) (&shr{κ}ty) (λ post '-[v], post v.1).
   Proof.
     iIntros (Hκ tid ? [vπ []]) "#LFT #TIME #PROPH #UNIQ HE $ HL [Hp _] Hproph".
     iMod (Hκ with "HE HL") as (q) "[Htok Hclose]"; first solve_ndisj.

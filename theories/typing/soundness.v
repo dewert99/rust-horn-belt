@@ -44,7 +44,8 @@ Section type_soundness.
     iMod proph_init as (?) "#PROPH". done.
     iMod uniq_init as (?) "#UNIQ". done. set (Htype := TypeG _ _ _ _ _ _ _).
     wp_bind (of_val main). iApply (wp_wand with "[Htl]").
-    iApply (Hmain Htype [] [] $! tid (λ _ '-[vπ], vπ (const True) -[]) -[] with "LFT TIME PROPH UNIQ [] Htl [] [$]").
+    iApply (Hmain Htype [] [] tid (λ _ '-[vπ], vπ (const True) -[]) -[]
+      with "LFT TIME PROPH UNIQ [] Htl [] [$]").
     { by rewrite /elctx_interp. }
     { by rewrite /llctx_interp big_sepL_nil. }
     { by iApply proph_obs_true. }
