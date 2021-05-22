@@ -187,7 +187,12 @@ Section lemmas.
     by iApply (Lk with "LFT PROPH E L T").
   Qed.
 
-  Lemma leak_tctx_cons_blocked {𝔄 𝔅l} E L p κ (ty: _ 𝔄) (T: _ 𝔅l) Φ :
+  Lemma leak_tctx_cons_just_hasty {𝔄 𝔅l} E L p (ty: _ 𝔄) (T: _ 𝔅l) Φ :
+    leak E L ty (const True) → leak_tctx E L T Φ →
+    leak_tctx E L (p ◁ ty +:: T) (λ '(_ -:: bl), Φ bl).
+  Proof. move=> ?. apply leak_tctx_cons_just. Qed.
+
+  Lemma leak_tctx_cons_just_blocked {𝔄 𝔅l} E L p κ (ty: _ 𝔄) (T: _ 𝔅l) Φ :
     leak_tctx E L T Φ → leak_tctx E L (p ◁{κ} ty +:: T) (λ '(_ -:: bl), Φ bl).
   Proof. apply leak_tctx_cons_just. Qed.
 
@@ -401,6 +406,10 @@ Section lemmas.
     (T1: tctx 𝔅l) (T2: tctx ℭl) (tr: predl_trans 𝔅l (𝔄l ++ ℭl)) : Prop :=
     tctx_incl E L T1 (T h++ T2) tr.
 
+  Lemma tctx_extract_ctx_eq {𝔄l 𝔅l ℭl} tr tr' E L (T: _ 𝔄l) (T1: _ 𝔅l) (T2: _ ℭl) :
+    tctx_extract_ctx E L T T1 T2 tr' → tr = tr' → tctx_extract_ctx E L T T1 T2 tr.
+  Proof. by move=> ?->. Qed.
+
   Lemma tctx_extract_ctx_nil {𝔄l} (T: _ 𝔄l) E L : tctx_extract_ctx E L +[] T T id.
   Proof. apply tctx_incl_refl. Qed.
 
@@ -474,14 +483,20 @@ Section lemmas.
 
 End lemmas.
 
+Ltac solve_extract :=
+  eapply tctx_extract_ctx_eq; [solve_typing|];
+  rewrite /trans_tail /compose /=; by reflexivity.
+
 Global Hint Resolve leak_tctx_nil : lrust_typing.
-(* Mysteriously, registering [leak_tctx_cons_hasty]/[leak_tctx_cons_blocked]
+(* Mysteriously, registering [leak_tctx_cons_*]
   to [Global Hint Resolve] does not help automation in some situations,
   but the following hints let automation work *)
-Global Hint Extern 0 (leak_tctx _ _ _ _) =>
+Global Hint Extern 10 (leak_tctx _ _ _ _) =>
   simple apply leak_tctx_cons_hasty : lrust_typing.
 Global Hint Extern 0 (leak_tctx _ _ _ _) =>
-  simple apply leak_tctx_cons_blocked : lrust_typing.
+  simple apply leak_tctx_cons_just_hasty : lrust_typing.
+Global Hint Extern 0 (leak_tctx _ _ _ _) =>
+  simple apply leak_tctx_cons_just_blocked : lrust_typing.
 
 Global Hint Resolve tctx_extract_elt_here_copy | 1 : lrust_typing.
 Global Hint Resolve tctx_extract_elt_here_exact | 2 : lrust_typing.

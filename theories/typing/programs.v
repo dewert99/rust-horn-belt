@@ -1,3 +1,4 @@
+From iris.proofmode Require Import environments.
 From lrust.lang Require Import proofmode memcpy.
 From lrust.typing Require Export type lft_contexts type_context cont_context.
 Set Default Proof Using "Type".
@@ -291,6 +292,26 @@ Section typing.
 
 End typing.
 
+Ltac typed_body_impl :=
+  iStartProof;
+  match goal with |- envs_entails _ (typed_body _ _ ?C ?T _ _) =>
+    let TypeT := type of T in let TypeC := type of C in
+    match eval hnf in (TypeT, TypeC) with (hlist _ ?𝔄l, list (_ ?𝔅)) =>
+      iApply (typed_body_impl (𝔄l:=𝔄l) (𝔅:=𝔅)); last first
+    end
+  end.
+
+Ltac typed_body_impl_as tr :=
+  iStartProof;
+  match goal with |- envs_entails _ (typed_body _ _ ?C ?T _ _) =>
+    let TypeT := type of T in let TypeC := type of C in
+    match eval hnf in (TypeT, TypeC) with (hlist _ ?𝔄l, list (_ ?𝔅)) =>
+      evar (tr: predl_trans' 𝔄l 𝔅);
+      iApply (typed_body_impl (𝔄l:=𝔄l) (𝔅:=𝔅) tr); last first
+    end
+  end.
+
 Ltac intro_subst := iIntros (?); simpl_subst.
+Ltac intro_subst_as x := iIntros (x); simpl_subst.
 
 Global Hint Opaque typed_instr typed_write typed_read : lrust_typing.
