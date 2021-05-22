@@ -215,6 +215,11 @@ Section typing.
   Qed.
   Hint Resolve prod_leak : lrust_typing.
 
+  Lemma prod_leak_just {𝔄 𝔅} (ty: _ 𝔄) (ty': _ 𝔅) E L :
+    leak E L ty (const True) → leak E L ty' (const True) →
+    leak E L (ty * ty') (const True).
+  Proof. move=> ??. apply leak_just. Qed.
+
   Lemma xprod_leak {𝔄l} (tyl: _ 𝔄l) Φl E L :
     leakl E L tyl Φl →
     leak E L (Π! tyl) (λ al, pforall (λ _, curry ($)) (pzip Φl al)).
@@ -222,6 +227,11 @@ Section typing.
     elim; [eapply leak_impl; [apply leak_just|done]|]=>/= *.
     by eapply leak_impl; [solve_typing|]=>/= [[??][??]].
   Qed.
+
+  Lemma xprod_leak_just {𝔄l} (tyl: _ 𝔄l) E L :
+    HForall (λ _ ty, leak E L ty (const True)) tyl →
+    leak E L (Π! tyl) (const True).
+  Proof. move=> ?. apply leak_just. Qed.
 
   Lemma prod_subtype {𝔄 𝔅 𝔄' 𝔅'} E L (f: 𝔄 → 𝔄') (g: 𝔅 → 𝔅') ty1 ty2 ty1' ty2' :
     subtype E L ty1 ty1' f → subtype E L ty2 ty2' g →
@@ -335,6 +345,7 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve prod_leak xprod_leak
+Global Hint Resolve prod_leak xprod_leak | 5 : lrust_typing.
+Global Hint Resolve prod_leak_just xprod_leak_just
   prod_subtype prod_eqtype xprod_subtype xprod_eqtype
   xprod_outlv_E_elctx_sat : lrust_typing.

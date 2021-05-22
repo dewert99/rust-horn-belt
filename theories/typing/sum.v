@@ -242,12 +242,19 @@ Section typing.
   Qed.
   Hint Resolve xsum_leak : lrust_typing.
 
+  Lemma xsum_leak_just {𝔄l} E L (tyl: _ 𝔄l) :
+    HForall (λ _ ty, leak E L ty (const True)) tyl → leak E L (Σ! tyl) (const True).
+  Proof. move=> ?. apply leak_just. Qed.
+
   Lemma sum_leak {𝔄 𝔅} E L (ty: _ 𝔄) (ty': _ 𝔅) Φ Φ' :
     leak E L ty Φ → leak E L ty' Φ' →
     leak E L (ty + ty') (λ s, match s with inl a => Φ a | inr b => Φ' b end).
-  Proof.
-    move=> ??. eapply leak_impl; [solve_typing|]. by case.
-  Qed.
+  Proof. move=> ??. eapply leak_impl; [solve_typing|]. by case. Qed.
+
+  Lemma sum_leak_just {𝔄 𝔅} E L (ty: _ 𝔄) (ty': _ 𝔅) :
+    leak E L ty (const True) → leak E L ty' (const True) →
+    leak E L (ty + ty') (const True).
+  Proof. move=> ??. apply leak_just. Qed.
 
   Lemma xsum_subtype {𝔄l 𝔅l} E L (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl :
     subtypel E L tyl tyl' fl → subtype E L (Σ! tyl) (Σ! tyl') (psum_map fl).
@@ -304,5 +311,6 @@ End typing.
 
 Global Instance empty_empty `{!typeG Σ} : Empty (type ∅) := empty.
 
-Global Hint Resolve xsum_leak sum_leak xsum_subtype xsum_eqtype
+Global Hint Resolve xsum_leak sum_leak | 5 : lrust_typing.
+Global Hint Resolve xsum_leak_just sum_leak_just xsum_subtype xsum_eqtype
   sum_subtype sum_eqtype : lrust_typing.

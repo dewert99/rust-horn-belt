@@ -370,6 +370,11 @@ Proof. split; fun_ext; by [case|case=> [?|[?|[]]]]. Qed.
 Fixpoint pforall `{F: A → _} {Xl} (Φ: ∀X, F X → Prop) (xl: plist F Xl) : Prop :=
   match Xl, xl with [], _ => True | _::_, x -:: xl' => Φ _ x ∧ pforall Φ xl' end.
 
+Inductive HForall `{F: A → _} (Φ: ∀X, F X → Prop) : ∀{Xl}, hlist F Xl → Prop :=
+| HForall_nil: HForall Φ +[]
+| HForall_cons {X Xl} (x: _ X) (xl: _ Xl) :
+    Φ _ x → HForall Φ xl → HForall Φ (x +:: xl).
+
 Inductive TCHForall `{F: A → _} (Φ: ∀X, F X → Prop) : ∀{Xl}, hlist F Xl → Prop :=
 | TCHForall_nil: TCHForall Φ +[]
 | TCHForall_cons {X Xl} (x: _ X) (xl: _ Xl) :

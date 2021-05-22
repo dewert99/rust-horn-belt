@@ -209,6 +209,11 @@ Section typing.
     array_succ_prod|]. solve_typing. } move=> v. by inv_vec v.
   Qed.
 
+  Lemma array_leak_just {𝔄} (ty: _ 𝔄) n E L :
+    leak E L ty (const True) → leak E L [ty; n] (const True).
+  Proof. move=> ?. apply leak_just. Qed.
+
 End typing.
 
-Global Hint Resolve array_leak array_subtype array_eqtype : lrust_typing.
+Global Hint Resolve array_leak | 5 : lrust_typing.
+Global Hint Resolve array_leak_just array_subtype array_eqtype : lrust_typing.

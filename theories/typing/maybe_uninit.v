@@ -105,6 +105,10 @@ Section typing.
     iApply (step_fupdN_wand with "ToObs"). by iIntros "!> >[$$]".
   Qed.
 
+  Lemma maybe_uninit_leak_just {𝔄} (ty: _ 𝔄) E L :
+    leak E L ty (const True) → leak E L (? ty) (const True).
+  Proof. move=> ?. apply leak_just. Qed.
+
   Lemma maybe_uninit_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty' E L :
     subtype E L ty ty' f → subtype E L (? ty) (? ty') (option_map f).
   Proof.
@@ -146,5 +150,6 @@ Section typing.
 
 End typing.
 
-Global Hint Resolve maybe_uninit_leak maybe_uninit_subtype maybe_uninit_eqtype
-  : lrust_typing.
+Global Hint Resolve maybe_uninit_leak | 5 : lrust_typing.
+Global Hint Resolve maybe_uninit_leak_just
+  maybe_uninit_subtype maybe_uninit_eqtype : lrust_typing.
