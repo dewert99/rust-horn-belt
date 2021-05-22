@@ -98,7 +98,8 @@ Section array.
 
 End array.
 
-Notation "[ ty ; n ]" := (array n ty) (format "[ ty ;  n ]") : lrust_type_scope.
+(* The notation in Rust is [ty; n], but it conflicts with lists in Coq *)
+Notation "[ ty ;^ n ]" := (array n ty) (format "[ ty ;^  n ]") : lrust_type_scope.
 
 Section typing.
   Context `{!typeG Σ}.
@@ -109,7 +110,7 @@ Section typing.
     [by do 6 f_equiv|rewrite Sz; by do 3 f_equiv].
   Qed.
 
-  Global Instance array_copy {𝔄} n (ty: _ 𝔄) : Copy ty → Copy [ty; n].
+  Global Instance array_copy {𝔄} n (ty: _ 𝔄) : Copy ty → Copy [ty;^ n].
   Proof.
     split; [apply _|]=>/= vπ ???? F l q ? HF. iIntros "#LFT tys Na κ".
     move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl. iInduction aπl as [] "IH" forall (q l F HF)=>/=.
@@ -132,13 +133,13 @@ Section typing.
     iMod ("Toκ+" with "Na [$↦' $↦r']") as "[Na $]". iApply ("Toκ" with "Na [$↦ $↦r]").
   Qed.
 
-  Global Instance array_send {𝔄} n (ty: _ 𝔄) : Send ty → Send [ty; n].
+  Global Instance array_send {𝔄} n (ty: _ 𝔄) : Send ty → Send [ty;^ n].
   Proof. move=> >/=. by do 6 f_equiv. Qed.
-  Global Instance array_sync {𝔄} n (ty: _ 𝔄) : Sync ty → Sync [ty; n].
+  Global Instance array_sync {𝔄} n (ty: _ 𝔄) : Sync ty → Sync [ty;^ n].
   Proof. move=> >/=. by do 3 f_equiv. Qed.
 
   Lemma array_subtype {𝔄 𝔅} E L n (f: 𝔄 → 𝔅) ty ty' :
-    subtype E L ty ty' f → subtype E L [ty; n] [ty'; n] (vmap f).
+    subtype E L ty ty' f → subtype E L [ty;^ n] [ty';^ n] (vmap f).
   Proof.
     iIntros (Sub ?) "L". iDestruct (Sub with "L") as "#Sub".
     iIntros "!> E". iDestruct ("Sub" with "E") as "(%Sz & ? & #InOwn & #InShr)".
@@ -155,10 +156,10 @@ Section typing.
       iSplitL "ty"; by [iApply "InShr"|iApply "IH"].
   Qed.
   Lemma array_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' n E L :
-    eqtype E L ty ty' f g → eqtype E L [ty; n] [ty'; n] (vmap f) (vmap g).
+    eqtype E L ty ty' f g → eqtype E L [ty;^ n] [ty';^ n] (vmap f) (vmap g).
   Proof. move=> [??]. split; by apply array_subtype. Qed.
 
-  Lemma array_one {𝔄} (ty: _ 𝔄) E L : eqtype E L [ty; 1] ty vhd (λ x, [#x]).
+  Lemma array_one {𝔄} (ty: _ 𝔄) E L : eqtype E L [ty;^ 1] ty vhd (λ x, [#x]).
   Proof.
     apply eqtype_unfold; [apply _|]. iIntros "% _!>_".
     iSplit; [by rewrite/= Nat.add_0_r|]. iSplit; [iApply lft_equiv_refl|].
@@ -172,7 +173,7 @@ Section typing.
   Qed.
 
   Lemma array_plus_prod {𝔄} m n (ty: _ 𝔄) E L :
-    eqtype E L [ty; m + n] ([ty; m] * [ty; n]) (vsepat m) (curry vapp).
+    eqtype E L [ty;^ m + n] ([ty;^ m] * [ty;^ n]) (vsepat m) (curry vapp).
   Proof.
     apply eqtype_symm, eqtype_unfold; [apply _|]. iIntros (?) "_!>_".
     iSplit; [iPureIntro=>/=; lia|]. iSplit. { rewrite/= lft_intersect_list_app.
@@ -195,14 +196,14 @@ Section typing.
   Qed.
 
   Lemma array_succ_prod {𝔄} n (ty: _ 𝔄) E L :
-    eqtype E L [ty; S n] (ty * [ty; n]) (λ v, (vhd v, vtl v)) (curry (λ x, vcons x)).
+    eqtype E L [ty;^ S n] (ty * [ty;^ n]) (λ v, (vhd v, vtl v)) (curry (λ x, vcons x)).
   Proof.
     eapply eqtype_eq. { eapply eqtype_trans; [apply (array_plus_prod 1)|].
     apply prod_eqtype; [apply array_one|solve_typing]. } { done. } { fun_ext. by case. }
   Qed.
 
   Lemma array_leak {𝔄} (ty: _ 𝔄) n Φ E L :
-    leak E L ty Φ → leak E L [ty; n] (λ al, lforall Φ al).
+    leak E L ty Φ → leak E L [ty;^ n] (λ al, lforall Φ al).
   Proof.
     move=> ?. elim n. { eapply leak_impl; [apply leak_just|]=> v. by inv_vec v. }
     move=> ? IH. eapply leak_impl. { eapply leak_subtype; [by eapply proj1,
@@ -210,7 +211,7 @@ Section typing.
   Qed.
 
   Lemma array_leak_just {𝔄} (ty: _ 𝔄) n E L :
-    leak E L ty (const True) → leak E L [ty; n] (const True).
+    leak E L ty (const True) → leak E L [ty;^ n] (const True).
   Proof. move=> ?. apply leak_just. Qed.
 
 End typing.
