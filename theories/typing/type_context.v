@@ -154,30 +154,33 @@ Section lemmas.
 
   (** Leaking a Type Context *)
 
-  Definition leak_tctx {𝔄l} (E: elctx) (L: llctx) (T: tctx 𝔄l) (Φ: predl 𝔄l) : Prop :=
+  Definition leak_tctx {𝔄l} (E: elctx) (L: llctx) (T: tctx 𝔄l)
+    (Φ: plist of_syn_type 𝔄l → Prop → Prop) : Prop :=
     ∀F q tid vπl, ↑lftN ∪ ↑prophN ⊆ F → lft_ctx -∗ proph_ctx -∗
       elctx_interp E -∗ llctx_interp L q -∗ tctx_interp tid T vπl ={F}=∗
-        ∃d, ⧖d ∗ |={F}▷=>^d |={F}=> ⟨π, Φ (vπl -$ π)⟩ ∗ llctx_interp L q.
+        ∃d, ⧖d ∗ |={F}▷=>^d |={F}=>
+          ⟨π, ∀φ, Φ (vπl -$ π) φ → φ⟩ ∗ llctx_interp L q.
 
-  Lemma leak_tctx_just {𝔄l} E L (T: _ 𝔄l) : leak_tctx E L T (const True).
+  Lemma leak_tctx_just {𝔄l} E L (T: _ 𝔄l) : leak_tctx E L T (const id).
   Proof.
     move=> *. iMod persist_time_rcpt_0 as "⧖". iIntros "_ _ _ $ _!>". iExists _.
-    iFrame "⧖". iApply step_fupdN_full_intro. by iApply proph_obs_true.
+    iFrame "⧖". iApply step_fupdN_full_intro. by iApply proph_obs_true=>/= ?.
   Qed.
 
-  Lemma leak_tctx_nil E L : leak_tctx E L +[] (const True).
+  Lemma leak_tctx_nil E L : leak_tctx E L +[] (const id).
   Proof. apply leak_tctx_just. Qed.
 
   Lemma leak_tctx_cons_hasty {𝔄 𝔅l} E L p (ty: _ 𝔄) Φ (T: _ 𝔅l) Ψ :
     leak E L ty Φ → leak_tctx E L T Ψ →
-    leak_tctx E L (p ◁ ty +:: T) (λ '(a -:: bl), Φ a ∧ Ψ bl).
+    leak_tctx E L (p ◁ ty +:: T) (λ '(a -:: bl) φ, Φ a → Ψ bl φ).
   Proof.
     iIntros (Lk Lk' ???[??]?) "#LFT #PROPH #E [L L+] /=[(%&%&_& ⧖ & ty) T]".
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
     iMod (Lk' with "LFT PROPH E L+ T") as (?) "[⧖' ToObs']"; [done|].
     iCombine "⧖ ⧖'" as "⧖". iCombine "ToObs ToObs'" as "ToObs".
     iExists _. iFrame "⧖". iApply (step_fupdN_wand with "ToObs").
-    iIntros "!> [>[Obs $] >[Obs' $]] !>". iCombine "Obs Obs'" as "$".
+    iIntros "!> [>[Obs $] >[Obs' $]] !>". iCombine "Obs Obs'" as "?".
+    iApply proph_obs_impl; [|done]=>/= ?[? Imp]? Imp'. by apply Imp, Imp'.
   Qed.
 
   Lemma leak_tctx_cons_just {𝔄 𝔅l} E L (t: _ 𝔄) (T: _ 𝔅l) Φ :

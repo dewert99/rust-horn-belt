@@ -22,16 +22,16 @@ Section typing.
     IntoVecVal el vl → k ◁cont{L, T'} tr ∈ C →
     tctx_extract_ctx E L (T' vl) T Tx trx → leak_tctx E L Tx Φ →
     ⊢ typed_body E L C T (jump: k el) (trx ∘ (λ post bcl,
-      let '(bl, cl) := psep bcl in Φ cl → tr post bl))%type.
+      let '(bl, cl) := psep bcl in Φ cl (tr post bl)))%type.
   Proof.
     move=> -> ? TT' Lk. iApply typed_body_tctx_incl; [done|]. iIntros (? bcπl ?).
     move: (papp_ex bcπl)=> [?[?->]]. iIntros "LFT TIME PROPH _ E Na L C /=[T' Tx] Obs".
     iMod (Lk with "LFT PROPH E L Tx") as (?) "[⧖ ToObs]"; [done|]. wp_bind Skip.
     iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME ⧖ [ToObs]")=>//.
     { iApply step_fupdN_with_emp. by rewrite difference_empty_L. } wp_seq.
-    iIntros "[Obs' L] !>". iCombine "Obs Obs'" as "Obs". wp_seq.
-    iApply ("C" with "[%//] Na L T' [Obs]"). iApply proph_obs_impl; [|done]=>/= ?.
-    rewrite papply_app papp_sepl papp_sepr. case=> Imp ?. by apply Imp.
+    iIntros "[Obs' L] !>". iCombine "Obs Obs'" as "#?". wp_seq.
+    iApply ("C" with "[%//] Na L T' []"). iApply proph_obs_impl; [|done]=>/= ?.
+    rewrite papply_app papp_sepl papp_sepr. case=> ? Imp. by apply Imp.
   Qed.
 
   Lemma type_cont {𝔄l 𝔅l ℭ} bl (T': _ → _ 𝔅l) L' (T: _ 𝔄l) kb ec e

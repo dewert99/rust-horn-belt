@@ -187,9 +187,9 @@ Section typing.
 
   Lemma type_assign_instr {𝔄 𝔅 𝔄' 𝔅'} (ty: _ 𝔄) (tyb: _ 𝔅)
     (ty': _ 𝔄') (tyb': _ 𝔅') gt st Φ p pb E L :
-    typed_write E L ty tyb ty' tyb' gt st → leak E L tyb Φ →
+    typed_write E L ty tyb ty' tyb' gt st → leak' E L tyb Φ →
     typed_instr E L +[p ◁ ty; pb ◁ tyb'] (p <- pb) (λ _, +[p ◁ ty'])
-      (λ post '-[a; b], Φ (gt a) → post -[st a b])%type.
+      (λ post '-[a; b], Φ (gt a) (post -[st a b])).
   Proof.
     iIntros ([Eq Wrt] Lk ?? (vπ & wπ &[]))
       "#LFT #TIME PROPH UNIQ #E $ [L L'] (p & pb & _) Obs".
@@ -208,16 +208,16 @@ Section typing.
     { iExists [vb]. rewrite -heap_mapsto_vec_singleton. iFrame. }
     iExists -[st ∘ vπ ⊛ wπ]. iSplitR "Obs".
     - rewrite right_id tctx_hasty_val'; [|done]. iExists (S db). by iFrame.
-    - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
+    - iApply proph_obs_impl; [|done]=>/= ?[? Imp]. by apply Imp.
   Qed.
 
   Lemma type_assign {𝔄 𝔅 𝔄' 𝔅' 𝔄l 𝔅l ℭ} (ty: _ 𝔄) (tyb: _ 𝔅) (ty': _ 𝔄')
     (tyb': _ 𝔅') gt st Φ p pb E L (C: cctx ℭ) (T: _ 𝔄l) (T': _ 𝔅l) trx tr e :
     Closed [] e → tctx_extract_ctx E L +[p ◁ ty; pb ◁ tyb'] T T' trx →
-    typed_write E L ty tyb ty' tyb' gt st → leak E L tyb Φ →
+    typed_write E L ty tyb ty' tyb' gt st → leak' E L tyb Φ →
     typed_body E L C (p ◁ ty' +:: T') e tr -∗
     typed_body E L C T (p <- pb;; e) (trx ∘
-      (λ post '(a -:: b -:: bl), Φ (gt a) → tr post (st a b -:: bl)))%type.
+      (λ post '(a -:: b -:: bl), Φ (gt a) (tr post (st a b -:: bl)))).
   Proof.
     iIntros. iApply type_seq; [by eapply type_assign_instr|done| |done].
     f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
@@ -252,11 +252,11 @@ Section typing.
 
   Lemma type_memcpy_instr {𝔄 𝔄' 𝔅 𝔅' ℭ ℭ'} (tyw: _ 𝔄) (tyw': _ 𝔄') (tyr: _ 𝔅)
     (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str Φ (n: Z) pw pr E L :
-    typed_write E L tyw tyb tyw' tyb' gtw stw → leak E L tyb Φ →
+    typed_write E L tyw tyb tyw' tyb' gtw stw → leak' E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
     typed_instr E L +[pw ◁ tyw; pr ◁ tyr] (pw <-{n} !pr)
       (λ _, +[pw ◁ tyw'; pr ◁ tyr'])
-      (λ post '-[a; b], Φ (gtw a) → post -[stw a (gtr b); str b])%type.
+      (λ post '-[a; b], Φ (gtw a) (post -[stw a (gtr b); str b])).
   Proof.
     iIntros ([Eq Wrt] Lk Rd ->??(?&?&[]))
       "/= #LFT #TIME PROPH UNIQ #E Na [[L L'] L''] (pw & pr &_) Obs".
@@ -276,18 +276,18 @@ Section typing.
     iMod ("Totyr'" with "↦'") as "($&$& tyr')". iModIntro. iExists -[_; _].
     iSplit; [rewrite right_id|].
     - iSplitL "tyw'"; (rewrite tctx_hasty_val'; [|done]); iExists _; by iFrame.
-    - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
+    - iApply proph_obs_impl; [|done]=>/= ?[? Imp]. by apply Imp.
   Qed.
 
   Lemma type_memcpy {𝔄 𝔄' 𝔅 𝔅' ℭ ℭ' 𝔄l 𝔅l 𝔇} (tyw: _ 𝔄) (tyw': _ 𝔄')
     (tyr: _ 𝔅) (tyr': _ 𝔅') (tyb: _ ℭ) (tyb': _ ℭ') gtw stw gtr str Φ
     (n: Z) pw pr E L (C: cctx 𝔇) (T: _ 𝔄l) (T': _ 𝔅l) e trx tr :
     Closed [] e → tctx_extract_ctx E L +[pw ◁ tyw; pr ◁ tyr] T T' trx →
-    typed_write E L tyw tyb tyw' tyb' gtw stw → leak E L tyb Φ →
+    typed_write E L tyw tyb tyw' tyb' gtw stw → leak' E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
     typed_body E L C (pw ◁ tyw' +:: pr ◁ tyr' +:: T') e tr -∗
     typed_body E L C T (pw <-{n} !pr;; e) (trx ∘ (λ post '(a -:: b -:: bl),
-      Φ (gtw a) → tr post (stw a (gtr b) -:: str b -:: bl)))%type.
+      Φ (gtw a) (tr post (stw a (gtr b) -:: str b -:: bl)))).
   Proof.
     iIntros. iApply type_seq; [by eapply type_memcpy_instr|done| |done].
     f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].

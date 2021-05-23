@@ -741,6 +741,9 @@ Definition leakl `{!typeG Σ} {𝔄l} (E: elctx) (L: llctx) (tyl: typel 𝔄l)
   (Φl: plist (λ 𝔄, 𝔄 → Prop) 𝔄l) : Prop :=
   HForall_1 (λ _, leak E L) tyl Φl.
 
+Definition leak' `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: _ 𝔄)
+  (Φ: 𝔄 → Prop → Prop) := leak E L ty (λ a, ∀φ, Φ a φ → φ).
+
 Section leak.
   Context `{!typeG Σ}.
 
@@ -764,6 +767,14 @@ Section leak.
   Lemma leakl_cons {𝔄 𝔄l} E L (ty: _ 𝔄) (tyl: _ 𝔄l) Φ Φl :
     leak E L ty Φ → leakl E L tyl Φl → leakl E L (ty +:: tyl) (Φ -:: Φl).
   Proof. by constructor. Qed.
+
+  Lemma leak'_post {𝔄} (ty: _ 𝔄) E L Φ :
+    leak E L ty Φ → leak' E L ty (λ a φ, Φ a → φ).
+  Proof. move=> ?. eapply leak_impl; [done|]=>/= ??? Imp. by apply Imp. Qed.
+
+  Lemma leak'_just {𝔄} (ty: _ 𝔄) E L Φ :
+    leak E L ty (const Φ) → leak' E L ty (const id).
+  Proof. move=> _. by eapply leak_impl; [apply leak_just|]=>/=. Qed.
 
 End leak.
 
@@ -1077,8 +1088,9 @@ Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
   right associativity, format "[loc[ l ]  :=  vl ]  P") : bi_scope.
 
 Global Hint Resolve ty_outlv_E_elctx_sat tyl_outlv_E_elctx_sat : lrust_typing.
-Global Hint Resolve leakl_nil subtype_refl eqtype_refl subtypel_nil eqtypel_nil
-  : lrust_typing.
+Global Hint Resolve leak'_post | 5 : lrust_typing.
+Global Hint Resolve leakl_nil leak'_just
+  subtype_refl eqtype_refl subtypel_nil eqtypel_nil : lrust_typing.
 (* We use [Hint Extern] instead of [Hint Resolve] here, because
   [into_plistc_cons], [leakl_cons], [subtypel_cons] and [eqtypel_cons]
   work with [apply] but not with [simple apply] *)

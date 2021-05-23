@@ -32,7 +32,7 @@ Section inc_max.
           iApply type_jump; [solve_typing|solve_extract|solve_typing]));
       revgoals. by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr.
       by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. }
-    move=> ?[[a ?][[b ?][]]] /=. case (bool_decide (b ≤ a)); tauto.
+    by move=> ?[[??][[??][]]]/=.
   Qed.
 
   Definition inc_max: val :=
@@ -77,7 +77,7 @@ Section inc_max.
       by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr.
       by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. }
     move=>/= ?[a[b[]]] Imp ??.
-    case Le: (bool_decide (b ≤ a))=> ->_[-> _]_; apply Imp; move: Le;
+    case Le: (bool_decide (b ≤ a))=> ->->; apply Imp; move: Le;
     [rewrite bool_decide_eq_true|rewrite bool_decide_eq_false]; lia.
   Qed.
 
