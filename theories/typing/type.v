@@ -1098,4 +1098,5 @@ Global Hint Extern 0 (IntoPlistc _ _) => apply into_plistc_cons : lrust_typing.
 Global Hint Extern 0 (leakl _ _ _ _) => apply leakl_cons : lrust_typing.
 Global Hint Extern 0 (subtypel _ _ _ _ _) => apply subtypel_cons : lrust_typing.
 Global Hint Extern 0 (eqtypel _ _ _ _ _ _) => apply eqtypel_cons : lrust_typing.
-Global Hint Opaque leak subtype eqtype : lrust_typing.
+
+Global Hint Opaque leak leak' subtype eqtype : lrust_typing.
