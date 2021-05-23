@@ -96,6 +96,8 @@ Section product.
     match tyl with +[] => <{unique}> unit_ty |
       ty +:: tyl' => <{to_cons_prod'}> (prod_ty ty (xprod_ty tyl')) end.
 
+  Local Instance typel_dist {𝔄l} : Dist (typel 𝔄l) := ofe_dist (typelO _).
+
   Global Instance product_ne {𝔄l} : NonExpansive (@xprod_ty 𝔄l).
   Proof. move=> ???. elim; [done|]=> */=. by do 2 f_equiv. Qed.
 

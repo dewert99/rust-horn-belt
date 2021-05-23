@@ -479,9 +479,9 @@ Proof. split; apply _. Qed.
 
 (** * Ofe *)
 
-Global Instance hlist_equiv `{F: A → ofe} {Xl}
+Local Instance hlist_equiv `{F: A → ofe} {Xl}
 : Equiv (hlist F Xl) := HForallTwo (λ _, (≡)).
-Global Instance hlist_dist `{F: A → ofe} {Xl} : Dist (hlist F Xl) :=
+Local Instance hlist_dist `{F: A → ofe} {Xl} : Dist (hlist F Xl) :=
   λ n, HForallTwo (λ _, (≡{n}≡)).
 
 Definition hlist_ofe_mixin `{F: A → ofe} {Xl} : OfeMixin (hlist F Xl).

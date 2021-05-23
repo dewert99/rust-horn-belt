@@ -266,8 +266,12 @@ Section ofe.
   Qed.
   Canonical Structure typeO 𝔄 : ofe := Ofe (type 𝔄) type_ofe_mixin.
 
-  Global Instance typel_equiv {𝔄l} : Equiv (typel 𝔄l) := ofe_equiv (hlistO typeO _).
-  Global Instance typel_dist {𝔄l} : Dist (typel 𝔄l) := ofe_dist (hlistO typeO _).
+End ofe.
+
+Notation typelO 𝔄l := (hlistO typeO 𝔄l).
+
+Section ofe_lemmas.
+  Context `{!typeG Σ}.
 
   Global Instance ty_size_ne {𝔄} n : Proper ((≡{n}@{_ 𝔄}≡) ==> (=)) ty_size.
   Proof. move=> ?? Eqv. apply Eqv. Qed.
@@ -287,6 +291,9 @@ Section ofe.
   Global Instance ty_outlv_E_proper {𝔄} :
     Proper ((≡@{_ 𝔄}) ==> (=) ==> (=)) ty_outlv_E.
   Proof. rewrite /ty_outlv_E. by move=> ?? [_ -> _ _ _]. Qed.
+
+  Local Instance typel_dist {𝔄l} : Dist (typel 𝔄l) := ofe_dist (typelO _).
+  Local Instance typel_equiv {𝔄l} : Equiv (typel 𝔄l) := ofe_equiv (typelO _).
 
   Global Instance tyl_lfts_ne {𝔄l} n : Proper ((≡{n}@{_ 𝔄l}≡) ==> (=)) tyl_lfts.
   Proof.
@@ -414,7 +421,7 @@ Section ofe.
   Global Instance st_of_pt_proper {𝔄} : Proper ((≡@{_ 𝔄}) ==> (≡)) st_of_pt.
   Proof. apply (ne_proper _). Qed.
 
-End ofe.
+End ofe_lemmas.
 
 Ltac solve_ne_type :=
   constructor;

@@ -29,6 +29,8 @@ Section fn.
   Record fn_params :=
     FP { fp_E_ex: lft → elctx;  fp_ityl: typel 𝔄l;  fp_oty: type 𝔅 }.
 
+  Local Instance typel_dist {𝔄l} : Dist (typel 𝔄l) := ofe_dist (typelO _).
+
   Definition fn_params_dist n fp fp' : Prop :=
     (∀ϝ, fp.(fp_E_ex) ϝ = fp'.(fp_E_ex) ϝ) ∧
     fp.(fp_ityl) ≡{n}≡ fp'.(fp_ityl) ∧ fp.(fp_oty) ≡{n}≡ fp'.(fp_oty).

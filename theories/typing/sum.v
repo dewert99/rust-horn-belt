@@ -95,6 +95,8 @@ Section sum.
     iModIntro. iExists i, vπ'. by do 2 (iSplit; [done|]).
   Qed.
 
+  Local Instance typel_dist {𝔄l} : Dist (typel 𝔄l) := ofe_dist (typelO _).
+
   Global Instance xsum_ty_ne {𝔄l} : NonExpansive (@xsum_ty 𝔄l).
   Proof.
     move=> n tyl tyl' Eqv. have EqMsz: max_ty_size tyl = max_ty_size tyl'.
