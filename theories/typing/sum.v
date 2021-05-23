@@ -123,7 +123,7 @@ End sum.
 
 Notation "Σ!" := xsum_ty : lrust_type_scope.
 Notation "ty + ty'" := (sum_ty ty%T ty'%T) : lrust_type_scope.
-Notation empty := (xsum_ty +[]).
+Notation empty_ty := (xsum_ty +[]).
 
 Section typing.
   Context `{!typeG Σ}.
@@ -311,7 +311,7 @@ Section typing.
 
 End typing.
 
-Global Instance empty_empty `{!typeG Σ} : Empty (type ∅) := empty.
+Global Instance empty_ty_empty `{!typeG Σ} : Empty (type ∅) := empty_ty.
 
 Global Hint Resolve xsum_leak sum_leak | 5 : lrust_typing.
 Global Hint Resolve xsum_leak_just sum_leak_just xsum_subtype xsum_eqtype
