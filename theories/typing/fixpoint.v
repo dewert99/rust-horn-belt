@@ -16,8 +16,8 @@ Section S.
   Lemma Tn_ty_lft_const n n' : ⊢ (Tn n).(ty_lft) ≡ₗ (Tn n').(ty_lft).
   Proof using HT.
     have Eq: ∀n, ⊢ (Tn n).(ty_lft) ≡ₗ (Tn 0).(ty_lft); last first.
-    { iApply lft_equiv_trans; [|iApply lft_equiv_sym]; iApply Eq. } clear n n'=> n.
-    case type_contr_type_lft_morph=> [> Hα ?|> Hα ?]; last first.
+    { iApply lft_equiv_trans; [|iApply lft_equiv_sym]; iApply Eq. }
+    clear n n'=> n. case type_contr_type_lft_morph=> [> Hα ?|> Hα ?]; last first.
     { iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_sym. iApply Hα. }
     elim: n=> [|n IH]; [apply lft_equiv_refl|]. rewrite /Tn /=.
     iApply lft_equiv_trans; [iApply type_lft_morph_lft_equiv_proper; iApply IH|].
@@ -128,15 +128,13 @@ Section S.
 
   Lemma fix_ty_Tn'_dist n : fix_ty ≡{n}≡ Tn' (3 + n).
   Proof. split=>// *; apply conv_compl. Qed.
-
 End S.
-
 End fix_defs.
 
 Import fix_defs.
 Global Notation fix_ty := fix_ty.
 
-Lemma fix_unfold_eqtype `{!typeG Σ} {𝔄} (T: _ → _ 𝔄) {HT: TypeContractive T} E L :
+Lemma fix_unfold_eqtype `{!typeG Σ} {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T} E L :
   eqtype E L (fix_ty T) (T (fix_ty T)) id id.
 Proof.
   have EqOwn: ∀n vπ d tid vl, (T $ Tn T (3 + n)).(ty_own) vπ d tid vl ≡
@@ -177,10 +175,11 @@ Proof.
   - rewrite EqShr'. by iApply bi.equiv_iff.
 Qed.
 
-Lemma fix_ty_ne `{!typeG Σ} {𝔄} (T T': _ → _ 𝔄)
+Lemma fix_ty_ne `{!typeG Σ} {𝔄} (T T': type 𝔄 → type 𝔄)
   `{!TypeContractive T, !NonExpansive T, !TypeContractive T'} n :
   (∀ty, T ty ≡{n}≡ T' ty) → fix_ty T ≡{n}≡ fix_ty T'.
-Proof. move=> Eq.
+Proof.
+  move=> Eq.
   have Eq': compl (own_shr_chain T) ≡{n}≡ compl (own_shr_chain T').
   { have Eq'': Tn T (3 + n) ≡{n}≡ Tn T' (3 + n).
     { rewrite /Tn. elim (S (3 + n)); [done|]=> ? IH. by rewrite !Nat_iter_S IH Eq. }
@@ -189,13 +188,14 @@ Proof. move=> Eq.
   split=>/=; try apply Eq; try apply Eq'. by rewrite /Tn /= (Eq base) Eq.
 Qed.
 
-Lemma fix_type_ne `{!typeG Σ} {𝔄 𝔅} (T : _ 𝔄 → _ → _ 𝔅)
+Lemma fix_type_ne `{!typeG Σ} {𝔄 𝔅} (T : type 𝔄 → type 𝔅 → type 𝔅)
   `{!(∀ty, TypeContractive (T ty))} :
   (∀`{!TypeNonExpansive U}, TypeNonExpansive (λ ty, T ty (U ty))) →
     TypeNonExpansive (λ ty, fix_ty (T ty)).
 Proof.
   move=> HT. have Hne: ∀n, TypeNonExpansive (λ ty, Tn (T ty) n).
-  { elim=> [|? IH]; [apply HT, _|apply HT, IH]. } split=>/=.
+  { elim=> [|? IH]; [apply HT, _|apply HT, IH]. }
+  split=>/=.
   - case (type_ne_type_lft_morph (T := λ ty, Tn (T ty) 1))=>
     [α βs E Hα HE|α E Hα HE].
     + eapply (type_lft_morph_add _ α βs E), HE=> ?.
@@ -211,13 +211,14 @@ Proof.
     etrans; [|symmetry; apply conv_compl]. by apply Hne.
 Qed.
 
-Lemma fix_type_contracive `{!typeG Σ} {𝔄 𝔅} (T : _ 𝔄 → _ → _ 𝔅)
+Lemma fix_type_contracive `{!typeG Σ} {𝔄 𝔅} (T : type 𝔄 → type 𝔅 → type 𝔅)
   `{!(∀ty, TypeContractive (T ty))} :
   (∀`{!TypeContractive U}, TypeContractive (λ ty, T ty (U ty))) →
     TypeContractive (λ ty, fix_ty (T ty)).
 Proof.
   move=> HT. have Hne: ∀n, TypeContractive (λ ty, Tn (T ty) n).
-  { elim=> [|? IH]; [apply HT, _|apply HT, IH]. } split=>/=.
+  { elim=> [|? IH]; [apply HT, _|apply HT, IH]. }
+  split=>/=.
   - case (type_ne_type_lft_morph (T := λ ty, Tn (T ty) 1))=>
     [α βs E Hα HE|α E Hα HE].
     + eapply (type_lft_morph_add _ α βs E), HE=> ?.
@@ -249,7 +250,8 @@ Section lemmas.
         apply limit_preserving_entails; [done|]=> ??? Eq.
         f_equiv; [|do 11 f_equiv]; apply Eq. }
       move=> n. have ->: (Tn T 0).(ty_size) = (Tn T (3 + n)).(ty_size).
-      { rewrite /Tn /=. apply type_contr_ty_size. } by apply copy_shr_acc.
+      { rewrite /Tn /=. apply type_contr_ty_size. }
+      by apply copy_shr_acc.
   Qed.
 
   Global Instance fix_send :
@@ -271,13 +273,12 @@ Section lemmas.
   Lemma fix_leak E L Φ :
     (∀ty, leak E L ty Φ → leak E L (T ty) Φ) → leak E L (fix_ty T) Φ.
   Proof.
-    move=> Loop. have Lk: ∀n, leak E L (Tn T n) Φ. { elim=> [|? H]; apply Loop;
-    [apply base_leak|apply H]. } rewrite /fix_ty=> > /=.
-    eapply @limit_preserving; [|move=> ?; by apply Lk].
+    move=> Loop. have Lk: ∀n, leak E L (Tn T n) Φ.
+    { elim=> [|? H]; apply Loop; [apply base_leak|apply H]. }
+    rewrite /fix_ty=> > /=. eapply @limit_preserving; [|move=> ?; by apply Lk].
     apply limit_preserving_forall=> ?.
     apply limit_preserving_entails; [done|]=> ??? Eq. do 4 f_equiv. apply Eq.
   Qed.
-
 End lemmas.
 
 Section subtyping.
@@ -288,11 +289,13 @@ Section subtyping.
   Local Lemma entails_dist_True (P Q: iProp Σ) : (P ⊢ Q) ↔ ∀n, (P → Q)%I ≡{n}≡ True%I.
   Proof. by rewrite entails_eq_True equiv_dist. Qed.
 
-  Lemma fix_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅)
-    T `{!TypeContractive T} T' `{!TypeContractive T'} E L :
+  Lemma fix_subtype {𝔄 𝔅} f
+    (T : type 𝔄 → type 𝔄) `{!TypeContractive T}
+    (T' : type 𝔅 → type 𝔅) `{!TypeContractive T'} E L :
     (∀ty ty', subtype E L ty ty' f → subtype E L (T ty) (T' ty') f) →
     subtype E L (fix_ty T) (fix_ty T') f.
-  Proof. move=> Loop qL.
+  Proof.
+    move=> Loop qL.
     have Incl: llctx_interp L qL -∗ □ (elctx_interp E -∗
       ∀n, type_incl (Tn T n) (Tn T' n) f).
     { rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
@@ -310,11 +313,13 @@ Section subtyping.
       apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
   Qed.
 
-  Lemma fix_eqtype_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g
-    T `{!TypeContractive T} T' `{!TypeContractive T'} E L :
+  Lemma fix_eqtype_subtype {𝔄 𝔅} f g
+    (T : type 𝔄 → type 𝔄) `{!TypeContractive T}
+    (T' : type 𝔅 → type 𝔅) `{!TypeContractive T'} E L :
     (∀ty ty', eqtype E L ty ty' f g → eqtype E L (T ty) (T' ty') f g) →
     subtype E L (fix_ty T) (fix_ty T') f.
-  Proof. move=> Loop qL.
+  Proof.
+    move=> Loop qL.
     have Incl: llctx_interp L qL -∗ □ (elctx_interp E -∗
       ∀n, type_incl (Tn T n) (Tn T' n) f).
     { rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
@@ -330,14 +335,15 @@ Section subtyping.
       apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
   Qed.
 
-  Lemma fix_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g
-    T `{!TypeContractive T} T' `{!TypeContractive T'} E L :
+  Lemma fix_eqtype {𝔄 𝔅} f g
+    (T: type 𝔄 → type 𝔄) `{!TypeContractive T}
+    (T': type 𝔅 → type 𝔅) `{!TypeContractive T'} E L :
     (∀ty ty', eqtype E L ty ty' f g → eqtype E L (T ty) (T' ty') f g) →
     eqtype E L (fix_ty T) (fix_ty T') f g.
-  Proof. move=> Loop.
+  Proof.
+    move=> Loop.
     have ?: ∀ty' ty, eqtype E L ty' ty g f → eqtype E L (T' ty') (T ty) g f.
     { move=> ??[??]. split; apply Loop; by split. }
     split; by eapply fix_eqtype_subtype.
   Qed.
-
 End subtyping.

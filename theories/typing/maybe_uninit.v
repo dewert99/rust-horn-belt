@@ -7,27 +7,30 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section maybe_uninit.
   Context `{!typeG Σ}.
 
-  Local Lemma maybe_uninit_mt {𝔄} (ty: _ 𝔄) vπ d tid l q :
+  Local Lemma maybe_uninit_mt {𝔄} (ty: type 𝔄) vπ d tid l q :
     (l ↦∗{q}: λ vl, ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
       ∃vπ', ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl)%I ⊣⊢
     ⌜vπ = const None⌝ ∗ l ↦∗{q}: (λ vl, ⌜length vl = ty.(ty_size)⌝) ∨
     ∃vπ', ⌜vπ = Some ∘ vπ'⌝ ∗ l ↦∗{q}: ty.(ty_own) vπ' d tid.
-  Proof. iSplit.
-    - iIntros "(%vl &?&[[%%]|(%vπ' &%&?)])". { iLeft. iSplit; [done|]. iExists vl.
-      by iFrame. } iRight. iExists vπ'. iSplit; [done|]. iExists vl. iFrame.
-    - iIntros "[(%& %vl & ↦ &%)|(%vπ' &%& %vl & ↦ &?)]"; iExists vl; iFrame "↦";
-      [by iLeft|]. iRight. iExists vπ'. by iSplit.
+  Proof.
+    iSplit.
+    - iIntros "(%vl &?&[[%%]|(%vπ' &%&?)])".
+      { iLeft. iSplit; [done|]. iExists vl. by iFrame. }
+      iRight. iExists vπ'. iSplit; [done|]. iExists vl. iFrame.
+    - iIntros "[(%& %vl & ↦ &%)|(%vπ' &%& %vl & ↦ &?)]"; iExists vl;
+        iFrame "↦"; [by iLeft|].
+      iRight. iExists vπ'. by iSplit.
   Qed.
 
-  Program Definition maybe_uninit {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) := {|
-    ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
-    ty_own vπ d tid vl :=
-      ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
-      ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl;
-    ty_shr vπ d κ tid l :=
-      ⌜vπ = const None⌝ ∨
-      ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_shr) vπ' d κ tid l;
-  |}%I.
+  Program Definition maybe_uninit {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
+    {| ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+       ty_own vπ d tid vl :=
+         ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
+         ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl;
+       ty_shr vπ d κ tid l :=
+         ▷ ⌜vπ = const None⌝ ∨
+         ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_shr) vπ' d κ tid l;
+    |}%I.
   Next Obligation. iIntros "* [[_$]|(%&_&?)]". by rewrite ty_size_eq. Qed.
   Next Obligation.
     move=> *. iIntros "[?|(%vπ &?&?)]"; [by iLeft|iRight]. iExists vπ.
@@ -63,7 +66,7 @@ Section maybe_uninit.
     iRight. iExists vπ. by iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "LFT In In' [->|(%vπ &->& ty)] κ".
+    move=> *. iIntros "LFT In In' [>->|(%vπ &->& ty)] κ".
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
       do 2 (iSplit; [done|]). iIntros "_!>". iFrame "κ". by iLeft. }
     iMod (ty_shr_proph with "LFT In In' ty κ") as "Upd"; [done|].
@@ -75,7 +78,6 @@ Section maybe_uninit.
 
   Global Instance maybe_uninit_ne {𝔄} : NonExpansive (@maybe_uninit 𝔄).
   Proof. solve_ne_type. Qed.
-
 End maybe_uninit.
 
 Notation "?" := maybe_uninit : lrust_type_scope.
@@ -89,12 +91,12 @@ Section typing.
     [move=>/= > ->*|move=>/= >*]; by do 4 f_equiv.
   Qed.
 
-  Global Instance maybe_uninit_send {𝔄} (ty: _ 𝔄) : Send ty → Send (? ty).
+  Global Instance maybe_uninit_send {𝔄} (ty: type 𝔄) : Send ty → Send (? ty).
   Proof. move=> >/=. by do 4 f_equiv. Qed.
-  Global Instance maybe_uninit_sync {𝔄} (ty: _ 𝔄) : Sync ty → Sync (? ty).
+  Global Instance maybe_uninit_sync {𝔄} (ty: type 𝔄) : Sync ty → Sync (? ty).
   Proof. move=> >/=. by do 4 f_equiv. Qed.
 
-  Lemma maybe_uninit_leak {𝔄} (ty: _ 𝔄) Φ E L :
+  Lemma maybe_uninit_leak {𝔄} (ty: type 𝔄) Φ E L :
     leak E L ty Φ →
     leak E L (? ty) (λ o, match o with None => True | Some a => Φ a end).
   Proof.
@@ -105,7 +107,7 @@ Section typing.
     iApply (step_fupdN_wand with "ToObs"). by iIntros "!> >[$$]".
   Qed.
 
-  Lemma maybe_uninit_leak_just {𝔄} (ty: _ 𝔄) E L :
+  Lemma maybe_uninit_leak_just {𝔄} (ty: type 𝔄) E L :
     leak E L ty (const True) → leak E L (? ty) (const True).
   Proof. move=> ?. apply leak_just. Qed.
 
@@ -117,37 +119,41 @@ Section typing.
     do 2 (iSplit; [done|]). iSplit; iIntros "!>*/=".
     - iIntros "[[->->]|(%vπ' &->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
       iSplit; [done|]. by iApply "InOwn".
-    - iIntros "[->|(%vπ' &->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
-      iSplit; [done|]. by iApply "InShr".
+    - iIntros "[Hvπ|(%vπ' &->&?)]".
+      + iLeft. by iDestruct "Hvπ" as ">->".
+      + iRight. iExists (f ∘ vπ'). iSplit; [done|]. by iApply "InShr".
   Qed.
   Lemma maybe_uninit_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' E L :
     eqtype E L ty ty' f g → eqtype E L (? ty) (? ty') (option_map f) (option_map g).
   Proof. move=> [??]. split; by apply maybe_uninit_subtype. Qed.
 
-  Lemma uninit_to_maybe_uninit {𝔄} (ty: _ 𝔄) E L :
+  Lemma uninit_to_maybe_uninit {𝔄} (ty: type 𝔄) E L :
     subtype E L (↯ ty.(ty_size)) (? ty) (const None).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_static|].
-    by iSplit; iIntros "!>*%/="; iLeft.
+    iSplit; iIntros "!>* /=".
+    - iIntros "(% & -> & %)". auto.
+    - iIntros "H". iLeft. iNext. by iDestruct "H" as "(% & ? & (% & -> & _))".
   Qed.
 
-  Lemma into_maybe_uninit {𝔄} (ty: _ 𝔄) E L : subtype E L ty (? ty) Some.
+  Lemma into_maybe_uninit {𝔄} (ty: type 𝔄) E L : subtype E L ty (? ty) Some.
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*?/="; iRight; iExists vπ; by iFrame.
   Qed.
 
-  Lemma maybe_uninit_join {𝔄} (ty: _ 𝔄) E L :
+  Lemma maybe_uninit_join {𝔄} (ty: type 𝔄) E L :
     subtype E L (? (? ty)) (? ty) (option_join _).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*/=".
     - iIntros "[[->->]|(%&->&[[->->]|(%vπ'' &->&?)])]"; [by iLeft|by iLeft|].
       iRight. iExists vπ''. by iFrame.
-    - iIntros "[->|(%&->&[->|(%vπ'' &->&?)])]"; [by iLeft|by iLeft|].
-      iRight. iExists vπ''. by iFrame.
+    - iIntros "[Eq|(%&->&[Eq|(%vπ'' &->&?)])]".
+      + iLeft. iNext. iDestruct "Eq" as %->. done.
+      + by iLeft.
+      + iRight. iExists vπ''. by iFrame.
   Qed.
-
 End typing.
 
 Global Hint Resolve maybe_uninit_leak | 5 : lrust_typing.

@@ -10,7 +10,8 @@ Section int.
     {| pt_size := 1;  pt_own (z: Zₛ) _ vl := ⌜vl = [ #z]⌝; |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
-  Global Instance int_send: Send int. Proof. done. Qed.
+  Global Instance int_send: Send int.
+  Proof. done. Qed.
 
   Lemma int_leak E L : leak E L int (const True).
   Proof. apply leak_just. Qed.
@@ -28,7 +29,7 @@ Section int.
     rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "⧖". by iExists z.
   Qed.
 
-  Lemma type_int {𝔄l 𝔅} (z: Z) (T: _ 𝔄l) x e tr E L (C: cctx 𝔅) :
+  Lemma type_int {𝔄l 𝔅} (z: Z) (T: tctx 𝔄l) x e tr E L (C: cctx 𝔅) :
     Closed (x :b: []) e →
     (∀v: val, typed_body E L C (v ◁ int +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := #z in e) (λ post al, tr post (z -:: al)).
@@ -45,7 +46,7 @@ Section int.
     tctx_hasty_val'; [|done]. iExists d. iFrame "⧖". by iExists (z + z').
   Qed.
 
-  Lemma type_plus {𝔄l 𝔅l ℭ} p1 p2 x e trx tr E L (C: cctx ℭ) (T: _ 𝔄l) (T': _ 𝔅l) :
+  Lemma type_plus {𝔄l 𝔅l ℭ} p1 p2 x e trx tr E L (C: cctx ℭ) (T: tctx 𝔄l) (T': tctx 𝔅l) :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' trx →
     (∀v: val, typed_body E L C (v ◁ int +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := p1 + p2 in e)
@@ -66,7 +67,7 @@ Section int.
     tctx_hasty_val'; [|done]. iExists d. iFrame "⧖". by iExists (z - z').
   Qed.
 
-  Lemma type_minus {𝔄l 𝔅l ℭ} p1 p2 x e trx tr E L (C: cctx ℭ) (T: _ 𝔄l) (T': _ 𝔅l) :
+  Lemma type_minus {𝔄l 𝔅l ℭ} p1 p2 x e trx tr E L (C: cctx ℭ) (T: tctx 𝔄l) (T': tctx 𝔅l) :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' trx →
     (∀v: val, typed_body E L C (v ◁ int +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := p1 - p2 in e)
@@ -87,7 +88,7 @@ Section int.
     tctx_hasty_val'; [|done]. iExists d. iFrame "⧖". by iExists (z * z').
   Qed.
 
-  Lemma type_mult {𝔄l 𝔅l ℭ} p1 p2 x e trx tr E L (C: cctx ℭ) (T: _ 𝔄l) (T': _ 𝔅l) :
+  Lemma type_mult {𝔄l 𝔅l ℭ} p1 p2 x e trx tr E L (C: cctx ℭ) (T: tctx 𝔄l) (T': tctx 𝔅l) :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' trx →
     (∀v: val, typed_body E L C (v ◁ int +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := p1 * p2 in e)
@@ -109,7 +110,7 @@ Section int.
     iFrame "⧖". by iExists (bool_decide (z <= z')).
   Qed.
 
-  Lemma type_le {𝔄l 𝔅l ℭ} p1 p2 x e trx tr E L (C: cctx ℭ) (T: _ 𝔄l) (T': _ 𝔅l) :
+  Lemma type_le {𝔄l 𝔅l ℭ} p1 p2 x e trx tr E L (C: cctx ℭ) (T: tctx 𝔄l) (T': tctx 𝔅l) :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p1 ◁ int; p2 ◁ int] T T' trx →
     (∀v: val, typed_body E L C (v ◁ bool_ty +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := p1 ≤ p2 in e)
@@ -118,7 +119,6 @@ Section int.
     iIntros. iApply type_let; [by apply type_le_instr|solve_typing| |done].
     f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
   Qed.
-
 End int.
 
 Global Hint Resolve int_leak : lrust_typing.

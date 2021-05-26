@@ -17,7 +17,8 @@ Section base.
     {| pt_size := 0; pt_own _ _ _ := False |}%I.
   Next Obligation. by iIntros. Qed.
 
-  Global Instance base_send {𝔄} : Send (@base 𝔄). Proof. done. Qed.
+  Global Instance base_send {𝔄} : Send (@base 𝔄).
+  Proof. done. Qed.
 
   Lemma base_leak {𝔄} E L Φ : leak E L (@base 𝔄) Φ.
   Proof. by iIntros "* _ _ _ _" ([?[??]]). Qed.
@@ -29,7 +30,6 @@ Section base.
   Qed.
   Lemma base_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g E L : eqtype E L base base f g.
   Proof. split; apply base_subtype. Qed.
-
 End base.
 
 Global Hint Resolve base_leak base_subtype base_eqtype : lrust_typing.

@@ -1,6 +1,6 @@
 From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
-From lrust.typing Require Import mod_ty uninit sum (* typing lib.panic *).
+From lrust.typing Require Import typing (* lib.panic *).
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
@@ -11,12 +11,12 @@ Section option.
   Definition option_ty {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
     <{sum_to_option: (() + 𝔄)%ST → optionₛ 𝔄}> (unit_ty + ty).
 
-  Lemma option_leak {𝔄} E L (ty: _ 𝔄) Φ :
+  Lemma option_leak {𝔄} E L (ty: type 𝔄) Φ :
     leak E L ty Φ →
     leak E L (option_ty ty) (λ o, match o with None => True | Some o => Φ o end).
   Proof. move=> ?. eapply leak_impl; [solve_typing|]. by case. Qed.
 
-  Lemma option_leak_just {𝔄} E L (ty: _ 𝔄) :
+  Lemma option_leak_just {𝔄} E L (ty: type 𝔄) :
     leak E L ty (const True) → leak E L (option_ty ty) (const True).
   Proof. move=> ?. apply leak_just. Qed.
 

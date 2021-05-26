@@ -14,7 +14,8 @@ Proof. have ->: g (f x) = (g ∘ f) x by done. by rewrite semi_iso. Qed.
 Class Iso {A B} (f: A → B) (g: B → A) :=
   { iso_semi_iso_l :> SemiIso f g; iso_semi_iso_r :> SemiIso g f }.
 
-Global Instance iso_id {A} : Iso (@id A) id. Proof. done. Qed.
+Global Instance iso_id {A} : Iso (@id A) id.
+Proof. done. Qed.
 
 Global Instance semi_iso_inj `{!@SemiIso A B f g} : Inj (=) (=) f | 100.
 Proof. move=> ?? /(f_equal g). by rewrite !semi_iso'. Qed.
@@ -27,20 +28,6 @@ Infix "⊛" := s_comb (left associativity, at level 50).
 Global Arguments s_comb {_ _ _} _ _ _ / : assert.
 Typeclasses Transparent s_comb.
 
-(* * Utility for Singleton Types *)
-
-Class Unique A := { unique: A; eq_unique: ∀x: A, x = unique }.
-
-Program Global Instance unit_unique: Unique () := {| unique := () |}.
-Next Obligation. by case. Qed.
-
-Program Global Instance fun_unique {B} `{!Unique A}
-  : Unique (B → A) := {| unique := const unique |}.
-Next Obligation. move=> *. fun_ext=>/= ?. apply eq_unique. Qed.
-
-Global Instance unique_iso `{!Unique A, !Unique B} : @Iso A B unique unique.
-Proof. split; fun_ext=>/= ?; symmetry; apply eq_unique. Qed.
-
 (** * Utility for voidness *)
 
 Global Instance Empty_set_empty: Empty Set := Empty_set.
@@ -48,15 +35,13 @@ Global Instance Empty_set_empty': Empty Type := Empty_set.
 
 Class Void A := absurd: ∀{B}, A → B.
 
-Global Instance Empty_set_void: Void ∅. Proof. by move. Qed.
-Global Instance False_void: Void False. Proof. by move. Qed.
+Global Instance Empty_set_void: Void ∅.
+Proof. by move. Qed.
+Global Instance False_void: Void False.
+Proof. by move. Qed.
 
 Global Instance fun_void `{!Inhabited A, !Void B} : Void (A → B).
 Proof. move=> ? /(.$ inhabitant) ?. by apply absurd. Qed.
-
-Program Global Instance void_fun_unique {B} `{!Void A}
-  : Unique (A → B) := {| unique := absurd |}.
-Next Obligation. move=> *. fun_ext=> ?. by apply absurd. Qed.
 
 Global Instance void_iso `{!Void A, !Void B} : Iso absurd absurd.
 Proof. split; fun_ext=> ?; by apply absurd. Qed.
@@ -115,10 +100,6 @@ Definition prod_right_id' {A} (x: A) := (x, ()).
 Global Instance prod_right_id_iso {A} : Iso (@prod_right_id A) prod_right_id'.
 Proof. split; fun_ext; by [case=> [?[]]|]. Qed.
 
-Program Global Instance prod_unique `{!Unique A, !Unique B}
-  : Unique (A * B) := {| unique := (unique, unique) |}.
-Next Obligation. move=> ????. case=> *; f_equal; apply eq_unique. Qed.
-
 (** * Utility for Sums *)
 
 Definition option_to_sum {A} (o: option A) : () + A :=
@@ -131,8 +112,11 @@ Proof. split; fun_ext; case=>//; by case. Qed.
 (** * Utility for Lists *)
 
 (** List.nth with better pattern matching *)
-Fixpoint lnth {A} (d: A) (xl: list A) (i: nat) : A := match xl with
-  [] => d | x :: xl' => match i with 0 => x | S j => lnth d xl' j end end.
+Fixpoint lnth {A} (d: A) (xl: list A) (i: nat) : A :=
+  match xl with
+  | [] => d
+  | x :: xl' => match i with 0 => x | S j => lnth d xl' j end
+  end.
 Notation lnthe := (lnth ∅).
 
 Lemma lnth_default {A} D (As : list A) i :
@@ -147,8 +131,12 @@ Fixpoint lforall {A} (Φ: A → Prop) (xl: list A) : Prop :=
   match xl with [] => True | x :: xl' => Φ x ∧ lforall Φ xl' end.
 
 Section forall2b. Context {A B} (f: A → B → bool).
-Fixpoint forall2b (xl: list A) (yl: list B) := match xl, yl with [], [] => true
-  | x :: xl', y :: yl' => f x y && forall2b xl' yl' | _, _ => false end.
+Fixpoint forall2b (xl: list A) (yl: list B) :=
+  match xl, yl with
+  | [], [] => true
+  | x :: xl', y :: yl' => f x y && forall2b xl' yl'
+  | _, _ => false
+  end.
 End forall2b.
 
 Definition list_to_option {A} (xl: list A) : option (A * list A) :=

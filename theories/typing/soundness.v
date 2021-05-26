@@ -56,7 +56,7 @@ Section type_soundness.
     iDestruct "Hmain" as (f k _ e ?) "(EQ & Hmain)". iDestruct "EQ" as %[= ->].
     wp_rec.
     iMod (lft_create with "LFT") as (ϝ) "Hϝ"; first done.
-    iApply ("Hmain" $! () ϝ exit_cont nil_tt tid -[] (λ π _, True) with "LFT TIME PROPH UNIQ [] Htl [Hϝ] [] [$] [$]").
+    iApply ("Hmain" $! () ϝ exit_cont -[] tid -[] (λ π _, True) with "LFT TIME PROPH UNIQ [] Htl [Hϝ] [] [$] [$]").
     { by rewrite /elctx_interp /=. }
     { rewrite /llctx_interp /=. iSplit; last done. iExists ϝ. iFrame. by rewrite /= left_id. }
     rewrite cctx_interp_singleton. simpl. iIntros (args [? []]) "_ _".

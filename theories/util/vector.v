@@ -1,6 +1,8 @@
 From iris.proofmode Require Import tactics.
 From lrust.util Require Import basic.
 
+(* TODO : move all that to stdpp *)
+
 (** * Utility for Vectors *)
 
 Notation vhd := Vector.hd.
@@ -12,9 +14,6 @@ Proof. by inv_vec xl. Qed.
 Lemma surjective_vcons_fun {A B n} (f: B → vec A (S n)) :
   f = (λ a, vcons a) ∘ (vhd ∘ f) ⊛ (vtl ∘ f).
 Proof. fun_ext=>/= ?. by rewrite -surjective_vcons. Qed.
-
-Program Global Instance vec_0_unique {A} : Unique (vec A 0) := {| unique := [#] |}.
-Next Obligation. move=> ? v. by inv_vec v. Qed.
 
 Global Instance vhd_vsingleton_iso {A} : Iso vhd (λ x: A, [#x]).
 Proof. split; [|done]. fun_ext=> v. by inv_vec v. Qed.
@@ -45,7 +44,8 @@ Lemma vapp_ex {A m n} (xl: _ A (m + n)) : ∃yl zl, xl = yl +++ zl.
 Proof. eexists _, _. apply vsepat_app. Qed.
 
 Global Instance vapp_vsepat_iso {A} m n : Iso (curry vapp) (@vsepat A m n).
-Proof. split; fun_ext.
+Proof.
+  split; fun_ext.
   - move=> [xl ?]. by elim xl; [done|]=>/= ???->.
   - move=>/= ?. rewrite [vsepat _ _]surjective_pairing /=. induction m; [done|]=>/=.
     by rewrite [vsepat _ _]surjective_pairing /= IHm -surjective_vcons.
@@ -77,12 +77,13 @@ Proof. by rewrite -{2}[f]vapply_funsep vapply_lookup. Qed.
 
 (** Iris *)
 
-Lemma big_sepL_vlookup_acc {A n} {PROP: bi} (Φ: _ → _ → PROP) (xl: vec A n) (i: fin n) :
+Lemma big_sepL_vlookup_acc {A n} {PROP: bi}
+      (Φ: nat → A → PROP) (xl: vec A n) (i: fin n) :
   ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊢
   Φ i (xl !!! i) ∗ (Φ i (xl !!! i) -∗ [∗ list] k ↦ x ∈ xl, Φ k x).
 Proof. by apply big_sepL_lookup_acc, vlookup_lookup. Qed.
 
-Lemma big_sepL_vlookup {A n} {PROP: bi} (Φ: nat → _ → PROP)
+Lemma big_sepL_vlookup {A n} {PROP: bi} (Φ: nat → A → PROP)
   (xl: vec A n) (i: fin n) `{!Absorbing (Φ i (xl !!! i))} :
   ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊢ Φ i (xl !!! i).
 Proof. rewrite big_sepL_vlookup_acc. apply bi.sep_elim_l, _. Qed.

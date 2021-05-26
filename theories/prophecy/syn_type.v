@@ -25,7 +25,8 @@ Notation Empty_setₛ := (xsumₛ []).
 
 Global Instance Empty_setₛ_empty: Empty syn_type := Empty_setₛ.
 
-Fixpoint of_syn_type (𝔄: syn_type) : Type := match 𝔄 with
+Fixpoint of_syn_type (𝔄: syn_type) : Type :=
+  match 𝔄 with
   | Zₛ => Z | boolₛ => bool | unitₛ => () | Propₛ => Prop
   | optionₛ 𝔄₀ => option (of_syn_type 𝔄₀) | listₛ 𝔄₀ => list (of_syn_type 𝔄₀)
   | vecₛ 𝔄₀ n => vec (of_syn_type 𝔄₀) n
@@ -39,7 +40,8 @@ Coercion of_syn_type: syn_type >-> Sortclass.
 
 (** Decidable Equality *)
 
-Fixpoint syn_type_beq 𝔄 𝔅 : bool := match 𝔄, 𝔅 with
+Fixpoint syn_type_beq 𝔄 𝔅 : bool :=
+  match 𝔄, 𝔅 with
   | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Propₛ, Propₛ => true
   | optionₛ 𝔄₀, optionₛ 𝔅₀ | listₛ 𝔄₀, listₛ 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀
   | vecₛ 𝔄₀ n, vecₛ 𝔅₀ m => syn_type_beq 𝔄₀ 𝔅₀ && bool_decide (n = m)
@@ -68,7 +70,8 @@ Qed.
 
 (** Decidable Inhabitedness *)
 
-Fixpoint inh_syn_type 𝔄 : bool := match 𝔄 with
+Fixpoint inh_syn_type 𝔄 : bool :=
+  match 𝔄 with
   | vecₛ 𝔄₀ n => bool_decide (n = 0) || inh_syn_type 𝔄₀
   | prodₛ 𝔄₀ 𝔄₁ => inh_syn_type 𝔄₀ && inh_syn_type 𝔄₁
   | sumₛ 𝔄₀ 𝔄₁ => inh_syn_type 𝔄₀ || inh_syn_type 𝔄₁
@@ -84,17 +87,19 @@ Proof.
   move: 𝔄. fix FIX 1. move=> 𝔄. split.
   - case: 𝔄=>//=; try by (move=> *; exact inhabitant).
     + move=> ? n. case Eq: (bool_decide (n = 0))=>/=.
-      { move: Eq=> /bool_decide_eq_true ->?. exact [#]. }
-      { move=> ?. by apply (vreplicate n), FIX. }
+      * move: Eq=> /bool_decide_eq_true ->?. exact [#].
+      * move=> ?. by apply (vreplicate n), FIX.
     + move=> ?? /andb_True[??]. constructor; by apply FIX.
     + move=> 𝔄?. case Eq: (inh_syn_type 𝔄)=>/= H.
-      { apply inl, FIX. by rewrite Eq. } { by apply inr, FIX. }
+      * apply inl, FIX. by rewrite Eq.
+      * by apply inr, FIX.
     + move=> 𝔄?. case Eq: (inh_syn_type 𝔄)=>/= ??; [by apply FIX|].
       apply (@absurd ∅ _). eapply FIX; [|done]. by rewrite Eq.
     + elim; [move=> ?; exact -[]|]=> ?? IH /andb_True [??].
       split; by [apply FIX|apply IH].
     + elim; [done|]=>/= 𝔄 ? IH. case Eq: (inh_syn_type 𝔄)=>/= H.
-      { left. apply FIX. by rewrite Eq. } { right. by apply IH. }
+      * left. apply FIX. by rewrite Eq.
+      * right. by apply IH.
   - case: 𝔄=>//=.
     + move=> ?[|?]; rewrite negb_orb=> /andb_True[/negb_True/bool_decide_spec ??] v;
       [lia|]. by eapply FIX, vhd.

@@ -1,5 +1,7 @@
 From iris.algebra Require Import cmra auth functions.
 
+(* TODO : move all that to Iris *)
+
 (** * Utility for [discrete_fun] *)
 
 Notation ".<[ x := a ]>" := (discrete_fun_insert x a)
@@ -18,7 +20,8 @@ Proof.
 Qed.
 
 Lemma discrete_fun_singleton_valid x (a: B _) : ✓ .{[x:=a]} ↔ ✓ a.
-Proof. split.
+Proof.
+  split.
   - move/(.$ x). by rewrite discrete_fun_lookup_singleton.
   - move=> ? y. rewrite /discrete_fun_singleton /discrete_fun_insert.
     case (decide (x = y))=> [?|?]; by [subst|apply ucmra_unit_valid].
@@ -42,5 +45,4 @@ Proof.
   rewrite /discrete_fun_singleton -(discrete_fun_insert_insert _ _ b' b).
   apply discrete_fun_insert_local_update. by rewrite discrete_fun_lookup_insert.
 Qed.
-
 End ucmra.

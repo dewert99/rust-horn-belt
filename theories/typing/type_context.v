@@ -58,11 +58,12 @@ Section type_context.
 
   Lemma wp_eval_path E p v : eval_path p = Some v → ⊢ WP p @ E {{ v', ⌜v' = v⌝ }}.
   Proof.
-    move: v. elim: p=>//. { move=> > [=?]. by iApply wp_value. }
-    { move=> > ?? /of_to_val ?. by iApply wp_value. }
-    case=>// e Wp. case=>//. case=>//= ?. move: Wp.
-    case (eval_path e)=>//. case=>//. case=>// ? Wp _ ?[=<-].
-    wp_bind e. iApply wp_wand; [by iApply Wp|]. iIntros. subst. by wp_op.
+    move: v. elim: p=>//.
+    - move=> > [=?]. by iApply wp_value.
+    - move=> > ?? /of_to_val ?. by iApply wp_value.
+    - case=>// e Wp. case=>//. case=>//= ?. move: Wp.
+      case (eval_path e)=>//. case=>//. case=>// ? Wp _ ?[=<-].
+      wp_bind e. iApply wp_wand; [by iApply Wp|]. iIntros. subst. by wp_op.
   Qed.
 
   Lemma eval_path_closed p v : eval_path p = Some v → Closed [] p.
@@ -82,7 +83,6 @@ Section type_context.
 
   (* Block tctx_elt_interp from reducing with simpl when t is a constructor. *)
   Global Arguments tctx_elt_interp : simpl never.
-
 End type_context.
 
 (** Type Context Interpretation *)
@@ -92,7 +92,7 @@ Notation tctx_interp tid :=
 Section lemmas.
   Context `{!typeG Σ}.
 
-  Lemma tctx_hasty_val {𝔄} (v: val) (ty: _ 𝔄) vπ tid :
+  Lemma tctx_hasty_val {𝔄} (v: val) (ty: type 𝔄) vπ tid :
     tctx_elt_interp tid (v ◁ ty) vπ ⊣⊢ ∃d, ⧖d ∗ ty.(ty_own) vπ d tid [v].
   Proof.
     rewrite /tctx_elt_interp eval_path_of_val. iSplit.
@@ -100,12 +100,12 @@ Section lemmas.
     - iDestruct 1 as (d) "[??]". iExists _, _. by iFrame.
   Qed.
 
-  Lemma tctx_elt_interp_hasty_path {𝔄} p1 p2 (ty: _ 𝔄) tid vπ :
+  Lemma tctx_elt_interp_hasty_path {𝔄} p1 p2 (ty: type 𝔄) tid vπ :
     eval_path p1 = eval_path p2 →
     tctx_elt_interp tid (p1 ◁ ty) vπ ⊣⊢ tctx_elt_interp tid (p2 ◁ ty) vπ.
   Proof. move=> Hp. rewrite /tctx_elt_interp. by setoid_rewrite Hp. Qed.
 
-  Lemma tctx_hasty_val' {𝔄} tid p v (ty: _ 𝔄) vπ:
+  Lemma tctx_hasty_val' {𝔄} tid p v (ty: type 𝔄) vπ:
     Some v = eval_path p →
     tctx_elt_interp tid (p ◁ ty) vπ ⊣⊢ ∃d, ⧖d ∗ ty.(ty_own) vπ d tid [v].
   Proof.
@@ -113,7 +113,7 @@ Section lemmas.
     by rewrite eval_path_of_val.
   Qed.
 
-  Lemma wp_hasty {𝔄} E tid p (ty: _ 𝔄) vπ Φ :
+  Lemma wp_hasty {𝔄} E tid p (ty: type 𝔄) vπ Φ :
     tctx_elt_interp tid (p ◁ ty) vπ -∗
     (∀v d, ⌜Some v = eval_path p⌝ -∗ ⧖d -∗ ty.(ty_own) vπ d tid [v] -∗ Φ v) -∗
     WP p @ E {{ Φ }}.
@@ -122,7 +122,7 @@ Section lemmas.
     [by iApply wp_eval_path|]. iIntros (?->). by iApply "ToΦ".
   Qed.
 
-  Lemma closed_hasty {𝔄} tid p (ty: _ 𝔄) vπ :
+  Lemma closed_hasty {𝔄} tid p (ty: type 𝔄) vπ :
     tctx_elt_interp tid (p ◁ ty) vπ -∗ ⌜Closed [] p⌝.
   Proof. iIntros "(%&%&%&_)!%". by eapply eval_path_closed. Qed.
 
@@ -135,7 +135,7 @@ Section lemmas.
   Global Instance tctx_nil_copy: CopyC +[].
   Proof. rewrite /CopyC. apply _. Qed.
 
-  Global Instance tctx_cons_copy {𝔄 𝔄l} p (ty: _ 𝔄) (T: _ 𝔄l) :
+  Global Instance tctx_cons_copy {𝔄 𝔄l} p (ty: type 𝔄) (T: tctx 𝔄l) :
     Copy ty → CopyC T → CopyC (p ◁ ty +:: T).
   Proof. rewrite /CopyC=> ???[??]. apply _. Qed.
 
@@ -144,9 +144,10 @@ Section lemmas.
   Class SendC {𝔄l} (T: tctx 𝔄l) := sendc_change_tid tid tid' vπl :
     tctx_interp tid T vπl ⊣⊢ tctx_interp tid' T vπl.
 
-  Global Instance tctx_nil_send: SendC +[]. Proof. done. Qed.
+  Global Instance tctx_nil_send: SendC +[].
+  Proof. done. Qed.
 
-  Global Instance tctx_cons_send {𝔄 𝔄l} p (ty: _ 𝔄) (T: _ 𝔄l) :
+  Global Instance tctx_cons_send {𝔄 𝔄l} p (ty: type 𝔄) (T: tctx 𝔄l) :
     Send ty → SendC T → SendC (p ◁ ty +:: T).
   Proof.
     move=> ? Eq' ??[??]/=. rewrite Eq' /tctx_elt_interp. by do 7 f_equiv.
@@ -161,7 +162,7 @@ Section lemmas.
         ∃d, ⧖d ∗ |={F}▷=>^d |={F}=>
           ⟨π, ∀φ, Φ (vπl -$ π) φ → φ⟩ ∗ llctx_interp L q.
 
-  Lemma leak_tctx_just {𝔄l} E L (T: _ 𝔄l) : leak_tctx E L T (const id).
+  Lemma leak_tctx_just {𝔄l} E L (T: tctx 𝔄l) : leak_tctx E L T (const id).
   Proof.
     move=> *. iMod persist_time_rcpt_0 as "⧖". iIntros "_ _ _ $ _!>". iExists _.
     iFrame "⧖". iApply step_fupdN_full_intro. by iApply proph_obs_true=>/= ?.
@@ -170,7 +171,7 @@ Section lemmas.
   Lemma leak_tctx_nil E L : leak_tctx E L +[] (const id).
   Proof. apply leak_tctx_just. Qed.
 
-  Lemma leak_tctx_cons_hasty {𝔄 𝔅l} E L p (ty: _ 𝔄) Φ (T: _ 𝔅l) Ψ :
+  Lemma leak_tctx_cons_hasty {𝔄 𝔅l} E L p (ty: type 𝔄) Φ (T: tctx 𝔅l) Ψ :
     leak E L ty Φ → leak_tctx E L T Ψ →
     leak_tctx E L (p ◁ ty +:: T) (λ '(a -:: bl) φ, Φ a → Ψ bl φ).
   Proof.
@@ -183,19 +184,19 @@ Section lemmas.
     iApply proph_obs_impl; [|done]=>/= ?[? Imp]? Imp'. by apply Imp, Imp'.
   Qed.
 
-  Lemma leak_tctx_cons_just {𝔄 𝔅l} E L (t: _ 𝔄) (T: _ 𝔅l) Φ :
+  Lemma leak_tctx_cons_just {𝔄 𝔅l} E L (t: tctx_elt 𝔄) (T: tctx 𝔅l) Φ :
     leak_tctx E L T Φ → leak_tctx E L (t +:: T) (λ '(_ -:: bl), Φ bl).
   Proof.
     iIntros (Lk ???[??]?) "LFT PROPH E L /=[_ T]".
     by iApply (Lk with "LFT PROPH E L T").
   Qed.
 
-  Lemma leak_tctx_cons_just_hasty {𝔄 𝔅l} E L p (ty: _ 𝔄) (T: _ 𝔅l) Φ :
+  Lemma leak_tctx_cons_just_hasty {𝔄 𝔅l} E L p (ty: type 𝔄) (T: tctx 𝔅l) Φ :
     leak E L ty (const True) → leak_tctx E L T Φ →
     leak_tctx E L (p ◁ ty +:: T) (λ '(_ -:: bl), Φ bl).
   Proof. move=> ?. apply leak_tctx_cons_just. Qed.
 
-  Lemma leak_tctx_cons_just_blocked {𝔄 𝔅l} E L p κ (ty: _ 𝔄) (T: _ 𝔅l) Φ :
+  Lemma leak_tctx_cons_just_blocked {𝔄 𝔅l} E L p κ (ty: type 𝔄) (T: tctx 𝔅l) Φ :
     leak_tctx E L T Φ → leak_tctx E L (p ◁{κ} ty +:: T) (λ '(_ -:: bl), Φ bl).
   Proof. apply leak_tctx_cons_just. Qed.
 
@@ -207,7 +208,8 @@ Section lemmas.
       tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩ ={⊤}=∗ ∃vπl',
       llctx_interp L q ∗ tctx_interp tid T' vπl' ∗ ⟨π, postπ π (vπl' -$ π)⟩.
 
-  Lemma tctx_incl_impl {𝔄l 𝔅l} (T: _ 𝔄l) (T': _ 𝔅l) (tr tr': _ → _ → Prop) E L :
+  Lemma tctx_incl_impl {𝔄l 𝔅l} (T: tctx 𝔄l) (T': tctx 𝔅l)
+                       (tr tr': predl_trans 𝔄l 𝔅l) E L :
     tctx_incl E L T T' tr' → (∀post vl, tr post vl → tr' post vl) →
     tctx_incl E L T T' tr.
   Proof.
@@ -216,15 +218,15 @@ Section lemmas.
     iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
   Qed.
 
-  Lemma tctx_incl_eq {𝔄l 𝔅l} (T: _ 𝔄l) (T': _ 𝔅l) tr tr' E L :
+  Lemma tctx_incl_eq {𝔄l 𝔅l} (T: tctx 𝔄l) (T': tctx 𝔅l) tr tr' E L :
     tctx_incl E L T T' tr' → (∀post vl, tr post vl = tr' post vl) →
     tctx_incl E L T T' tr.
   Proof. move=> ? Eq. eapply tctx_incl_impl; [done|]=> ??. by rewrite Eq. Qed.
 
-  Lemma tctx_incl_refl {𝔄l} (T: _ 𝔄l) E L : tctx_incl E L T T id.
+  Lemma tctx_incl_refl {𝔄l} (T: tctx 𝔄l) E L : tctx_incl E L T T id.
   Proof. move=> ?? vπl ?. iIntros. iExists vπl. by iFrame. Qed.
 
-  Lemma tctx_incl_trans {𝔄l 𝔅l ℭl} tr tr' (T1: _ 𝔄l) (T2: _ 𝔅l) (T3: _ ℭl) E L :
+  Lemma tctx_incl_trans {𝔄l 𝔅l ℭl} tr tr' (T1: tctx 𝔄l) (T2: tctx 𝔅l) (T3: tctx ℭl) E L :
     tctx_incl E L T1 T2 tr → tctx_incl E L T2 T3 tr' → tctx_incl E L T1 T3 (tr ∘ tr').
   Proof.
     move=> In In' >. iIntros "#LFT #PROPH #UNIQ #E L T Obs".
@@ -234,7 +236,7 @@ Section lemmas.
   Qed.
 
   Lemma tctx_incl_app {𝔄l 𝔅l ℭl 𝔇l}
-    (T1: _ 𝔄l) (T1': _ 𝔅l) (T2: _ ℭl) (T2': _ 𝔇l) tr tr' E L :
+    (T1: tctx 𝔄l) (T1': tctx 𝔅l) (T2: tctx ℭl) (T2': tctx 𝔇l) tr tr' E L :
     tctx_incl E L T1 T1' tr → tctx_incl E L T2 T2' tr' →
     tctx_incl E L (T1 h++ T2) (T1' h++ T2') (trans_app tr tr').
   Proof.
@@ -248,26 +250,28 @@ Section lemmas.
     iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app.
   Qed.
 
-  Lemma tctx_incl_frame_l {𝔄l 𝔅l ℭl} (T: _ 𝔄l) (T': _ 𝔅l) (Tf: _ ℭl) tr E L :
+  Lemma tctx_incl_frame_l {𝔄l 𝔅l ℭl} (T: tctx 𝔄l) (T': tctx 𝔅l) (Tf: tctx ℭl) tr E L :
     tctx_incl E L T T' tr → tctx_incl E L (Tf h++ T) (Tf h++ T') (trans_lower tr).
   Proof.
-    move=> ?. eapply tctx_incl_eq. { apply tctx_incl_app; [|done].
-    apply tctx_incl_refl. } done.
+    move=> ?. eapply tctx_incl_eq.
+    { apply tctx_incl_app; [|done]. apply tctx_incl_refl. }
+    done.
   Qed.
-  Lemma tctx_incl_frame_r {𝔄l 𝔅l ℭl} (T: _ 𝔄l) (T': _ 𝔅l) (Tf: _ ℭl) tr E L :
+  Lemma tctx_incl_frame_r {𝔄l 𝔅l ℭl} (T: tctx 𝔄l) (T': tctx 𝔅l) (Tf: tctx ℭl) tr E L :
     tctx_incl E L T T' tr → tctx_incl E L (T h++ Tf) (T' h++ Tf) (trans_upper tr).
   Proof.
-    move=> ?. eapply tctx_incl_eq. { apply tctx_incl_app; [done|].
-    apply tctx_incl_refl. } done.
+    move=> ?. eapply tctx_incl_eq.
+    { apply tctx_incl_app; [done|]. apply tctx_incl_refl. }
+    done.
   Qed.
-  Lemma tctx_incl_tail {𝔄 𝔄l 𝔅l} (t: _ 𝔄) (T1: _ 𝔄l) (T2: _ 𝔅l) tr E L :
+  Lemma tctx_incl_tail {𝔄 𝔄l 𝔅l} (t: tctx_elt 𝔄) (T1: tctx 𝔄l) (T2: tctx 𝔅l) tr E L :
     tctx_incl E L T1 T2 tr → tctx_incl E L (t +:: T1) (t +:: T2) (trans_tail tr).
   Proof.
-    move=> ?. eapply tctx_incl_eq.
-    { by apply (tctx_incl_frame_l _ _ +[_]). } by move=> ?[??].
+    move=> ?. eapply tctx_incl_eq. { by apply (tctx_incl_frame_l _ _ +[_]). }
+    by move=> ?[??].
   Qed.
 
-  Lemma tctx_incl_swap {𝔄 𝔅 𝔄l} (t: _ 𝔄) (t': _ 𝔅) (T: _ 𝔄l) E L :
+  Lemma tctx_incl_swap {𝔄 𝔅 𝔄l} (t: tctx_elt 𝔄) (t': tctx_elt 𝔅) (T: tctx 𝔄l) E L :
     tctx_incl E L (t +:: t' +:: T) (t' +:: t +:: T)
       (λ post '(a -:: b -:: al), post (b -:: a -:: al)).
   Proof.
@@ -275,13 +279,13 @@ Section lemmas.
     iExists (vπ' -:: vπ -:: wπl). iFrame.
   Qed.
 
-  Lemma tctx_incl_leak_head {𝔄 𝔅l} (t: _ 𝔄) (T: _ 𝔅l) E L :
+  Lemma tctx_incl_leak_head {𝔄 𝔅l} (t: tctx_elt 𝔄) (T: tctx 𝔅l) E L :
     tctx_incl E L (t +:: T) T (λ post '(_ -:: bl), post bl).
   Proof.
     iIntros (??[??]?) "_ _ _ _ $ [_ T] ? !>". iExists _. by iFrame "T".
   Qed.
 
-  Lemma tctx_incl_leak_lower {𝔄l 𝔅l} (T: _ 𝔄l) (T': _ 𝔅l) E L :
+  Lemma tctx_incl_leak_lower {𝔄l 𝔅l} (T: tctx 𝔄l) (T': tctx 𝔅l) E L :
     tctx_incl E L (T h++ T') T (λ post abl, post (psepl abl)).
   Proof.
     move=> ?? abπl ?. move: (papp_ex abπl)=> [aπl[?->]].
@@ -292,14 +296,14 @@ Section lemmas.
   Definition tctx_equiv {𝔄l} (T T': tctx 𝔄l) : Prop :=
     ∀E L, tctx_incl E L T T' id ∧ tctx_incl E L T' T id.
 
-  Lemma get_tctx_equiv {𝔄l} (T T': _ 𝔄l) :
+  Lemma get_tctx_equiv {𝔄l} (T T': tctx 𝔄l) :
     (∀tid vπl, tctx_interp tid T vπl ⊣⊢ tctx_interp tid T' vπl) → tctx_equiv T T'.
   Proof.
     move=> Eq ??; split; iIntros (????) "_ _ _ _ $ T Obs !>"; iExists _;
-    rewrite Eq; iFrame.
+      rewrite Eq; iFrame.
   Qed.
 
-  Lemma copy_tctx_incl {𝔄 𝔄l} (ty: _ 𝔄) `{!Copy ty} (T: _ 𝔄l) p E L :
+  Lemma copy_tctx_incl {𝔄 𝔄l} (ty: type 𝔄) `{!Copy ty} (T: tctx 𝔄l) p E L :
     tctx_incl E L (p ◁ ty +:: T) (p ◁ ty +:: p ◁ ty +:: T)
       (λ post '(a -:: al), post (a -:: a -:: al)).
   Proof.
@@ -307,7 +311,7 @@ Section lemmas.
     iExists (vπ -:: vπ -:: wπl). iFrame "Obs T". by iSplit.
   Qed.
 
-  Lemma tctx_to_shift_loc_0 {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) E L :
+  Lemma tctx_to_shift_loc_0 {𝔄 𝔅l} (ty: type 𝔄) p (T: tctx 𝔅l) E L :
     JustLoc ty → tctx_incl E L (p ◁ ty +:: T) (p +ₗ #0 ◁ ty +:: T) id.
   Proof.
     iIntros (JLoc ??[??]?) "_ _ _ _ $ /=[(%&%& %Ev & ⧖ & ty) T] Obs !>".
@@ -315,7 +319,7 @@ Section lemmas.
     iExists _, _. iFrame "⧖ ty". by rewrite/= Ev shift_loc_0.
   Qed.
 
-  Lemma tctx_of_shift_loc_0 {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) E L :
+  Lemma tctx_of_shift_loc_0 {𝔄 𝔅l} (ty: type 𝔄) p (T: tctx 𝔅l) E L :
     tctx_incl E L (p +ₗ #0 ◁ ty +:: T) (p ◁ ty +:: T) id.
   Proof.
     iIntros (??[??]?) "_ _ _ _ $ /=[(%&%& %Ev & ⧖ty) T] Obs !>". iExists (_-::_).
@@ -323,7 +327,7 @@ Section lemmas.
     case (eval_path p)=>//. (do 2 (case=>//))=> ?. by rewrite shift_loc_0.
   Qed.
 
-  Lemma tctx_shift_loc_assoc {𝔄 𝔅l} (ty: _ 𝔄) p (T: _ 𝔅l) (z z': Z) :
+  Lemma tctx_shift_loc_assoc {𝔄 𝔅l} (ty: type 𝔄) p (T: tctx 𝔅l) (z z': Z) :
     tctx_equiv (p +ₗ #z +ₗ #z' ◁ ty +:: T) (p +ₗ #(z + z') ◁ ty +:: T).
   Proof.
     apply get_tctx_equiv=>/= ?[??]. f_equiv.
@@ -331,7 +335,7 @@ Section lemmas.
     (do 2 case=>//)=> ?. by rewrite shift_loc_assoc.
   Qed.
 
-  Lemma subtype_tctx_incl {𝔄 𝔅 𝔄l} ty ty' (f: 𝔄 → 𝔅) (T: _ 𝔄l) p E L :
+  Lemma subtype_tctx_incl {𝔄 𝔅 𝔄l} ty ty' (f: 𝔄 → 𝔅) (T: tctx 𝔄l) p E L :
     subtype E L ty ty' f →
     tctx_incl E L (p ◁ ty +:: T) (p ◁ ty' +:: T)
       (λ post '(a -:: al), post (f a -:: al)).
@@ -342,8 +346,8 @@ Section lemmas.
     do 2 (iSplit; [done|]). by iApply "InOwn".
   Qed.
 
-  Lemma subtype_tctx_incl_blocked {𝔄 𝔅 𝔄l} ty ty' `{!@Inj 𝔄 𝔅 (=) (=) f}
-    κ κ' (T: _ 𝔄l) p E L :
+  Lemma subtype_tctx_incl_blocked {𝔄 𝔅 𝔄l} (ty : type 𝔄) (ty' : type 𝔅)
+                                  `{!Inj (=) (=) f}  κ κ' (T: tctx 𝔄l) p E L :
     subtype E L ty ty' f → lctx_lft_incl E L κ κ' →
     tctx_incl E L (p ◁{κ} ty +:: T) (p ◁{κ'} ty' +:: T)
       (λ post '(a -:: al), post (f a -:: al)).
@@ -365,29 +369,31 @@ Section lemmas.
     tctx_incl E L T (t +:: T') tr.
 
   Lemma tctx_extract_elt_further {𝔄 𝔅 𝔄l 𝔅l}
-    (t: _ 𝔄) (t': _ 𝔅) (T: _ 𝔄l) (T': _ 𝔅l) tr E L :
+    (t: tctx_elt 𝔄) (t': tctx_elt 𝔅) (T: tctx 𝔄l) (T': tctx 𝔅l) tr E L :
     tctx_extract_elt E L t T T' tr →
     tctx_extract_elt E L t (t' +:: T) (t' +:: T')
       (λ post '(b -:: al), tr (λ '(a -:: bl), post (a -:: b -:: bl)) al).
   Proof.
-    move=> ?. eapply tctx_incl_eq. { eapply tctx_incl_trans;
-    by [eapply tctx_incl_tail|apply tctx_incl_swap]. } move=> ?[??]/=. f_equal.
+    move=> ?. eapply tctx_incl_eq.
+    { eapply tctx_incl_trans; by [eapply tctx_incl_tail|apply tctx_incl_swap]. }
+    move=> ?[??]/=. f_equal.
   Qed.
 
-  Lemma tctx_extract_elt_here_copy {𝔄 𝔅 𝔄l} ty ty' (f: 𝔅 → 𝔄) (T: _ 𝔄l) p p' E L :
+  Lemma tctx_extract_elt_here_copy {𝔄 𝔅 𝔄l} ty ty' (f: 𝔅 → 𝔄) (T: tctx 𝔄l) p p' E L :
     p = p' → Copy ty' → subtype E L ty' ty f →
     tctx_extract_elt E L (p ◁ ty) (p' ◁ ty' +:: T) (p' ◁ ty' +:: T)
       (λ post '(b -:: al), post (f b -:: b -:: al)).
   Proof.
-    move=> ->??. eapply tctx_incl_eq. { eapply tctx_incl_trans;
-    by [apply copy_tctx_incl|apply subtype_tctx_incl]. } by move=> ?[??].
+    move=> ->??. eapply tctx_incl_eq.
+    { eapply tctx_incl_trans; by [apply copy_tctx_incl|apply subtype_tctx_incl]. }
+    by move=> ?[??].
   Qed.
 
-  Lemma tctx_extract_elt_here_exact {𝔄 𝔄l} (t: _ 𝔄) (T: _ 𝔄l) E L :
+  Lemma tctx_extract_elt_here_exact {𝔄 𝔄l} (t: tctx_elt 𝔄) (T: tctx 𝔄l) E L :
     tctx_extract_elt E L t (t +:: T) T id.
   Proof. apply tctx_incl_refl. Qed.
 
-  Lemma tctx_extract_elt_here {𝔄 𝔅 𝔄l} ty ty' (f: 𝔅 → 𝔄) (T: _ 𝔄l) p E L :
+  Lemma tctx_extract_elt_here {𝔄 𝔅 𝔄l} ty ty' (f: 𝔅 → 𝔄) (T: tctx 𝔄l) p E L :
     subtype E L ty' ty f →
     tctx_extract_elt E L (p ◁ ty) (p ◁ ty' +:: T) T
       (λ post '(b -:: al), post (f b -:: al)).
@@ -395,8 +401,8 @@ Section lemmas.
     move=> ?. eapply tctx_incl_eq; [by apply subtype_tctx_incl|]. by move=> ?[??].
   Qed.
 
-  Lemma tctx_extract_elt_here_blocked {𝔄 𝔅 𝔄l} κ κ' ty ty'
-    (f: 𝔅 → 𝔄) `{!Inj (=) (=) f} (T: _ 𝔄l) p E L :
+  Lemma tctx_extract_elt_here_blocked {𝔄 𝔅 𝔄l} κ κ' (ty : type 𝔄) (ty' : type 𝔅)
+    f `{!Inj (=) (=) f} (T: tctx 𝔄l) p E L :
     subtype E L ty' ty f → lctx_lft_incl E L κ' κ →
     tctx_extract_elt E L (p ◁{κ} ty) (p ◁{κ'} ty' +:: T) T
       (λ post '(b -:: al), post (f b -:: al)).
@@ -409,25 +415,29 @@ Section lemmas.
     (T1: tctx 𝔅l) (T2: tctx ℭl) (tr: predl_trans 𝔅l (𝔄l ++ ℭl)) : Prop :=
     tctx_incl E L T1 (T h++ T2) tr.
 
-  Lemma tctx_extract_ctx_eq {𝔄l 𝔅l ℭl} tr tr' E L (T: _ 𝔄l) (T1: _ 𝔅l) (T2: _ ℭl) :
+  Lemma tctx_extract_ctx_eq {𝔄l 𝔅l ℭl} tr tr' E L
+                            (T: tctx 𝔄l) (T1: tctx 𝔅l) (T2: tctx ℭl) :
     tctx_extract_ctx E L T T1 T2 tr' → tr = tr' → tctx_extract_ctx E L T T1 T2 tr.
   Proof. by move=> ?->. Qed.
 
-  Lemma tctx_extract_ctx_nil {𝔄l} (T: _ 𝔄l) E L : tctx_extract_ctx E L +[] T T id.
+  Lemma tctx_extract_ctx_nil {𝔄l} (T: tctx 𝔄l) E L :
+    tctx_extract_ctx E L +[] T T id.
   Proof. apply tctx_incl_refl. Qed.
 
   Lemma tctx_extract_ctx_elt {𝔄 𝔄l 𝔅l ℭl 𝔇l}
-    (t: _ 𝔄) (T: _ 𝔄l) (T1: _ 𝔅l) (T2: _ ℭl) (T3: _ 𝔇l) tr tr' E L :
+      (t: tctx_elt 𝔄) (T: tctx 𝔄l) (T1: tctx 𝔅l) (T2: tctx ℭl) (T3: tctx 𝔇l)
+      tr tr' E L :
     tctx_extract_elt E L t T1 T2 tr → tctx_extract_ctx E L T T2 T3 tr' →
     tctx_extract_ctx E L (t +:: T) T1 T3 (tr ∘ trans_tail tr').
   Proof. move=> ??. eapply tctx_incl_trans; by [|apply tctx_incl_tail]. Qed.
 
-  Lemma tctx_extract_ctx_incl {𝔄l 𝔅l ℭl} (T: _ 𝔄l) (T': _ 𝔅l) (Tx: _ ℭl) tr E L :
+  Lemma tctx_extract_ctx_incl {𝔄l 𝔅l ℭl} (T: tctx 𝔄l) (T': tctx 𝔅l) (Tx: tctx ℭl) tr E L :
     tctx_extract_ctx E L T' T Tx tr →
     tctx_incl E L T T' (λ post, tr (λ bcl, post (psepl bcl))).
   Proof.
-    move=> Ex. eapply tctx_incl_eq. { eapply tctx_incl_trans;
-    [apply Ex|apply tctx_incl_leak_lower]. } done.
+    move=> Ex. eapply tctx_incl_eq.
+    { eapply tctx_incl_trans; [apply Ex|apply tctx_incl_leak_lower]. }
+    done.
   Qed.
 
   (** Unblocking a Type Context *)
@@ -447,7 +457,7 @@ Section lemmas.
     iFrame "⧖". iIntros "!>!>!>!>!>". iSplit; [|done]. by iApply proph_obs_true.
   Qed.
 
-  Lemma unblock_tctx_cons_unblock {𝔄 𝔄l} p (ty: _ 𝔄) (T T': _ 𝔄l) κ E L :
+  Lemma unblock_tctx_cons_unblock {𝔄 𝔄l} p (ty: type 𝔄) (T T': tctx 𝔄l) κ E L :
     lctx_lft_alive E L ty.(ty_lft) → unblock_tctx E L κ T T' →
     unblock_tctx E L κ (p ◁{κ} ty +:: T) (p ◁ ty +:: T').
   Proof.
@@ -466,7 +476,7 @@ Section lemmas.
     iExists v, dp. iSplit; [done|]. by iFrame.
   Qed.
 
-  Lemma unblock_tctx_cons_just {𝔄 𝔄l} (t: _ 𝔄) (T T': _ 𝔄l) κ E L :
+  Lemma unblock_tctx_cons_just {𝔄 𝔄l} (t: tctx_elt 𝔄) (T T': tctx 𝔄l) κ E L :
     unblock_tctx E L κ T T' → unblock_tctx E L κ (t +:: T) (t +:: T').
   Proof.
     iIntros (Un ??[vπ ?]) "LFT E L †κ /=[t T]".
@@ -475,15 +485,14 @@ Section lemmas.
     iIntros "!> >($&?&$) !>". iFrame "t". by iApply proph_obs_impl; [|done]=>/= ?->.
   Qed.
 
-  Lemma unblock_tctx_cons_just_hasty {𝔄 𝔄l} p (ty: _ 𝔄) (T T': _ 𝔄l) κ E L :
+  Lemma unblock_tctx_cons_just_hasty {𝔄 𝔄l} p (ty: type 𝔄) (T T': tctx 𝔄l) κ E L :
     unblock_tctx E L κ T T' → unblock_tctx E L κ (p ◁ ty +:: T) (p ◁ ty +:: T').
   Proof. apply unblock_tctx_cons_just. Qed.
 
-  Lemma unblock_tctx_cons_just_blocked {𝔄 𝔄l} p (ty: _ 𝔄) (T T': _ 𝔄l) κ κ' E L :
+  Lemma unblock_tctx_cons_just_blocked {𝔄 𝔄l} p (ty: type 𝔄) (T T': tctx 𝔄l) κ κ' E L :
     κ ≠ κ' → unblock_tctx E L κ T T' →
     unblock_tctx E L κ (p ◁{κ'} ty +:: T) (p ◁{κ'} ty +:: T').
   Proof. move=> ?. apply unblock_tctx_cons_just. Qed.
-
 End lemmas.
 
 Ltac solve_extract :=

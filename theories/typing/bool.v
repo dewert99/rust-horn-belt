@@ -10,7 +10,8 @@ Section bool.
     {| pt_size := 1;  pt_own (b: boolₛ) _ vl := ⌜vl = [ #b]⌝; |}%I.
   Next Obligation. move=> *. by iIntros (->). Qed.
 
-  Global Instance bool_send: Send bool_ty. Proof. done. Qed.
+  Global Instance bool_send: Send bool_ty.
+  Proof. done. Qed.
 
   Lemma bool_leak E L : leak E L bool_ty (const True).
   Proof. apply leak_just. Qed.
@@ -22,13 +23,13 @@ Section bool.
     rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "⧖". by iExists b.
   Qed.
 
-  Lemma type_bool {𝔄l 𝔅} (b: bool) (T: _ 𝔄l) x e tr E L (C: cctx 𝔅) :
+  Lemma type_bool {𝔄l 𝔅} (b: bool) (T: tctx 𝔄l) x e tr E L (C: cctx 𝔅) :
     Closed (x :b: []) e →
     (∀v: val, typed_body E L C (v ◁ bool_ty +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := #b in e) (λ post al, tr post (b -:: al)).
   Proof. iIntros. iApply type_let; by [apply type_bool_instr|solve_typing]. Qed.
 
-  Lemma type_if {𝔄l 𝔅l ℭ} p (T: _ 𝔄l) (T': _ 𝔅l) e1 e2 tr1 tr2 trx E L (C: cctx ℭ) :
+  Lemma type_if {𝔄l 𝔅l ℭ} p (T: tctx 𝔄l) (T': tctx 𝔅l) e1 e2 tr1 tr2 trx E L (C: cctx ℭ) :
     tctx_extract_ctx E L +[p ◁ bool_ty] T T' trx →
     typed_body E L C T' e1 tr1 -∗ typed_body E L C T' e2 tr2 -∗
     typed_body E L C T (if: p then e1 else e2) (trx ∘
@@ -41,7 +42,6 @@ Section bool.
     - by iApply ("e1" with "LFT TIME PROPH UNIQ E Na L C T").
     - by iApply ("e2" with "LFT TIME PROPH UNIQ E Na L C T").
   Qed.
-
 End bool.
 
 Global Hint Resolve bool_leak : lrust_typing.

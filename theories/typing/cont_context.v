@@ -37,11 +37,11 @@ Notation "k ◁cont{ L , T } tr" := (CCtxe k L T tr)
 Section cont_context.
   Context `{!typeG Σ}.
 
-  Global Instance cctx_interp_permut {𝔄} tid (postπ: _ → pred' 𝔄) :
+  Global Instance cctx_interp_permut {𝔄} tid (postπ: proph (pred' 𝔄)) :
     Proper ((≡ₚ) ==> (⊣⊢)) (cctx_interp tid postπ).
   Proof. solve_proper. Qed.
 
-  Lemma cctx_interp_cons {𝔄} tid postπ (c: _ 𝔄) C :
+  Lemma cctx_interp_cons {𝔄} tid postπ (c: cctx_elt 𝔄) C :
     cctx_interp tid postπ (c :: C) ⊣⊢
     cctx_elt_interp tid postπ c ∧ cctx_interp tid postπ C.
   Proof.
@@ -52,7 +52,7 @@ Section cont_context.
       + iDestruct "cC" as "[_ C]". by iApply "C".
   Qed.
 
-  Lemma cctx_interp_nil {𝔄} tid (postπ: _ → pred' 𝔄) :
+  Lemma cctx_interp_nil {𝔄} tid (postπ: proph (pred' 𝔄)) :
     cctx_interp tid postπ [] ⊣⊢ True.
   Proof. iSplit; [by iIntros|]. iIntros "_ % %In". inversion In. Qed.
 
@@ -60,11 +60,11 @@ Section cont_context.
     cctx_interp tid postπ (C ++ C') ⊣⊢
     cctx_interp tid postπ C ∧ cctx_interp tid postπ C'.
   Proof.
-    elim C. { by rewrite/= cctx_interp_nil left_id. } move=>/= ?? IH.
-    by rewrite !cctx_interp_cons IH assoc.
+    elim C. { by rewrite/= cctx_interp_nil left_id. }
+    move=>/= ?? IH. by rewrite !cctx_interp_cons IH assoc.
   Qed.
 
-  Lemma cctx_interp_singleton {𝔄} tid postπ (c: _ 𝔄) :
+  Lemma cctx_interp_singleton {𝔄} tid postπ (c: cctx_elt 𝔄) :
     cctx_interp tid postπ [c] ⊣⊢ cctx_elt_interp tid postπ c.
   Proof. by rewrite cctx_interp_cons cctx_interp_nil right_id. Qed.
 
@@ -87,7 +87,7 @@ Section cont_context.
   Lemma cctx_incl_nil {𝔄} E (C: cctx 𝔄) : cctx_incl E C [].
   Proof. iIntros "%% _ _ _ _ _ % %In". inversion In. Qed.
 
-  Lemma cctx_incl_cons {𝔄 𝔄l} k L n (T T': vec _ n → tctx 𝔄l) tr tr' (C C': cctx 𝔄) E :
+  Lemma cctx_incl_cons {𝔄 𝔄l} k L n (T T': vec val n → tctx 𝔄l) tr tr' (C C': cctx 𝔄) E :
     cctx_incl E C C' → (∀vl, tctx_incl E L (T' vl) (T vl) tr') →
     cctx_incl E (k ◁cont{L, T} tr :: C) (k ◁cont{L, T'} (tr' ∘ tr) :: C').
   Proof.

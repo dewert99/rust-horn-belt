@@ -12,10 +12,10 @@ Section sum.
 
   Notation hnthb := (hnth (base (𝔄:=@empty _ Empty_setₛ_empty))).
 
-  Definition is_pad {𝔄l} i (tyl: _ 𝔄l) (vl: list val) : iProp Σ :=
+  Definition is_pad {𝔄l} i (tyl: typel 𝔄l) (vl: list val) : iProp Σ :=
     ⌜((hnthb tyl i).(ty_size) + length vl)%nat = max_ty_size tyl⌝.
 
-  Lemma split_sum_mt {𝔄l} (tyl: _ 𝔄l) vπ d l tid q :
+  Lemma split_sum_mt {𝔄l} (tyl: typel 𝔄l) vπ d l tid q :
     (l ↦∗{q}: λ vl, ∃i (vπ': proph (lnthe 𝔄l i)) vl' vl'',
       ⌜vπ = pinj i ∘ vπ' ∧ vl = #i :: vl' ++ vl'' ∧ length vl = S (max_ty_size tyl)⌝ ∗
       (hnthb tyl i).(ty_own) vπ' d tid vl')%I ⊣⊢
@@ -37,11 +37,11 @@ Section sum.
       do 2 (split; [done|]). rewrite/= app_length Eq. by f_equal.
   Qed.
 
-  Lemma ty_lfts_nth_incl {𝔄l} (tyl: _ 𝔄l) i :
+  Lemma ty_lfts_nth_incl {𝔄l} (tyl: typel 𝔄l) i :
     ⊢ tyl_lft tyl ⊑ ty_lft (hnthb tyl i).
   Proof.
-    elim: tyl i. { move=> ?. apply lft_incl_refl. } move=> ?? ty tyl IH i.
-    rewrite /tyl_lft lft_intersect_list_app.
+    elim: tyl i; [auto using lft_incl_refl|].
+    move=> ?? ty tyl IH i. rewrite /tyl_lft lft_intersect_list_app.
     case i; [iApply lft_intersect_incl_l|]=> ?.
     iApply lft_incl_trans; by [iApply lft_intersect_incl_r|iApply IH].
   Qed.
@@ -79,23 +79,23 @@ Section sum.
   Next Obligation.
     move=> *. iIntros "#LFT #?". iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "ty".
     iIntros "κ". iMod (ty_own_proph with "LFT [] ty κ") as "Upd"; [done| |].
-    { iApply lft_incl_trans; by [|iApply ty_lfts_nth_incl]. } iModIntro.
-    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toty]".
-    iModIntro. iExists ξl, q'. iSplit. { iPureIntro. by apply proph_dep_constr. }
-    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[?$]".
-    iModIntro. iExists i, vπ', vl', vl''. by iSplit.
+    { iApply lft_incl_trans; by [|iApply ty_lfts_nth_incl]. }
+    iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toty]".
+    iModIntro. iExists ξl, q'. iSplit.
+    - iPureIntro. by apply proph_dep_constr.
+    - iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[?$]".
+      iModIntro. iExists i, vπ', vl', vl''. by iSplit.
   Qed.
   Next Obligation.
     move=> *. iIntros "#LFT #In #? (%i & %vπ' &->& Bor & ty) κ".
     iMod (ty_shr_proph with "LFT In [] ty κ") as "Upd"; [done| |].
-    { iApply lft_incl_trans; by [|iApply ty_lfts_nth_incl]. } iIntros "!>!>".
-    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toty]".
-    iModIntro. iExists ξl, q'. iSplit. { iPureIntro. by apply proph_dep_constr. }
-    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[?$]".
-    iModIntro. iExists i, vπ'. by do 2 (iSplit; [done|]).
+    { iApply lft_incl_trans; by [|iApply ty_lfts_nth_incl]. }
+    iIntros "!>!>". iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toty]".
+    iModIntro. iExists ξl, q'. iSplit.
+    - iPureIntro. by apply proph_dep_constr.
+    - iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[?$]".
+      iModIntro. iExists i, vπ'. by do 2 (iSplit; [done|]).
   Qed.
-
-  Local Instance typel_dist {𝔄l} : Dist (typel 𝔄l) := ofe_dist (typelO _).
 
   Global Instance xsum_ty_ne {𝔄l} : NonExpansive (@xsum_ty 𝔄l).
   Proof.
@@ -118,7 +118,6 @@ Section sum.
   Proof.
     move=> ???????. rewrite /sum_ty. do 2 f_equiv. constructor; by [|constructor].
   Qed.
-
 End sum.
 
 Notation "Σ!" := xsum_ty : lrust_type_scope.
@@ -128,9 +127,9 @@ Notation empty_ty := (xsum_ty +[]).
 Section typing.
   Context `{!typeG Σ}.
 
-  Lemma xsum_lft_morph {𝔅 𝔄l} (Tl: _ 𝔄l) :
-    TCHForall (λ _, TypeLftMorphism) Tl →
-    TypeLftMorphism (λ ty: _ 𝔅, Σ! (Tl +$ ty))%T.
+  Lemma xsum_lft_morph {𝔅 𝔄l} (Tl: hlist (λ 𝔄, type 𝔅 → type 𝔄) 𝔄l) :
+    TCHForall (λ 𝔄, TypeLftMorphism) Tl →
+    TypeLftMorphism (λ ty: type 𝔅, Σ! (Tl +$ ty))%T.
   Proof.
     move=> All. set T := λ ty, Σ!%T (Tl +$ ty).
     have [[?[?[?[??]]]]|[?[?[??]]]]:
@@ -165,7 +164,7 @@ Section typing.
       + by rewrite !elctx_interp_app HE HE'.
   Qed.
 
-  Global Instance xsum_type_ne {𝔄 𝔅l} (T: _ 𝔄 → _ 𝔅l) :
+  Global Instance xsum_type_ne {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅l) :
     ListTypeNonExpansive T → TypeNonExpansive (Σ! ∘ T)%T.
   Proof.
     move=> [Tl[->All]]. have EqMsz: ∀ty ty',
@@ -182,7 +181,7 @@ Section typing.
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
   (* TODO : get rid of this duplication *)
-  Global Instance xsum_type_contr {𝔄 𝔅l} (T: _ 𝔄 → _ 𝔅l) :
+  Global Instance xsum_type_contr {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅l) :
     ListTypeContractive T → TypeContractive (Σ! ∘ T)%T.
   Proof.
     move=> [Tl[->All]].
@@ -199,7 +198,7 @@ Section typing.
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
 
-  Global Instance xsum_copy {𝔄l} (tyl: _ 𝔄l) : ListCopy tyl → Copy (Σ! tyl).
+  Global Instance xsum_copy {𝔄l} (tyl: typel 𝔄l) : ListCopy tyl → Copy (Σ! tyl).
   Proof.
     move=> ?. have Copy: ∀i, Copy (hnth base tyl i).
     { move=> *. apply (TCHForall_nth _); by [apply _|]. }
@@ -227,12 +226,12 @@ Section typing.
     iFrame "↦i ↦i'". iExists vl'. by iFrame.
   Qed.
 
-  Global Instance xsum_send {𝔄l} (tyl: _ 𝔄l) : ListSend tyl → Send (Σ! tyl).
+  Global Instance xsum_send {𝔄l} (tyl: typel 𝔄l) : ListSend tyl → Send (Σ! tyl).
   Proof. move=> Send ?*/=. do 9 f_equiv. by eapply TCHForall_nth in Send. Qed.
-  Global Instance xsum_sync {𝔄l} (tyl: _ 𝔄l) : ListSync tyl → Sync (Σ! tyl).
+  Global Instance xsum_sync {𝔄l} (tyl: typel 𝔄l) : ListSync tyl → Sync (Σ! tyl).
   Proof. move=> Sync ?*/=. do 6 f_equiv. by eapply TCHForall_nth in Sync. Qed.
 
-  Lemma xsum_leak {𝔄l} E L (tyl: _ 𝔄l) Φl :
+  Lemma xsum_leak {𝔄l} E L (tyl: typel 𝔄l) Φl :
     leakl E L tyl Φl →
     leak E L (Σ! tyl) (λ s, match to_xsume s with xinj i x => pnth absurd Φl i x end).
   Proof.
@@ -240,25 +239,28 @@ Section typing.
     eapply HForall_1_nth in Lk; [|apply leak_just].
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
     iApply (step_fupdN_wand with "ToObs"). iIntros "!> >[Obs $] !>".
-    iApply proph_obs_impl; [|done]=> ?. by rewrite [const _]eq_unique pinj_to_xsum.
+    iApply proph_obs_impl; [|done]=> ? /=.
+    rewrite pinj_to_xsum. clear.
+    revert Φl i vπ'. induction 𝔄l as [|𝔄 𝔄l IH]; [by intros ?? []|].
+    intros [Φ Φl] [] ?; [done|by simpl; auto].
   Qed.
   Hint Resolve xsum_leak : lrust_typing.
 
-  Lemma xsum_leak_just {𝔄l} E L (tyl: _ 𝔄l) :
+  Lemma xsum_leak_just {𝔄l} E L (tyl: typel 𝔄l) :
     HForall (λ _ ty, leak E L ty (const True)) tyl → leak E L (Σ! tyl) (const True).
   Proof. move=> ?. apply leak_just. Qed.
 
-  Lemma sum_leak {𝔄 𝔅} E L (ty: _ 𝔄) (ty': _ 𝔅) Φ Φ' :
+  Lemma sum_leak {𝔄 𝔅} E L (ty: type 𝔄) (ty': type 𝔅) Φ Φ' :
     leak E L ty Φ → leak E L ty' Φ' →
     leak E L (ty + ty') (λ s, match s with inl a => Φ a | inr b => Φ' b end).
   Proof. move=> ??. eapply leak_impl; [solve_typing|]. by case. Qed.
 
-  Lemma sum_leak_just {𝔄 𝔅} E L (ty: _ 𝔄) (ty': _ 𝔅) :
+  Lemma sum_leak_just {𝔄 𝔅} E L (ty: type 𝔄) (ty': type 𝔅) :
     leak E L ty (const True) → leak E L ty' (const True) →
     leak E L (ty + ty') (const True).
   Proof. move=> ??. apply leak_just. Qed.
 
-  Lemma xsum_subtype {𝔄l 𝔅l} E L (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl :
+  Lemma xsum_subtype {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl :
     subtypel E L tyl tyl' fl → subtype E L (Σ! tyl) (Σ! tyl') (psum_map fl).
   Proof.
     move=> Subs ?. iIntros "L".
@@ -289,7 +291,7 @@ Section typing.
       iSplit; by [|iApply "InShr"].
   Qed.
 
-  Lemma xsum_eqtype {𝔄l 𝔅l} E L (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl gl :
+  Lemma xsum_eqtype {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl gl :
     eqtypel E L tyl tyl' fl gl →
     eqtype E L (Σ! tyl) (Σ! tyl') (psum_map fl) (psum_map gl).
   Proof.
@@ -300,15 +302,15 @@ Section typing.
     subtype E L ty1 ty1' f → subtype E L ty2 ty2' g →
     subtype E L (ty1 + ty2) (ty1' + ty2') (sum_map f g).
   Proof.
-    move=> A B. eapply subtype_eq. { apply mod_ty_subtype; [apply _|].
-    apply xsum_subtype. solve_typing. } fun_ext. by case.
+    move=> A B. eapply subtype_eq.
+    { apply mod_ty_subtype; [apply _|]. apply xsum_subtype. solve_typing. }
+    fun_ext. by case.
   Qed.
 
   Lemma sum_eqtype {𝔄 𝔅 𝔄' 𝔅'} E L (f: 𝔄 → 𝔄') f' (g: 𝔅 → 𝔅') g' ty1 ty2 ty1' ty2' :
     eqtype E L ty1 ty1' f f' → eqtype E L ty2 ty2' g g' →
     eqtype E L (ty1 + ty2) (ty1' + ty2') (sum_map f g) (sum_map f' g').
   Proof. move=> [??][??]. split; by apply sum_subtype. Qed.
-
 End typing.
 
 Global Instance empty_ty_empty `{!typeG Σ} : Empty (type ∅) := empty_ty.

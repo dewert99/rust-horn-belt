@@ -10,7 +10,8 @@ Section mod_ty.
   Local Lemma mod_ty_mt {𝔄 𝔅} (f: 𝔄 → 𝔅) ty vπ' d tid l q :
     (l ↦∗{q}: λ vl, ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ ty.(ty_own) vπ d tid vl)%I ⊣⊢
     ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ l ↦∗{q}: ty.(ty_own) vπ d tid.
-  Proof. iSplit.
+  Proof.
+    iSplit.
     - iIntros "(%vl &?& %vπ &->&?)". iExists vπ. iSplit; [done|]. iExists vl. iFrame.
     - iIntros "(%vπ &->& %vl & ↦ &?)". iExists vl. iFrame "↦". iExists vπ.
       by iSplit; [done|].
@@ -104,21 +105,23 @@ Section typing.
 
   Lemma mod_ty_own {𝔄 𝔅} g f `{!@Iso 𝔄 𝔅 f g} ty vπ d tid vl :
     (<{f}> ty).(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) (g ∘ vπ) d tid vl.
-  Proof. iSplit=>/=.
+  Proof.
+    iSplit=>/=.
     - iIntros "[%[->?]]". by rewrite compose_assoc semi_iso.
     - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
   Qed.
   Lemma mod_ty_shr {𝔄 𝔅} g f `{!@Iso 𝔄 𝔅 f g} ty vπ d κ tid l :
     (<{f}> ty).(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) (g ∘ vπ) d κ tid l.
-  Proof. iSplit=>/=.
+  Proof.
+    iSplit=>/=.
     - iIntros "[%[->?]]". by rewrite compose_assoc semi_iso.
     - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
   Qed.
 
-  Lemma mod_ty_id {𝔄} (ty: _ 𝔄) : <{id}>%T ty ≡ ty.
+  Lemma mod_ty_id {𝔄} (ty: type 𝔄) : <{id}>%T ty ≡ ty.
   Proof. split; move=>// *; by [rewrite mod_ty_own|rewrite mod_ty_shr]. Qed.
 
-  Lemma mod_ty_compose {𝔄 𝔅 ℭ} (f: 𝔄 → 𝔅) (g: _ → ℭ) ty :
+  Lemma mod_ty_compose {𝔄 𝔅 ℭ} (f: 𝔄 → 𝔅) (g: 𝔅 → ℭ) ty :
     (<{g}> (<{f}> ty) ≡ <{g ∘ f}> ty)%T.
   Proof.
     split=>// *; (iSplit=>/=; [

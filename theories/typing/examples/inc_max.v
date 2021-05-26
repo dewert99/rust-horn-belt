@@ -34,7 +34,7 @@ Section inc_max.
       by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. }
     by move=> ?[[??][[??][]]]/=.
   Qed.
-
+  
   Definition inc_max: val :=
     fn: ["oa"; "ob"] := Newlft;;
       letalloc: "oua" <- "oa" in letalloc: "oub" <- "ob" in
@@ -49,7 +49,7 @@ Section inc_max.
 
   Lemma type_inc_max :
     typed_val inc_max (fn(∅; int, int) → int)
-      (λ (post: pred' _) (_: _:*_:*_), ∀n, n ≠ 0 → post n).
+      (λ (post: pred' _) _, ∀n, n ≠ 0 → post n).
   Proof.
     eapply type_fn; [solve_typing|]=>/= _ ??[?[?[]]]. simpl_subst. via_tr_impl.
     { unshelve (
@@ -80,5 +80,4 @@ Section inc_max.
     case Le: (bool_decide (b ≤ a))=> ->->; apply Imp; move: Le;
     [rewrite bool_decide_eq_true|rewrite bool_decide_eq_false]; lia.
   Qed.
-
 End inc_max.

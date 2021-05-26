@@ -41,7 +41,7 @@ Proof. move=> ?? Eqv. apply Eqv. constructor. Qed.
 Lemma proph_dep_constr {A B} (f: A → B) vπ ξl : vπ ./ ξl → f ∘ vπ ./ ξl.
 Proof. move=> Dep ?? /Dep ?. by apply (f_equal f). Qed.
 
-Local Lemma proph_dep_mono {A} ξl ζl (vπ: _ → A) :
+Local Lemma proph_dep_mono {A} ξl ζl (vπ: proph A) :
   ξl ⊆ ζl → vπ ./ ξl → vπ ./ ζl.
 Proof. move=> In Dep ?? Eqv. apply Dep => ??. by apply Eqv, In. Qed.
 
@@ -69,16 +69,17 @@ Proof.
   move=> Dep. split; move=> ?? /Dep Eq; apply (inj2 f) in Eq; by inversion Eq.
 Qed.
 
-Lemma proph_dep_unique `{!Unique A} (vπ: _ → A) : vπ ./ [].
-Proof. by rewrite (eq_unique vπ). Qed.
+Lemma proph_dep_singleton {A} (vπ: proph A) :
+  (∀ u v : A, u = v) → vπ ./ [].
+Proof. by intros ????. Qed.
 
-Lemma proph_dep_pair {A B} ξl ζl (vπ: _ → A * B) :
+Lemma proph_dep_pair {A B} ξl ζl (vπ: proph (A * B)) :
   fst ∘ vπ ./ ξl → snd ∘ vπ ./ ζl → vπ ./ ξl ++ ζl.
 Proof.
   move=> ??. rewrite (surjective_pairing_fun vπ). by apply proph_dep_constr2.
 Qed.
 
-Lemma proph_dep_vcons {A n} ξl ζl (vπ: _ → vec A (S n)) :
+Lemma proph_dep_vcons {A n} ξl ζl (vπ: proph (vec A (S n))) :
   vhd ∘ vπ ./ ξl → vtl ∘ vπ ./ ζl → vπ ./ ξl ++ ζl.
 Proof.
   move=> ??. rewrite (surjective_vcons_fun vπ). by apply proph_dep_constr2.
@@ -98,13 +99,16 @@ Local Definition res (L: proph_log) := pli_pv <$> L.
 Local Definition proph_asn_eqv_out ξl π π' := ∀ξ, ξ ∉ ξl → π ξ = π' ξ.
 Local Notation "π .≡~{ ξl }≡ π'" := (proph_asn_eqv_out ξl π π')
   (at level 70, format "π  .≡~{ ξl }≡  π'").
-Local Definition proph_dep_out {A} (vπ: _ → A) ξl :=
+Local Definition proph_dep_out {A} (vπ: proph A) ξl :=
   ∀ π π', π .≡~{ ξl }≡ π' → vπ π = vπ π'.
 Local Notation "vπ ./~ ξl" := (proph_dep_out vπ ξl)
   (at level 70, format "vπ  ./~  ξl").
 
-Local Fixpoint proph_log_ok L := match L with [] => True |
-  .{ξ := vπ} :: L' => ξ ∉ res L' ∧ vπ ./~ res L ∧ proph_log_ok L' end.
+Local Fixpoint proph_log_ok L :=
+  match L with
+  | [] => True
+  | .{ξ := vπ} :: L' => ξ ∉ res L' ∧ vπ ./~ res L ∧ proph_log_ok L'
+  end.
 Local Notation ".✓ L" := (proph_log_ok L) (at level 20, format ".✓  L").
 
 Local Definition proph_sat π L := Forall (λ pli, π pli.(pli_pv) = pli.(pli_val) π) L.
@@ -122,8 +126,11 @@ Proof. rewrite /proph_upd. case (decide (ξ = ξ))=> [?|?]; by [simpl_eq|]. Qed.
 Local Lemma proph_upd_lookup_ne π ξ vπ ζ : ξ ≠ ζ → :<[ξ := vπ]> π ζ = π ζ.
 Proof. rewrite /proph_upd. by case (decide (ξ = ζ))=> [?|?]. Qed.
 
-Local Fixpoint proph_modify π L := match L with
-  [] => π | .{ξ := vπ} :: L' => proph_modify (:<[ξ := vπ]> π) L' end.
+Local Fixpoint proph_modify π L :=
+  match L with
+  | [] => π
+  | .{ξ := vπ} :: L' => proph_modify (:<[ξ := vπ]> π) L'
+  end.
 Local Notation "π ! L" := (proph_modify π L) (at level 30, format "π  !  L").
 
 Local Lemma proph_modify_eqv L : ∀π, π ! L .≡~{res L}≡ π.
@@ -188,7 +195,6 @@ Local Definition proph_atom pli : iProp Σ :=
   own proph_name (◯ line pli.(pli_pv) (aitem pli.(pli_val))).
 Definition proph_obs (φπ: proph Prop) : iProp Σ :=
   ∃L, ⌜∀π, π ◁ L → φπ π⌝ ∗ [∗ list] pli ∈ L, proph_atom pli.
-
 End defs.
 
 Notation "q :[ ξ ]" := (proph_tok ξ q)
@@ -272,7 +278,7 @@ Proof.
   iMod (own_update _ _ (● S' ⋅ ◯ line ξ (fitem 1)) with "●S") as "[●S' ?]".
   { by apply auth_update_alloc,
       discrete_fun_insert_local_update, alloc_singleton_local_update. }
-  iModIntro. iSplitL "●S'"; last first. { iModIntro. iExists i. by iFrame. }
+  iModIntro. iSplitL "●S'"; last first. { by iModIntro; iExists i; iFrame. }
   iModIntro. iExists S'. iFrame "●S'". iPureIntro. exists L.
   split; [done|]. case=> [𝔅i j]?. rewrite /S' /add_line /discrete_fun_insert -Sim.
   case (decide (𝔄i = 𝔅i))=> [?|?]; [|done]. subst=>/=.
@@ -383,7 +389,6 @@ Proof.
   move=> Val. move: Inc. move: Val=> /Cinr_valid/to_agree_uninj [?<-].
   inversion Eq. by move/to_agree_included <-.
 Qed.
-
 End lemmas.
 
 Global Opaque proph_ctx proph_tok proph_obs.
@@ -405,13 +410,13 @@ Proof.
   iIntros "PROPH ξ" (???[??]) "ξl". by iMod (proph_resolve with "PROPH ξ ξl").
 Qed.
 
-Lemma proph_eqz_obs {A} (uπ vπ: _ → A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
+Lemma proph_eqz_obs {A} (uπ vπ: proph A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
 Proof. iIntros "?" (???[??]) "? !>". iFrame. Qed.
 
-Lemma proph_eqz_eq {A} (vπ: _ → A) : ⊢ vπ :== vπ.
+Lemma proph_eqz_eq {A} (vπ: proph A) : ⊢ vπ :== vπ.
 Proof. iApply proph_eqz_obs. by iApply proph_obs_true. Qed.
 
-Lemma proph_eqz_modify {A} (uπ uπ' vπ: _ → A) :
+Lemma proph_eqz_modify {A} (uπ uπ' vπ: proph A) :
   ⟨π, uπ' π = uπ π⟩ -∗ uπ :== vπ -∗ uπ' :== vπ.
 Proof.
   iIntros "Obs Eqz" (???[??]) "ξl". iMod ("Eqz" with "[%//] ξl") as "[Obs' $]".
@@ -435,11 +440,10 @@ Proof.
   iCombine "Obs Obs'" as "?". by iApply proph_obs_impl; [|done]=>/= ?[->->].
 Qed.
 
-Lemma proph_eqz_pair {A B} (uπ vπ: _ → A * B) :
+Lemma proph_eqz_pair {A B} (uπ vπ: proph (A * B)) :
   fst ∘ uπ :== fst ∘ vπ -∗ snd ∘ uπ :== snd ∘ vπ -∗ uπ :== vπ.
 Proof.
   iIntros "Eqz Eqz'". iDestruct (proph_eqz_constr2 with "Eqz Eqz'") as "?".
   by rewrite -!surjective_pairing_fun.
 Qed.
-
 End lemmas.

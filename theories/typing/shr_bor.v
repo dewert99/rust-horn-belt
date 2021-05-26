@@ -31,7 +31,6 @@ Section shr_bor.
 
   Global Instance shr_ne {𝔄} κ : NonExpansive (@shr_bor 𝔄 κ).
   Proof. solve_ne_type. Qed.
-
 End shr_bor.
 
 Notation "&shr{ κ }" := (shr_bor κ) (format "&shr{ κ }") : lrust_type_scope.
@@ -40,18 +39,19 @@ Section typing.
   Context `{!typeG Σ}.
 
   Global Instance shr_type_contr {𝔄} κ : TypeContractive (@shr_bor _ _ 𝔄 κ).
-  Proof. split; [by apply (type_lft_morph_add_one κ)|done| |].
+  Proof.
+    split; [by apply (type_lft_morph_add_one κ)|done| |].
     - move=>/= *. by do 4 f_equiv.
     - move=>/= *. do 8 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
-  Global Instance shr_send {𝔄} κ (ty: _ 𝔄) : Sync ty → Send (&shr{κ} ty).
+  Global Instance shr_send {𝔄} κ (ty: type 𝔄) : Sync ty → Send (&shr{κ} ty).
   Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
 
-  Global Instance shr_just_loc {𝔄} κ (ty: _ 𝔄) : JustLoc (&shr{κ} ty).
+  Global Instance shr_just_loc {𝔄} κ (ty: type 𝔄) : JustLoc (&shr{κ} ty).
   Proof. iIntros (?[|]?[|[[]|][]]) "? //". by iExists _. Qed.
 
-  Lemma shr_leak {𝔄} κ (ty: _ 𝔄) E L : leak E L (&shr{κ} ty) (const True).
+  Lemma shr_leak {𝔄} κ (ty: type 𝔄) E L : leak E L (&shr{κ} ty) (const True).
   Proof. apply leak_just. Qed.
 
   Lemma shr_type_incl {𝔄 𝔅} κ κ' (f: 𝔄 → 𝔅) ty ty' :
@@ -77,7 +77,7 @@ Section typing.
     eqtype E L (&shr{κ} ty) (&shr{κ'} ty') f g.
   Proof. move=> [??] [??]. split; by apply shr_subtype. Qed.
 
-  Lemma read_shr {𝔄} (ty: _ 𝔄) κ E L :
+  Lemma read_shr {𝔄} (ty: type 𝔄) κ E L :
     Copy ty → lctx_lft_alive E L κ →
     typed_read E L (&shr{κ} ty) ty (&shr{κ} ty) id id.
   Proof.
@@ -85,12 +85,11 @@ Section typing.
     setoid_rewrite by_just_loc_ex at 1. iDestruct "shr" as (l[=->]) "#shr".
     iMod (Alv with "E L") as (q) "[κ ToL]"; [done|].
     iMod (copy_shr_acc with "LFT shr Na κ") as (q' vl) "(Na & ↦ & ty & Toκ)";
-    [done|by rewrite ->shr_locsE_shrN|]. iExists l, vl, q'. iIntros "!>".
-    iFrame "↦". iSplit; [done|]. iSplit.
-    { iApply ty_own_depth_mono; [|done]. lia. } iIntros "↦".
-    iMod ("Toκ" with "Na ↦") as "[$ κ]". by iMod ("ToL" with "κ") as "$".
+    [done|by rewrite ->shr_locsE_shrN|]. iExists l, vl, q'. iIntros "!> {$↦}".
+    iSplit; [done|iSplit].
+    - iApply ty_own_depth_mono; [|done]. lia.
+    - iIntros "↦". iMod ("Toκ" with "Na ↦") as "[$ κ]". by iMod ("ToL" with "κ") as "$".
   Qed.
-
 End typing.
 
 Global Hint Resolve shr_leak shr_subtype shr_eqtype read_shr : lrust_typing.

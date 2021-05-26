@@ -5,9 +5,11 @@ Set Default Proof Using "Type".
 
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
-Fixpoint subst_plv {𝔄l} (bl: plistc binder 𝔄l) (vl: plistc val 𝔄l)
-  (e: expr) : expr := match 𝔄l, bl, vl with [], _, _ => e |
-    _::_, b -:: bl', v -:: vl' => subst' b v (subst_plv bl' vl' e) end.
+Fixpoint subst_plv {𝔄l} (bl: plistc binder 𝔄l) (vl: plistc val 𝔄l) (e: expr) : expr :=
+  match 𝔄l, bl, vl with
+  | [], _, _ => e
+  | _::_, b -:: bl', v -:: vl' => subst' b v (subst_plv bl' vl' e)
+  end.
 
 Instance do_subst_plv {𝔄l} (bl vl: plistc _ 𝔄l) e :
   DoSubstL bl (map of_val vl) e (subst_plv bl vl e).
@@ -15,7 +17,7 @@ Proof.
   rewrite /DoSubstL. induction 𝔄l, bl, vl; [done|]=>/=. by rewrite IH𝔄l.
 Qed.
 
-Lemma subst_plv_renew {𝔄l 𝔅l} (bl: _ 𝔄l) (vl': _ 𝔅l) eq eq' e :
+Lemma subst_plv_renew {𝔄l 𝔅l} (bl: plistc binder 𝔄l) (vl': plistc val 𝔅l) eq eq' e :
   subst_plv (plistc_renew eq bl) vl' e =
     subst_plv bl (plistc_renew eq' vl') e.
 Proof.
@@ -28,8 +30,6 @@ Section fn.
 
   Record fn_params :=
     FP { fp_E_ex: lft → elctx;  fp_ityl: typel 𝔄l;  fp_oty: type 𝔅 }.
-
-  Local Instance typel_dist {𝔄l} : Dist (typel 𝔄l) := ofe_dist (typelO _).
 
   Definition fn_params_dist n fp fp' : Prop :=
     (∀ϝ, fp.(fp_E_ex) ϝ = fp'.(fp_E_ex) ϝ) ∧
@@ -78,7 +78,6 @@ Section fn.
       induction Eq; [done|]. case wl=> ??. case vπl=> ??/=.
       f_equiv; [|by apply IHEq]. rewrite /tctx_elt_interp. by do 8 f_equiv.
   Qed.
-
 End fn.
 
 Arguments fn_params {_ _} _ _.
@@ -102,7 +101,8 @@ Notation "fn( E ) → oty" := (fn (λ _: (), FP E%EL +[] oty%T))
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance fn_type_contr {A 𝔄l 𝔅 ℭ} E (IT: A → _ ℭ → _ 𝔄l) (OT: _ → _ → _ 𝔅) :
+  Global Instance fn_type_contr {A 𝔄l 𝔅 ℭ} E
+         (IT: A → type ℭ → typel 𝔄l) (OT: A → type ℭ → type 𝔅) :
     (∀x, ListTypeNonExpansive (IT x)) → (∀x, TypeNonExpansive (OT x)) →
     TypeContractive (λ ty, fn (λ x, FP (E x) (IT x ty) (OT x ty))).
   Proof.
@@ -122,12 +122,14 @@ Section typing.
     move=>/= n ty ty' *. apply bi.exist_ne=> ?. apply bi.sep_ne; [done|].
     do 5 apply bi.exist_ne=> ?. f_equiv. f_contractive. (do 2 f_equiv)=> x.
     (do 5 f_equiv)=> wl. rewrite /typed_body. (do 3 f_equiv)=> aπl. do 2 f_equiv.
-    have EqBox: ∀𝔄 (T: _ → _ 𝔄), TypeNonExpansive T → ∀vπ d tid vl,
+    have EqBox: ∀𝔄 (T: type ℭ → type 𝔄), TypeNonExpansive T → ∀vπ d tid vl,
       (box (T ty)).(ty_own) vπ d tid vl ≡{n}≡ (box (T ty')).(ty_own) vπ d tid vl.
-    { move=> ?? Ne. apply box_type_contr=> *. { by apply Ne. }
-      { by iApply type_lft_morph_lft_equiv_proper. }
-      { apply type_lft_morph_elctx_interp_proper=>//. apply _. }
-      { apply dist_dist_later. by apply Ne. } { apply dist_S. by apply Ne. } }
+    { move=> ?? Ne. apply box_type_contr=> *.
+      - by apply Ne.
+      - by iApply type_lft_morph_lft_equiv_proper.
+      - apply type_lft_morph_elctx_interp_proper=>//. apply _.
+      - apply dist_dist_later. by apply Ne.
+      - apply dist_S. by apply Ne. }
     move: (NeIT x)=> [?[->NeITl]]. do 5 f_equiv; [|do 3 f_equiv; [|f_equiv]].
     - apply equiv_dist. rewrite /fp_E /= !elctx_interp_app.
       do 2 f_equiv; [|f_equiv; [|f_equiv]].
@@ -145,13 +147,14 @@ Section typing.
       f_equiv; [|done]. rewrite /tctx_elt_interp. do 6 f_equiv. by apply EqBox.
   Qed.
 
-  Global Instance fn_send {A 𝔄l 𝔅} (fp: A → _ 𝔄l 𝔅) : Send (fn fp).
+  Global Instance fn_send {A 𝔄l 𝔅} (fp: A → fn_params 𝔄l 𝔅) : Send (fn fp).
   Proof. done. Qed.
 
-  Lemma fn_leak {A 𝔄l 𝔅} (fp: A → _ 𝔄l 𝔅) E L : leak E L (fn fp) (const True).
+  Lemma fn_leak {A 𝔄l 𝔅} (fp: A → fn_params 𝔄l 𝔅) E L : leak E L (fn fp) (const True).
   Proof. apply leak_just. Qed.
 
-  Local Lemma subtypel_llctx_big_sep_box {𝔄l 𝔅l} (tyl: _ 𝔄l) (tyl': _ 𝔅l) fl q E L :
+  Local Lemma subtypel_llctx_big_sep_box {𝔄l 𝔅l}
+        (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl q E L :
     subtypel E L tyl tyl' fl →
     llctx_interp L q -∗ □ (elctx_interp E -∗
       [∗ hlist] ty; ty';- f ∈ tyl; tyl';- fl, type_incl (box ty) (box ty') f).
@@ -162,12 +165,13 @@ Section typing.
     iDestruct ("IH" with "E") as "$".
   Qed.
 
-  Lemma fn_subtype {A 𝔄l 𝔄l' 𝔅 𝔅'} (fp: A → _) fp' (fl: _ 𝔄l' 𝔄l) (g: 𝔅 → 𝔅') E L :
+  Lemma fn_subtype {A 𝔄l 𝔄l' 𝔅 𝔅'}
+        (fp: A → fn_params 𝔄l 𝔅) (fp': A → fn_params 𝔄l' 𝔅') fl g E L :
     (∀x ϝ, let E' := E ++ fp_E (fp' x) ϝ in elctx_sat E' L (fp_E (fp x) ϝ) ∧
       subtypel E' L (fp' x).(fp_ityl) (fp x).(fp_ityl) fl ∧
       subtype E' L (fp x).(fp_oty) (fp' x).(fp_oty) g) →
     subtype E L (fn fp) (fn fp')
-     (λ tr (post: predₛ _) (al': Π!%ST _), tr (post ∘ g) (plist_map fl al')).
+     (λ tr (post: predₛ 𝔅') (al': Π!%ST 𝔄l'), tr (post ∘ g) (plist_map fl al')).
   Proof.
     move=> Big. apply subtype_plain_type=>/= ?. iIntros "L".
     iAssert (∀x ϝ, □ (elctx_interp (E ++ fp_E (fp' x) ϝ) -∗
@@ -207,7 +211,7 @@ Section typing.
       fix FIX 1. case=> [|??]; case=>//= ??[??][??]. f_equal. apply FIX.
   Qed.
 
-  Lemma fn_subtype_specialize {A B 𝔄l 𝔅} (σ: A → B) (fp: _ → _ 𝔄l 𝔅) E L :
+  Lemma fn_subtype_specialize {A B 𝔄l 𝔅} (σ: A → B) (fp: B → fn_params 𝔄l 𝔅) E L :
     subtype E L (fn fp) (fn (fp ∘ σ)) id.
   Proof.
     apply subtype_plain_type. iIntros (?) "_!>_/=". iSplit; [done|].
@@ -223,8 +227,8 @@ Section typing.
       WP f (of_val r :: map of_val (vl ++ wl)) {{ Φ }}) -∗
     WP f (of_val r :: map of_val vl ++ pl) {{ Φ }}.
   Proof.
-    move: tyl pl vπl vl. elim=> [|???? IH]. { iIntros "* _ Wp".
-    iSpecialize ("Wp" $! -[] with "[//]"). by rewrite !right_id. }
+    move: tyl pl vπl vl. elim=> [|???? IH].
+    { iIntros "* _ Wp". iSpecialize ("Wp" $! -[] with "[//]"). by rewrite !right_id. }
     iIntros ([p pl'][??]vl) "/= [p pl'] ToWp".
     have ->: App f (of_val r :: map of_val vl ++ p :: pl') =
       fill_item (AppRCtx f (r :: vl) pl') p by done.
@@ -236,8 +240,8 @@ Section typing.
     by rewrite eval_path_of_val.
   Qed.
 
-  Lemma type_call {A 𝔄l 𝔅 ℭl 𝔇l 𝔈l 𝔉} x (fp: A → _ 𝔄l 𝔅) p ql ql' k trx trk tri
-    E L (C: cctx 𝔉) (T: _ ℭl) (T': _ 𝔇l) (Tk: _ → _ 𝔈l) :
+  Lemma type_call {A 𝔄l 𝔅 ℭl 𝔇l 𝔈l 𝔉} x (fp: A → fn_params 𝔄l 𝔅) p ql ql' k trx trk tri
+    E L (C: cctx 𝔉) (T: tctx ℭl) (T': tctx 𝔇l) (Tk: vec val 1 → tctx 𝔈l) :
     IntoPlistc ql ql' → Forall (lctx_lft_alive E L) L.*1 →
     tctx_extract_ctx E L (p ◁ fn fp +::
       hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') T T' trx →
@@ -279,9 +283,9 @@ Section typing.
     as (?) "(L & Tk & Obs)". iApply ("C" with "Na L Tk Obs").
   Qed.
 
-  Lemma type_letcall {A 𝔄l 𝔅 ℭl 𝔇l 𝔈} x (fp: A → _ 𝔄l 𝔅) p ql ql' (T: _ ℭl)
-    (T': _ 𝔇l) b e trx tr E L (C: cctx 𝔈)
-    `{!IntoPlistc ql ql', !Closed (b :b: []) e, !Closed [] p} :
+  Lemma type_letcall {A 𝔄l 𝔅 ℭl 𝔇l 𝔈} x (fp: A → fn_params 𝔄l 𝔅) p ql ql'
+                     (T: tctx ℭl) (T': tctx 𝔇l) b e trx tr E L (C: cctx 𝔈)
+                     `{!IntoPlistc ql ql', !Closed (b :b: []) e, !Closed [] p} :
     TCForall (Closed []) ql → Forall (lctx_lft_alive E L) L.*1 →
     tctx_extract_ctx E L (p ◁ fn fp +::
       hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') T T' trx →
@@ -307,14 +311,17 @@ Section typing.
       rewrite is_closed_nil_subst; [|done].
       have ->: map (subst "_k" k) ql = ql.
       { clear -Clql. elim Clql; [done|]=>/= ????->. by rewrite is_closed_nil_subst. }
-      iApply typed_body_eq; last first. { iApply type_call=>//; [constructor|]=> v.
-      have {1}->: v = vhd [#v] by done. move: [#v]=> ?. apply tctx_incl_refl. } done.
+      iApply typed_body_eq; last first.
+      { iApply type_call=>//; [constructor|]=> v.
+        have {1}->: v = vhd [#v] by done. move: [#v]=> ?. apply tctx_incl_refl. }
+      done.
     - iIntros (? ret). inv_vec ret=> ret. rewrite /subst_v /=.
       rewrite (is_closed_subst []); [| |set_solver+]; last first.
-      { apply subst'_is_closed; [|done]. apply is_closed_of_val. } iApply "e".
+      { apply subst'_is_closed; [|done]. apply is_closed_of_val. }
+      iApply "e".
   Qed.
 
-  Lemma type_fnrec {A 𝔄l 𝔅} (tr: predl_trans' 𝔄l 𝔅) (fp: A → _) fb e bl bl'
+  Lemma type_fnrec {A 𝔄l 𝔅} tr (fp: A → fn_params 𝔄l 𝔅) fb e bl bl'
     `{Into: !IntoPlistc bl bl', Cl: !Closed (fb :b: ("return" :: bl)%binder +b+ []) e} :
     (∀x ϝ (f: val) k (wl: plistc _ 𝔄l), ⊢ typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
       [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } tr_ret]
@@ -334,7 +341,7 @@ Section typing.
     by iApply proph_obs_impl; [|done]=>/= ??.
   Qed.
 
-  Lemma type_fn {A 𝔄l 𝔅} (tr: predl_trans' 𝔄l 𝔅) (fp: A → _) e bl bl'
+  Lemma type_fn {A 𝔄l 𝔅} tr (fp: A → fn_params 𝔄l 𝔅) e bl bl'
     `{!IntoPlistc bl bl', !Closed ("return" :: bl +b+ []) e} :
     (∀x ϝ k (wl: plistc _ 𝔄l), ⊢ typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
       [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } tr_ret]
@@ -342,11 +349,11 @@ Section typing.
       (subst "return" k $ subst_plv bl' wl e) tr) →
     typed_val (fn: bl := e)%V (fn fp) tr.
   Proof.
-    move=> Body. eapply type_fnrec; [apply _|]=> *. iApply typed_body_impl;
-    last first. { iApply typed_body_tctx_incl; [|iApply Body].
-    apply tctx_incl_leak_head. } by move=>/= ?[??][_ ?].
+    move=> Body. eapply type_fnrec; [apply _|]=> *.
+    iApply typed_body_impl; last first.
+    { iApply typed_body_tctx_incl; [|iApply Body]. apply tctx_incl_leak_head. }
+    by move=>/= ?[??][_ ?].
   Qed.
-
 End typing.
 
 Global Hint Resolve fn_leak fn_subtype : lrust_typing.

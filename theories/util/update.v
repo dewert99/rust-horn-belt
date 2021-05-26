@@ -2,6 +2,8 @@ From iris.bi Require Import updates.
 From iris.proofmode Require Import tactics.
 From lrust.util Require Import basic.
 
+(* TODO : move all that to Iris *)
+
 (** * Utility for Multi-Step-Taking Updates *)
 
 Section lemmas.
@@ -94,5 +96,4 @@ Proof.
   iApply fupd_mask_mono; [done|].
   by iApply step_fupdN_fupd_mask_mono; [done|].
 Qed.
-
 End lemmas.

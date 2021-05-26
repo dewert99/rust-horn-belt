@@ -107,16 +107,16 @@ Section own.
     - move=>/= > *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
-  Global Instance own_send {𝔄} n (ty: _ 𝔄) : Send ty → Send (own_ptr n ty).
+  Global Instance own_send {𝔄} n (ty: type 𝔄) : Send ty → Send (own_ptr n ty).
   Proof. move=> >/=. by do 9 f_equiv. Qed.
 
-  Global Instance own_sync {𝔄} n (ty: _ 𝔄) : Sync ty → Sync (own_ptr n ty).
+  Global Instance own_sync {𝔄} n (ty: type 𝔄) : Sync ty → Sync (own_ptr n ty).
   Proof. move=> >/=. by do 6 f_equiv. Qed.
 
-  Global Instance own_just_loc {𝔄} n (ty: _ 𝔄) : JustLoc (own_ptr n ty).
+  Global Instance own_just_loc {𝔄} n (ty: type 𝔄) : JustLoc (own_ptr n ty).
   Proof. iIntros (?[|]?[|[[]|][]]) "? //". by iExists _. Qed.
 
-  Lemma own_leak {𝔄} E L n (ty: _ 𝔄) Φ :
+  Lemma own_leak {𝔄} E L n (ty: type 𝔄) Φ :
     leak E L ty Φ → leak E L (own_ptr n ty) Φ.
   Proof.
     iIntros (Lk ???[|]?[|[[]|][]]?) "LFT PROPH E L own //".
@@ -144,7 +144,6 @@ Section own.
   Lemma own_eqtype {𝔄 𝔅} E L n (f: 𝔄 → 𝔅) g ty ty' :
     eqtype E L ty ty' f g → eqtype E L (own_ptr n ty) (own_ptr n ty') f g.
   Proof. move=> [??]. split; by apply own_subtype. Qed.
-
 End own.
 
 Section box.
@@ -178,40 +177,41 @@ Section box.
   Lemma box_eqtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) g ty ty' :
     eqtype E L ty ty' f g → eqtype E L (box ty) (box ty') f g.
   Proof. move=> [??]. split; by apply box_subtype. Qed.
-
 End box.
 
 Section typing.
   Context `{!typeG Σ}.
 
-  Lemma write_own {𝔄 𝔅} (ty: _ 𝔄) (ty': _ 𝔅) n E L :
+  Lemma write_own {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) n E L :
     ty.(ty_size) = ty'.(ty_size) →
-    typed_write E L (own_ptr n ty) ty (own_ptr n ty') ty' id (λ _ a, a).
+    typed_write E L (own_ptr n ty') ty' (own_ptr n ty) ty id (λ _ a, a).
   Proof.
     move=> Sz. split; [done|]. iIntros (?[|][[]|]??) "_ _ _ $ own //".
     iDestruct "own" as "[(%vl & >↦ & ty) †]". iModIntro. iExists _.
     iSplit; [done|]. iSplitL "↦ ty".
-    { iNext. iExists _. iFrame "↦". iApply ty_own_depth_mono; [|done]. lia. }
-    iIntros (??) "$ ? !>". by rewrite Sz.
+    - iNext. iExists _. iFrame "↦". iApply ty_own_depth_mono; [|done]. lia.
+    - iIntros (??) "$ ? !>". by rewrite Sz.
   Qed.
 
-  Lemma read_own_copy {𝔄} (ty: _ 𝔄) n E L :
+  Lemma read_own_copy {𝔄} (ty: type 𝔄) n E L :
     Copy ty → typed_read E L (own_ptr n ty) ty (own_ptr n ty) id id.
   Proof.
     move=> ??[|?]???; iIntros "_ _ $$ own"=>//=. setoid_rewrite by_just_loc_ex at 1.
     iDestruct "own" as (l[=->]) "[(%vl & >↦ & ty) †]". iModIntro.
     iExists l, vl, 1%Qp. iSplit; [done|]. iFrame "↦ †". iSplit.
-    { iApply ty_own_depth_mono; [|done]. lia. } iIntros "? !>!>". iExists vl. iFrame.
+    - iApply ty_own_depth_mono; [|done]. lia.
+    - iIntros "? !>!>". iExists vl. iFrame.
   Qed.
 
-  Lemma read_own_move {𝔄} (ty: _ 𝔄) n E L :
-    typed_read E L (own_ptr n ty) ty (own_ptr n (↯ ty.(ty_size))) id unique.
+  Lemma read_own_move {𝔄} (ty: type 𝔄) n E L :
+    typed_read E L (own_ptr n ty) ty (own_ptr n (↯ ty.(ty_size))) id (const tt).
   Proof.
     move=> ?[|?]???; iIntros "_ _ $$ own"=>//. setoid_rewrite by_just_loc_ex at 1.
     iDestruct "own" as (l[=->]) "[(%vl & >↦ & ty) †]".
     iDestruct (ty_size_eq with "ty") as "#>%". iModIntro.
     iExists l, vl, 1%Qp. iSplit; [done|]. iFrame "↦ †". iSplitL "ty".
-    { iApply ty_own_depth_mono; [|done]. lia. } iIntros "?!>!>". iExists vl. by iSplit.
+    - iApply ty_own_depth_mono; [|done]. lia.
+    - iIntros "?!>!>". iExists vl. simpl. auto with iFrame.
   Qed.
 
   Lemma type_new_instr n E L :
@@ -223,27 +223,30 @@ Section typing.
     iApply wp_new=>//. iIntros "!>" (l) "(† & ↦) #⧖". iExists -[const ()].
     iSplit; [|done]. rewrite/= right_id (tctx_hasty_val #l).
     iExists 1%nat. iFrame "⧖". rewrite/= freeable_sz_full Z2Nat.id; [|done].
-    iFrame "†". iNext. iExists _. iFrame "↦". by rewrite repeat_length.
+    iFrame "†". iNext. iExists _. iFrame "↦". rewrite repeat_length. auto.
   Qed.
 
-  Lemma type_new {𝔄l 𝔅} n x e tr E L (C: cctx 𝔅) (T: _ 𝔄l) :
+  Lemma type_new {𝔄l 𝔅} n x e tr E L (C: cctx 𝔅) (T: tctx 𝔄l) :
     Closed (x :b: []) e → 0 ≤ n → let n' := Z.to_nat n in
     (∀v: val, typed_body E L C (v ◁ own_ptr n' (↯ n') +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := new [ #n] in e) (λ post al, tr post (() -:: al)).
   Proof. iIntros. subst. iApply type_let; by [apply type_new_instr|solve_typing]. Qed.
 
-  Lemma type_new_subtype {𝔄 𝔅l ℭ} (ty: _ 𝔄) n (T: _ 𝔅l) f e tr x E L (C: cctx ℭ) :
+  Lemma type_new_subtype {𝔄 𝔅l ℭ} (ty: type 𝔄) n (T: tctx 𝔅l) f e tr x E L (C: cctx ℭ) :
     Closed (x :b: []) e → 0 ≤ n → let n' := Z.to_nat n in
     subtype E L (↯ n') ty f →
     (∀v: val, typed_body E L C (v ◁ own_ptr n' ty +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := new [ #n] in e) (λ post al, tr post (f () -:: al)).
   Proof.
-    iIntros (??? Sub) "?". iApply type_let; [by apply type_new_instr|solve_typing| |];
-    last first. { iIntros (?). iApply typed_body_tctx_incl;
-    [eapply subtype_tctx_incl, own_subtype, Sub|done]. } done.
+    iIntros (??? Sub) "?".
+    iApply type_let; [by apply type_new_instr|solve_typing| |]; last first.
+    { iIntros (?).
+      iApply typed_body_tctx_incl;
+        [eapply subtype_tctx_incl, own_subtype, Sub|done]. }
+    done.
   Qed.
 
-  Lemma type_delete_instr {𝔄} (ty: _ 𝔄) (n: Z) p E L :
+  Lemma type_delete_instr {𝔄} (ty: type 𝔄) (n: Z) p E L :
     let n' := ty.(ty_size) in n = Z.of_nat n' →
     typed_instr E L +[p ◁ own_ptr n' ty] (delete [ #n; p])%E (λ _, +[])
       (λ post _, post -[]).
@@ -252,12 +255,13 @@ Section typing.
     iApply (wp_hasty with "p"). iIntros (?[|?] _) "? own"; [done|].
     setoid_rewrite by_just_loc_ex. iDestruct "own" as (?[=->]) "[(%& >↦ & ty)?]".
     iDestruct (ty_size_eq with "ty") as "#>%Sz". iApply (wp_delete with "[-]").
-    { by rewrite /n' -Sz. } { iFrame "↦". rewrite Sz. by iApply freeable_sz_full. }
-    { iIntros "!>_". iExists -[]. by iSplit. }
+    - by rewrite /n' -Sz.
+    - iFrame "↦". rewrite Sz. by iApply freeable_sz_full.
+    - iIntros "!>_". iExists -[]. by iSplit.
   Qed.
 
-  Lemma type_delete {𝔄 𝔅l ℭl 𝔇} (ty: _ 𝔄) n' (n: Z) p e
-    E L (C: cctx 𝔇) (T: _ 𝔅l) (T': _ ℭl) trx tr :
+  Lemma type_delete {𝔄 𝔅l ℭl 𝔇} (ty: type 𝔄) n' (n: Z) p e
+    E L (C: cctx 𝔇) (T: tctx 𝔅l) (T': tctx ℭl) trx tr :
     Closed [] e → tctx_extract_ctx E L +[p ◁ own_ptr n' ty] T T' trx →
     n' = ty.(ty_size) → n = n' → typed_body E L C T' e tr -∗
     typed_body E L C T (delete [ #n; p ];; e) (trx ∘ (λ post '(_ -:: al), tr post al)).
@@ -266,8 +270,8 @@ Section typing.
     f_equal. fun_ext=> ?. fun_ext. by case.
   Qed.
 
-  Lemma type_letalloc_1 {𝔄 𝔅l ℭl 𝔇} (ty: _ 𝔄) (x: string) p e
-    (T: _ 𝔅l) (T': _ ℭl) trx tr E L (C: cctx 𝔇) :
+  Lemma type_letalloc_1 {𝔄 𝔅l ℭl 𝔇} (ty: type 𝔄) (x: string) p e
+    (T: tctx 𝔅l) (T': tctx ℭl) trx tr E L (C: cctx 𝔇) :
     Closed [] p → Closed [x] e →
     tctx_extract_ctx E L +[p ◁ ty] T T' trx → ty.(ty_size) = 1%nat →
     (∀v: val, typed_body E L C (v ◁ box ty +:: T') (subst x v e) tr) -∗
@@ -280,15 +284,18 @@ Section typing.
         split; [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
       - iIntros (xv) "/=".
         have ->: (subst x xv (x <- p;; e))%E = (xv <- p;; subst x xv e)%E.
-        { rewrite /subst /=. repeat f_equal;
-          [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
-        iApply type_assign; [|solve_typing|by eapply write_own|solve_typing|
-        by rewrite /box Sz]. apply subst_is_closed; [apply is_closed_of_val|done]. }
+        { rewrite /subst /=.
+          repeat f_equal;
+            [by rewrite bool_decide_true|eapply is_closed_subst=>//; set_solver]. }
+        iApply type_assign;
+          [|solve_typing|by eapply write_own|solve_typing|by rewrite /box Sz].
+        apply subst_is_closed; [apply is_closed_of_val|done]. }
     by move=>/= ?[??]?.
   Qed.
 
-  Lemma type_letalloc_n {𝔄 𝔅 𝔅' ℭl 𝔇l 𝔈} (ty: _ 𝔄) (tyr: _ 𝔅) (tyr': _ 𝔅')
-    gt st (T: _ ℭl) (T': _ 𝔇l) trx tr (x: string) p e E L (C: cctx 𝔈) :
+  Lemma type_letalloc_n {𝔄 𝔅 𝔅' ℭl 𝔇l 𝔈} (ty: type 𝔄) (tyr: type 𝔅)
+        (tyr': type 𝔅') gt st (T: tctx ℭl) (T': tctx 𝔇l) trx tr (x: string)
+        p e E L (C: cctx 𝔈) :
     Closed [] p → Closed [x] e → tctx_extract_ctx E L +[p ◁ tyr] T T' trx →
     typed_read E L tyr ty tyr' gt st →
     (∀v: val, typed_body E L C (v ◁ box ty +:: p ◁ tyr' +:: T') (subst x v e) tr) -∗
@@ -296,23 +303,27 @@ Section typing.
       (λ post '(b -:: bl), tr post (gt b -:: st b -:: bl))).
   Proof.
     iIntros. iApply typed_body_tctx_incl; [done|].
-    iApply typed_body_impl; last first. {
-      iApply type_new; [|lia|]=>/=.
-      - rewrite /Closed /= !andb_True !right_id. split; [done|].
-        split; [by apply is_closed_of_val|]. split;
-        [apply bool_decide_spec|eapply is_closed_weaken=>//]; set_solver.
-      - iIntros (xv). have ->: subst x xv (x <-{ty.(ty_size)} !p;; e)%E =
-          (xv <-{ty.(ty_size)} !p;; subst x xv e)%E.
-        { rewrite /subst /=. repeat f_equal.
-          - eapply (is_closed_subst []); [apply is_closed_of_val|set_solver].
-          - by rewrite bool_decide_true.
-          - eapply is_closed_subst; [done|set_solver]. } rewrite Nat2Z.id.
-        iApply type_memcpy; [|solve_typing| | |done|done|done];
-        [|by apply write_own|solve_typing]. apply subst_is_closed; [|done].
-        apply is_closed_of_val. }
-    by move=>/= ?[??]?.
+    iApply typed_body_impl; last first.
+    { iApply type_new; [|lia|]=>/=.
+      - rewrite /Closed /=. rewrite !andb_True.
+        eauto 10 using is_closed_of_val, is_closed_weaken with set_solver.
+    - iIntros (xv).
+      have ->: subst x xv (x <-{ty.(ty_size)} !p;; e)%E =
+               (xv <-{ty.(ty_size)} !p;; subst x xv e)%E.
+      { rewrite /subst /=. repeat f_equal.
+        - eapply (is_closed_subst []); [apply is_closed_of_val|set_solver].
+        - by rewrite bool_decide_true.
+        - eapply is_closed_subst; [done|set_solver]. }
+      rewrite Nat2Z.id. iApply type_memcpy.
+      + apply subst_is_closed; [apply is_closed_of_val|done].
+      + solve_typing.
+      + by apply (write_own ty (uninit _)).
+      + solve_typing.
+      + done.
+      + done.
+      + done. }
+      by move=>/= ?[??]?.
   Qed.
-
 End typing.
 
 Global Hint Resolve own_leak own_subtype own_eqtype box_subtype box_eqtype

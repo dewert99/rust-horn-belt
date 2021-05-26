@@ -11,13 +11,13 @@ Section list.
     fix_ty (λ ty', <{option_to_list: optionₛ (𝔄 * listₛ 𝔄) → listₛ 𝔄}>
       (option_ty (ty * box ty')))%T.
 
-  Lemma list_leak {𝔄} E L (ty: _ 𝔄) Φ :
+  Lemma list_leak {𝔄} E L (ty: type 𝔄) Φ :
     leak E L ty Φ → leak E L (list_ty ty) (lforall Φ).
   Proof.
     move=> ?. apply fix_leak=> ??. eapply leak_impl; [solve_typing|]. by case.
   Qed.
 
-  Lemma list_leak_just {𝔄} E L (ty: _ 𝔄) :
+  Lemma list_leak_just {𝔄} E L (ty: type 𝔄) :
     leak E L ty (const True) → leak E L (list_ty ty) (const True).
   Proof. move=> ?. apply leak_just. Qed.
 

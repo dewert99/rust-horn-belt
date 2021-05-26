@@ -103,7 +103,7 @@ Qed.
 Definition prval_to_inh {𝔄} (vπ: proph 𝔄)
   : inh_syn_type 𝔄 := to_inh_syn_type (vπ inhabitant).
 
-Lemma uniq_intro {𝔄} (vπ: _ → 𝔄) d E :
+Lemma uniq_intro {𝔄} (vπ: proph 𝔄) d E :
   ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗ ∃i,
     let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i in .VO[ξ] vπ d ∗ .PC[ξ] vπ d.
 Proof.
