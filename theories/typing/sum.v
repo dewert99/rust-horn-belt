@@ -111,17 +111,9 @@ Section sum.
       repeat (eapply ty_size_ne || f_equiv)=>//. by rewrite Eqv'.
   Qed.
 
-  Definition sum_ty {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) : type (𝔄 + 𝔅) :=
-    <{of_psum_2: Σ!%ST [𝔄; 𝔅] → (𝔄 + 𝔅)%ST}> (xsum_ty +[ty; ty']).
-
-  Global Instance sum_ty_ne {𝔄 𝔅} : NonExpansive2 (@sum_ty 𝔄 𝔅).
-  Proof.
-    move=> ???????. rewrite /sum_ty. do 2 f_equiv. constructor; by [|constructor].
-  Qed.
 End sum.
 
 Notation "Σ!" := xsum_ty : lrust_type_scope.
-Notation "ty + ty'" := (sum_ty ty%T ty'%T) : lrust_type_scope.
 Notation empty_ty := (xsum_ty +[]).
 
 Section typing.
@@ -250,16 +242,6 @@ Section typing.
     HForall (λ _ ty, leak E L ty (const True)) tyl → leak E L (Σ! tyl) (const True).
   Proof. move=> ?. apply leak_just. Qed.
 
-  Lemma sum_leak {𝔄 𝔅} E L (ty: type 𝔄) (ty': type 𝔅) Φ Φ' :
-    leak E L ty Φ → leak E L ty' Φ' →
-    leak E L (ty + ty') (λ s, match s with inl a => Φ a | inr b => Φ' b end).
-  Proof. move=> ??. eapply leak_impl; [solve_typing|]. by case. Qed.
-
-  Lemma sum_leak_just {𝔄 𝔅} E L (ty: type 𝔄) (ty': type 𝔅) :
-    leak E L ty (const True) → leak E L ty' (const True) →
-    leak E L (ty + ty') (const True).
-  Proof. move=> ??. apply leak_just. Qed.
-
   Lemma xsum_subtype {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl :
     subtypel E L tyl tyl' fl → subtype E L (Σ! tyl) (Σ! tyl') (psum_map fl).
   Proof.
@@ -297,24 +279,9 @@ Section typing.
   Proof.
     move=> /eqtypel_subtypel[??]. by split; apply xsum_subtype.
   Qed.
-
-  Lemma sum_subtype {𝔄 𝔅 𝔄' 𝔅'} E L (f: 𝔄 → 𝔄') (g: 𝔅 → 𝔅') ty1 ty2 ty1' ty2' :
-    subtype E L ty1 ty1' f → subtype E L ty2 ty2' g →
-    subtype E L (ty1 + ty2) (ty1' + ty2') (sum_map f g).
-  Proof.
-    move=> A B. eapply subtype_eq.
-    { apply mod_ty_subtype; [apply _|]. apply xsum_subtype. solve_typing. }
-    fun_ext. by case.
-  Qed.
-
-  Lemma sum_eqtype {𝔄 𝔅 𝔄' 𝔅'} E L (f: 𝔄 → 𝔄') f' (g: 𝔅 → 𝔅') g' ty1 ty2 ty1' ty2' :
-    eqtype E L ty1 ty1' f f' → eqtype E L ty2 ty2' g g' →
-    eqtype E L (ty1 + ty2) (ty1' + ty2') (sum_map f g) (sum_map f' g').
-  Proof. move=> [??][??]. split; by apply sum_subtype. Qed.
 End typing.
 
 Global Instance empty_ty_empty `{!typeG Σ} : Empty (type ∅) := empty_ty.
 
-Global Hint Resolve xsum_leak sum_leak | 5 : lrust_typing.
-Global Hint Resolve xsum_leak_just sum_leak_just xsum_subtype xsum_eqtype
-  sum_subtype sum_eqtype : lrust_typing.
+Global Hint Resolve xsum_leak | 5 : lrust_typing.
+Global Hint Resolve xsum_leak_just xsum_subtype xsum_eqtype : lrust_typing.

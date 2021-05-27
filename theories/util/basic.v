@@ -87,15 +87,6 @@ Definition prod_right_id' {A} (x: A) := (x, ()).
 Global Instance prod_right_id_iso {A} : Iso (@prod_right_id A) prod_right_id'.
 Proof. split; fun_ext; by [case=> [?[]]|]. Qed.
 
-(** * Utility for Sums *)
-
-Definition option_to_sum {A} (o: option A) : () + A :=
-  match o with None => inl () | Some x => inr x end.
-Definition sum_to_option {A} (s: () + A) : option A :=
-  match s with inl _ => None | inr x => Some x end.
-Global Instance option_sum_iso {A} : Iso (@option_to_sum A) sum_to_option.
-Proof. split; fun_ext; case=>//; by case. Qed.
-
 (** * Utility for Lists *)
 
 (** List.nth with better pattern matching *)

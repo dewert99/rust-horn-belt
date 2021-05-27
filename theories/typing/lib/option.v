@@ -1,6 +1,6 @@
 From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
-From lrust.typing Require Import typing (* lib.panic *).
+From lrust.typing Require Import mod_ty product sum (* lib.panic *).
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
@@ -8,8 +8,18 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section option.
   Context `{!typeG Σ}.
 
+  Definition sum' A B : Type := A + (B + ∅).
+
+  Definition option_to_sum' {A} (o: option A) : sum' () A :=
+    match o with None => inl () | Some x => (inr (inl x)) end.
+  Definition sum'_to_option {A} (s: sum' () A) : option A :=
+    match s with inl _ => None | inr (inl x) => Some x
+      | inr (inr a) => absurd a end.
+  Global Instance option_sum'_iso {A} : Iso (@option_to_sum' A) sum'_to_option.
+  Proof. split; fun_ext; case=>//; by case. Qed.
+
   Definition option_ty {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
-    <{sum_to_option: (() + 𝔄)%ST → optionₛ 𝔄}> (unit_ty + ty).
+    <{sum'_to_option: (Σ! [(); 𝔄])%ST → optionₛ 𝔄}> (Σ! +[(); ty])%T.
 
   Lemma option_leak {𝔄} E L (ty: type 𝔄) Φ :
     leak E L ty Φ →
