@@ -389,6 +389,14 @@ Proof.
   move=> Val. move: Inc. move: Val=> /Cinr_valid/to_agree_uninj [?<-].
   inversion Eq. by move/to_agree_included <-.
 Qed.
+
+Lemma proph_obs_false E φπ :
+  ↑prophN ⊆ E → (∀π, ¬ φπ π) → proph_ctx -∗ .⟨φπ⟩ ={E}=∗ False.
+Proof.
+  iIntros (? Neg) "PROPH Obs".
+  iMod (proph_obs_sat with "PROPH Obs") as %[? Ex]; [done|]. by apply Neg in Ex.
+Qed.
+
 End lemmas.
 
 Global Opaque proph_ctx proph_tok proph_obs.

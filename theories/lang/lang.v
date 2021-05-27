@@ -234,7 +234,7 @@ Inductive bin_op_eval (σ : state) : bin_op → base_lit → base_lit → base_l
 | BinOpOffset l z :
     bin_op_eval σ OffsetOp (LitLoc l) (LitInt z) (LitLoc $ l +ₗ z).
 
-Definition stuck_term := App (Lit $ LitInt 0) [].
+Notation stuck_term := (App (Lit (LitInt 0)) []).
 
 Inductive head_step : expr → state → list Empty_set → expr → state → list expr → Prop :=
 | BinOpS op l1 l2 l' σ :
@@ -617,7 +617,7 @@ Canonical Structure lrust_lang := LanguageOfEctx lrust_ectx_lang.
 Lemma stuck_irreducible K σ : irreducible (fill K stuck_term) σ.
 Proof.
   apply: (irreducible_fill (K:=ectx_language.fill K)); first done.
-  apply prim_head_irreducible; unfold stuck_term.
+  apply prim_head_irreducible.
   - inversion 1.
   - apply ectxi_language_sub_redexes_are_values.
     intros [] ??; simplify_eq/=; eauto; discriminate_list.
