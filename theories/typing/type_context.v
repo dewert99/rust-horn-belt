@@ -126,34 +126,6 @@ Section lemmas.
     tctx_elt_interp tid (p ◁ ty) vπ -∗ ⌜Closed [] p⌝.
   Proof. iIntros "(%&%&%&_)!%". by eapply eval_path_closed. Qed.
 
-  (** Copying a Type Context *)
-
-  Class CopyC {𝔄l} (T: tctx 𝔄l) :=
-    copyc_persistent tid vπl : Persistent (tctx_interp tid T vπl).
-  Global Existing Instances copyc_persistent.
-
-  Global Instance tctx_nil_copy: CopyC +[].
-  Proof. rewrite /CopyC. apply _. Qed.
-
-  Global Instance tctx_cons_copy {𝔄 𝔄l} p (ty: type 𝔄) (T: tctx 𝔄l) :
-    Copy ty → CopyC T → CopyC (p ◁ ty +:: T).
-  Proof. rewrite /CopyC=> ???[??]. apply _. Qed.
-
-  (** Sending a Typing Context *)
-
-  Class SendC {𝔄l} (T: tctx 𝔄l) :=
-    sendc_change_tid tid tid' vπl :
-      tctx_interp tid T vπl ⊣⊢ tctx_interp tid' T vπl.
-
-  Global Instance tctx_nil_send: SendC +[].
-  Proof. done. Qed.
-
-  Global Instance tctx_cons_send {𝔄 𝔄l} p (ty: type 𝔄) (T: tctx 𝔄l) :
-    Send ty → SendC T → SendC (p ◁ ty +:: T).
-  Proof.
-    move=> ? Eq' ??[??]/=. rewrite Eq' /tctx_elt_interp. by do 7 f_equiv.
-  Qed.
-
   (** Leaking a Type Context *)
 
   Definition leak_tctx {𝔄l} (E: elctx) (L: llctx) (T: tctx 𝔄l)
