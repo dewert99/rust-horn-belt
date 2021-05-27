@@ -402,16 +402,6 @@ Section lemmas.
     move=> ?. eapply tctx_incl_eq; [by apply subtype_tctx_incl|]. by move=> ?[??].
   Qed.
 
-  Lemma tctx_extract_elt_here_blocked {𝔄 𝔅 𝔄l} κ κ' (ty : type 𝔄) (ty' : type 𝔅)
-    f `{!Inj (=) (=) f} (T: tctx 𝔄l) p E L :
-    subtype E L ty' ty f → lctx_lft_incl E L κ' κ →
-    tctx_extract_elt E L (p ◁{κ} ty) (p ◁{κ'} ty' +:: T) T
-      (λ post '(b -:: al), post (f b -:: al)).
-  Proof.
-    move=> ??. eapply tctx_incl_eq; [by apply subtype_tctx_incl_blocked|].
-    by move=> ?[??].
-  Qed.
-
   Definition tctx_extract_ctx {𝔄l 𝔅l ℭl} E L (T: tctx 𝔄l)
     (T1: tctx 𝔅l) (T2: tctx ℭl) (tr: predl_trans 𝔅l (𝔄l ++ ℭl)) : Prop :=
     tctx_incl E L T1 (T h++ T2) tr.
@@ -513,8 +503,7 @@ Global Hint Extern 0 (leak_tctx _ _ _ _) =>
 
 Global Hint Resolve tctx_extract_elt_here_copy | 1 : lrust_typing.
 Global Hint Resolve tctx_extract_elt_here_exact | 2 : lrust_typing.
-Global Hint Resolve tctx_extract_elt_here tctx_extract_elt_here_blocked | 20
-  : lrust_typing.
+Global Hint Resolve tctx_extract_elt_here | 20 : lrust_typing.
 (* We need [eapply] to use [tctx_extract_elt_further] *)
 Global Hint Extern 50 (tctx_extract_elt _ _ _ _ _ _) =>
   eapply tctx_extract_elt_further : lrust_typing.
