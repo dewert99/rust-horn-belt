@@ -65,7 +65,7 @@ Section fn.
   Next Obligation. move=> *. by iDestruct 1 as (?????->) "?". Qed.
 
   Global Instance fn_ne n :
-    Proper (pointwise_relation A (fn_params_dist n) ==> (≡{n}≡)) fn.
+    Proper (pointwise_relation A (fn_params_dist n) ==> dist n) fn.
   Proof.
     move=> fp fp' Eq. apply ty_of_st_ne, st_of_pt_ne. split; [done|]=>/= ???.
     do 5 apply bi.exist_ne=> ?. do 3 f_equiv. f_equiv=> x. (do 5 f_equiv)=> wl.

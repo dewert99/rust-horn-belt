@@ -32,8 +32,8 @@ Section bool.
   Lemma type_if {𝔄l 𝔅l ℭ} p (T: tctx 𝔄l) (T': tctx 𝔅l) e1 e2 tr1 tr2 trx E L (C: cctx ℭ) :
     tctx_extract_ctx E L +[p ◁ bool_ty] T T' trx →
     typed_body E L C T' e1 tr1 -∗ typed_body E L C T' e2 tr2 -∗
-    typed_body E L C T (if: p then e1 else e2) (trx ∘
-      (λ post '(b -:: vl), if b then tr1 post vl else tr2 post vl)).
+    typed_body E L C T (if: p then e1 else e2)
+      (trx ∘ (λ post '(b -:: vl), if b then tr1 post vl else tr2 post vl)).
   Proof.
     iIntros (?) "e1 e2". iApply typed_body_tctx_incl; [done|]=>/=.
     iIntros (?[??]?) "/= #LFT #TIME #PROPH #UNIQ #E Na L C [p T] Obs".

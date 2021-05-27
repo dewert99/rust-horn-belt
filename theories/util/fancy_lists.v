@@ -558,7 +558,7 @@ Section hlist_ofe.
 Context {A} {F: A → ofe} {Xl : list A}.
 
 Instance hlist_equiv : Equiv (hlist F Xl) := HForallTwo (λ _, (≡)).
-Instance hlist_dist : Dist (hlist F Xl) := λ n, HForallTwo (λ _, (≡{n}≡)).
+Instance hlist_dist : Dist (hlist F Xl) := λ n, HForallTwo (λ _, dist n).
 
 Definition hlist_ofe_mixin : OfeMixin (hlist F Xl).
 Proof.
@@ -585,15 +585,14 @@ Context {A} {F: A → ofe} {Xl : list A}.
 
 Global Instance hcons_ne {X} : NonExpansive2 (@hcons _ F X Xl).
 Proof. by constructor. Qed.
-Global Instance hcons_proper {X} :
-  Proper ((≡@{_ X}) ==> (≡@{_ Xl}) ==> (≡)) (hcons F).
+Global Instance hcons_proper {X} : Proper ((≡) ==> (≡) ==> (≡)) (@hcons _ F X Xl).
 Proof. by constructor. Qed.
 
 Global Instance hnth_ne {D} n :
-  Proper ((=@{_ D}) ==> (≡{n}@{hlist F Xl}≡) ==> forall_relation (λ _, (≡{n}≡))) hnth.
+  Proper ((=) ==> (dist n) ==> forall_relation (λ i, dist n)) (@hnth _ F Xl D).
 Proof. move=> ??->????. by apply (HForallTwo_nth (λ X, ofe_dist (F X) n)). Qed.
 Global Instance hnth_proper {D} :
-  Proper ((=@{_ D}) ==> (≡@{hlist F Xl}) ==> forall_relation (λ _, (≡))) hnth.
+  Proper ((=) ==> (≡) ==> forall_relation (λ _, (≡))) (@hnth _ F Xl D).
 Proof. move=> ??->?? /equiv_dist ??. apply equiv_dist=> ?. by apply hnth_ne. Qed.
 End hlist_ofe_lemmas.
 
