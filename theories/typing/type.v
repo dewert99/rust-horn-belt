@@ -662,8 +662,8 @@ Instance: Params (@Sync) 3 := {}.
 
 Notation ListSync := (TCHForall (λ 𝔄, @Sync _ _ 𝔄)).
 
-Class JustLoc `{!typeG Σ} {𝔄} (ty: type 𝔄) : Prop := just_loc:
-  ∀vπ d tid vl, ty.(ty_own) vπ d tid vl -∗ ⌜∃l: loc, vl = [ #l]⌝.
+Class JustLoc `{!typeG Σ} {𝔄} (ty: type 𝔄) : Prop :=
+  just_loc vπ d tid vl : ty.(ty_own) vπ d tid vl -∗ ⌜∃l: loc, vl = [ #l]⌝.
 
 Section traits.
   Context `{!typeG Σ}.

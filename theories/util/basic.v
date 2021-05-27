@@ -48,20 +48,7 @@ Proof. split; fun_ext=> ?; by apply absurd. Qed.
 
 (** * Utility for Iris *)
 
-Notation "(≡{ n }≡)" := (dist n) (only parsing).
-Notation "(≡{ n }@{ A }≡)" := (@dist A _ n) (only parsing).
-
 Notation big_sepL := (big_opL bi_sep) (only parsing).
-
-Lemma big_sepL_forall' `{!BiAffine PROP} {A} (Φ: A → PROP) l :
-  (∀x, Persistent (Φ x)) →
-  ([∗ list] x ∈ l, Φ x) ⊣⊢ ∀x, ⌜x ∈ l⌝ → Φ x.
-Proof.
-  move=> ?. elim l. { iSplit; [|by iIntros]. iIntros "_" (? In). inversion In. }
-  move=>/= ?? ->. setoid_rewrite elem_of_cons. iSplit.
-  - iIntros "[? To]" (?[->|?]); by [|iApply "To"].
-  - iIntros "To". iSplit; [|iIntros (??)]; iApply "To"; by [iLeft|iRight].
-Qed.
 
 (** * Utility for Natural Numbers *)
 

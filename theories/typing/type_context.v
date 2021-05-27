@@ -141,8 +141,9 @@ Section lemmas.
 
   (** Sending a Typing Context *)
 
-  Class SendC {𝔄l} (T: tctx 𝔄l) := sendc_change_tid tid tid' vπl :
-    tctx_interp tid T vπl ⊣⊢ tctx_interp tid' T vπl.
+  Class SendC {𝔄l} (T: tctx 𝔄l) :=
+    sendc_change_tid tid tid' vπl :
+      tctx_interp tid T vπl ⊣⊢ tctx_interp tid' T vπl.
 
   Global Instance tctx_nil_send: SendC +[].
   Proof. done. Qed.
