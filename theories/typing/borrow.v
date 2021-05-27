@@ -34,13 +34,14 @@ Section borrow.
 
   Lemma type_share_instr {𝔄} E L p κ (ty : type 𝔄) :
     lctx_lft_alive E L κ →
-    typed_instr E L +[p ◁ &uniq{κ}ty] Share (const +[p ◁ &shr{κ} ty]) (λ post '-[a], a.1 = a.2 -> post -[a.1]).
+    typed_instr E L +[p ◁ &uniq{κ}ty] Share (const +[p ◁ &shr{κ} ty])
+      (λ post '-[(a, a')], a' = a -> post -[a]).
   Proof.
     iIntros (Hκ ?? [vπ []]) "#LFT #TIME #PROPH #UNIQ #HE $ HL [Huniq _] Hproph".
     iMod (Hκ with "HE HL") as (q) "[[Htok1 Htok2] Hclose]"; [done..|].
     iDestruct "Huniq" as ([[]|] [|d]) "(% & _ & [#? H]) /="; try done;
-      iDestruct "H" as (? ?) "([% %] & Hvo & Huniq)"; try lia.
-    set (ξ := PrVar _ i).
+      iDestruct "H" as (? ?) "([% %Eq] & Hvo & Huniq)"; try lia.
+    move: Eq. set (ξ := PrVar _ i)=> Eq.
     iMod (bor_exists_tok with "LFT Huniq Htok1") as (vπ') "[Huniq Htok1]"; first solve_ndisj.
     iMod (bor_exists_tok with "LFT Huniq Htok1") as (d'') "[Huniq Htok1]"; first solve_ndisj.
     iMod (bor_acc with "LFT Huniq Htok1") as "[(Hown & > #Hd'' & Hpc) Hclose']"; first solve_ndisj.
@@ -66,19 +67,20 @@ Section borrow.
     wp_seq. iIntros "[Hshr Htok1]". iMod ("Hclose" with "[$Htok1 $Htok2]") as "$".
     iExists -[_]. rewrite /= right_id. iSplitR "Hproph Hobs".
     - iExists _, _. by iFrame "# % Hshr".
-    - iCombine "Hobs Hproph" as "Hobs". iApply proph_obs_impl; [|done] => π /=.
-      rewrite -(f_equal (.$ π) H1) => [] /= [<- ?]; auto.
+    - iCombine "Hobs Hproph" as "Hobs". iApply proph_obs_impl; [|done]=>/= π.
+      move: (equal_f Eq π)=>/=. case (vπ π)=>/= ??<-[<-Imp]. by apply Imp.
   Qed.
 
   Lemma type_share {𝔄 𝔅l ℭl 𝔇} p e κ (ty: type 𝔄) (T: tctx 𝔅l) (T' : tctx ℭl)
     trx tr E L (C: cctx 𝔇) :
-    Closed [] e → tctx_extract_elt E L (p ◁ &uniq{κ} ty) T T' trx →
+    Closed [] e → tctx_extract_ctx E L +[p ◁ &uniq{κ} ty] T T' trx →
     lctx_lft_alive E L κ →
     typed_body E L C (p ◁ &shr{κ} ty +:: T') e tr -∗
-    typed_body E L C T (Share;; e) (trx ∘ (λ post '(a -:: bl),
-      a.1 = a.2 → tr post (a.1 -:: bl)))%type.
+    typed_body E L C T (Share;; e) (trx ∘ (λ post '((a, a') -:: bl),
+      a' = a → tr post (a -:: bl)))%type.
   Proof.
-    iIntros. iApply type_seq; by [eapply type_share_instr|solve_typing].
+    iIntros. iApply type_seq; [by eapply type_share_instr|solve_typing| |done].
+    fun_ext=>/= ?. f_equal. fun_ext. by case.
   Qed.
 
   Lemma tctx_extract_hasty_borrow {𝔄 𝔅 As} E L p n (ty : type 𝔄) (ty' : type 𝔅) κ (T : tctx As) f:

@@ -5,22 +5,24 @@ Set Default Proof Using "Type".
 Section get_x.
   Context `{!typeG Σ}.
 
-  Definition get_x : val :=
+  Definition get_x: val :=
     fn: ["p"] :=
-       let: "p'" := !"p" in
-       Share ;;
-       letalloc: "r" <- "p'" +ₗ #0 in
-       delete [ #1; "p"] ;; return: ["r"].
+      let: "p'" := !"p" in Share;;
+      letalloc: "r" <- "p'" in
+      delete [ #1; "p"];; return: ["r"].
 
   Lemma get_x_type :
-    typed_val get_x (fn(∀ α, ∅; &uniq{α}(Π[int; int])) → &shr{α}int).
+    typed_val get_x (fn<α>(∅; &uniq{α} (int * int)) → &shr{α} int)
+      (λ post '-[(zz, zz')], zz' = zz → post zz.1).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>". iIntros (α ϝ ret p).
-    inv_vec p=>p. simpl_subst.
-    iApply type_deref; [solve_typing..|]. iIntros (p'); simpl_subst.
-    iApply (type_share (p' +ₗ #0)); [solve_typing..|].
-    iApply type_letalloc_1; [solve_typing..|]. iIntros (r). simpl_subst.
-    iApply type_delete; [solve_typing..|].
-    iApply type_jump; solve_typing.
+    move=> ??. eapply type_fn; [solve_typing|]=>/= ???[p[]]. simpl_subst. via_tr_impl.
+    { iApply type_deref; [solve_extract|solve_typing|solve_typing|]. intro_subst.
+      iApply type_share; [solve_extract|solve_typing|].
+      (* TODO: make automation work for product split *)
+      iApply (type_letalloc_1 (&shr{_} int));
+        [eapply tctx_extract_split_shr_prod; solve_typing|done|]. intro_subst.
+      iApply type_delete; [solve_extract|done|done|].
+      iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+    by move=> ?[[[??]?][]]/=.
   Qed.
 End get_x.
