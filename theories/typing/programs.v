@@ -319,10 +319,6 @@ Ltac via_tr_impl_with tr :=
     end
   end.
 
-Ltac cushion_tr := via_tr_impl; [|shelve].
-
-Ltac by_simpl_tr := by move=>/= ??; exact id.
-
 Ltac intro_subst := iIntros (?); simpl_subst.
 Ltac intro_subst_as x := iIntros (x); simpl_subst.
 

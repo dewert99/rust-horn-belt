@@ -21,20 +21,16 @@ Section inc_max.
         then b' = b → post (a, a') else a' = a → post (b, b')).
   Proof.
     eapply type_fn; [solve_typing|]=>/= ???[?[?[]]]. simpl_subst. via_tr_impl.
-    { unshelve (
-        do 2 (iApply type_deref; [solve_extract|solve_typing|done|];
-          intro_subst; cushion_tr);
-        do 2 (iApply type_deref; [solve_extract|solve_typing|done|];
-          intro_subst; cushion_tr);
-        iApply type_le; [solve_extract|]; intro_subst; cushion_tr;
-        iApply type_if; [solve_extract| |]; (cushion_tr; iApply type_assign;
-          [solve_extract|solve_typing|solve_typing|]; cushion_tr;
-          iApply type_jump; [solve_typing|solve_extract|solve_typing]));
-      revgoals. by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr.
-      by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. }
+    { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
+      do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
+      iApply type_le; [solve_extract|]. intro_subst. via_tr_impl.
+      { iApply type_if; [solve_extract| |]; (iApply type_assign;
+          [solve_extract|solve_typing|solve_typing|];
+          iApply type_jump; [solve_typing|solve_extract|solve_typing]). }
+      move=> ??/=. exact id. }
     by move=> ?[[??][[??][]]]/=.
   Qed.
-  
+
   Definition inc_max: val :=
     fn: ["oa"; "ob"] := Newlft;;
       letalloc: "oua" <- "oa" in letalloc: "oub" <- "ob" in
@@ -52,31 +48,26 @@ Section inc_max.
       (λ (post: pred' _) _, ∀n, n ≠ 0 → post n).
   Proof.
     eapply type_fn; [solve_typing|]=>/= _ ??[?[?[]]]. simpl_subst. via_tr_impl.
-    { unshelve (
-        iApply type_newlft; iIntros (α); cushion_tr;
-        do 2 (iApply (type_letalloc_1 (&uniq{α} _)); [solve_extract|done|];
-          intro_subst; cushion_tr);
-        iApply type_val; [apply type_take_max|]; intro_subst; cushion_tr;
-        iApply type_letcall; [solve_typing|solve_extract|solve_typing|];
-        intro_subst; cushion_tr;
-        do 2 (iApply type_deref; [solve_extract|solve_typing|done|];
-          intro_subst; cushion_tr);
-        iApply type_int; intro_subst; cushion_tr; iApply type_plus;
-        [solve_extract|]; intro_subst; cushion_tr; iApply type_assign;
-        [solve_extract|solve_typing|solve_typing|]; cushion_tr;
-        iApply (type_cont_norec [_;_] (λ vl, +[vhd vl ◁{_} _; vhd (vtl vl) ◁{_} _]));
-        [intro_subst; iApply type_jump; [solve_typing|solve_extract|solve_typing]|];
-        iIntros (? vl); inv_vec vl; iIntros; simpl_subst;
-        iApply type_endlft; [solve_typing|]; cushion_tr;
-        do 2 (iApply type_deref; [solve_extract|solve_typing|done|];
-          intro_subst; cushion_tr);
-        iApply type_minus; [solve_extract|]; intro_subst; cushion_tr;
-        iApply type_letalloc_1; [solve_extract|done|]; intro_subst; cushion_tr;
-        iApply type_jump; [solve_typing|solve_extract|solve_typing]);
-      revgoals. by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr.
-      by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr.
-      by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. by_simpl_tr. }
-    move=>/= ?[a[b[]]] Imp ??.
+    { iApply type_newlft. iIntros (α).
+      do 2 (iApply (type_letalloc_1 (&uniq{α} _)); [solve_extract|done|]; intro_subst).
+      iApply type_val; [apply type_take_max|]. intro_subst.
+      iApply type_letcall; [solve_typing|solve_extract|solve_typing|].
+      intro_subst. via_tr_impl.
+      { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
+        iApply type_int. intro_subst. iApply type_plus; [solve_extract|]. intro_subst.
+        iApply type_assign; [solve_extract|solve_typing|solve_typing|].
+        iApply (type_cont_norec [_;_] (λ vl, +[vhd vl ◁{_} _; vhd (vtl vl) ◁{_} _])).
+        { intro_subst. via_tr_impl.
+          { iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+          move=> ??/=. exact id. }
+        iIntros (? vl). inv_vec vl. iIntros. simpl_subst.
+        iApply type_endlft; [solve_typing|].
+        do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
+        iApply type_minus; [solve_extract|]. intro_subst.
+        iApply type_letalloc_1; [solve_extract|done|]. intro_subst.
+        iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+      move=> ??/=. exact id. }
+    move=> ?[a[b[]]] Imp ??/=.
     case Le: (bool_decide (b ≤ a))=> ->->; apply Imp; move: Le;
     [rewrite bool_decide_eq_true|rewrite bool_decide_eq_false]; lia.
   Qed.
