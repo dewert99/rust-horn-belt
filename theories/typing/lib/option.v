@@ -116,7 +116,6 @@ Section option.
       iApply type_jump; solve_typing.
   Qed.
 *)
-
 End option.
 
 Global Hint Resolve option_leak | 5 : lrust_typing.

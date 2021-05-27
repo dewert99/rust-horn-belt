@@ -61,7 +61,6 @@ Section mod_ty.
 
   Global Instance mod_ty_ne {𝔄 𝔅} (f: 𝔄 → 𝔅) : NonExpansive (mod_ty f).
   Proof. solve_ne_type. Qed.
-
 End mod_ty.
 
 Notation "<{ f }>" := (mod_ty f) (format "<{ f }>"): lrust_type_scope.
@@ -162,7 +161,6 @@ Section typing.
     eqtype E L ty ty' h h' →
     eqtype E L (<{f}> ty) (<{f'}> ty') (f' ∘ h ∘ g) (f ∘ h' ∘ g').
   Proof. move=> [??]. split; by apply mod_ty_subtype. Qed.
-
 End typing.
 
 Global Hint Resolve mod_ty_leak mod_ty_subtype mod_ty_eqtype : lrust_typing.

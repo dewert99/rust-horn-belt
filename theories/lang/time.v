@@ -44,7 +44,6 @@ Section definitions.
   (** authority *)
   Definition time_interp (n: nat) : iProp Σ :=
     own time_global_name (mono_nat_auth 1 n).
-
 End definitions.
 
 Typeclasses Opaque persist_time_rcpt cumul_time_rcpt.

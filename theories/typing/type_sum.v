@@ -32,7 +32,7 @@ Section case.
              (∀ i, hnth (D := empty) (λ _ _, False) prel i post (v -:: w)))%type.
 
 Proof.
-    iIntros (elEl Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph". 
+    iIntros (elEl Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
     wp_bind p. iApply (wp_hasty with "Hp").
     iIntros ([[]|] [|depth1]) "%Hv #Hdepth Hp /= //".
     iDestruct "Hp" as "[H↦ Hf]". iDestruct "H↦" as (vl) "[H↦ Hown]".
@@ -109,8 +109,8 @@ Proof.
         (λ post '(v -:: w),
            ∀ i, hnth (D := Empty_setₛ) (λ _ _, False) prel i post (v -:: w))%type.
   Proof.
-    iIntros (el2el' Halive Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph". wp_bind p.
-    iApply (wp_hasty with "Hp").
+    iIntros (el2el' Halive Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
+    wp_bind p. iApply (wp_hasty with "Hp").
     iIntros ([[]|] [|depth1]) "%Hv #Hdepth /= [#? Hp] //".
     { iDestruct "Hp" as (??) "(% & ?)". lia. }
     iDestruct "Hp" as (depth2 ξid) "([% %B] & ξvo & Hp)"; set ξ := PrVar _ ξid.
@@ -137,12 +137,14 @@ Proof.
     destruct Hety as [Hety|Hety].
     - iMod (uniq_intro wπ depth2 with "PROPH UNIQ") as (ζid) "[ζvo ζpc]"; [done|]; set ζ := PrVar _ ζid.
       iDestruct (uniq_proph_tok with "ζvo ζpc") as "(ζvo & ζ & Toζpc)"; rewrite proph_tok_singleton.
-      iMod (uniq_preresolve ξ _ (λ π, pinj i (π ζ)) with "PROPH ξvo ξpc ζ") as "(#Hproph' & ζ & ξeqz)"; first done.
+      iMod (uniq_preresolve ξ _ (λ π, pinj i (π ζ)) with "PROPH ξvo ξpc ζ")
+        as "(#Hproph' & ζ & ξeqz)"; first done.
       { apply proph_dep_constr, proph_dep_one. }
       iDestruct ("Toζpc" with "ζ") as "ζpc".
       iMod ("Hclose'" $! (∃ vπ' d', (l +ₗ 1) ↦∗: (hnthb tyl i).(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ζ] vπ' d')%I
         with "[ξeqz H↦i H↦vl''] [ ζpc H↦vl' Hown]") as "[Hb Htok]".
-      { iIntros "!>Hown". iMod (bi.later_exist_except_0 with "Hown") as (??) "(Hown & #>Hdepth2'' & ζpc)".
+      { iIntros "!>Hown".
+        iMod (bi.later_exist_except_0 with "Hown") as (??) "(Hown & #>Hdepth2'' & ζpc)".
         iDestruct "Hown" as (vl'2) "[H↦ Hown]". iExists _, _. iModIntro; iNext.
         iDestruct (proph_ctrl_eqz with "PROPH ζpc") as "ζeqz".
         iDestruct (proph_eqz_constr (pinj i) with "ζeqz") as "ζeqz".
@@ -199,7 +201,8 @@ Proof.
   Lemma type_case_shr' {𝔅l 𝔄l ℭ} prel E L (C : cctx ℭ) (T : tctx 𝔅l) p κ tyl el el' :
     list_to_hlist el = Some el' → lctx_lft_alive E L κ →
     IxHForall3 (λ i ty e (prei : predl_trans' (Σ!%ST 𝔄l :: _) _),
-      (⊢ typed_body E L C ((p +ₗ #1 ◁ &shr{κ}ty) +:: T) e (λ post '(vi -:: w), prei post (pinj (D := Empty_setₛ) i vi -:: w))) ∨
+      (⊢ typed_body E L C ((p +ₗ #1 ◁ &shr{κ}ty) +:: T) e
+           (λ post '(vi -:: w), prei post (pinj (D := Empty_setₛ) i vi -:: w))) ∨
       (⊢ typed_body E L C ((p ◁ &shr{κ}(xsum_ty tyl)) +:: T) e prei)
     ) tyl el' prel →
     ⊢ typed_body E L C ((p ◁ &shr{κ}(xsum_ty tyl)) +:: T) (case: !p of el)
@@ -261,8 +264,9 @@ Proof.
     iCombine "Hdepth1 Hdepth2" as "Hdepth".
     rewrite !(ty_own_depth_mono _ _ (depth1 `max` depth2)); [|lia..].
     iMod (Hw with "LFT UNIQ HE HL Hty1") as (l ->) "(H & Hw)".
-    iDestruct "H" as (vl) "(> H↦ & H)".
-    iDestruct "H" as (?) "H"; iMod (bi.later_exist_except_0 with "H") as (?) "H";iDestruct "H" as (??) "(>(% & % & H) & ?)".
+    iDestruct "H" as (vl) "(> H↦ & H)". iDestruct "H" as (?) "H".
+    iMod (bi.later_exist_except_0 with "H") as (?) "H".
+    iDestruct "H" as (??) "(>(% & % & H) & ?)".
     destruct vl as [|? vl]; iDestruct "H" as %[= Hlen].
     rewrite heap_mapsto_vec_cons. iDestruct "H↦" as "[H↦0 H↦vl]".
     wp_write. wp_bind p1. iApply (wp_wand with "[]"); first by iApply (wp_eval_path).

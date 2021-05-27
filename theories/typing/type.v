@@ -537,7 +537,7 @@ Class TypeNonExpansive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : P
 }.
 
 Class TypeContractive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Prop := {
-  type_contr_type_lft_morph :> TypeLftMorphism T;
+  type_contr_type_lft_morph : TypeLftMorphism T;
   type_contr_ty_size ty ty' : (T ty).(ty_size) = (T ty').(ty_size);
   type_contr_ty_own n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →

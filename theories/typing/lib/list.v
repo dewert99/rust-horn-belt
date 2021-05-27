@@ -31,7 +31,6 @@ Section list.
   Lemma list_eqtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) g ty ty' :
     eqtype E L ty ty' f g → eqtype E L (list_ty ty) (list_ty ty') (map f) (map g).
   Proof. move=> [??]. by split; apply list_subtype. Qed.
-
 End list.
 
 Global Hint Resolve list_leak | 5 : lrust_typing.

@@ -48,7 +48,6 @@ Definition val_obs (ξ: proph_var) (vπ: proph ξ.(pv_ty)) (d: nat) : iProp Σ :
 Local Definition val_obs2 ξ vπ d : iProp Σ := own_line ξ 1 vπ d.
 Definition proph_ctrl (ξ: proph_var) (vπ: proph ξ.(pv_ty)) (d: nat) : iProp Σ :=
   (val_obs ξ vπ d ∗ 1:[ξ]) ∨ ((∃vπ' d', val_obs2 ξ vπ' d') ∗ (.$ ξ) :== vπ).
-
 End defs.
 
 Notation ".VO[ ξ ]" := (val_obs ξ) (at level 5, format ".VO[ ξ ]") : bi_scope.
@@ -177,7 +176,6 @@ Qed.
 
 Lemma proph_ctrl_eqz ξ vπ d : proph_ctx -∗ .PC[ξ] vπ d -∗ (.$ ξ) :== vπ.
 Proof. iIntros "#? [[_ ?]|[_ ?]]"; by [iApply proph_eqz_token|]. Qed.
-
 End lemmas.
 
 Global Opaque uniq_ctx val_obs proph_ctrl.

@@ -25,7 +25,6 @@ Section cont_context.
   Definition cctx_interp {𝔄} (tid: thread_id)
     (postπ: proph (pred' 𝔄)) (C: list (cctx_elt 𝔄)) : iProp Σ :=
     ∀c, ⌜c ∈ C⌝ -∗ cctx_elt_interp tid postπ c.
-
 End cont_context.
 Add Printing Constructor cctx_elt.
 
@@ -97,7 +96,6 @@ Section cont_context.
       iApply ("k" with "Na L T Obs").
     - iDestruct "kC" as "[_ ?]". by iApply (InC with "LFT PROPH UNIQ E").
   Qed.
-
 End cont_context.
 
 Global Hint Resolve cctx_incl_nil cctx_incl_cons : lrust_typing.
