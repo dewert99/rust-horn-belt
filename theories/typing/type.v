@@ -566,7 +566,7 @@ Section type_contr.
   Global Instance type_contr_type_ne {𝔄 𝔅} (T: type 𝔄 → type 𝔅) :
     TypeContractive T → TypeNonExpansive T.
   Proof.
-    move=> HT. split; [by apply _|move=> *; by apply HT| |].
+    move=> HT. split; [by apply HT|move=> *; by apply HT| |].
     - move=> *. apply HT=>// *; by [apply dist_dist_later|apply dist_S].
     - move=> n *. apply HT=>// *; [|by apply dist_dist_later].
       case n as [|[|]]=>//. simpl in *. by apply dist_S.
