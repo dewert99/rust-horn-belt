@@ -11,9 +11,9 @@ Section inc_max.
       let: "ua" := !"oua" in let: "ub" := !"oub" in
       let: "a" := !"ua" in let: "b" := !"ub" in let: "ord" := "b" ≤ "a" in
       if: "ord" then
-        "oua" <- "ua";; return: ["oua"]
+        "oua" <- "ua";; delete [ #1; "oub"];; return: ["oua"]
       else
-        "oub" <- "ub";; return: ["oub"].
+        "oub" <- "ub";; delete [ #1; "oua"];; return: ["oub"].
 
   Lemma type_take_max :
     typed_val take_max (fn<α>(∅; &uniq{α} int, &uniq{α} int) → &uniq{α} int)
@@ -24,9 +24,10 @@ Section inc_max.
     { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
       do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
       iApply type_le; [solve_extract|]. intro_subst. via_tr_impl.
-      { iApply type_if; [solve_extract| |]; (iApply type_assign;
-          [solve_extract|solve_typing|solve_typing|];
-          iApply type_jump; [solve_typing|solve_extract|solve_typing]). }
+      { iApply type_if; [solve_extract| |];
+        ( iApply type_assign; [solve_extract|solve_typing|solve_typing|];
+          iApply type_delete; [solve_extract|done|done|];
+          iApply type_jump; [solve_typing|solve_extract|solve_typing] ). }
       move=> ??/=. exact id. }
     by move=> ?[[??][[??][]]]/=.
   Qed.
@@ -39,8 +40,9 @@ Section inc_max.
       let: "uc" := !"ouc" in let: "c" := !"uc" in let: "1" := #1 in
       let: "c'" := "c" + "1" in "uc" <- "c'";;
       letcont: "ret" ["oa"; "ob"] := Endlft;;
-        let: "a" := !"oa" in let: "b" := !"ob" in let: "d" := "a" - "b" in
-        letalloc: "od" <- "d" in return: ["od"] in
+        let: "a" := !"oa" in let: "b" := !"ob" in
+        delete [ #1; "oa"];; delete [ #1; "ob"];;
+        let: "d" := "a" - "b" in letalloc: "od" <- "d" in return: ["od"] in
       jump: "ret" ["oa"; "ob"].
 
   Lemma type_inc_max :
@@ -63,6 +65,7 @@ Section inc_max.
         iIntros (? vl). inv_vec vl. iIntros. simpl_subst.
         iApply type_endlft; [solve_typing|].
         do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
+        do 2 (iApply type_delete; [solve_extract|done|done|]).
         iApply type_minus; [solve_extract|]. intro_subst.
         iApply type_letalloc_1; [solve_extract|done|]. intro_subst.
         iApply type_jump; [solve_typing|solve_extract|solve_typing]. }

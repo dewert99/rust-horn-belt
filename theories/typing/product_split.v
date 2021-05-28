@@ -359,6 +359,19 @@ Section product_split.
 
   (** * Merging with [tctx_extract_elt]. *)
 
+  Lemma tctx_extract_merge_own_prod {𝔄 𝔅 ℭl 𝔇l} n (ty: type 𝔄) (ty': type 𝔅)
+    (T: tctx ℭl) (T': tctx 𝔇l) tr p E L :
+    tctx_extract_ctx E L
+      +[p ◁ own_ptr n ty; p +ₗ #ty.(ty_size) ◁ own_ptr n ty'] T T' tr →
+    tctx_extract_elt E L (p ◁ own_ptr n (ty * ty')) T T'
+      (λ post, tr (λ '(a -:: b -:: dl), post ((a, b) -:: dl))).
+  Proof.
+    move=> ?. eapply tctx_incl_eq.
+    { eapply tctx_incl_trans; [done|].
+      apply (tctx_incl_frame_r _ +[_]), tctx_merge_own_prod. }
+    move=>/= ??. f_equal. fun_ext. by case=> [?[??]].
+  Qed.
+
   Lemma tctx_extract_merge_own_xprod {𝔄 𝔄l 𝔅l ℭl} n (tyl: typel (𝔄 :: 𝔄l))
     (T: tctx 𝔅l) (T': tctx ℭl) tr p E L :
     tctx_extract_ctx E L (hasty_own_offsets p n tyl 0) T T' tr →
@@ -392,4 +405,5 @@ Global Hint Resolve tctx_extract_split_own_prod tctx_extract_split_own_xprod
    solve_typing get slow because of that. See:
      https://coq.inria.fr/bugs/show_bug.cgi?id=5304
 *)
-Global Hint Resolve tctx_extract_merge_own_xprod | 40 : lrust_typing_merge.
+Global Hint Resolve tctx_extract_merge_own_prod tctx_extract_merge_own_xprod
+  | 40 : lrust_typing_merge.
