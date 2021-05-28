@@ -49,7 +49,8 @@ Section inc_max.
     typed_val inc_max (fn(∅; int, int) → int)
       (λ (post: pred' _) _, ∀n, n ≠ 0 → post n).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= _ ??[?[?[]]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [solve_typing|]=>/= _ ??[?[?[]]]. simpl_fp_E. simpl_subst.
+    via_tr_impl.
     { iApply type_newlft. iIntros (α).
       do 2 (iApply (type_letalloc_1 (&uniq{α} _)); [solve_extract|done|]; intro_subst).
       iApply type_val; [apply type_take_max|]. intro_subst.

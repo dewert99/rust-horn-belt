@@ -7,19 +7,20 @@ Section unbox.
 
   Definition unbox : val :=
     fn: ["b"] :=
-       let: "b'" := !"b" in let: "bx" := !"b'" in
-       letalloc: "r" <- "bx" +ₗ #0 in
-       delete [ #1; "b"] ;; return: ["r"].
+      let: "b'" := !"b" in let: "bx" := !"b'" in letalloc: "r" <- "bx" in
+      delete [ #1; "b"];; return: ["r"].
 
-  Lemma ubox_type :
-    typed_val unbox (fn(∀ α, ∅; &uniq{α}(box(Π[int; int]))) → &uniq{α}int).
+  Lemma unbox_type :
+    typed_val unbox (fn<α>(∅; &uniq{α} (box (int * int))) → &uniq{α} int)
+      (λ post '-[((z, w), (z', w'))], w' = w → post (z, z')).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (α ϝ ret b). inv_vec b=>b. simpl_subst.
-    iApply type_deref; [solve_typing..|]. iIntros (b'); simpl_subst.
-    iApply type_deref_uniq_own; [solve_typing..|]. iIntros (bx); simpl_subst.
-    iApply type_letalloc_1; [solve_typing..|]. iIntros (r). simpl_subst.
-    iApply type_delete; [solve_typing..|].
-    iApply type_jump; solve_typing.
+    eapply type_fn; [solve_typing|]=>/= ???[?[]]. simpl_fp_E. simpl_subst.
+    via_tr_impl.
+    { iApply type_deref; [solve_extract|solve_typing|done|]. intro_subst.
+      iApply type_deref_uniq_own; [solve_extract|solve_typing|]. intro_subst.
+      iApply (type_letalloc_1 (&uniq{_} int)); [solve_extract|done|]. intro_subst.
+      iApply type_delete; [solve_extract|done|done|].
+      iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+    by move=> ?[[[??][??]][]]/=.
   Qed.
 End unbox.
