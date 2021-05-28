@@ -276,13 +276,14 @@ Section product_split.
   Lemma tctx_extract_split_own_prod {𝔄 𝔅 ℭ 𝔇l 𝔈l} (t: tctx_elt 𝔄) n
     (ty: type 𝔅) (ty': type ℭ) (T: tctx 𝔇l) (T': tctx 𝔈l) tr p E L :
     tctx_extract_elt E L t
-      +[p ◁ own_ptr n ty; p +ₗ #ty.(ty_size) ◁ own_ptr n ty'] T' tr →
+      +[p +ₗ #0 ◁ own_ptr n ty; p +ₗ #ty.(ty_size) ◁ own_ptr n ty'] T' tr →
     tctx_extract_elt E L t (p ◁ own_ptr n (ty * ty') +:: T) (T' h++ T)
       (λ post '((b, c) -:: dl), tr (λ '(a -:: el), post (a -:: el -++ dl)) -[b; c]).
   Proof.
     move=> ?. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
-      eapply tctx_incl_trans; by [apply tctx_split_own_prod|]. }
+      eapply tctx_incl_trans; [apply tctx_split_own_prod|].
+      eapply tctx_incl_trans; [apply tctx_to_shift_loc_0, _|done]. }
     move=>/= ?[[??]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
   Qed.
 
@@ -301,15 +302,18 @@ Section product_split.
   Lemma tctx_extract_split_shr_prod {𝔄 𝔅 ℭ 𝔇l 𝔈l} (t: tctx_elt 𝔄) κ
     (ty: type 𝔅) (ty': type ℭ) (T: tctx 𝔇l) (T': tctx 𝔈l) tr p E L :
     tctx_extract_elt E L t
-      +[p ◁ &shr{κ} ty; p +ₗ #ty.(ty_size) ◁ &shr{κ} ty'] T' tr →
+      +[p +ₗ #0 ◁ &shr{κ} ty; p +ₗ #ty.(ty_size) ◁ &shr{κ} ty'] T' tr →
     tctx_extract_elt E L t (p ◁ &shr{κ} (ty * ty') +:: T)
       (p ◁ &shr{κ} (ty * ty') +:: T' h++ T) (λ post '((b, c) -:: dl),
         tr (λ '(a -:: el), post (a -:: (b, c) -:: el -++ dl)) -[b; c]).
   Proof.
-    move=> ?. eapply tctx_incl_ext. { eapply (tctx_incl_frame_r +[_] (_+::_+::_)).
-    eapply tctx_incl_trans; [apply copy_tctx_incl, _|]. eapply tctx_incl_trans;
-    [|apply tctx_incl_swap]. apply (tctx_incl_frame_l _ _ +[_]).
-    eapply tctx_incl_trans; by [apply tctx_split_shr_prod|]. }
+    move=> ?. eapply tctx_incl_ext.
+    { eapply (tctx_incl_frame_r +[_] (_+::_+::_)).
+      eapply tctx_incl_trans; [apply copy_tctx_incl, _|].
+      eapply tctx_incl_trans; [|apply tctx_incl_swap].
+      apply (tctx_incl_frame_l _ _ +[_]).
+      eapply tctx_incl_trans; [apply tctx_split_shr_prod|].
+      eapply tctx_incl_trans; [apply tctx_to_shift_loc_0, _|done]. }
     move=>/= ?[[??]?]. by rewrite /trans_upper /trans_lower.
   Qed.
 
@@ -333,13 +337,15 @@ Section product_split.
     (ty: type 𝔅) (ty': type ℭ) (T: tctx 𝔇l) (T': tctx 𝔈l) tr p E L :
     lctx_lft_alive E L κ →
     tctx_extract_elt E L t
-      +[p ◁ &uniq{κ} ty; p +ₗ #ty.(ty_size) ◁ &uniq{κ} ty'] T' tr →
+      +[p +ₗ #0 ◁ &uniq{κ} ty; p +ₗ #ty.(ty_size) ◁ &uniq{κ} ty'] T' tr →
     tctx_extract_elt E L t (p ◁ &uniq{κ} (ty * ty') +:: T) (T' h++ T)
       (λ post '(((b, c), (b', c')) -:: dl),
         tr (λ '(a -:: el), post (a -:: el -++ dl)) -[(b, b'); (c, c')]).
   Proof.
-    move=> ??. eapply tctx_incl_ext. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
-    by eapply tctx_incl_trans; [apply tctx_split_uniq_prod|]. }
+    move=> ??. eapply tctx_incl_ext.
+    { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+      eapply tctx_incl_trans; [by apply tctx_split_uniq_prod|].
+      eapply tctx_incl_trans; [apply tctx_to_shift_loc_0, _|done]. }
     move=>/= ?[[[??][??]]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
   Qed.
 
@@ -362,13 +368,14 @@ Section product_split.
   Lemma tctx_extract_merge_own_prod {𝔄 𝔅 ℭl 𝔇l} n (ty: type 𝔄) (ty': type 𝔅)
     (T: tctx ℭl) (T': tctx 𝔇l) tr p E L :
     tctx_extract_ctx E L
-      +[p ◁ own_ptr n ty; p +ₗ #ty.(ty_size) ◁ own_ptr n ty'] T T' tr →
+      +[p +ₗ #0 ◁ own_ptr n ty; p +ₗ #ty.(ty_size) ◁ own_ptr n ty'] T T' tr →
     tctx_extract_elt E L (p ◁ own_ptr n (ty * ty')) T T'
       (λ post, tr (λ '(a -:: b -:: dl), post ((a, b) -:: dl))).
   Proof.
     move=> ?. eapply tctx_incl_ext.
-    { eapply tctx_incl_trans; [done|].
-      apply (tctx_incl_frame_r _ +[_]), tctx_merge_own_prod. }
+    { eapply tctx_incl_trans; [done|]=>/=.
+      eapply tctx_incl_trans; [apply tctx_of_shift_loc_0|].
+      apply (tctx_incl_frame_r +[_; _] +[_]), tctx_merge_own_prod. }
     move=>/= ??. f_equal. fun_ext. by case=> [?[??]].
   Qed.
 
