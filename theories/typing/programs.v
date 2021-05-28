@@ -153,21 +153,28 @@ Section typing.
     rewrite /llctx_interp. iExists Λ. iFrame "Λ". by iSplit.
   Qed.
 
-  Lemma type_endlft {𝔄l 𝔅} (T T': tctx 𝔄l) κ κl tr e E L (C: cctx 𝔅) :
-    Closed [] e → unblock_tctx E L κ T T' →
-    typed_body E L C T' e tr -∗ typed_body E (κ ⊑ₗ κl :: L) C T (Endlft;; e) tr.
+  Lemma type_endlft {𝔄l 𝔅l ℭ} (T: tctx 𝔄l) (T' T'': tctx 𝔅l)
+      κ κl tru tr e E L (C: cctx ℭ) :
+    Closed [] e →
+    leak_unblock_tctx E (κ ⊑ₗ κl :: L) κ T T' tru → unblock_tctx E L κ T' T'' →
+    typed_body E L C T'' e tr -∗
+    typed_body E (κ ⊑ₗ κl :: L) C T (Endlft;; e) (tru ∘ tr).
   Proof.
-    iIntros (? Un) "e %%% #LFT #TIME PROPH UNIQ #E Na
-    [(%&%& κ' & To†) L] C T Obs". iSpecialize ("To†" with "κ'").
-    wp_bind Skip. iApply (wp_mask_mono _ (↑lftN ∪ ↑lft_userN)); [done|].
-    iApply (wp_step_fupd with "To†"); [set_solver|]. wp_seq. iIntros "#? !>".
-    wp_seq. wp_bind Skip. iMod (Un with "LFT E L [] T") as (d vπl') "[⧖ ToT']".
+    iIntros (? LkU Un) "e %%% #LFT #TIME #PROPH UNIQ #E Na L' C T Obs".
+    wp_bind Skip. iMod (LkU with "LFT PROPH E L' T Obs") as (??) "[⧖ ToT']".
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [ToT']")=>//.
+    { iApply step_fupdN_with_emp. by rewrite difference_empty_L. }
+    wp_seq. iIntros "([(%&%& κ' & To†) L] & T' & Obs) !>".
+    iSpecialize ("To†" with "κ'"). wp_seq. wp_bind Skip.
+    iApply wp_mask_mono; [|iApply (wp_step_fupd with "To†")]; [set_solver..|].
+    wp_seq. iIntros "† !>". wp_seq. wp_bind Skip.
+    iMod (Un with "LFT E L [†] T'") as (??) "[⧖ ToT']".
     { simpl in *. subst. rewrite -lft_dead_or. by iRight. }
     iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [ToT']")=>//.
     { iApply step_fupdN_with_emp. by rewrite difference_empty_L. }
-    wp_seq. iIntros "(L & Obs' & T') !>". wp_seq. iCombine "Obs Obs'" as "?".
-    iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T'").
-    by iApply proph_obs_impl; [|done]=> ?[?<-].
+    wp_seq. iIntros "(L & T'' & Obs') !>". wp_seq. iCombine "Obs Obs'" as "Obs".
+    iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T'' [Obs]").
+    by iApply proph_obs_impl; [|done]=>/= ?[?<-].
   Qed.
 
   Lemma type_path_instr {𝔄} p (ty: type 𝔄) E L :

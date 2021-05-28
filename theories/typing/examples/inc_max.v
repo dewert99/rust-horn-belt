@@ -38,12 +38,10 @@ Section inc_max.
       let: "take_max" := take_max in
       letcall: "ouc" := "take_max" ["oua"; "oub"] in
       let: "uc" := !"ouc" in let: "c" := !"uc" in let: "1" := #1 in
-      let: "c'" := "c" + "1" in "uc" <- "c'";;
-      letcont: "ret" ["oa"; "ob"] := Endlft;;
-        let: "a" := !"oa" in let: "b" := !"ob" in
-        delete [ #1; "oa"];; delete [ #1; "ob"];;
-        let: "d" := "a" - "b" in letalloc: "od" <- "d" in return: ["od"] in
-      jump: "ret" ["oa"; "ob"].
+      let: "c'" := "c" + "1" in "uc" <- "c'";; Endlft;;
+      let: "a" := !"oa" in let: "b" := !"ob" in
+      let: "d" := "a" - "b" in letalloc: "od" <- "d" in
+      delete [ #1; "oa"];; delete [ #1; "ob"];; return: ["od"].
 
   Lemma type_inc_max :
     typed_val inc_max (fn(∅; int, int) → int)
@@ -58,18 +56,14 @@ Section inc_max.
       intro_subst. via_tr_impl.
       { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
         iApply type_int. intro_subst. iApply type_plus; [solve_extract|]. intro_subst.
-        iApply type_assign; [solve_extract|solve_typing|solve_typing|].
-        iApply (type_cont_norec [_;_] (λ vl, +[vhd vl ◁{_} _; vhd (vtl vl) ◁{_} _])).
-        { intro_subst. via_tr_impl.
-          { iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
-          move=> ??/=. exact id. }
-        iIntros (? vl). inv_vec vl. iIntros. simpl_subst.
-        iApply type_endlft; [solve_typing|].
-        do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
-        do 2 (iApply type_delete; [solve_extract|done|done|]).
-        iApply type_minus; [solve_extract|]. intro_subst.
-        iApply type_letalloc_1; [solve_extract|done|]. intro_subst.
-        iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+        iApply type_assign; [solve_extract|solve_typing|solve_typing|]. via_tr_impl.
+        { iApply type_endlft; [solve_leak_unblock|solve_typing|].
+          do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
+          iApply type_minus; [solve_extract|]. intro_subst.
+          iApply type_letalloc_1; [solve_extract|done|]. intro_subst.
+          do 2 (iApply type_delete; [solve_extract|done|done|]).
+          iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+        move=> ??/=. exact id. }
       move=> ??/=. exact id. }
     move=> ?[a[b[]]] Imp ??/=.
     case Le: (bool_decide (b ≤ a))=> ->->; apply Imp; move: Le;
