@@ -7,8 +7,6 @@ Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl 𝔇l: syn_typel).
 Definition path := expr.
 Bind Scope expr_scope with path.
 
-(* TODO: Consider making this a pair of a path and the rest. We could
-   then e.g. formulate tctx_elt_hasty_path more generally. *)
 Inductive tctx_elt `{!typeG Σ} 𝔄 : Type :=
 | TCtx_hasty (p: path) (ty: type 𝔄)
 | TCtx_blocked (p: path) (κ: lft) (ty: type 𝔄).
@@ -190,7 +188,7 @@ Section lemmas.
   Definition tctx_incl {𝔄l 𝔅l} (E: elctx) (L: llctx) (T: tctx 𝔄l) (T': tctx 𝔅l)
     (tr: predl_trans 𝔄l 𝔅l) : Prop :=
     Proper ((≡) ==> (≡)) tr ∧
-    ∀tid q vπl postπ,
+    ∀q tid vπl postπ,
       lft_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
       tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩
       ={⊤}=∗
@@ -327,7 +325,7 @@ Section lemmas.
   Proof.
     split; [apply _|]. iIntros (??[??]?) "_ _ _ _ $ /=[(%&%& %Ev & ⧖ty) T] Obs !>".
     iExists (_-::_). iFrame "T Obs". iExists _, _. iFrame "⧖ty". iPureIntro.
-    move: Ev=>/=. case (eval_path p)=>//. (do 2 (case=>//))=> ?. by rewrite shift_loc_0.
+    move: Ev=>/=. case (eval_path p)=>//. (do 2 case=>//)=> ?. by rewrite shift_loc_0.
   Qed.
 
   Lemma tctx_shift_loc_assoc {𝔄 𝔅l} (ty: type 𝔄) p (T: tctx 𝔅l) (z z': Z) :
@@ -435,21 +433,69 @@ Section lemmas.
     done.
   Qed.
 
+  (** Leaking for Unblocking *)
+
+  (* [κ] is a dummy parameter for automation *)
+  Definition leak_unblock_tctx {𝔄l 𝔅l} (E: elctx) (L: llctx) (κ: lft)
+      (T: tctx 𝔄l) (T': tctx 𝔅l) (tr: predl_trans 𝔄l 𝔅l) : Prop :=
+    ∀q tid vπl postπ, lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+      tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩ ={⊤}=∗
+        ∃d vπl', ⧖d ∗ |={⊤}▷=>^d |={⊤}=>
+          llctx_interp L q ∗ tctx_interp tid T' vπl' ∗ ⟨π, postπ π (vπl' -$ π)⟩.
+
+  Lemma leak_unblock_tctx_impl {𝔄l 𝔅l} (tr tr': predl_trans 𝔄l 𝔅l) T T' E L κ :
+    leak_unblock_tctx E L κ T T' tr' → (∀post al, tr post al → tr' post al) →
+    leak_unblock_tctx E L κ T T' tr.
+  Proof.
+    iIntros (LkU Imp ????) "LFT PROPH E L T Obs".
+    iApply (LkU with "LFT PROPH E L T [Obs]").
+    iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
+  Qed.
+
+  Lemma leak_unblock_tctx_nil κ E L : leak_unblock_tctx E L κ +[] +[] id.
+  Proof.
+    iIntros (??[]?) "/= _ _ _ $ _ $". iMod persistent_time_receipt_0 as "⧖".
+    iExists 0%nat, -[]. by iFrame "⧖".
+  Qed.
+
+  Lemma leak_unblock_tctx_cons_leak {𝔄 𝔅l ℭl} (ty: type 𝔄) p Φ
+      (T: tctx 𝔅l) (T': tctx ℭl) tr κ E L :
+    κ ∈ ty_lfts ty → leak' E L ty Φ → leak_unblock_tctx E L κ T T' tr →
+    leak_unblock_tctx E L κ (p ◁ ty +:: T) T'
+      (λ post '(a -:: bl), tr (λ cl, Φ a (post cl)) bl).
+  Proof.
+    iIntros (_ Lk LkU ??[vπ ?]?)
+      "#LFT #PROPH #E [L L₊] /=[(%& %d &_& ⧖ & ty) T] Obs".
+    iMod (Lk with "LFT PROPH E L₊ ty") as "Upd"; [done|].
+    iMod (LkU with "LFT PROPH E L T Obs") as (? vπl') "[⧖' Upd']".
+    iCombine "Upd Upd'" as "Upd". iCombine "⧖ ⧖'" as "⧖".
+    iExists _, vπl'. iFrame "⧖". iApply (step_fupdN_wand with "Upd").
+    iIntros "!> [>[Obs $] >($&$& Obs')]". iCombine "Obs Obs'" as "?".
+    iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
+  Qed.
+
+  Lemma leak_unblock_tctx_cons_keep {𝔄 𝔅l ℭl} (t: tctx_elt 𝔄)
+      (T: tctx 𝔅l) (T': tctx ℭl) tr κ E L :
+    leak_unblock_tctx E L κ T T' tr →
+    leak_unblock_tctx E L κ (t +:: T) (t +:: T') (trans_tail tr).
+  Proof.
+    iIntros (LkU ??[vπ ?]?) "LFT PROPH E L /=[t T] Obs".
+    iMod (LkU with "LFT PROPH E L T Obs") as (d vπl') "[⧖ Upd]". iModIntro.
+    iExists d, (vπ -:: vπl'). iFrame "⧖". iApply (step_fupdN_wand with "Upd").
+    iIntros ">($&$&?) !>". iFrame.
+  Qed.
+
   (** Unblocking a Type Context *)
-  (* TODO : That would be great if this could also remove all the
-     instances mentionning the lifetime in question.
-     E.g., if [p ◁ &uniq{κ} ty] should be removed, because this is now
-     useless. *)
 
   Definition unblock_tctx {𝔄l} (E: elctx) (L: llctx) (κ: lft) (T T': tctx 𝔄l) : Prop :=
-    ∀qL tid vπl, lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
-      [†κ] -∗ tctx_interp tid T vπl ={⊤}=∗ ∃d vπl', ⧖d ∗ |={⊤}▷=> |={⊤}▷=>^d |={⊤}=>
-        llctx_interp L qL ∗ ⟨π, vπl -$ π = vπl' -$ π⟩ ∗ tctx_interp tid T' vπl'.
+    ∀q tid vπl, lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗ [†κ] -∗
+      tctx_interp tid T vπl ={⊤}=∗ ∃d vπl', ⧖d ∗ |={⊤}▷=> |={⊤}▷=>^d |={⊤}=>
+        llctx_interp L q ∗ tctx_interp tid T' vπl' ∗ ⟨π, vπl -$ π = vπl' -$ π⟩.
 
   Lemma unblock_tctx_nil κ E L : unblock_tctx E L κ +[] +[].
   Proof.
     iIntros (??[]) "_ _ $ _ _". iMod persistent_time_receipt_0 as "⧖". iExists 0%nat, -[].
-    iFrame "⧖". iIntros "!>!>!>!>!>". iSplit; [|done]. by iApply proph_obs_true.
+    iFrame "⧖". iIntros "!>!>!>!>!>". iSplit; [done|]. by iApply proph_obs_true.
   Qed.
 
   Lemma unblock_tctx_cons_unblock {𝔄 𝔄l} p (ty: type 𝔄) (T T': tctx 𝔄l) κ E L :
@@ -464,11 +510,11 @@ Section lemmas.
     [done|by iApply lft_incl_refl|]. iExists _, (vπ' -:: vπl').
     iCombine "⧖dp ⧖dT" as "$". iIntros "!>!>!>". iMod "ToT'".
     iModIntro. iCombine "Toty ToT'" as "Big". iApply (step_fupdN_wand with "Big").
-    iIntros "[>(%&%&%& ξl & Toty) >($& Obs' &$)]".
+    iIntros "[>(%&%&%& ξl & Toty) >($&$& Obs')]".
     iMod ("Eqz" with "[] ξl") as "[Obs ξl]"; [done|]. iCombine "Obs Obs'" as "?".
     iMod ("Toty" with "ξl") as "[ty lft]". iMod ("ToL'" with "lft") as "$".
-    iModIntro. iSplit. { by iApply proph_obs_impl; [|done]=> ?[->->]. }
-    iExists v, dp. iSplit; [done|]. by iFrame.
+    iModIntro. iSplit. { iExists v, dp. iSplit; [done|]. by iFrame. }
+    { by iApply proph_obs_impl; [|done]=> ?[->->]. }
   Qed.
 
   Lemma unblock_tctx_cons_just {𝔄 𝔄l} (t: tctx_elt 𝔄) (T T': tctx 𝔄l) κ E L :
@@ -477,7 +523,7 @@ Section lemmas.
     iIntros (Un ??[vπ ?]) "LFT E L †κ /=[t T]".
     iMod (Un with "LFT E L †κ T") as (d vπl') "[⧖ Upd]". iModIntro.
     iExists d, (vπ -:: vπl'). iFrame "⧖". iApply (step_fupdN_wand with "Upd").
-    iIntros "!> >($&?&$) !>". iFrame "t". by iApply proph_obs_impl; [|done]=>/= ?->.
+    iIntros "!> >($&$&?) !>". iFrame "t". by iApply proph_obs_impl; [|done]=>/= ?->.
   Qed.
 
   Lemma unblock_tctx_cons_just_hasty {𝔄 𝔄l} p (ty: type 𝔄) (T T': tctx 𝔄l) κ E L :
@@ -493,6 +539,10 @@ End lemmas.
 Ltac solve_extract :=
   eapply tctx_extract_ctx_eq; [solve_typing|];
   rewrite /trans_tail /compose /=; by reflexivity.
+
+Ltac solve_leak_unblock :=
+  eapply leak_unblock_tctx_impl; [solve_typing|]=> ??;
+  rewrite /trans_tail /=; by exact id.
 
 Global Hint Resolve leak_tctx_nil : lrust_typing.
 (* Mysteriously, registering [leak_tctx_cons_*]
@@ -515,8 +565,12 @@ Global Hint Extern 50 (tctx_extract_elt _ _ _ _ _ _) =>
 Global Hint Resolve tctx_extract_ctx_nil tctx_extract_ctx_elt
   tctx_extract_ctx_incl : lrust_typing.
 
+Global Hint Resolve leak_unblock_tctx_nil leak_unblock_tctx_cons_leak
+  : lrust_typing.
+Global Hint Resolve leak_unblock_tctx_cons_keep | 20 : lrust_typing.
+
 Global Hint Resolve unblock_tctx_nil unblock_tctx_cons_unblock
   unblock_tctx_cons_just_hasty unblock_tctx_cons_just_blocked : lrust_typing.
 
 Global Hint Opaque leak_tctx tctx_incl tctx_extract_elt tctx_extract_ctx
-  unblock_tctx : lrust_typing.
+  leak_unblock_tctx unblock_tctx : lrust_typing.

@@ -11,7 +11,7 @@ Section lemmas.
   (** * Owning Pointers *)
 
   Fixpoint hasty_own_idxs {𝔄} (p: path) (k: nat) (ty: type 𝔄) (n: nat)
-    (i: nat) : tctx (replicate n 𝔄) :=
+      (i: nat) : tctx (replicate n 𝔄) :=
     match n with
     | O => +[]
     | S m =>
@@ -26,7 +26,7 @@ Section lemmas.
     apply get_tctx_equiv=> ? vπl. move: p i. induction n; [done|]=> p ?.
     case vπl=>/= ??. f_equiv; [|done].
     rewrite tctx_elt_interp_hasty_path; [done|]=>/=. case (eval_path p)=>//.
-    (do 2 (case=>//))=> ?. by rewrite shift_loc_assoc -Nat2Z.inj_add.
+    (do 2 case=>//)=> ?. by rewrite shift_loc_assoc -Nat2Z.inj_add.
   Qed.
 
   Lemma tctx_split_own_array {𝔄} k (ty: type 𝔄) n p E L :
@@ -39,14 +39,13 @@ Section lemmas.
     move=>/= ? IH ?. eapply tctx_incl_ext.
     { eapply tctx_incl_trans;
         [by eapply subtype_tctx_incl; eapply own_subtype, proj1, array_succ_prod|].
-      eapply tctx_incl_trans; [by eapply tctx_split_own_prod|].
-      apply (tctx_incl_app +[_] +[_]); [by apply tctx_to_shift_loc_0, _|].
+      eapply tctx_incl_trans; [by eapply tctx_split_own_prod|]. apply tctx_incl_tail.
       eapply tctx_incl_trans; [by apply IH|]. eapply proj1, hasty_own_idxs_equiv. }
     move=>/= ?[v[]]. by inv_vec v.
   Qed.
 
-  Lemma tctx_extract_split_own_array {𝔄 𝔄' 𝔅l ℭl} (t: tctx_elt 𝔄) k (ty: type 𝔄') n
-    (T: tctx 𝔅l) (T': tctx ℭl) tr p E L :
+  Lemma tctx_extract_split_own_array {𝔄 𝔄' 𝔅l ℭl} (t: tctx_elt 𝔄) k
+      (ty: type 𝔄') n (T: tctx 𝔅l) (T': tctx ℭl) tr p E L :
     tctx_extract_elt E L t (hasty_own_idxs p k ty n 0) T' tr →
     tctx_extract_elt E L t (p ◁ own_ptr k [ty;^ n] +:: T) (T' h++ T) (λ post
       '(al -:: bl), tr (λ '(a -:: cl), post (a -:: cl -++ bl)) (vec_to_plist al)).
@@ -70,8 +69,7 @@ Section lemmas.
     { eapply tctx_incl_trans;
         [|by eapply subtype_tctx_incl, own_subtype, proj2, array_succ_prod].
       eapply tctx_incl_trans; [|by eapply tctx_merge_own_prod].
-      apply (tctx_incl_app +[_] +[_]); [by apply tctx_of_shift_loc_0|].
-      eapply tctx_incl_trans; [|by apply IH].
+      apply tctx_incl_tail. eapply tctx_incl_trans; [|by apply IH].
       apply (tctx_incl_app +[_] +[_]); [|by eapply proj2, hasty_own_idxs_equiv].
       rewrite Nat2Z.inj_add. eapply proj2, tctx_shift_loc_assoc. }
     by move=>/= ?[?[??]].
@@ -102,7 +100,8 @@ Section lemmas.
     iSplit; [by rewrite/= Ev|]. iFrame "⧖". by rewrite big_sepL_vlookup vfunsep_lookup.
   Qed.
 
-  Lemma tctx_extract_idx_shr_array {𝔄 𝔅l} (ty: type 𝔄) n κ p (i: fin n) (T: tctx 𝔅l) E L :
+  Lemma tctx_extract_idx_shr_array {𝔄 𝔅l} (ty: type 𝔄)
+      n κ p (i: fin n) (T: tctx 𝔅l) E L :
     tctx_extract_elt E L (p +ₗ #(i * ty.(ty_size))%nat ◁ &shr{κ} ty)
       (p ◁ &shr{κ} [ty;^ n] +:: T) (p ◁ &shr{κ} [ty;^ n] +:: T)
       (λ post '(xl -:: bl), post (xl !!! i -:: xl -:: bl))%type.
@@ -143,7 +142,7 @@ Section lemmas.
   (** * Unique References *)
 
   Fixpoint hasty_uniq_idxs {𝔄} (p: path) (κ: lft) (ty: type 𝔄) (n: nat)
-    (i: nat) : tctx (replicate n (𝔄 * 𝔄)%ST) :=
+      (i: nat) : tctx (replicate n (𝔄 * 𝔄)%ST) :=
     match n with
     | O => +[]
     | S m =>
@@ -164,17 +163,17 @@ Section lemmas.
         [eapply tctx_uniq_eqtype; by [apply array_succ_prod|apply _|]|].
       eapply tctx_incl_trans;
         [by eapply (tctx_incl_frame_r +[_]), tctx_split_uniq_prod|].
-      apply (tctx_incl_app +[_] +[_]); [by apply tctx_to_shift_loc_0, _|].
-      eapply tctx_incl_trans; [apply IH|]. eapply proj1, get_tctx_equiv=> ? vπl.
+      apply tctx_incl_tail. eapply tctx_incl_trans; [apply IH|].
+      eapply proj1, get_tctx_equiv=> ? vπl.
       move: p 0%nat. clear. induction n; [done|]=> p ?. case vπl=>/= ??.
       f_equiv; [|done]. rewrite tctx_elt_interp_hasty_path; [done|]=>/=.
-      case (eval_path p)=>//. (do 2 (case=>//))=> ?.
+      case (eval_path p)=>//. (do 2 case=>//)=> ?.
       by rewrite shift_loc_assoc -Nat2Z.inj_add. }
     move=> ?[[v v'][]]. inv_vec v. by inv_vec v'.
   Qed.
 
-  Lemma tctx_extract_split_uniq_array {𝔄 𝔅 ℭl 𝔇l} (t: tctx_elt 𝔄) κ (ty: type 𝔅) n
-        (T: tctx ℭl) (T': tctx 𝔇l) tr p E L :
+  Lemma tctx_extract_split_uniq_array {𝔄 𝔅 ℭl 𝔇l} (t: tctx_elt 𝔄) κ
+      (ty: type 𝔅) n (T: tctx ℭl) (T': tctx 𝔇l) tr p E L :
     lctx_lft_alive E L κ →
     tctx_extract_elt E L t (hasty_uniq_idxs p κ ty n 0) T' tr →
     tctx_extract_elt E L t (p ◁ &uniq{κ} [ty;^ n] +:: T) (T' h++ T)
