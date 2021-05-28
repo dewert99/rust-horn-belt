@@ -138,7 +138,7 @@ Section borrow.
   Lemma type_deref_uniq_own {𝔄 𝔅l ℭl 𝔇} κ x p e n (ty: type 𝔄)
     (T: tctx 𝔅l) (T': tctx ℭl) trx tr E L (C: cctx 𝔇) :
     Closed (x :b: []) e →
-    tctx_extract_elt E L (p ◁ &uniq{κ} (own_ptr n ty)) T T' trx →
+    tctx_extract_ctx E L +[p ◁ &uniq{κ} (own_ptr n ty)] T T' trx →
     lctx_lft_alive E L κ →
     (∀v: val, typed_body E L C (v ◁ &uniq{κ} ty +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := !p in e) (trx ∘ tr).
