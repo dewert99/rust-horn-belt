@@ -7,23 +7,24 @@ Section init_prod.
 
   Definition init_prod : val :=
     fn: ["x"; "y"] :=
-       let: "x'" := !"x" in let: "y'" := !"y" in
-       let: "r" := new [ #2] in
-       "r" +ₗ #0 <- "x'";; "r" +ₗ #1 <- "y'";;
-       delete [ #1; "x"] ;; delete [ #1; "y"] ;; return: ["r"].
+      let: "x'" := !"x" in let: "y'" := !"y" in
+      let: "r" := new [ #2] in
+      "r" <- "x'";; "r" +ₗ #1 <- "y'";;
+      delete [ #1; "x"];; delete [ #1; "y"];; return: ["r"].
 
-  Lemma init_prod_type : typed_val init_prod (fn(∅; int, int) → Π[int;int]).
+  Lemma init_prod_type:
+    typed_val init_prod (fn(∅; int, int) → int * int)
+      (λ post '-[z; z'], post (z, z')).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros ([] ϝ ret p). inv_vec p=>x y. simpl_subst.
-    iApply type_deref; [solve_typing..|]. iIntros (x'). simpl_subst.
-    iApply type_deref; [solve_typing..|]. iIntros (y'). simpl_subst.
-    iApply (type_new_subtype (Π[uninit 1; uninit 1])); [solve_typing..|].
-      iIntros (r). simpl_subst. unfold Z.to_nat, Pos.to_nat; simpl.
-    iApply (type_assign (own_ptr 2 (uninit 1))); [solve_typing..|].
-    iApply type_assign; [solve_typing..|].
-    iApply type_delete; [solve_typing..|].
-    iApply type_delete; [solve_typing..|].
-    iApply type_jump; solve_typing.
+    eapply type_fn; [solve_typing|]=> _ ??[?[?[]]]. simpl_subst. via_tr_impl.
+    { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
+      iApply (type_new_subtype (↯ 1 * ↯ 1));
+        [done|eapply proj1, uninit_plus_prod|].
+      intro_subst. have ->: Z.to_nat 2 = 2%nat by done.
+      iApply (type_assign (own_ptr _ (↯ 1))); [solve_extract|solve_typing|solve_typing|].
+      iApply type_assign; [solve_extract|solve_typing|solve_typing|].
+      do 2 (iApply type_delete; [solve_extract|done|done|]).
+      iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+    by move=> ?[?[?[]]]/=.
   Qed.
 End init_prod.

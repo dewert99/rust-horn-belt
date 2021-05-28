@@ -22,6 +22,11 @@ Section typing.
 
   Lemma uninit_leak n E L : leak E L (↯ n) (const True).
   Proof. apply leak_just. Qed.
+
+  (* TODO: Remove this *)
+  Lemma uninit_plus_prod E L m n :
+    eqtype E L (↯ (m + n)) (↯ m * ↯ n) (const ((), ())) (const ()).
+  Admitted.
 End typing.
 
 Global Hint Resolve uninit_leak : lrust_typing.

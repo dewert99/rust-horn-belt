@@ -15,12 +15,10 @@ Section get_x.
     typed_val get_x (fn<α>(∅; &uniq{α} (int * int)) → &shr{α} int)
       (λ post '-[(zz, zz')], zz' = zz → post zz.1).
   Proof.
-    move=> ??. eapply type_fn; [solve_typing|]=>/= ???[p[]]. simpl_subst. via_tr_impl.
+    move=> ??. eapply type_fn; [solve_typing|]=>/= α ??[p[]]. simpl_subst. via_tr_impl.
     { iApply type_deref; [solve_extract|solve_typing|solve_typing|]. intro_subst.
       iApply type_share; [solve_extract|solve_typing|].
-      (* TODO: make automation work for product split *)
-      iApply (type_letalloc_1 (&shr{_} int));
-        [eapply tctx_extract_split_shr_prod; solve_typing|done|]. intro_subst.
+      iApply (type_letalloc_1 (&shr{α} int)); [solve_extract|done|]. intro_subst.
       iApply type_delete; [solve_extract|done|done|].
       iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
     by move=> ?[[[??]?][]]/=.
