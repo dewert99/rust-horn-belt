@@ -295,7 +295,7 @@ Section lemmas.
   Proof.
     iIntros (??[??]?) "_ _ _ _ $ /=[(%&%& %Ev & ⧖ty) T] Obs !>". iExists (_-::_).
     iFrame "T Obs". iExists _, _. iFrame "⧖ty". iPureIntro. move: Ev=>/=.
-    case (eval_path p)=>//. (do 2 (case=>//))=> ?. by rewrite shift_loc_0.
+    case (eval_path p)=>//. (do 2 case=>//)=> ?. by rewrite shift_loc_0.
   Qed.
 
   Lemma tctx_shift_loc_assoc {𝔄 𝔅l} (ty: type 𝔄) p (T: tctx 𝔅l) (z z': Z) :
