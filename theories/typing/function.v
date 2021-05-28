@@ -361,6 +361,6 @@ Section typing.
   Qed.
 End typing.
 
-Ltac simpl_fp_E := rewrite /fp_E /ty_outlv_E /=.
+Ltac simpl_fp_E := rewrite /fp_E /ty_outlives_E /=.
 
 Global Hint Resolve fn_leak fn_subtype : lrust_typing.

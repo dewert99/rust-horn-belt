@@ -366,7 +366,7 @@ Section product_split.
     tctx_extract_elt E L (p ◁ own_ptr n (ty * ty')) T T'
       (λ post, tr (λ '(a -:: b -:: dl), post ((a, b) -:: dl))).
   Proof.
-    move=> ?. eapply tctx_incl_eq.
+    move=> ?. eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [done|].
       apply (tctx_incl_frame_r _ +[_]), tctx_merge_own_prod. }
     move=>/= ??. f_equal. fun_ext. by case=> [?[??]].
