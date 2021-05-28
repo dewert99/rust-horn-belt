@@ -92,7 +92,7 @@ Section cont_context.
   Proof.
     iIntros (InC InT ??) "LFT PROPH UNIQ E kC". rewrite !cctx_interp_cons. iSplit.
     - iDestruct "kC" as "[k _]". iIntros (??) "Na L T' Obs".
-      iMod (InT with "LFT PROPH UNIQ E L T' Obs") as (?) "(L & T & Obs)".
+      iMod (proj2 (InT _) with "LFT PROPH UNIQ E L T' Obs") as (?) "(L & T & Obs)".
       iApply ("k" with "Na L T Obs").
     - iDestruct "kC" as "[_ ?]". by iApply (InC with "LFT PROPH UNIQ E").
   Qed.

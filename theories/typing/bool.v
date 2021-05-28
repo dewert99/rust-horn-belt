@@ -27,7 +27,9 @@ Section bool.
     Closed (x :b: []) e →
     (∀v: val, typed_body E L C (v ◁ bool_ty +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := #b in e) (λ post al, tr post (b -:: al)).
-  Proof. iIntros. iApply type_let; by [apply type_bool_instr|solve_typing]. Qed.
+  Proof.
+    iIntros. iApply type_let; [apply type_bool_instr|solve_typing|done..].
+  Qed.
 
   Lemma type_if {𝔄l 𝔅l ℭ} p (T: tctx 𝔄l) (T': tctx 𝔅l) e1 e2 tr1 tr2 trx E L (C: cctx ℭ) :
     tctx_extract_ctx E L +[p ◁ bool_ty] T T' trx →

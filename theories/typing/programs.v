@@ -18,9 +18,9 @@ Section typing.
       ⟨π, tr (postπ π) (vπl -$ π)⟩ -∗ WP e {{ _, cont_postcondition }}.
   Global Arguments typed_body {_ _} _ _ _ _ _%E _%type.
 
-  Lemma typed_body_eq {𝔄l 𝔅} tr tr' E L (C: cctx 𝔅) (T: tctx 𝔄l) e :
-    tr = tr' → typed_body E L C T e tr' -∗ typed_body E L C T e tr.
-  Proof. by move=> ->. Qed.
+  Global Instance typed_body_proper 𝔄l 𝔅 E L C T e :
+    Proper ((≡) ==> (≡)) (@typed_body 𝔄l 𝔅 E L C T e).
+  Proof. intros ?? EQ. unfold typed_body. do 18 f_equiv. apply EQ. Qed.
 
   Lemma typed_body_impl {𝔄l 𝔅} (tr tr': predl_trans' 𝔄l 𝔅) E L (C: cctx 𝔅) (T: tctx 𝔄l) e :
     (∀post vl, tr post vl → tr' post vl) →
@@ -34,7 +34,7 @@ Section typing.
     tctx_incl E L T T' tr' →
     typed_body E L C T' e tr -∗ typed_body E L C T e (tr' ∘ tr).
   Proof.
-    iIntros (In) "e". iIntros (???) "#LFT TIME #PROPH #UNIQ #E Na L C T Obs".
+    iIntros ([? In]) "e". iIntros (???) "#LFT TIME #PROPH #UNIQ #E Na L C T Obs".
     iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & T' & Obs)".
     iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T' Obs").
   Qed.
@@ -119,7 +119,7 @@ Section typing.
   Lemma type_let {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: tctx 𝔄l) (T2: val → tctx 𝔅l)
     (T: tctx ℭl) (T': tctx 𝔇l) E L (C: cctx 𝔈) xb e e' tr tr' trx tr_res :
     Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr →
-    tctx_extract_ctx E L T1 T T' trx → tr_res = trx ∘ (trans_upper tr ∘ tr') →
+    tctx_extract_ctx E L T1 T T' trx → tr_res ≡ trx ∘ (trans_upper tr ∘ tr') →
     (∀v: val, typed_body E L C (T2 v h++ T') (subst' xb v e') tr') -∗
     typed_body E L C T (let: xb := e in e') tr_res.
   Proof.
@@ -132,13 +132,13 @@ Section typing.
     (∀v': val, typed_body E L C (v' ◁ ty +:: T) (subst' xb v' e) tr) -∗
     typed_body E L C T (let: xb := v in e) (λ post bl, tr post (a -:: bl)).
   Proof.
-    iIntros (? Val) "?". iApply type_let; by [apply Val|solve_typing].
+    iIntros (? Val) "?". iApply type_let; [apply Val|solve_typing|done..].
   Qed.
 
   Lemma type_seq {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: tctx 𝔄l) (T2: tctx 𝔅l)
     (T: tctx ℭl) (T': tctx 𝔇l) E L (C: cctx 𝔈) e e' tr tr' trx tr_res :
     Closed [] e' → typed_instr E L T1 e (const T2) tr →
-    tctx_extract_ctx E L T1 T T' trx → tr_res = trx ∘ (trans_upper tr ∘ tr') →
+    tctx_extract_ctx E L T1 T T' trx → tr_res ≡ trx ∘ (trans_upper tr ∘ tr') →
     typed_body E L C (T2 h++ T') e' tr' -∗ typed_body E L C T (e;; e') tr_res.
   Proof. iIntros. iApply (type_let _ (const T2))=>//. by iIntros. Qed.
 
@@ -184,8 +184,8 @@ Section typing.
     (∀v: val, typed_body E L C (v ◁ ty +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := p in e) (trx ∘ tr).
   Proof.
-    iIntros. iApply type_let; [by eapply type_path_instr|done| |done].
-    f_equal. fun_ext=> ?. fun_ext. by case.
+    iIntros (? Extr) "?". iApply type_let; [by eapply type_path_instr|done| |done].
+    destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case.
   Qed.
 
   Lemma type_assign_instr {𝔄 𝔅 𝔄' 𝔅'} (ty: type 𝔄) (tyb: type 𝔅)
@@ -220,11 +220,11 @@ Section typing.
     Closed [] e → tctx_extract_ctx E L +[p ◁ ty; pb ◁ tyb'] T T' trx →
     typed_write E L ty tyb ty' tyb' gt st → leak' E L tyb Φ →
     typed_body E L C (p ◁ ty' +:: T') e tr -∗
-    typed_body E L C T (p <- pb;; e) (trx ∘
-      (λ post '(a -:: b -:: bl), Φ (gt a) (tr post (st a b -:: bl)))).
+    typed_body E L C T (p <- pb;; e)
+      (trx ∘ (λ post '(a -:: b -:: bl), Φ (gt a) (tr post (st a b -:: bl)))).
   Proof.
-    iIntros. iApply type_seq; [by eapply type_assign_instr|done| |done].
-    f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
+    iIntros (? Extr ??) "?". iApply type_seq; [by eapply type_assign_instr|done| |done].
+    destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case=> [?[??]].
   Qed.
 
   Lemma type_deref_instr {𝔄 𝔅 𝔄'} (ty: type 𝔄) (tyb: type 𝔅) (ty': type 𝔄')
@@ -251,8 +251,8 @@ Section typing.
     typed_body E L C T (let: x := !p in e)
       (trx ∘ (λ post '(a -:: al), tr post (gt a -:: st a -:: al))).
   Proof.
-    iIntros. iApply type_let; [by eapply type_deref_instr|done| |done].
-    f_equal. fun_ext=> ?. fun_ext. by case.
+    iIntros (? Extr ??) "?". iApply type_let; [by eapply type_deref_instr|done| |done].
+    destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case.
   Qed.
 
   Lemma type_memcpy_instr {𝔄 𝔄' 𝔅 𝔅' ℭ ℭ'} (tyw: type 𝔄) (tyw': type 𝔄')
@@ -292,11 +292,12 @@ Section typing.
     typed_write E L tyw tyb tyw' tyb' gtw stw → leak' E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
     typed_body E L C (pw ◁ tyw' +:: pr ◁ tyr' +:: T') e tr -∗
-    typed_body E L C T (pw <-{n} !pr;; e) (trx ∘ (λ post '(a -:: b -:: bl),
-      Φ (gtw a) (tr post (stw a (gtr b) -:: str b -:: bl)))).
+    typed_body E L C T (pw <-{n} !pr;; e)
+      (trx ∘ (λ post '(a -:: b -:: bl),
+                Φ (gtw a) (tr post (stw a (gtr b) -:: str b -:: bl)))).
   Proof.
-    iIntros. iApply type_seq; [by eapply type_memcpy_instr|done| |done].
-    f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
+    iIntros (? Extr ????) "?". iApply type_seq; [by eapply type_memcpy_instr|done| |done].
+    destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case=> [?[??]].
   Qed.
 End typing.
 

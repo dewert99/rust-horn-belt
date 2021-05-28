@@ -282,7 +282,7 @@ Section typing.
     iApply (wp_step_fupd with "To†ϝ"); [set_solver|]. wp_seq. iIntros "†ϝ !>".
     wp_seq. iMod ("ToκL" with "†ϝ") as "> κL". iMod ("ToL" with "κL L") as "L".
     iSpecialize ("C" with "[//]"). have ->: [v: expr] = map of_val ([#v]) by done.
-    iMod (InTk _ _ _ (_-::_) with "LFT PROPH UNIQ E L [$oty $T'] Obs")
+    iMod (proj2 (InTk _) _ _ (_-::_) with "LFT PROPH UNIQ E L [$oty $T'] Obs")
     as (?) "(L & Tk & Obs)". iApply ("C" with "Na L Tk Obs").
   Qed.
 
@@ -314,7 +314,7 @@ Section typing.
       rewrite is_closed_nil_subst; [|done].
       have ->: map (subst "_k" k) ql = ql.
       { clear -Clql. elim Clql; [done|]=>/= ????->. by rewrite is_closed_nil_subst. }
-      iApply typed_body_eq; last first.
+      iApply typed_body_proper; last first.
       { iApply type_call=>//; [constructor|]=> v.
         have {1}->: v = vhd [#v] by done. move: [#v]=> ?. apply tctx_incl_refl. }
       done.

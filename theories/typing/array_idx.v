@@ -51,10 +51,10 @@ Section lemmas.
     tctx_extract_elt E L t (p ◁ own_ptr k [ty;^ n] +:: T) (T' h++ T) (λ post
       '(al -:: bl), tr (λ '(a -:: cl), post (a -:: cl -++ bl)) (vec_to_plist al)).
   Proof.
-    move=> ?. eapply tctx_incl_ext.
+    move=> Extr. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
       eapply tctx_incl_trans; by [apply tctx_split_own_array|]. }
-    move=>/= ?[??]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
+    destruct Extr as [Htr _]=>/= ?[??]. apply Htr.  by case.
   Qed.
 
   Lemma tctx_merge_own_array {𝔄} k (ty: type 𝔄) n p E L :
@@ -96,6 +96,7 @@ Section lemmas.
       (p +ₗ #(i * ty.(ty_size))%nat ◁ &shr{κ} ty +:: T)
       (λ post '(xl -:: bl), post (xl !!! i -:: bl))%type.
   Proof.
+    split; [by intros ??? [??]|].
     iIntros (??[??]?) "_ _ _ _ $ [p T] Obs !>". iExists (_-::_).
     iFrame "Obs T". iDestruct "p" as ([[]|][|]Ev) "[⧖ ?]"=>//=. iExists _, _.
     iSplit; [by rewrite/= Ev|]. iFrame "⧖". by rewrite big_sepL_vlookup vfunsep_lookup.
@@ -135,8 +136,8 @@ Section lemmas.
     typed_body E L C T (let: x := p +ₗ q * #ty.(ty_size) in e) (trx ∘
       (λ post '(xl -:: z -:: bl), ∃i: fin n, z = i ∧ tr post (xl !!! i -:: bl)))%type.
   Proof.
-    iIntros. iApply type_let; [by apply type_idx_shr_array_instr|solve_typing| |done].
-    f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
+    iIntros (? Extr) "?". iApply type_let; [by apply type_idx_shr_array_instr|solve_typing| |done].
+    destruct Extr as [Htrx _]=>?. apply Htrx. by case=> [?[??]].
   Qed.
 
   (** * Unique References *)
@@ -180,9 +181,10 @@ Section lemmas.
       (λ post '((bl, bl') -:: cl),
         tr (λ '(a -:: dl), post (a -:: dl -++ cl)) (vec_to_plist (vzip bl bl'))).
   Proof.
-    move=> ??. eapply tctx_incl_ext. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
-    eapply tctx_incl_trans; by [apply tctx_split_uniq_array|]. }
-    move=>/= ?[[??]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
+    move=> ? Extr. eapply tctx_incl_ext.
+    { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+      eapply tctx_incl_trans; by [apply tctx_split_uniq_array|]. }
+    destruct Extr as [Htr _]=>/= ?[[??]?]. apply Htr. by case.
   Qed.
 End lemmas.
 

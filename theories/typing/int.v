@@ -33,7 +33,7 @@ Section int.
     Closed (x :b: []) e →
     (∀v: val, typed_body E L C (v ◁ int +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := #z in e) (λ post al, tr post (z -:: al)).
-  Proof. iIntros. iApply type_let; by [apply type_int_instr|solve_typing]. Qed.
+  Proof. iIntros. iApply type_let; [apply type_int_instr|solve_typing|done..]. Qed.
 
   Lemma type_plus_instr E L p1 p2 :
     typed_instr_ty E L +[p1 ◁ int; p2 ◁ int] (p1 + p2) int
@@ -52,8 +52,8 @@ Section int.
     typed_body E L C T (let: x := p1 + p2 in e)
       (trx ∘ (λ post '(z -:: z' -:: bl), tr post (z + z' -:: bl))).
   Proof.
-    iIntros. iApply type_let; [by apply type_plus_instr|solve_typing| |done].
-    f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
+    iIntros (? Extr) "?". iApply type_let; [by apply type_plus_instr|solve_typing| |done].
+    destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case=> [?[??]].
   Qed.
 
   Lemma type_minus_instr E L p1 p2 :
@@ -73,8 +73,8 @@ Section int.
     typed_body E L C T (let: x := p1 - p2 in e)
       (trx ∘ (λ post '(z -:: z' -:: bl), tr post (z - z' -:: bl))).
   Proof.
-    iIntros. iApply type_let; [by apply type_minus_instr|solve_typing| |done].
-    f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
+    iIntros (? Extr) "?". iApply type_let; [by apply type_minus_instr|solve_typing| |done].
+    destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case=> [?[??]].
   Qed.
 
   Lemma type_mult_instr E L p1 p2 :
@@ -94,8 +94,8 @@ Section int.
     typed_body E L C T (let: x := p1 * p2 in e)
       (trx ∘ (λ post '(z -:: z' -:: bl), tr post (z * z' -:: bl))).
   Proof.
-    iIntros. iApply type_let; [by apply type_mult_instr|solve_typing| |done].
-    f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
+    iIntros (? Extr) "?". iApply type_let; [by apply type_mult_instr|solve_typing| |done].
+    destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case=> [?[??]].
   Qed.
 
   Lemma type_le_instr E L p1 p2 :
@@ -116,8 +116,8 @@ Section int.
     typed_body E L C T (let: x := p1 ≤ p2 in e)
       (trx ∘ (λ post '(z -:: z' -:: bl), tr post (bool_decide (z ≤ z') -:: bl))).
   Proof.
-    iIntros. iApply type_let; [by apply type_le_instr|solve_typing| |done].
-    f_equal. fun_ext=> ?. fun_ext. by case=> [?[??]].
+    iIntros (? Extr) "?". iApply type_let; [by apply type_le_instr|solve_typing| |done].
+    destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case=> [?[??]].
   Qed.
 End int.
 

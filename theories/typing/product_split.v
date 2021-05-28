@@ -99,6 +99,7 @@ Section product_split.
       +[p ◁ own_ptr n ty; p +ₗ #ty.(ty_size) ◁ own_ptr n ty']
       (λ post '-[(a, b)], post -[a; b]).
   Proof.
+    split; [by intros ??? [[??][]]|].
     iIntros (??[abπ[]]?) "_ _ _ _ $ [p _] Obs".
     iDestruct "p" as ([[]|][|]Ev) "[#? own]"=>//.
     iDestruct "own" as "[(% & >↦ & (%&%&>->& ty & ty')) †]".
@@ -117,6 +118,7 @@ Section product_split.
     tctx_incl E L +[p ◁ own_ptr n ty; p +ₗ #ty.(ty_size) ◁ own_ptr n ty']
       +[p ◁ own_ptr n (ty * ty')] (λ post '-[a; b], post -[(a, b)]).
   Proof.
+    split; [by intros ??? [?[?[]]]|].
     iIntros (??(?&?&[])?) "_ _ _ _ $ (p & p' &_) Obs".
     iDestruct "p" as ([[]|][|]Ev) "[⧖ own]"=>//.
     iDestruct "p'" as ([[]|][|]Ev') "[⧖' own']"=>//.
@@ -153,6 +155,7 @@ Section product_split.
       +[p ◁ &shr{κ} ty; p +ₗ #ty.(ty_size) ◁ &shr{κ} ty']
       (λ post '-[(a, b)], post -[a; b]).
   Proof.
+    split; [by intros ??? [[??][]]|].
     iIntros (??[abπ[]]?) "_ _ _ _ $ [p _] Obs !>".
     iDestruct "p" as ([[]|][|]Ev) "[#? own]"=>//. iDestruct "own" as "[ty ty']".
     iExists -[fst ∘ abπ; snd ∘ abπ]. iSplitR "Obs"; last first.
@@ -166,6 +169,7 @@ Section product_split.
     tctx_incl E L +[p ◁ &shr{κ} ty; p +ₗ #ty.(ty_size) ◁ &shr{κ} ty']
       +[p ◁ &shr{κ} (ty * ty')] (λ post '-[a; b], post -[(a, b)]).
   Proof.
+    split; [by intros ??? [?[?[]]]|].
     iIntros (??(?&?&[])?) "_ _ _ _ $ (p & p' &_) Obs !>".
     iDestruct "p" as ([[]|][|]Ev) "[⧖ ty]"=>//.
     iDestruct "p'" as ([[]|][|]Ev') "[⧖' ty']"=>//.
@@ -191,7 +195,8 @@ Section product_split.
       +[p ◁ &uniq{κ} ty; p +ₗ #ty.(ty_size) ◁ &uniq{κ} ty']
       (λ post '-[((a, b), (a', b'))], post -[(a, a'); (b, b')]).
   Proof.
-    iIntros (Alv ??[vπ[]]?) "#LFT #PROPH #UNIQ E L [p _] Obs".
+    intros Alv. split; [by intros ??? [[[??][??]][]]|].
+    iIntros (??[vπ[]]?) "#LFT #PROPH #UNIQ E L [p _] Obs".
     set aπ: proph 𝔄 := λ π, (vπ π).1.1. set bπ: proph 𝔅 := λ π, (vπ π).1.2.
     have ?: Inhabited 𝔄 := populate (aπ inhabitant).
     have ?: Inhabited 𝔅 := populate (bπ inhabitant).
@@ -280,10 +285,10 @@ Section product_split.
     tctx_extract_elt E L t (p ◁ own_ptr n (ty * ty') +:: T) (T' h++ T)
       (λ post '((b, c) -:: dl), tr (λ '(a -:: el), post (a -:: el -++ dl)) -[b; c]).
   Proof.
-    move=> ?. eapply tctx_incl_ext.
+    move=> Extr. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
       eapply tctx_incl_trans; by [apply tctx_split_own_prod|]. }
-    move=>/= ?[[??]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
+    destruct Extr as [Htr _]=>/= ?[[??]?].  by apply Htr=>- [??].
   Qed.
 
   Lemma tctx_extract_split_own_xprod {𝔄 𝔄l 𝔅l ℭl} (t: tctx_elt 𝔄) n (tyl: typel 𝔄l)
@@ -292,10 +297,10 @@ Section product_split.
     tctx_extract_elt E L t (p ◁ own_ptr n (Π! tyl) +:: T) (T' h++ T)
       (λ post '(al -:: bl), tr (λ '(a -:: cl), post (a -:: cl -++ bl)) al).
   Proof.
-    move=> ?. eapply tctx_incl_ext.
+    move=> Extr. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
       eapply tctx_incl_trans; by [apply tctx_split_own_xprod|]. }
-    move=>/= ?[??]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
+    destruct Extr as [Htr _]=>/= ?[??]. by apply Htr=>- [??].
   Qed.
 
   Lemma tctx_extract_split_shr_prod {𝔄 𝔅 ℭ 𝔇l 𝔈l} (t: tctx_elt 𝔄) κ
@@ -306,11 +311,13 @@ Section product_split.
       (p ◁ &shr{κ} (ty * ty') +:: T' h++ T) (λ post '((b, c) -:: dl),
         tr (λ '(a -:: el), post (a -:: (b, c) -:: el -++ dl)) -[b; c]).
   Proof.
-    move=> ?. eapply tctx_incl_ext. { eapply (tctx_incl_frame_r +[_] (_+::_+::_)).
-    eapply tctx_incl_trans; [apply copy_tctx_incl, _|]. eapply tctx_incl_trans;
-    [|apply tctx_incl_swap]. apply (tctx_incl_frame_l _ _ +[_]).
-    eapply tctx_incl_trans; by [apply tctx_split_shr_prod|]. }
-    move=>/= ?[[??]?]. by rewrite /trans_upper /trans_lower.
+    move=> ?. eapply tctx_incl_ext.
+    { eapply (tctx_incl_frame_r +[_] (_+::_+::_)).
+      eapply tctx_incl_trans; [apply copy_tctx_incl, _|].
+      eapply tctx_incl_trans; [|apply tctx_incl_swap].
+      apply (tctx_incl_frame_l _ _ +[_]).
+      eapply tctx_incl_trans; by [apply tctx_split_shr_prod|]. }
+    by move=>/= ?[[??]?].
   Qed.
 
   Lemma tctx_extract_split_shr_xprod {𝔄 𝔄l 𝔅l ℭl} (t: tctx_elt 𝔄) κ (tyl: typel 𝔄l)
@@ -323,10 +330,10 @@ Section product_split.
     move=> ?. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_+::_+::_)).
       eapply tctx_incl_trans; [apply copy_tctx_incl, _|].
-      eapply tctx_incl_trans;
-        [|apply tctx_incl_swap]. apply (tctx_incl_frame_l _ _ +[_]).
+      eapply tctx_incl_trans; [|apply tctx_incl_swap].
+      apply (tctx_incl_frame_l _ _ +[_]).
       eapply tctx_incl_trans; by [apply tctx_split_shr_xprod|]. }
-    move=>/= ?[??]. by rewrite /trans_upper /trans_lower.
+    by move=>/= ?[??].
   Qed.
 
   Lemma tctx_extract_split_uniq_prod {𝔄 𝔅 ℭ 𝔇l 𝔈l} (t: tctx_elt 𝔄) κ
@@ -338,9 +345,10 @@ Section product_split.
       (λ post '(((b, c), (b', c')) -:: dl),
         tr (λ '(a -:: el), post (a -:: el -++ dl)) -[(b, b'); (c, c')]).
   Proof.
-    move=> ??. eapply tctx_incl_ext. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
-    by eapply tctx_incl_trans; [apply tctx_split_uniq_prod|]. }
-    move=>/= ?[[[??][??]]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
+    move=> ? Extr. eapply tctx_incl_ext.
+    { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+      by eapply tctx_incl_trans; [apply tctx_split_uniq_prod|]. }
+    destruct Extr as [Htr _]=>/= ?[[[??][??]]?]. by apply Htr=>- [??].
   Qed.
 
   Lemma tctx_extract_split_uniq_xprod {𝔄 𝔄l 𝔅l ℭl} (t: tctx_elt 𝔄) κ (tyl: typel 𝔄l)
@@ -351,10 +359,10 @@ Section product_split.
       (λ post '((al, al') -:: bl),
         tr (λ '(a -:: cl), post (a -:: cl -++ bl)) (ptrans (pzip al al'))).
   Proof.
-    move=> ??. eapply tctx_incl_ext.
+    move=> ? Extr. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
       eapply tctx_incl_trans; by [apply tctx_split_uniq_xprod|]. }
-    move=>/= ?[[??]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
+    destruct Extr as [Htr _]=>/= ?[[??]?]. by apply Htr=>- [??].
   Qed.
 
   (** * Merging with [tctx_extract_elt]. *)
@@ -366,10 +374,10 @@ Section product_split.
     tctx_extract_elt E L (p ◁ own_ptr n (ty * ty')) T T'
       (λ post, tr (λ '(a -:: b -:: dl), post ((a, b) -:: dl))).
   Proof.
-    move=> ?. eapply tctx_incl_ext.
+    move=> Extr. eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [done|].
       apply (tctx_incl_frame_r _ +[_]), tctx_merge_own_prod. }
-    move=>/= ??. f_equal. fun_ext. by case=> [?[??]].
+    destruct Extr as [Htr _]=>/= ??. apply Htr. by case=> [?[??]].
   Qed.
 
   Lemma tctx_extract_merge_own_xprod {𝔄 𝔄l 𝔅l ℭl} n (tyl: typel (𝔄 :: 𝔄l))

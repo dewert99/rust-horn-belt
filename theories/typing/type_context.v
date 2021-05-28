@@ -25,6 +25,12 @@ Notation predl 𝔄l := (pred' (plist of_syn_type 𝔄l)).
 Notation predl_trans 𝔄l 𝔅l := (predl 𝔅l → predl 𝔄l).
 Notation predl_trans' 𝔄l 𝔅 := (pred' 𝔅 → predl 𝔄l).
 
+Instance pred'_equiv A : Equiv (pred' A) := pointwise_relation _ (↔).
+Instance predl_trans_equiv 𝔄l 𝔅l : Equiv (predl_trans 𝔄l 𝔅l) :=
+  pointwise_relation _ (pointwise_relation _ (↔)).
+Instance predl_trans'_equiv 𝔄l 𝔅 : Equiv (predl_trans' 𝔄l 𝔅) :=
+  pointwise_relation _ (pointwise_relation _ (↔)).
+
 Notation predₛ 𝔄 := (𝔄 → Propₛ)%ST.
 Notation predlₛ 𝔄l := (predₛ (Π! 𝔄l))%ST.
 Notation predl_trans'ₛ 𝔄l 𝔅 := (predₛ 𝔅 → predlₛ 𝔄l)%ST.
@@ -32,6 +38,12 @@ Notation predl_trans'ₛ 𝔄l 𝔅 := (predₛ 𝔅 → predlₛ 𝔄l)%ST.
 Definition trans_app {𝔄l 𝔅l ℭl 𝔇l} (tr: predl_trans 𝔄l 𝔅l) (tr': predl_trans ℭl 𝔇l)
   : predl_trans (𝔄l ++ ℭl) (𝔅l ++ 𝔇l) := λ post acl,
   let '(al, cl) := psep acl in tr (λ bl, tr' (λ dl, post (bl -++ dl)) cl) al.
+
+Instance trans_app_proper {𝔄l 𝔅l ℭl 𝔇l} tr tr' :
+  Proper ((≡) ==> (≡)) tr →
+  Proper ((≡) ==> (≡)) tr' →
+  Proper ((≡) ==> (≡)) (@trans_app 𝔄l 𝔅l ℭl 𝔇l tr tr').
+Proof. intros Htr Htr' ????. unfold trans_app. apply Htr=>?. apply Htr'=>? //. Qed.
 
 Definition trans_lower {𝔄l 𝔅l ℭl} (tr: predl_trans 𝔄l 𝔅l)
   : predl_trans (ℭl ++ 𝔄l) (ℭl ++ 𝔅l) := λ post cal,
@@ -176,33 +188,45 @@ Section lemmas.
   (** Type Context Inclusion *)
 
   Definition tctx_incl {𝔄l 𝔅l} (E: elctx) (L: llctx) (T: tctx 𝔄l) (T': tctx 𝔅l)
-    (tr: predl_trans 𝔄l 𝔅l) : Prop := ∀tid q vπl postπ,
+    (tr: predl_trans 𝔄l 𝔅l) : Prop :=
+    Proper ((≡) ==> (≡)) tr ∧
+    ∀tid q vπl postπ,
       lft_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
-      tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩ ={⊤}=∗ ∃vπl',
-      llctx_interp L q ∗ tctx_interp tid T' vπl' ∗ ⟨π, postπ π (vπl' -$ π)⟩.
+      tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩
+      ={⊤}=∗
+      ∃vπl', llctx_interp L q ∗ tctx_interp tid T' vπl' ∗ ⟨π, postπ π (vπl' -$ π)⟩.
 
   Lemma tctx_incl_impl {𝔄l 𝔅l} (T: tctx 𝔄l) (T': tctx 𝔅l)
                        (tr tr': predl_trans 𝔄l 𝔅l) E L :
     tctx_incl E L T T' tr' → (∀post vl, tr post vl → tr' post vl) →
+    Proper ((≡) ==> (≡)) tr →
     tctx_incl E L T T' tr.
   Proof.
-    move=> In Imp. iIntros (????) "LFT PROPH UNIQ E L T #Obs".
+    move=> [? In] Imp. split; [done|].
+    iIntros (????) "LFT PROPH UNIQ E L T #Obs".
     iMod (In with "LFT PROPH UNIQ E L T []") as "$"; [|done].
     iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
   Qed.
 
   Lemma tctx_incl_ext {𝔄l 𝔅l} (T: tctx 𝔄l) (T': tctx 𝔅l) tr tr' E L :
-    tctx_incl E L T T' tr' → (∀post vl, tr post vl = tr' post vl) →
+    tctx_incl E L T T' tr' → (∀post vl, tr post vl ↔ tr' post vl) →
     tctx_incl E L T T' tr.
-  Proof. move=> ? Eq. eapply tctx_incl_impl; [done|]=> ??. by rewrite Eq. Qed.
+  Proof.
+    move=> In Eq. eapply tctx_incl_impl; [done| |].
+    - move=> ??. by rewrite Eq.
+    - move=> ????. rewrite !Eq. by apply In.
+ Qed.
 
   Lemma tctx_incl_refl {𝔄l} (T: tctx 𝔄l) E L : tctx_incl E L T T id.
-  Proof. move=> ?? vπl ?. iIntros. iExists vπl. by iFrame. Qed.
+  Proof. split; [by apply _|]. move=> ?? vπl ?. iIntros. iExists vπl. by iFrame. Qed.
 
   Lemma tctx_incl_trans {𝔄l 𝔅l ℭl} tr tr' (T1: tctx 𝔄l) (T2: tctx 𝔅l) (T3: tctx ℭl) E L :
     tctx_incl E L T1 T2 tr → tctx_incl E L T2 T3 tr' → tctx_incl E L T1 T3 (tr ∘ tr').
   Proof.
-    move=> In In' >. iIntros "#LFT #PROPH #UNIQ #E L T Obs".
+    move=> In In'. split.
+    { eapply compose_proper; [apply In|apply In']. }
+    iIntros "* #LFT #PROPH #UNIQ #E L T Obs".
+    destruct In as [? In]. destruct In' as [? In'].
     iMod (In with "LFT PROPH UNIQ E L T Obs") as (?) "(L & T & Obs)".
     iMod (In' with "LFT PROPH UNIQ E L T Obs") as (vπl'') "(?&?&?)".
     iExists vπl''. by iFrame.
@@ -213,7 +237,8 @@ Section lemmas.
     tctx_incl E L T1 T1' tr → tctx_incl E L T2 T2' tr' →
     tctx_incl E L (T1 h++ T2) (T1' h++ T2') (trans_app tr tr').
   Proof.
-    move=> In1 In2 ?? vπl ?. move: (papp_ex vπl)=> [?[?->]].
+    move=> [? In1] [? In2]. split; [apply _|].
+    move=>?? vπl ?. move: (papp_ex vπl)=> [?[?->]].
     iIntros "#LFT #PROPH #UNIQ #E L [T1 T2] Obs".
     iMod (In1 with "LFT PROPH UNIQ E L T1 [Obs]") as (wπl) "(L & T1' & Obs)".
     { iApply proph_obs_eq; [|done]=> ?.
@@ -248,6 +273,7 @@ Section lemmas.
     tctx_incl E L (t +:: t' +:: T) (t' +:: t +:: T)
       (λ post '(a -:: b -:: al), post (b -:: a -:: al)).
   Proof.
+    split; [by intros ??? [? [? ?]]|].
     iIntros (??(vπ & vπ' & wπl)?) "_ _ _ _ $ (?&?&?) ?!>".
     iExists (vπ' -:: vπ -:: wπl). iFrame.
   Qed.
@@ -255,12 +281,14 @@ Section lemmas.
   Lemma tctx_incl_leak_head {𝔄 𝔅l} (t: tctx_elt 𝔄) (T: tctx 𝔅l) E L :
     tctx_incl E L (t +:: T) T (λ post '(_ -:: bl), post bl).
   Proof.
+    split; [by intros ??? [? ?]|].
     iIntros (??[??]?) "_ _ _ _ $ [_ T] ? !>". iExists _. by iFrame "T".
   Qed.
 
   Lemma tctx_incl_leak_lower {𝔄l 𝔅l} (T: tctx 𝔄l) (T': tctx 𝔅l) E L :
     tctx_incl E L (T h++ T') T (λ post abl, post (psepl abl)).
   Proof.
+    split; [by intros ????|].
     move=> ?? abπl ?. move: (papp_ex abπl)=> [aπl[?->]].
     iIntros "_ _ _ _ $ [T _] ? !>". iExists aπl. iFrame "T".
     iApply proph_obs_eq; [|done]=> ?. by rewrite/= papply_app papp_sepl.
@@ -272,14 +300,15 @@ Section lemmas.
   Lemma get_tctx_equiv {𝔄l} (T T': tctx 𝔄l) :
     (∀tid vπl, tctx_interp tid T vπl ⊣⊢ tctx_interp tid T' vπl) → tctx_equiv T T'.
   Proof.
-    move=> Eq ??; split; iIntros (????) "_ _ _ _ $ T Obs !>"; iExists _;
-      rewrite Eq; iFrame.
+    move=> Eq ??; split; (split; [apply _|]);
+      iIntros (????) "_ _ _ _ $ T Obs !>"; iExists _; rewrite Eq; iFrame.
   Qed.
 
   Lemma copy_tctx_incl {𝔄 𝔄l} (ty: type 𝔄) `{!Copy ty} (T: tctx 𝔄l) p E L :
     tctx_incl E L (p ◁ ty +:: T) (p ◁ ty +:: p ◁ ty +:: T)
       (λ post '(a -:: al), post (a -:: a -:: al)).
   Proof.
+    split; [by intros ??? [??]|].
     iIntros (??[vπ wπl]?) "_ _ _ _ $ /=[#? T] Obs !>".
     iExists (vπ -:: vπ -:: wπl). iFrame "Obs T". by iSplit.
   Qed.
@@ -287,17 +316,18 @@ Section lemmas.
   Lemma tctx_to_shift_loc_0 {𝔄 𝔅l} (ty: type 𝔄) p (T: tctx 𝔅l) E L :
     JustLoc ty → tctx_incl E L (p ◁ ty +:: T) (p +ₗ #0 ◁ ty +:: T) id.
   Proof.
-    iIntros (JLoc ??[??]?) "_ _ _ _ $ /=[(%&%& %Ev & ⧖ & ty) T] Obs !>".
-    iExists (_-::_). iDestruct (JLoc with "ty") as %[?[=->]]. iFrame "T Obs".
-    iExists _, _. iFrame "⧖ ty". by rewrite/= Ev shift_loc_0.
+    intros JLoc. split; [apply _|].
+    - iIntros (??[??]?) "_ _ _ _ $ /=[(%&%& %Ev & ⧖ & ty) T] Obs !>".
+      iExists (_-::_). iDestruct (JLoc with "ty") as %[?[=->]]. iFrame "T Obs".
+      iExists _, _. iFrame "⧖ ty". by rewrite/= Ev shift_loc_0.
   Qed.
 
   Lemma tctx_of_shift_loc_0 {𝔄 𝔅l} (ty: type 𝔄) p (T: tctx 𝔅l) E L :
     tctx_incl E L (p +ₗ #0 ◁ ty +:: T) (p ◁ ty +:: T) id.
   Proof.
-    iIntros (??[??]?) "_ _ _ _ $ /=[(%&%& %Ev & ⧖ty) T] Obs !>". iExists (_-::_).
-    iFrame "T Obs". iExists _, _. iFrame "⧖ty". iPureIntro. move: Ev=>/=.
-    case (eval_path p)=>//. (do 2 (case=>//))=> ?. by rewrite shift_loc_0.
+    split; [apply _|]. iIntros (??[??]?) "_ _ _ _ $ /=[(%&%& %Ev & ⧖ty) T] Obs !>".
+    iExists (_-::_). iFrame "T Obs". iExists _, _. iFrame "⧖ty". iPureIntro.
+    move: Ev=>/=. case (eval_path p)=>//. (do 2 (case=>//))=> ?. by rewrite shift_loc_0.
   Qed.
 
   Lemma tctx_shift_loc_assoc {𝔄 𝔅l} (ty: type 𝔄) p (T: tctx 𝔅l) (z z': Z) :
@@ -313,7 +343,8 @@ Section lemmas.
     tctx_incl E L (p ◁ ty +:: T) (p ◁ ty' +:: T)
       (λ post '(a -:: al), post (f a -:: al)).
   Proof.
-    iIntros (Sub ??[vπ wπl]?) "#LFT _ _ E L /=[(%v & %d &%&?& ty) T] Obs /=".
+    intros Sub. split; [by intros ??? [??]|].
+    iIntros (??[vπ wπl]?) "#LFT _ _ E L /=[(%v & %d &%&?& ty) T] Obs /=".
     iDestruct (Sub with "L E") as "#(_ & _ & #InOwn & _)". iModIntro.
     iExists (f ∘ vπ -:: wπl). iFrame "L T Obs". iExists v, d.
     do 2 (iSplit; [done|]). by iApply "InOwn".
@@ -325,7 +356,8 @@ Section lemmas.
     tctx_incl E L (p ◁{κ} ty +:: T) (p ◁{κ'} ty' +:: T)
       (λ post '(a -:: al), post (f a -:: al)).
   Proof.
-    iIntros (Sub InLft ??[vπ wπl]?) "#LFT _ _ E L /=[(%v &%& Toty) T] Obs".
+    intros Sub InLft. split; [by intros ??? [??]|].
+    iIntros (??[vπ wπl]?) "#LFT _ _ E L /=[(%v &%& Toty) T] Obs".
     iDestruct (Sub with "L E") as "#(_&_& #InOwn &_)".
     iDestruct (InLft with "L E") as "#κ⊑κ'". iModIntro. iExists (f ∘ vπ -:: wπl).
     iFrame "L Obs T". iExists v. iSplit; [done|]. iIntros "†κ'".
@@ -358,7 +390,7 @@ Section lemmas.
       (λ post '(b -:: al), post (f b -:: b -:: al)).
   Proof.
     move=> ->??. eapply tctx_incl_ext.
-    { eapply tctx_incl_trans; by [apply copy_tctx_incl|apply subtype_tctx_incl]. }
+    { by eapply tctx_incl_trans; [apply copy_tctx_incl|apply subtype_tctx_incl]. }
     by move=> ?[??].
   Qed.
 

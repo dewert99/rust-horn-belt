@@ -14,7 +14,8 @@ Section borrow.
     tctx_incl E L +[p ◁ own_ptr n ty] +[p ◁ &uniq{κ} ty; p ◁{κ} own_ptr n ty]
       (λ post '-[a], ∀a': 𝔄, post -[(a, a'); a']).
   Proof.
-    iIntros (Out ??[vπ[]]?) "#LFT #PROPH #UNIQ #E L [p _] Obs".
+    intros Out. split; [intros ??? [?[]]; by apply forall_proper|].
+    iIntros (??[vπ[]]?) "#LFT #PROPH #UNIQ #E L [p _] Obs".
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).
     iDestruct "p" as ([[]|][|]?) "[#⧖ own]"=>//.
     iDestruct "own" as "[(%& >↦ & ty) †]". iDestruct (Out with "L E") as "#Out".
@@ -79,8 +80,9 @@ Section borrow.
     typed_body E L C T (Share;; e) (trx ∘ (λ post '((a, a') -:: bl),
       a' = a → tr post (a -:: bl)))%type.
   Proof.
-    iIntros. iApply type_seq; [by eapply type_share_instr|solve_typing| |done].
-    fun_ext=>/= ?. f_equal. fun_ext. by case.
+    iIntros (? Extr ?) "?".
+    iApply type_seq; [by eapply type_share_instr|solve_typing| |done].
+    destruct Extr as [Htrx _]=>??. apply Htrx. by case.
   Qed.
 
   Lemma tctx_extract_hasty_borrow {𝔄 𝔅 As} E L p n (ty : type 𝔄) (ty' : type 𝔅) κ (T : tctx As) f:
@@ -90,10 +92,10 @@ Section borrow.
                        ((p ◁{κ} own_ptr n ty)+::T) (λ post '(b -:: bs), ∀ (b' : 𝔄), post ((f b, b') -:: b' -:: bs)).
   Proof.
     intros. eapply tctx_incl_impl.
-    eapply tctx_incl_trans; [by eapply subtype_tctx_incl, own_subtype|].
-    eapply (tctx_incl_frame_r +[_] +[_; _]).
-    - by eapply tctx_borrow.
+    - eapply tctx_incl_trans; [by eapply subtype_tctx_incl, own_subtype|].
+      eapply (tctx_incl_frame_r +[_] +[_; _]). by eapply tctx_borrow.
     - done.
+    - intros ??? [??]. by apply forall_proper.
   Qed.
 
   Lemma type_deref_uniq_own_instr {𝔄} κ p n (ty: type 𝔄) E L :
@@ -143,8 +145,9 @@ Section borrow.
     (∀v: val, typed_body E L C (v ◁ &uniq{κ} ty +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := !p in e) (trx ∘ tr).
   Proof.
-    iIntros. iApply type_let; [by eapply type_deref_uniq_own_instr|solve_typing| |done].
-    fun_ext=>/= ?. f_equal. fun_ext. by case.
+    iIntros (? Extr ?) "?".
+    iApply type_let; [by eapply type_deref_uniq_own_instr|solve_typing| |done].
+    destruct Extr as [Htrx _]=>??. apply Htrx. by case.
   Qed.
 
   Lemma type_deref_shr_own_instr {𝔅} {E L} κ p n (ty : type 𝔅) :
@@ -172,11 +175,13 @@ Section borrow.
     (∀v: val, typed_body E L C (v ◁ &shr{κ} ty +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := !p in e) (trx ∘ tr).
   Proof.
-    iIntros. iApply type_let; [by eapply type_deref_shr_own_instr|solve_typing| |done].
-    fun_ext=>/= ?. f_equal. fun_ext. by case.
+    iIntros (? Extr ?) "?".
+    iApply type_let; [by eapply type_deref_shr_own_instr|solve_typing| |done].
+    destruct Extr as [Htrx _]=>??. apply Htrx. by case.
   Qed.
 
-  Definition tr_unnest {𝔄} (post : pred' (𝔄 * 𝔄)%ST) (vs : plist of_syn_type [((𝔄 * 𝔄) * (𝔄 * 𝔄))%ST]) : Prop :=
+  Definition tr_unnest {𝔄} (post : pred' (𝔄 * 𝔄)%ST)
+                            (vs : Π!%ST[((𝔄 * 𝔄) * (𝔄 * 𝔄))%ST]) : Prop :=
     let '-[(v, v')] := vs in v.2 = v'.2 → post (v.1, v'.1).
 
   Lemma type_deref_uniq_uniq_instr {𝔄 E L} κ κ' p (ty : type 𝔄) :
@@ -271,10 +276,11 @@ Section borrow.
     tctx_extract_elt E L (p ◁ &uniq{κ} (&uniq{κ'} ty)) T T' trx →
     lctx_lft_alive E L κ → lctx_lft_incl E L κ κ' →
     (∀v: val, typed_body E L C (v ◁ &uniq{κ} ty +:: T') (subst' x v e) tr) -∗
-    typed_body E L C T (let: x := !p in e) (trx ∘ (λ post '(v -:: bl),
-      tr_unnest (λ v', tr post (v' -:: bl)) -[v])).
+    typed_body E L C T (let: x := !p in e)
+      (trx ∘ (λ post '(v -:: bl),
+                tr_unnest (λ v', tr post (v' -:: bl)) -[v])).
   Proof.
-    iIntros. iApply type_let; [by eapply type_deref_uniq_uniq_instr|solve_typing|done|done].
+    iIntros. by iApply type_let; [by eapply type_deref_uniq_uniq_instr|solve_typing| |done].
   Qed.
 
   Lemma type_deref_shr_uniq_instr {𝔄} {E L} κ κ' p (ty : type 𝔄) :
@@ -301,10 +307,10 @@ Section borrow.
     tctx_extract_elt E L (p ◁ &shr{κ} (&uniq{κ'} ty)) T T' trx →
     lctx_lft_alive E L κ → lctx_lft_incl E L κ κ' →
     (∀v: val, typed_body E L C (v ◁ &shr{κ} ty +:: T') (subst' x v e) tr) -∗
-    typed_body E L C T (let: x := !p in e) (trx ∘
-      (λ post '(v -:: bl), tr post (v.1 -:: bl))).
+    typed_body E L C T (let: x := !p in e)
+      (trx ∘ (λ post '(v -:: bl), tr post (v.1 -:: bl))).
   Proof.
-    iIntros. iApply type_let; [by eapply type_deref_shr_uniq_instr|solve_typing|done|done].
+    iIntros. by iApply type_let; [by eapply type_deref_shr_uniq_instr|solve_typing| |done].
   Qed.
 End borrow.
 

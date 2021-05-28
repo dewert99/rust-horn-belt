@@ -223,7 +223,8 @@ Section typing.
     tctx_incl E L +[p ◁ &uniq{κ} ty] +[p ◁ &uniq{κ'} ty; p ◁{κ'} &uniq{κ} ty]
       (λ post '-[(a, a')], ∀a'': 𝔄, post -[(a, a''); (a'', a')]).
   Proof.
-    iIntros (κκ' ??[vπ[]]?) "#LFT #PROPH #UNIQ E L [p _] Obs".
+    intros κκ'. split; [intros ??? [[??][]]; by apply forall_proper|].
+    iIntros (??[vπ[]]?) "#LFT #PROPH #UNIQ E L [p _] Obs".
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
     iDestruct (κκ' with "L E") as "#κ⊑κ'". iFrame "L".
     iDestruct "p" as ([[]|]??) "[⧖ [#In uniq]]"=>//.
@@ -281,10 +282,11 @@ Section typing.
         ∀a'': 𝔄, post ((a, a'') -:: (a'', a') -:: bl)).
   Proof.
     move=> ??. eapply tctx_incl_impl.
-    { apply (tctx_incl_frame_r +[_] +[_;_]).
+    - apply (tctx_incl_frame_r +[_] +[_;_]).
       eapply tctx_incl_trans; [by apply tctx_reborrow_uniq|].
-      by apply subtype_tctx_incl, uniq_subtype, eqtype_symm. }
-    by move=>/= ?[[??]?].
+      by apply subtype_tctx_incl, uniq_subtype, eqtype_symm.
+    - by move=>/= ?[[??]?].
+    - intros ??? [[??]?]. by apply forall_proper.
   Qed.
 
   Lemma tctx_uniq_mod_ty_out' {𝔄 𝔅 ℭl} κ f ty (T: tctx ℭl) p E L
@@ -292,7 +294,9 @@ Section typing.
     tctx_incl E L (p ◁ &uniq{κ} (<{f}> ty) +:: T) (p ◁ &uniq{κ} ty +:: T)
       (λ post '((b, b') -:: cl), ∀a a', b = f a → b' = f a' → post ((a, a') -:: cl)).
   Proof.
-    iIntros (Alv ??[vπ ?]?) "LFT #PROPH UNIQ E L /=[p T] Obs".
+    intros Alv. split.
+    { intros ?? Eq  [[??]?]. do 2 apply forall_proper=>?. split=>???; apply Eq; auto. }
+    iIntros (??[vπ ?]?) "LFT #PROPH UNIQ E L /=[p T] Obs".
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
     have ?: Inhabited 𝔅 := populate (vπ inhabitant).1.
     iDestruct "p" as ([[]|]? Ev) "[_ [In uniq]]"=>//.
@@ -327,8 +331,10 @@ Section typing.
     tctx_incl E L (p ◁ &uniq{κ} (<{f}> ty) +:: T) (p ◁ &uniq{κ} ty +:: T)
       (λ post '((b, b') -:: cl), post ((g b, g b') -:: cl)).
   Proof.
-    move=> ?. eapply tctx_incl_impl; [apply tctx_uniq_mod_ty_out'; by [apply _|]|].
-    move=> ?[[??]?]??? /(f_equal g) + /(f_equal g) +. by rewrite !semi_iso'=> <-<-.
+    move=> ?. eapply tctx_incl_impl.
+    - apply tctx_uniq_mod_ty_out'; by [apply _|].
+    - move=> ?[[??]?]??? /(f_equal g) + /(f_equal g) +. by rewrite !semi_iso'=> <-<-.
+    - by intros ??? [[??]?].
   Qed.
 
   Lemma tctx_uniq_eqtype {𝔄 𝔅 ℭl} κ (f: 𝔄 → 𝔅) g ty ty' (T: tctx ℭl) p E L :
@@ -336,7 +342,8 @@ Section typing.
     tctx_incl E L (p ◁ &uniq{κ} ty +:: T) (p ◁ &uniq{κ} ty' +:: T)
       (λ post '((a, a') -:: cl), post ((f a, f a') -:: cl)).
   Proof.
-    iIntros ([Sub Sub'] ? Alv ??[vπ ?]?) "LFT #PROPH UNIQ E L /=[p T] Obs".
+    intros [Sub Sub'] ? Alv. split; [by intros ??? [[??]?]|].
+    iIntros (??[vπ ?]?) "LFT #PROPH UNIQ E L /=[p T] Obs".
     iDestruct (Sub with "L") as "#Sub". iDestruct (Sub' with "L") as "#Sub'".
     iDestruct ("Sub" with "E") as "#(_& _ & #InOwn &_)".
     iDestruct ("Sub'" with "E") as "#(_& ? & #InOwn' &_)".

@@ -1,5 +1,5 @@
 From iris.proofmode Require Import tactics.
-From lrust.typing Require Import programs function sum bool.
+From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
 (* Minimal support for panic and assert.
@@ -42,7 +42,8 @@ Section panic.
     typed_body E L C T (assert: p ;; e)
       (trx ∘ (λ post '(b -:: al), if b then tr post al else False))%type.
   Proof.
-    iIntros. iApply type_seq; [by apply type_assert_instr|solve_typing| |done].
-    f_equal. fun_ext=>/= ?. fun_ext. by case.
+    iIntros (? Extr) "?". 
+    iApply type_seq; [by apply type_assert_instr|solve_typing| |done].
+    destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case.
   Qed.
 End panic.

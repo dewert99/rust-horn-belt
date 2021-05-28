@@ -230,7 +230,9 @@ Section typing.
     Closed (x :b: []) e → 0 ≤ n → let n' := Z.to_nat n in
     (∀v: val, typed_body E L C (v ◁ own_ptr n' (↯ n') +:: T) (subst' x v e) tr) -∗
     typed_body E L C T (let: x := new [ #n] in e) (λ post al, tr post (() -:: al)).
-  Proof. iIntros. subst. iApply type_let; by [apply type_new_instr|solve_typing]. Qed.
+  Proof.
+    iIntros. iApply type_let; [by apply type_new_instr|solve_typing|done..].
+  Qed.
 
   Lemma type_new_subtype {𝔄 𝔅l ℭ} (ty: type 𝔄) n (T: tctx 𝔅l) f e tr x E L (C: cctx ℭ) :
     Closed (x :b: []) e → 0 ≤ n → let n' := Z.to_nat n in
@@ -266,8 +268,8 @@ Section typing.
     n' = ty.(ty_size) → n = n' → typed_body E L C T' e tr -∗
     typed_body E L C T (delete [ #n; p ];; e) (trx ∘ (λ post '(_ -:: al), tr post al)).
   Proof.
-    iIntros (??->?) "?". iApply type_seq; [by eapply type_delete_instr|done| |done].
-    f_equal. fun_ext=> ?. fun_ext. by case.
+    iIntros (? Extr -> ?) "?". iApply type_seq; [by eapply type_delete_instr|done| |done].
+    destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case.
   Qed.
 
   Lemma type_letalloc_1 {𝔄 𝔅l ℭl 𝔇} (ty: type 𝔄) (x: string) p e
