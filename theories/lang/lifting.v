@@ -72,7 +72,7 @@ Implicit Types P Q : iProp Σ.
 Implicit Types e : expr.
 Implicit Types ef : option expr.
 
-Lemma wp_step_fupdN_time_rcpt n m E1 E2 e P Φ :
+Lemma wp_step_fupdN_time_receipt n m E1 E2 e P Φ :
   TCEq (to_val e) None → E2 ⊆ E1 → ↑timeN ⊆ E1 →
   time_ctx -∗ ⧖n -∗
     (⧗m ∧ ((|={E1∖E2,∅}=> |={∅}▷=>^(S (n + m)) |={∅,E1∖E2}=> P) ∗
@@ -81,25 +81,25 @@ Lemma wp_step_fupdN_time_rcpt n m E1 E2 e P Φ :
 Proof.
   iIntros (???) "#TIME #Hn H".
   iApply (wp_step_fupdN (S (n + m)) _ _ E2)=>//. iSplit.
-  - iIntros "* [_ Ht]". iMod (time_rcpt_le with "TIME Ht Hn [H]") as "[% ?]"=>//.
+  - iIntros "* [_ Ht]". iMod (time_receipt_le with "TIME Ht Hn [H]") as "[% ?]"=>//.
     + iDestruct "H" as "[$ _]".
     + iApply fupd_mask_weaken; [|iIntros "_ !> !% /="; lia]; set_solver+.
   - iDestruct "H" as "[_ $]".
 Qed.
 
-Lemma wp_step_fupdN_persist_time_rcpt n E1 E2 e P Φ :
+Lemma wp_step_fupdN_persistent_time_receipt n E1 E2 e P Φ :
   TCEq (to_val e) None → E2 ⊆ E1 → ↑timeN ⊆ E1 →
   time_ctx -∗ ⧖n -∗ (|={E1∖E2,∅}=> |={∅}▷=>^(S n) |={∅, E1∖E2}=> P) -∗
   WP e @ E2 {{ v, P ={E1}=∗ Φ v }} -∗
   WP e @ E1 {{ Φ }}.
 Proof.
   iIntros (???) "#TIME #Hn HP Hwp".
-  iApply (wp_step_fupdN_time_rcpt _ _ E1 E2 with "TIME Hn [> -]")=>//.
-  iMod cumul_time_rcpt_0 as "$". iFrame. by rewrite -plus_n_O.
+  iApply (wp_step_fupdN_time_receipt _ _ E1 E2 with "TIME Hn [> -]")=>//.
+  iMod cumulative_time_receipt_0 as "$". iFrame. by rewrite -plus_n_O.
 Qed.
 
 (* FIXME : we need to unfold WP *)
-Lemma wp_cumul_time_rcpt E e Φ :
+Lemma wp_cumulative_time_receipt E e Φ :
   TCEq (to_val e) None → ↑timeN ⊆ E →
   time_ctx -∗
   WP e @ (E∖↑timeN) {{ v, ⧗1 -∗ Φ v }} -∗
@@ -107,7 +107,7 @@ Lemma wp_cumul_time_rcpt E e Φ :
 Proof.
   rewrite !wp_unfold /wp_pre /=. iIntros (-> ?) "#TIME Hwp".
   iIntros (?????) "[Hσ Ht]".
-  iMod (step_cumul_time_rcpt with "TIME Ht") as "[Ht Hclose]"=>//.
+  iMod (step_cumulative_time_receipt with "TIME Ht") as "[Ht Hclose]"=>//.
   iMod ("Hwp" $! _ _ _ [] 0%nat with "[$]") as "[$ Hwp]".
   iIntros "!>" (e2 σ2 efs stp). iMod ("Hwp" $! e2 σ2 efs stp) as "Hwp".
   iIntros "!> !>". iMod "Hwp". iModIntro.
@@ -117,15 +117,15 @@ Proof.
   iIntros "!> % H". by iApply "H".
 Qed.
 
-Lemma wp_persist_time_rcpt n E e Φ :
+Lemma wp_persistent_time_receipt n E e Φ :
   TCEq (to_val e) None → ↑timeN ⊆ E →
   time_ctx -∗
   ⧖n -∗ WP e @ (E∖↑timeN) {{ v, ⧖(S n) -∗ Φ v }} -∗
   WP e @ E {{ Φ }}.
 Proof.
-  iIntros. iApply wp_fupd. iApply wp_cumul_time_rcpt=>//.
+  iIntros. iApply wp_fupd. iApply wp_cumulative_time_receipt=>//.
   iApply (wp_wand with "[$]"). iIntros (?) "HΦ ?". iApply "HΦ".
-  by iApply (cumul_persist_time_rcpts _ 1 with "[//] [$]").
+  by iApply (cumulative_persistent_time_receipt _ 1 with "[//] [$]").
 Qed.
 
 (** Base axioms for core primitives of the language: Stateless reductions *)

@@ -70,7 +70,7 @@ Section typing.
 
   Global Instance mod_ty_type_ne {𝔄 𝔅} (f: 𝔄 → 𝔅) : TypeNonExpansive <{f}>%T.
   Proof.
-    split=>/= *; by [apply type_lft_morph_id_like| |do 3 f_equiv|do 3 f_equiv].
+    split=>/= *; by [apply type_lft_morphism_id_like| |do 3 f_equiv|do 3 f_equiv].
   Qed.
 
   Global Instance mod_ty_copy {𝔄 𝔅} (f: 𝔄 → 𝔅) ty : Copy ty → Copy (<{f}> ty).

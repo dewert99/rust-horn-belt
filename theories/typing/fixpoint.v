@@ -17,10 +17,10 @@ Section S.
   Proof using HT.
     have Eq: ∀n, ⊢ (Tn n).(ty_lft) ≡ₗ (Tn 0).(ty_lft); last first.
     { iApply lft_equiv_trans; [|iApply lft_equiv_sym]; iApply Eq. }
-    clear n n'=> n. case type_contr_type_lft_morph=> [> Hα ?|> Hα ?]; last first.
+    clear n n'=> n. case type_contractive_type_lft_morphism=> [> Hα ?|> Hα ?]; last first.
     { iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_sym. iApply Hα. }
     elim: n=> [|n IH]; [apply lft_equiv_refl|]. rewrite /Tn /=.
-    iApply lft_equiv_trans; [iApply type_lft_morph_lft_equiv_proper; iApply IH|].
+    iApply lft_equiv_trans; [iApply type_lft_morphism_lft_equiv_proper; iApply IH|].
     iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_trans.
     { iApply lft_intersect_equiv_proper; [iApply lft_equiv_refl|iApply Hα]. }
     iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
@@ -33,7 +33,7 @@ Section S.
   Proof using HT.
     have Eq: ∀n, elctx_interp (Tn (S n)).(ty_E) ≡ elctx_interp (Tn 1).(ty_E);
     [|by rewrite !Eq]. clear n n'=> n.
-    case type_contr_type_lft_morph=> [> Hα HE|> ? HE]; last by rewrite !HE.
+    case type_contractive_type_lft_morphism=> [> Hα HE|> ? HE]; last by rewrite !HE.
     elim: n; [done|]=> n IH.
     rewrite (HE (Tn (S n))) IH !HE !assoc -!persistent_sep_dup -!assoc.
     iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
@@ -48,10 +48,10 @@ Section S.
       (Tn (2 + i)).(ty_shr) vπ d κ tid l ≡{n}≡ (Tn (2 + n)).(ty_shr) vπ d κ tid l).
   Proof using HT.
     move: i. elim: n=> /=[|n IH]=> i ?.
-    - split; [done|]. apply HT=>//; [apply type_contr_ty_size|
+    - split; [done|]. apply HT=>//; [apply type_contractive_ty_size|
         apply (Tn_ty_lft_const (S i) 1)|apply (Tn_ty_E_const i 0)].
     - case i as [|]; [lia|]. case (IH i) as [??]; [lia|].
-      split; (apply HT=>//; [apply type_contr_ty_size|
+      split; (apply HT=>//; [apply type_contractive_ty_size|
         apply (Tn_ty_lft_const (2 + i) (2 + n))|apply (Tn_ty_E_const (S i) (S n))]).
   Qed.
   Program Definition own_shr_chain :=
@@ -69,7 +69,7 @@ Section S.
     ty_own := (Tn n).(ty_own);  ty_shr := (Tn n).(ty_shr)
   |}.
   Next Obligation.
-    move=> *. rewrite ty_size_eq /Tn. iIntros "->!%/=". apply type_contr_ty_size.
+    move=> *. rewrite ty_size_eq /Tn. iIntros "->!%/=". apply type_contractive_ty_size.
   Qed.
   Next Obligation. move=> >. apply ty_own_depth_mono. Qed.
   Next Obligation. move=> >. apply ty_shr_depth_mono. Qed.
@@ -163,7 +163,7 @@ Proof.
       case (fix_ty_Tn'_dist T n)=> [_ _ _ _ Eq]. apply Eq. }
   apply eqtype_id_unfold. iIntros "*_!>_". iSplit; [iPureIntro; by apply HT|].
   iSplit; [|iSplit; iIntros "!> *"].
-  - case type_contr_type_lft_morph=> [α βs E' Hα HE'|α E' Hα HE'].
+  - case type_contractive_type_lft_morphism=> [α βs E' Hα HE'|α E' Hα HE'].
     + iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
       iApply lft_equiv_trans; [iApply Hα|].
       iApply lft_equiv_trans; [|iApply lft_intersect_equiv_proper;
@@ -196,12 +196,12 @@ Proof.
   move=> HT. have Hne: ∀n, TypeNonExpansive (λ ty, Tn (T ty) n).
   { elim=> [|? IH]; [apply HT, _|apply HT, IH]. }
   split=>/=.
-  - case (type_ne_type_lft_morph (T := λ ty, Tn (T ty) 1))=>
+  - case (type_ne_type_lft_morphism (T := λ ty, Tn (T ty) 1))=>
     [α βs E Hα HE|α E Hα HE].
-    + eapply (type_lft_morph_add _ α βs E), HE=> ?.
+    + eapply (type_lft_morphism_add _ α βs E), HE=> ?.
       iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
       iApply (Tn_ty_lft_const _ 1 0).
-    + eapply (type_lft_morph_const _ α E), HE=> ?.
+    + eapply (type_lft_morphism_const _ α E), HE=> ?.
       iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
       iApply (Tn_ty_lft_const _ 1 0).
   - apply HT, _.
@@ -211,7 +211,7 @@ Proof.
     etrans; [|symmetry; apply conv_compl]. by apply Hne.
 Qed.
 
-Lemma fix_type_contracive `{!typeG Σ} {𝔄 𝔅} (T : type 𝔄 → type 𝔅 → type 𝔅)
+Lemma fix_type_contractive `{!typeG Σ} {𝔄 𝔅} (T : type 𝔄 → type 𝔅 → type 𝔅)
   `{!(∀ty, TypeContractive (T ty))} :
   (∀`{!TypeContractive U}, TypeContractive (λ ty, T ty (U ty))) →
     TypeContractive (λ ty, fix_ty (T ty)).
@@ -219,12 +219,12 @@ Proof.
   move=> HT. have Hne: ∀n, TypeContractive (λ ty, Tn (T ty) n).
   { elim=> [|? IH]; [apply HT, _|apply HT, IH]. }
   split=>/=.
-  - case (type_ne_type_lft_morph (T := λ ty, Tn (T ty) 1))=>
+  - case (type_ne_type_lft_morphism (T := λ ty, Tn (T ty) 1))=>
     [α βs E Hα HE|α E Hα HE].
-    + eapply (type_lft_morph_add _ α βs E), HE=> ?.
+    + eapply (type_lft_morphism_add _ α βs E), HE=> ?.
       iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
       iApply (Tn_ty_lft_const _ 1 0).
-    + eapply (type_lft_morph_const _ α E), HE=> ?.
+    + eapply (type_lft_morphism_const _ α E), HE=> ?.
       iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
       iApply (Tn_ty_lft_const _ 1 0).
   - apply HT, _.
@@ -250,7 +250,7 @@ Section lemmas.
         apply limit_preserving_entails; [done|]=> ??? Eq.
         f_equiv; [|do 11 f_equiv]; apply Eq. }
       move=> n. have ->: (Tn T 0).(ty_size) = (Tn T (3 + n)).(ty_size).
-      { rewrite /Tn /=. apply type_contr_ty_size. }
+      { rewrite /Tn /=. apply type_contractive_ty_size. }
       by apply copy_shr_acc.
   Qed.
 

@@ -163,10 +163,10 @@ Section arc.
     - by iApply at_bor_shorten.
   Qed.
 
-  Global Instance arc_type_contr : TypeContractive arc.
+  Global Instance arc_type_contractive : TypeContractive arc.
   Proof.
     split.
-    - apply (type_lft_morph_add _ static [] [])=>?.
+    - apply (type_lft_morphism_add _ static [] [])=>?.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /elctx_interp /= left_id right_id.
     - done.
@@ -298,10 +298,10 @@ Section arc.
     iExists _, _. iModIntro. iFrame. by iApply at_bor_shorten.
   Qed.
 
-  Global Instance weak_type_contr : TypeContractive weak.
+  Global Instance weak_type_contractive : TypeContractive weak.
   Proof.
     split.
-    - apply (type_lft_morph_add _ static [] [])=>?.
+    - apply (type_lft_morphism_add _ static [] [])=>?.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /elctx_interp /= left_id right_id.
     - done.
@@ -497,7 +497,7 @@ Section arc.
     { rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val tctx_hasty_val' //.
       unlock. iFrame "Hrcx". iFrame "Hx†". iExists [_]. rewrite heap_mapsto_vec_singleton.
       iFrame "Hx". iApply (ty_shr_mono with "[] Hshr").
-      iApply lft_incl_glb; [done|]. iApply elctx_interp_ty_outlv_E.
+      iApply lft_incl_glb; [done|]. iApply elctx_interp_ty_outlives_E.
       rewrite !elctx_interp_app /=. iDestruct "HE" as "(_ & [[_ $] _] & _)". }
     iApply type_delete; [solve_typing..|].
     iApply type_jump; solve_typing.
@@ -808,10 +808,10 @@ Section arc.
     { iDestruct "Hrc'" as "[?|$]"; last done.
       iMod (lctx_lft_alive_tok ty.(ty_lft) with "HE HL")
         as (?) "(Htok & HL & Hclose)"; [done| |].
-      { change (ty_outlv_E (arc ty)) with (ty_outlv_E ty).
+      { change (ty_outlives_E (arc ty)) with (ty_outlives_E ty).
         eapply (lctx_lft_alive_incl _ _ ϝ); first solve_typing.
         iIntros (?) "_ !>". rewrite !elctx_interp_app /=.
-        iIntros "(_ & _ & [? _] & _ & _)". by iApply elctx_interp_ty_outlv_E. }
+        iIntros "(_ & _ & [? _] & _ & _)". by iApply elctx_interp_ty_outlives_E. }
       iMod (arc_own_share with "LFT Htok [$]") as "[Htok $]"; first solve_ndisj.
       by iApply ("Hclose" with "Htok"). }
     iDestruct "Hrc'" as (γ ν q) "(#Hpersist & Htok & Hν)".
@@ -923,10 +923,10 @@ Section arc.
     { iDestruct "Hrc'" as "[?|$]"; last done.
       iMod (lctx_lft_alive_tok ty.(ty_lft) with "HE HL")
         as (?) "(Htok & HL & Hclose)"; [done| |].
-      { change (ty_outlv_E (arc ty)) with (ty_outlv_E ty).
+      { change (ty_outlives_E (arc ty)) with (ty_outlives_E ty).
         eapply (lctx_lft_alive_incl _ _ ϝ); first solve_typing.
         iIntros (?) "_ !>". rewrite !elctx_interp_app /=.
-        iIntros "(_ & _ & [?_] & _ & _)". by iApply elctx_interp_ty_outlv_E. }
+        iIntros "(_ & _ & [?_] & _ & _)". by iApply elctx_interp_ty_outlives_E. }
       iMod (arc_own_share with "LFT Htok [$]") as "[Htok $]"; first solve_ndisj.
       by iApply ("Hclose" with "Htok"). }
     iDestruct "Hrc'" as (γ ν q) "(#Hpersist & Htok & Hν)".

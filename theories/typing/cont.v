@@ -27,7 +27,7 @@ Section typing.
     move=> -> ? TT' Lk. iApply typed_body_tctx_incl; [done|]. iIntros (? bcπl ?).
     move: (papp_ex bcπl)=> [?[?->]]. iIntros "LFT TIME PROPH _ E Na L C /=[T' Tx] Obs".
     iMod (Lk with "LFT PROPH E L Tx") as (?) "[⧖ ToObs]"; [done|]. wp_bind Skip.
-    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME ⧖ [ToObs]")=>//.
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [ToObs]")=>//.
     { iApply step_fupdN_with_emp. by rewrite difference_empty_L. }
     wp_seq. iIntros "[Obs' L] !>". iCombine "Obs Obs'" as "#?". wp_seq.
     iApply ("C" with "[%//] Na L T' []"). iApply proph_obs_impl; [|done]=>/= ?.

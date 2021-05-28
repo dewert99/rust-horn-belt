@@ -34,9 +34,9 @@ Section lemmas.
       (λ post '-[al], post (vec_to_plist al)).
   Proof.
     move: p. elim n.
-    { move=> ?. eapply tctx_incl_eq; [by apply tctx_incl_leak_head|]=>/= ?[v[]].
+    { move=> ?. eapply tctx_incl_ext; [by apply tctx_incl_leak_head|]=>/= ?[v[]].
       by inv_vec v. }
-    move=>/= ? IH ?. eapply tctx_incl_eq.
+    move=>/= ? IH ?. eapply tctx_incl_ext.
     { eapply tctx_incl_trans;
         [by eapply subtype_tctx_incl; eapply own_subtype, proj1, array_succ_prod|].
       eapply tctx_incl_trans; [by eapply tctx_split_own_prod|].
@@ -51,7 +51,7 @@ Section lemmas.
     tctx_extract_elt E L t (p ◁ own_ptr k [ty;^ n] +:: T) (T' h++ T) (λ post
       '(al -:: bl), tr (λ '(a -:: cl), post (a -:: cl -++ bl)) (vec_to_plist al)).
   Proof.
-    move=> ?. eapply tctx_incl_eq.
+    move=> ?. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
       eapply tctx_incl_trans; by [apply tctx_split_own_array|]. }
     move=>/= ?[??]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
@@ -62,11 +62,11 @@ Section lemmas.
       (λ post al, post -[plist_to_vec al]).
   Proof.
     move: p. elim: n.
-    { move=> ?. eapply tctx_incl_eq.
+    { move=> ?. eapply tctx_incl_ext.
       { eapply tctx_incl_trans; [by apply tctx_of_shift_loc_0|].
         eapply subtype_tctx_incl, own_subtype, proj2, array_one. }
       by move=> ?[?[]]. }
-    move=>/= ? IH ?. eapply tctx_incl_eq.
+    move=>/= ? IH ?. eapply tctx_incl_ext.
     { eapply tctx_incl_trans;
         [|by eapply subtype_tctx_incl, own_subtype, proj2, array_succ_prod].
       eapply tctx_incl_trans; [|by eapply tctx_merge_own_prod].
@@ -83,7 +83,7 @@ Section lemmas.
     tctx_extract_elt E L (p ◁ own_ptr k [ty;^ S n]) T T' (λ post, tr
       (λ acl, let '(al, cl) := psep acl in post (plist_to_vec al -:: cl))).
   Proof.
-    move=> ?. eapply tctx_incl_eq.
+    move=> ?. eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [done|].
       apply (tctx_incl_frame_r _ +[_]), tctx_merge_own_array. }
     done.
@@ -106,7 +106,7 @@ Section lemmas.
       (p ◁ &shr{κ} [ty;^ n] +:: T) (p ◁ &shr{κ} [ty;^ n] +:: T)
       (λ post '(xl -:: bl), post (xl !!! i -:: xl -:: bl))%type.
   Proof.
-    eapply tctx_incl_eq.
+    eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [apply copy_tctx_incl, _|apply tctx_idx_shr_array]. }
     done.
   Qed.
@@ -156,9 +156,9 @@ Section lemmas.
       (λ post '-[(al, al')], post (vec_to_plist (vzip al al'))).
   Proof.
     move=> ?. move: p. elim: n.
-    { move=> ?. eapply tctx_incl_eq;
+    { move=> ?. eapply tctx_incl_ext;
        [by apply tctx_incl_leak_head|]=>/= ?[[v v'][]]. inv_vec v. by inv_vec v'. }
-    move=>/= n IH p. eapply tctx_incl_eq.
+    move=>/= n IH p. eapply tctx_incl_ext.
     { eapply tctx_incl_trans;
         [eapply tctx_uniq_eqtype; by [apply array_succ_prod|apply _|]|].
       eapply tctx_incl_trans;
@@ -180,7 +180,7 @@ Section lemmas.
       (λ post '((bl, bl') -:: cl),
         tr (λ '(a -:: dl), post (a -:: dl -++ cl)) (vec_to_plist (vzip bl bl'))).
   Proof.
-    move=> ??. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+    move=> ??. eapply tctx_incl_ext. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
     eapply tctx_incl_trans; by [apply tctx_split_uniq_array|]. }
     move=>/= ?[[??]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
   Qed.

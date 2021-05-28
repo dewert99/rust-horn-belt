@@ -8,7 +8,7 @@ Section shr_bor.
   Context `{!typeG Σ}.
 
   Program Definition shr_bor {𝔄} (κ: lft) (ty: type 𝔄) : type 𝔄 := {|
-    st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlv_E ty κ;
+    st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
     st_own vπ d tid vl := [S(d') := d] [loc[l] := vl] ty.(ty_shr) vπ d' κ tid l
   |}%I.
   Next Obligation.
@@ -38,9 +38,9 @@ Notation "&shr{ κ }" := (shr_bor κ) (format "&shr{ κ }") : lrust_type_scope.
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance shr_type_contr {𝔄} κ : TypeContractive (@shr_bor _ _ 𝔄 κ).
+  Global Instance shr_type_contractive {𝔄} κ : TypeContractive (@shr_bor _ _ 𝔄 κ).
   Proof.
-    split; [by apply (type_lft_morph_add_one κ)|done| |].
+    split; [by apply (type_lft_morphism_add_one κ)|done| |].
     - move=>/= *. by do 4 f_equiv.
     - move=>/= *. do 8 (f_contractive || f_equiv). by simpl in *.
   Qed.

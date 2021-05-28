@@ -189,9 +189,9 @@ Section rc.
     - by iApply na_bor_shorten.
   Qed.
 
-  Global Instance rc_type_contr : TypeContractive rc.
+  Global Instance rc_type_contractive : TypeContractive rc.
     split.
-    - apply (type_lft_morph_add _ static [] []).
+    - apply (type_lft_morphism_add _ static [] []).
       + intros. rewrite left_id. iApply lft_equiv_refl.
       + intros. by rewrite /= /elctx_interp /= left_id right_id.
     - done.
@@ -666,7 +666,7 @@ Section code.
     { rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val tctx_hasty_val' //.
       unlock. iFrame "Hrcx". iFrame "Hx†". iExists [_]. rewrite heap_mapsto_vec_singleton.
       iFrame "Hx". iApply (ty_shr_mono with "[] Hshr").
-      iApply lft_incl_glb; [done|]. iApply elctx_interp_ty_outlv_E.
+      iApply lft_incl_glb; [done|]. iApply elctx_interp_ty_outlives_E.
       rewrite !elctx_interp_app /=. iDestruct "HE" as "(_ & [[_ $] _] & _)". }
     iApply type_delete; [solve_typing..|].
     iApply type_jump; solve_typing.

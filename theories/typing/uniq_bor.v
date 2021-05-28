@@ -11,7 +11,7 @@ Section uniq_bor.
     : inh_syn_type 𝔄 := prval_to_inh (fst ∘ vπ).
 
   Program Definition uniq_bor {𝔄} (κ: lft) (ty: type 𝔄) : type (𝔄 * 𝔄) := {|
-    ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlv_E ty κ;
+    ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
     ty_own vπ d tid vl := κ ⊑ ty.(ty_lft) ∗ [loc[l] := vl] ∃d' i,
       let ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i in
       ⌜(S d' ≤ d)%nat ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ .VO[ξ] (fst ∘ vπ) d' ∗
@@ -118,9 +118,9 @@ Notation "&uniq{ κ }" := (uniq_bor κ) (format "&uniq{ κ }") : lrust_type_scop
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance uniq_type_contr {𝔄} κ : TypeContractive (@uniq_bor _ _ 𝔄 κ).
+  Global Instance uniq_type_contractive {𝔄} κ : TypeContractive (@uniq_bor _ _ 𝔄 κ).
   Proof.
-    split; [by apply (type_lft_morph_add_one κ)|done| |].
+    split; [by apply (type_lft_morphism_add_one κ)|done| |].
     - move=> > ? Hl * /=. f_equiv.
       + apply equiv_dist. iDestruct Hl as "#[??]".
         iSplit; iIntros "#H"; (iApply lft_incl_trans; [iApply "H"|done]).
@@ -234,7 +234,7 @@ Section typing.
     [done|]. set ζ := PrVar _ ζi.
     iMod (bor_create _ κ' (∃vπ' d', .VO[ξ] vπ' d' ∗ ⧖(S d') ∗ .PC[ζ] vπ' d')%I
       with "LFT [⧖ ξVo ζPc]") as "[ζBor ToζBig]"; [done| |].
-    { iExists _, _. iFrame "ξVo ζPc". iApply persist_time_rcpt_mono; [|done]. lia. }
+    { iExists _, _. iFrame "ξVo ζPc". iApply persistent_time_receipt_mono; [|done]. lia. }
     iMod (bor_combine with "LFT ξBor ζBor") as "Bor"; [done|].
     iExists -[λ π, ((vπ π).1, π ζ); λ π, (π ζ, (vπ π).2)]. iSplitR "Obs"; last first.
     { iApply (proph_obs_impl with "Obs") => /= π. case (vπ π)=>/= ?? All. apply All. }

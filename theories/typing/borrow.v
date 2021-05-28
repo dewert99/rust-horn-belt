@@ -10,7 +10,7 @@ Section borrow.
   Context `{!typeG Σ}.
 
   Lemma tctx_borrow {𝔄} E L p n (ty: type 𝔄) κ:
-    elctx_sat E L (ty_outlv_E ty κ) →
+    elctx_sat E L (ty_outlives_E ty κ) →
     tctx_incl E L +[p ◁ own_ptr n ty] +[p ◁ &uniq{κ} ty; p ◁{κ} own_ptr n ty]
       (λ post '-[a], ∀a': 𝔄, post -[(a, a'); a']).
   Proof.
@@ -18,7 +18,7 @@ Section borrow.
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).
     iDestruct "p" as ([[]|][|]?) "[#⧖ own]"=>//.
     iDestruct "own" as "[(%& >↦ & ty) †]". iDestruct (Out with "L E") as "#Out".
-    iDestruct (elctx_interp_ty_outlv_E with "Out") as "#?".
+    iDestruct (elctx_interp_ty_outlives_E with "Out") as "#?".
     iMod (uniq_intro vπ with "PROPH UNIQ") as (i) "[Vo Pc]"; [done|].
     set ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i.
     iMod (bor_create ⊤ κ (∃vπ' d, _ ↦∗: ty.(ty_own) vπ' d _ ∗
@@ -48,7 +48,7 @@ Section borrow.
     iDestruct "Hown" as (?) "[H↦ Hown]".
     iDestruct (ty.(ty_own_proph) with "LFT [$] Hown [$Htok2]") as "H"; first solve_ndisj.
     wp_bind Skip.
-    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME Hd'' [H]"); [done..| |].
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME Hd'' [H]"); [done..| |].
     { iApply step_fupdN_with_emp.
       iApply (fupd_step_fupdN_fupd_mask_mono with "H"); done. }
     wp_seq. iDestruct 1 as (ξl q') "/= (%Hdep & Hdt & Hclose'')".
@@ -60,7 +60,7 @@ Section borrow.
     iMod (bor_sep with "LFT Huniq") as "[Huniq _]"; first solve_ndisj.
     iDestruct (ty.(ty_share) with "LFT [$] Huniq Htok") as "Hshr"; first solve_ndisj.
     iModIntro. wp_seq.
-    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME Hd'' [Hshr]");
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME Hd'' [Hshr]");
       [done..| |].
     { iApply step_fupdN_with_emp.
       iApply (fupd_step_fupdN_fupd_mask_mono with "Hshr"); done. }
@@ -85,7 +85,7 @@ Section borrow.
 
   Lemma tctx_extract_hasty_borrow {𝔄 𝔅 As} E L p n (ty : type 𝔄) (ty' : type 𝔅) κ (T : tctx As) f:
     subtype E L ty' ty f →
-    elctx_sat E L (ty_outlv_E ty κ) →
+    elctx_sat E L (ty_outlives_E ty κ) →
     tctx_extract_elt E L (p ◁ &uniq{κ}ty) ((p ◁ own_ptr n ty')+::T)
                        ((p ◁{κ} own_ptr n ty)+::T) (λ post '(b -:: bs), ∀ (b' : 𝔄), post ((f b, b') -:: b' -:: bs)).
   Proof.
@@ -110,7 +110,7 @@ Section borrow.
     iDestruct "Body" as (?[|]) "(↦own & _ & ξPc)";
       iDestruct "↦own" as ([|[[| |]|][]]) "[>↦ own]"; try iDestruct "own" as ">[]".
     iDestruct "own" as "[ty †]". rewrite heap_mapsto_vec_singleton -wp_fupd.
-    iApply wp_cumul_time_rcpt; [done|done|]. wp_read. iIntros "⧗1".
+    iApply wp_cumulative_time_receipt; [done|done|]. wp_read. iIntros "⧗1".
     iDestruct (uniq_agree with "ξVo ξPc") as %[<-->].
     iMod (uniq_intro (fst ∘ vπ) with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].
     set (ζ := PrVar _ ζi).
@@ -121,12 +121,12 @@ Section borrow.
     iMod ("ToBor" $! (∃vπ' d', (∃vl', _ ↦∗ vl' ∗ ty_own ty vπ' d' _ vl') ∗
       ⧖(S d') ∗ .PC[ζ] vπ' d')%I with "[↦ ⧗1 † ToξPc] [ty ζPc]") as "[Bor κ]".
     - iIntros "!> (%&%& ? & >⧖' & ζPc)".
-      iMod (cumul_persist_time_rcpts with "TIME ⧗1 ⧖'") as "⧖'"; [solve_ndisj|].
+      iMod (cumulative_persistent_time_receipt with "TIME ⧗1 ⧖'") as "⧖'"; [solve_ndisj|].
       iIntros "!>!>". iDestruct ("ToξPc" with "[ζPc]") as "ξPc".
       { iApply (proph_ctrl_eqz with "PROPH ζPc"). }
       iExists _, _. iFrame "⧖' ξPc".
       iExists [_]. rewrite heap_mapsto_vec_singleton. iFrame "↦". iFrame.
-    - iExists _, _. iFrame "ty ζPc". iApply persist_time_rcpt_mono; [|done]. lia.
+    - iExists _, _. iFrame "ty ζPc". iApply persistent_time_receipt_mono; [|done]. lia.
     - iExists -[λ π, ((vπ π).1, π ζ)]. iMod ("ToL" with "κ") as "$".
       rewrite right_id tctx_hasty_val'; [|done]. iModIntro. iSplitR "Obs".
       + iExists _. iFrame "⧖". iFrame "#". iExists _, _. iFrame "ζVo Bor". iPureIntro.
@@ -161,7 +161,7 @@ Section borrow.
     iMod ("Hclose" with "[Htok1 Htok2]") as "($ & $)"; first by iFrame.
     rewrite right_id tctx_hasty_val' //. iFrame.
     iExists (S _). simpl. iFrame "Hown".
-    iApply (persist_time_rcpt_mono with "Hd"); lia.
+    iApply (persistent_time_receipt_mono with "Hd"); lia.
   Qed.
 
   Lemma type_deref_shr_own {𝔄 𝔅l ℭl 𝔇} κ x p e n (ty: type 𝔄)
@@ -211,14 +211,14 @@ Section borrow.
       iExists d', ωi. rewrite (proof_irrel (prval_to_inh' (λ π, (vπ' π, π ω))) (prval_to_inh' (fst ∘ vπ))).
       by iFrame. }
     { iExists l0. rewrite heap_mapsto_vec_singleton. iFrame.
-      iExists _, _. iFrame. iApply (persist_time_rcpt_mono); [|done]. lia. }
+      iExists _, _. iFrame. iApply (persistent_time_receipt_mono); [|done]. lia. }
     iClear "Hdepth1 Hdepth2'". clear dependent p depth1 Hκ.
     iMod (bor_exists with "LFT Hbor") as (l') "Hbor"; [done|].
     iMod (bor_sep with "LFT Hbor") as "[H↦ Hbor]"; [done|].
     iMod (bor_acc with "LFT H↦ Htok") as "[>H↦ Hclose']"; [done|].
     iMod (bor_sep with "LFT Hbor") as "[BorVoPc Hbor]"; [done|].
     iMod (bor_unnest with "LFT Hbor") as "Hbor"; [done|].
-    iApply wp_fupd. iApply wp_cumul_time_rcpt=>//. wp_read. iIntros "Ht".
+    iApply wp_fupd. iApply wp_cumulative_time_receipt=>//. wp_read. iIntros "Ht".
     iMod "Hbor".
     iMod ("Hclose'" with "[H↦]") as "[_ Htok]"; first by auto.
     iMod (bor_combine with "LFT BorVoPc [Hbor]") as "Hbor"; [done| |].
@@ -248,7 +248,7 @@ Section borrow.
       iMod (uniq_update with "UNIQ ωVo ωPc") as "[ωVo ωPc]"; [solve_ndisj|].
       iSplitR "Hinner ωPc".
       - iExists _, d'.
-        iMod (cumul_persist_time_rcpts with "TIME Ht Hd'") as "$"; [solve_ndisj|].
+        iMod (cumulative_persistent_time_receipt with "TIME Ht Hd'") as "$"; [solve_ndisj|].
         iFrame. iApply "Heqz".
         iDestruct (proph_ctrl_eqz with "PROPH Hpc") as "Eqz".
         iApply (proph_eqz_constr2 pair with "Eqz []").
@@ -292,7 +292,7 @@ Section borrow.
     iExists -[_].
     rewrite right_id tctx_hasty_val' //.
     iFrame. iExists (S depth). iFrame.
-    iApply (persist_time_rcpt_mono with "Hdepth"); lia.
+    iApply (persistent_time_receipt_mono with "Hdepth"); lia.
   Qed.
 
   Lemma type_deref_shr_uniq {𝔄 𝔅l ℭl 𝔇} κ κ' x p e (ty: type 𝔄)

@@ -44,9 +44,9 @@ Section product_split.
   Proof.
     move=> HSub Split. elim: tyl.
     { move=> ?.
-      by eapply tctx_incl_eq; [apply tctx_incl_leak_head|]=>/= ?[[][]]. }
+      by eapply tctx_incl_ext; [apply tctx_incl_leak_head|]=>/= ?[[][]]. }
     move=>/= ??? tyl IH ?.
-    eapply tctx_incl_eq.
+    eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [by eapply subtype_tctx_incl, HSub, mod_ty_out, _|].
       eapply tctx_incl_trans; [by apply Split|].
       apply (tctx_incl_app +[_] +[_]); [by apply tctx_to_shift_loc_0, _|].
@@ -66,13 +66,13 @@ Section product_split.
                       (λ post al, post -[al]).
   Proof.
     move=> HSub Merge. elim: tyl; [done|]=> ?? ty. case=>/=.
-    { move=> _ _ ?. eapply tctx_incl_eq.
+    { move=> _ _ ?. eapply tctx_incl_ext.
       { eapply tctx_incl_trans; [apply tctx_of_shift_loc_0|].
         eapply subtype_tctx_incl, HSub, subtype_trans, mod_ty_in.
         eapply subtype_trans; [apply prod_ty_right_id|].
         apply prod_subtype, mod_ty_out, _. solve_typing. }
         by move=> ?[?[]]. }
-    move=> ???? IH _ ?. eapply tctx_incl_eq.
+    move=> ???? IH _ ?. eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [|by eapply subtype_tctx_incl, HSub, mod_ty_in].
       eapply tctx_incl_trans; [|by apply Merge].
       apply (tctx_incl_app +[_] +[_]); [by apply tctx_of_shift_loc_0|].
@@ -253,9 +253,9 @@ Section product_split.
       (λ post '-[(al, al')], post (ptrans (pzip al al'))).
   Proof.
     move=> ?. move: p. elim: tyl.
-    { move=>/= ?. by eapply tctx_incl_eq;
+    { move=>/= ?. by eapply tctx_incl_ext;
         [apply tctx_incl_leak_head|]=>/= ?[[][]]_[]. }
-    move=>/= 𝔄 𝔅l ty tyl IH p. eapply tctx_incl_eq.
+    move=>/= 𝔄 𝔅l ty tyl IH p. eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [apply tctx_uniq_mod_ty_out; by [apply _|]|].
       eapply tctx_incl_trans; [by apply tctx_split_uniq_prod|].
       apply (tctx_incl_app +[_] +[_]); [by apply tctx_to_shift_loc_0, _|].
@@ -280,7 +280,7 @@ Section product_split.
     tctx_extract_elt E L t (p ◁ own_ptr n (ty * ty') +:: T) (T' h++ T)
       (λ post '((b, c) -:: dl), tr (λ '(a -:: el), post (a -:: el -++ dl)) -[b; c]).
   Proof.
-    move=> ?. eapply tctx_incl_eq.
+    move=> ?. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
       eapply tctx_incl_trans; by [apply tctx_split_own_prod|]. }
     move=>/= ?[[??]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
@@ -292,7 +292,7 @@ Section product_split.
     tctx_extract_elt E L t (p ◁ own_ptr n (Π! tyl) +:: T) (T' h++ T)
       (λ post '(al -:: bl), tr (λ '(a -:: cl), post (a -:: cl -++ bl)) al).
   Proof.
-    move=> ?. eapply tctx_incl_eq.
+    move=> ?. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
       eapply tctx_incl_trans; by [apply tctx_split_own_xprod|]. }
     move=>/= ?[??]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
@@ -306,7 +306,7 @@ Section product_split.
       (p ◁ &shr{κ} (ty * ty') +:: T' h++ T) (λ post '((b, c) -:: dl),
         tr (λ '(a -:: el), post (a -:: (b, c) -:: el -++ dl)) -[b; c]).
   Proof.
-    move=> ?. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_+::_+::_)).
+    move=> ?. eapply tctx_incl_ext. { eapply (tctx_incl_frame_r +[_] (_+::_+::_)).
     eapply tctx_incl_trans; [apply copy_tctx_incl, _|]. eapply tctx_incl_trans;
     [|apply tctx_incl_swap]. apply (tctx_incl_frame_l _ _ +[_]).
     eapply tctx_incl_trans; by [apply tctx_split_shr_prod|]. }
@@ -320,7 +320,7 @@ Section product_split.
       (p ◁ &shr{κ} (Π! tyl) +:: T' h++ T) (λ post '(al -:: bl),
         tr (λ '(a -:: cl), post (a -:: al -:: cl -++ bl)) al).
   Proof.
-    move=> ?. eapply tctx_incl_eq.
+    move=> ?. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_+::_+::_)).
       eapply tctx_incl_trans; [apply copy_tctx_incl, _|].
       eapply tctx_incl_trans;
@@ -338,7 +338,7 @@ Section product_split.
       (λ post '(((b, c), (b', c')) -:: dl),
         tr (λ '(a -:: el), post (a -:: el -++ dl)) -[(b, b'); (c, c')]).
   Proof.
-    move=> ??. eapply tctx_incl_eq. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
+    move=> ??. eapply tctx_incl_ext. { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
     by eapply tctx_incl_trans; [apply tctx_split_uniq_prod|]. }
     move=>/= ?[[[??][??]]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
   Qed.
@@ -351,7 +351,7 @@ Section product_split.
       (λ post '((al, al') -:: bl),
         tr (λ '(a -:: cl), post (a -:: cl -++ bl)) (ptrans (pzip al al'))).
   Proof.
-    move=> ??. eapply tctx_incl_eq.
+    move=> ??. eapply tctx_incl_ext.
     { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
       eapply tctx_incl_trans; by [apply tctx_split_uniq_xprod|]. }
     move=>/= ?[[??]?]. rewrite /trans_upper /=. f_equal. fun_ext. by case.
@@ -365,7 +365,7 @@ Section product_split.
     tctx_extract_elt E L (p ◁ own_ptr n (Π! tyl)) T T'
       (λ post, tr (λ acl, let '(al, cl) := psep acl in post (al -:: cl))).
   Proof.
-    move=> ?. eapply tctx_incl_eq.
+    move=> ?. eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [done|].
       apply (tctx_incl_frame_r _ +[_]), tctx_merge_own_xprod. }
     done.

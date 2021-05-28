@@ -163,7 +163,7 @@ Section typing.
     iApply (wp_step_fupd with "To†"); [set_solver|]. wp_seq. iIntros "#? !>".
     wp_seq. wp_bind Skip. iMod (Un with "LFT E L [] T") as (d vπl') "[⧖ ToT']".
     { simpl in *. subst. rewrite -lft_dead_or. by iRight. }
-    iApply (wp_step_fupdN_persist_time_rcpt _ _ ∅ with "TIME ⧖ [ToT']")=>//.
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [ToT']")=>//.
     { iApply step_fupdN_with_emp. by rewrite difference_empty_L. }
     wp_seq. iIntros "(L & Obs' & T') !>". wp_seq. iCombine "Obs Obs'" as "?".
     iApply ("e" with "LFT TIME PROPH UNIQ E Na L C T'").
@@ -200,11 +200,11 @@ Section typing.
     iMod (Wrt with "LFT UNIQ E L ty") as (? ->) "[(%vl & ↦ & tyb) Toty']".
     iDestruct (ty_size_eq with "tyb") as "#>%Sz".
     iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH E L' tyb") as "ToObs";
-    [set_solver|]. iApply (wp_step_fupdN_persist_time_rcpt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
+    [set_solver|]. iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
     with "TIME ⧖ [ToObs]")=>//. { by iApply step_fupdN_with_emp. }
     wp_bind pb. iApply (wp_hasty with "pb"). iIntros (vb db ?) "#⧖' tyb'".
     iDestruct (ty_size_eq with "tyb'") as %Sz'. move: Sz. rewrite Eq -Sz' /=.
-    case vl=> [|?[|]]=>// ?. iApply (wp_persist_time_rcpt with "TIME ⧖'"); [solve_ndisj|].
+    case vl=> [|?[|]]=>// ?. iApply (wp_persistent_time_receipt with "TIME ⧖'"); [solve_ndisj|].
     rewrite heap_mapsto_vec_singleton.
     wp_write. iIntros "#⧖S [Obs' $]". iCombine "Obs Obs'" as "Obs".
     iMod ("Toty'" with "[↦ tyb'] ⧖S") as "[$ ty']".
@@ -273,9 +273,9 @@ Section typing.
     iDestruct (ty_size_eq with "tyb") as "#>%".
     iDestruct (ty_size_eq with "tyb'") as "#>%".
     iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH E L'' tyb") as "ToObs";
-    [set_solver|]. iApply (wp_step_fupdN_persist_time_rcpt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
+    [set_solver|]. iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
     with "TIME ⧖ [ToObs]")=>//; [by iApply step_fupdN_with_emp|].
-    iApply (wp_persist_time_rcpt with "TIME ⧖'"); [solve_ndisj|].
+    iApply (wp_persistent_time_receipt with "TIME ⧖'"); [solve_ndisj|].
     iApply (wp_memcpy with "[$↦ $↦']"); [congruence|congruence|].
     iIntros "!> [↦ ↦'] #⧖'S [Obs' $]". iCombine "Obs Obs'" as "Obs".
     iMod ("Totyw" with "[↦ tyb'] ⧖'S") as "[$ tyw']". { iExists vlb. iFrame. }

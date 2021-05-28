@@ -58,7 +58,7 @@ Section join.
       simpl_subst. iIntros (c) "Hfin". iMod na_alloc as (tid') "Htl". wp_let.
       wp_let. unlock. rewrite !tctx_hasty_val. iDestruct "HfA" as (?) "[_ HfA]".
       iApply (type_call_iris _ [ϝ] () [_] with "LFT TIME HE Htl [Hϝ1] HfA [HenvA]").
-      - rewrite /fp_E outlv_product. solve_typing.
+      - rewrite /fp_E outlives_product. solve_typing.
       - by rewrite /= (right_id static).
       - iDestruct "HenvA" as (?) "HenvA".
         rewrite big_sepL_singleton tctx_hasty_val send_change_tid. auto.
@@ -71,7 +71,7 @@ Section join.
       [solve_typing..|].
     rewrite !tctx_hasty_val. iDestruct "HfB" as (?) "[_ HfB]".
     iApply (type_call_iris _ [ϝ] () [_] with "LFT TIME HE Hna [Hϝ2] HfB [HenvB]").
-    { rewrite /fp_E outlv_product. solve_typing. }
+    { rewrite /fp_E outlives_product. solve_typing. }
     { by rewrite /= (right_id static). }
     { by rewrite big_sepL_singleton tctx_hasty_val. }
     (* The return continuation after calling fB in the main thread. *)

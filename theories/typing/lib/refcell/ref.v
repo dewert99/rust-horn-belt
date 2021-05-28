@@ -22,7 +22,7 @@ Section ref.
   Program Definition ref (α : lft) (ty : type) :=
     tc_opaque
     {| ty_size := 2;
-       ty_lfts := α :: ty.(ty_lfts); ty_E := ty.(ty_E) ++ ty_outlv_E ty α;
+       ty_lfts := α :: ty.(ty_lfts); ty_E := ty.(ty_E) ++ ty_outlives_E ty α;
        ty_own tid vl :=
          match vl return _ with
          | [ #(LitLoc lv);  #(LitLoc lrc) ] =>
@@ -70,12 +70,12 @@ Section ref.
     - by iApply na_bor_shorten.
   Qed.
 
-  Global Instance ref_type_contr α : TypeContractive (ref α).
+  Global Instance ref_type_contractive α : TypeContractive (ref α).
   Proof.
     split.
-    - apply (type_lft_morph_add _ α [α] []) => ?.
+    - apply (type_lft_morphism_add _ α [α] []) => ?.
       + iApply lft_equiv_refl.
-      + by rewrite elctx_interp_app /= elctx_interp_ty_outlv_E
+      + by rewrite elctx_interp_app /= elctx_interp_ty_outlives_E
                    /= /elctx_interp /= left_id right_id.
     - done.
     - intros n ty1 ty2 Hsz Hl HE Ho Hs tid [|[[|lv|]|][|[[|lrc|]|][]]]=>//=.

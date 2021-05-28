@@ -10,8 +10,8 @@ Class timeG Σ := TimeG {
   time_mono_nat_inG :> inG Σ mono_natR;
   time_nat_inG :> inG Σ (authR natUR);
   time_global_name : gname;
-  time_persist_name : gname;
-  time_cumul_name : gname;
+  time_persistent_name : gname;
+  time_cumulative_name : gname;
 }.
 
 Class timePreG Σ := TimePreG {
@@ -30,82 +30,82 @@ Section definitions.
   Context `{!timeG Σ}.
 
   (** persistent time receipt *)
-  Definition persist_time_rcpt (n : nat) :=
-    own time_persist_name (mono_nat_lb n).
+  Definition persistent_time_receipt (n : nat) :=
+    own time_persistent_name (mono_nat_lb n).
   (** cumulative time receipt *)
-  Definition cumul_time_rcpt (n : nat) :=
-    own time_cumul_name (◯ n).
+  Definition cumulative_time_receipt (n : nat) :=
+    own time_cumulative_name (◯ n).
   (** invariant *)
   Definition time_ctx `{!invG Σ} :=
     inv timeN (∃ n m,
        own time_global_name (mono_nat_lb (n + m)) ∗
-       own time_cumul_name (● n) ∗
-       own time_persist_name (mono_nat_auth 1 m)).
+       own time_cumulative_name (● n) ∗
+       own time_persistent_name (mono_nat_auth 1 m)).
   (** authority *)
   Definition time_interp (n: nat) : iProp Σ :=
     own time_global_name (mono_nat_auth 1 n).
 End definitions.
 
-Typeclasses Opaque persist_time_rcpt cumul_time_rcpt.
-Instance: Params (@persist_time_rcpt) 2 := {}.
-Instance: Params (@cumul_time_rcpt) 2 := {}.
+Typeclasses Opaque persistent_time_receipt cumulative_time_receipt.
+Instance: Params (@persistent_time_receipt) 2 := {}.
+Instance: Params (@cumulative_time_receipt) 2 := {}.
 
-Notation "⧖ n" := (persist_time_rcpt n)
+Notation "⧖ n" := (persistent_time_receipt n)
   (at level 1, format "⧖ n") : bi_scope.
-Notation "⧗ n" := (cumul_time_rcpt n)
+Notation "⧗ n" := (cumulative_time_receipt n)
   (at level 1, format "⧗ n") : bi_scope.
 
 Section time.
   Context `{!timeG Σ}.
   Implicit Types P Q : iProp Σ.
 
-  Global Instance persist_time_rcpt_timeless n : Timeless (⧖n).
-  Proof. unfold persist_time_rcpt. apply _. Qed.
-  Global Instance persist_time_rcpt_persistent n : Persistent (⧖n).
-  Proof. unfold persist_time_rcpt. apply _. Qed.
-  Global Instance cumul_time_rcpt_timeless n : Timeless (⧗n).
-  Proof. unfold cumul_time_rcpt. apply _. Qed.
+  Global Instance persistent_time_receipt_timeless n : Timeless (⧖n).
+  Proof. unfold persistent_time_receipt. apply _. Qed.
+  Global Instance persistent_time_receipt_persistent n : Persistent (⧖n).
+  Proof. unfold persistent_time_receipt. apply _. Qed.
+  Global Instance cumulative_time_receipt_timeless n : Timeless (⧗n).
+  Proof. unfold cumulative_time_receipt. apply _. Qed.
 
   Lemma time_interp_step n :
     time_interp n ==∗ time_interp (S n).
   Proof. eapply own_update, mono_nat_update. lia. Qed.
 
-  Lemma persist_time_rcpt_mono n m :
+  Lemma persistent_time_receipt_mono n m :
     (n ≤ m)%nat → ⧖m -∗ ⧖n.
   Proof.
-    intros ?. unfold persist_time_rcpt. by apply own_mono, mono_nat_lb_mono.
+    intros ?. unfold persistent_time_receipt. by apply own_mono, mono_nat_lb_mono.
   Qed.
-  Lemma cumul_time_rcpt_mono n m :
+  Lemma cumulative_time_receipt_mono n m :
     (n ≤ m)%nat → ⧗m -∗ ⧗n.
   Proof.
-    intros ?. unfold cumul_time_rcpt.
+    intros ?. unfold cumulative_time_receipt.
     by apply own_mono, auth_frag_mono, nat_included.
   Qed.
 
-  Lemma persist_time_rcpt_sep n m : ⧖(n `max` m) ⊣⊢ ⧖n ∗ ⧖m.
-  Proof. by rewrite /persist_time_rcpt -mono_nat_lb_op own_op. Qed.
-  Lemma cumul_time_rcpt_sep n m : ⧗(n + m) ⊣⊢ ⧗n ∗ ⧗m.
-  Proof. by rewrite /cumul_time_rcpt -nat_op auth_frag_op own_op. Qed.
+  Lemma persistent_time_receipt_sep n m : ⧖(n `max` m) ⊣⊢ ⧖n ∗ ⧖m.
+  Proof. by rewrite /persistent_time_receipt -mono_nat_lb_op own_op. Qed.
+  Lemma cumulative_time_receipt_sep n m : ⧗(n + m) ⊣⊢ ⧗n ∗ ⧗m.
+  Proof. by rewrite /cumulative_time_receipt -nat_op auth_frag_op own_op. Qed.
 
-  Global Instance persist_time_rcpt_from_sep n m : FromSep ⧖(n `max` m) ⧖n ⧖m.
-  Proof. rewrite /FromSep. by rewrite persist_time_rcpt_sep. Qed.
-  Global Instance persist_time_rcpt_into_sep n m : IntoSep ⧖(n `max` m) ⧖n ⧖m.
-  Proof. rewrite /IntoSep. by rewrite persist_time_rcpt_sep. Qed.
-  Global Instance cumul_time_rcpt_from_sep n m : FromSep ⧗(n + m) ⧗n ⧗m.
-  Proof. rewrite /FromSep. by rewrite cumul_time_rcpt_sep. Qed.
-  Global Instance cumul_time_rcpt_into_sep n m : IntoSep ⧗(n + m) ⧗n ⧗m.
-  Proof. rewrite /IntoSep. by rewrite cumul_time_rcpt_sep. Qed.
+  Global Instance persistent_time_receipt_from_sep n m : FromSep ⧖(n `max` m) ⧖n ⧖m.
+  Proof. rewrite /FromSep. by rewrite persistent_time_receipt_sep. Qed.
+  Global Instance persistent_time_receipt_into_sep n m : IntoSep ⧖(n `max` m) ⧖n ⧖m.
+  Proof. rewrite /IntoSep. by rewrite persistent_time_receipt_sep. Qed.
+  Global Instance cumulative_time_receipt_from_sep n m : FromSep ⧗(n + m) ⧗n ⧗m.
+  Proof. rewrite /FromSep. by rewrite cumulative_time_receipt_sep. Qed.
+  Global Instance cumulative_time_receipt_into_sep n m : IntoSep ⧗(n + m) ⧗n ⧗m.
+  Proof. rewrite /IntoSep. by rewrite cumulative_time_receipt_sep. Qed.
 
-  Lemma persist_time_rcpt_0 : ⊢ |==> ⧖0.
-  Proof. rewrite /persist_time_rcpt. apply own_unit. Qed.
-  Lemma cumul_time_rcpt_0 : ⊢ |==> ⧗0.
-  Proof. rewrite /cumul_time_rcpt. apply own_unit. Qed.
+  Lemma persistent_time_receipt_0 : ⊢ |==> ⧖0.
+  Proof. rewrite /persistent_time_receipt. apply own_unit. Qed.
+  Lemma cumulative_time_receipt_0 : ⊢ |==> ⧗0.
+  Proof. rewrite /cumulative_time_receipt. apply own_unit. Qed.
 
-  Lemma cumul_persist_time_rcpts `{!invG Σ} E n m :
+  Lemma cumulative_persistent_time_receipt `{!invG Σ} E n m :
     ↑timeN ⊆ E → time_ctx -∗ ⧗n -∗ ⧖m ={E}=∗ ⧖(n + m).
   Proof.
     iIntros (?) "#TIME Hn #Hm".
-    unfold persist_time_rcpt, cumul_time_rcpt.
+    unfold persistent_time_receipt, cumulative_time_receipt.
     iInv "TIME" as (n' m') ">(Hglob & Hn' & Hm')".
     iDestruct (own_valid_2 with "Hn' Hn")
       as %[?%nat_included _]%auth_both_valid_discrete.
@@ -121,14 +121,14 @@ Section time.
     rewrite (_:(n'+m')%nat = ((n'-n) + (m'+n))%nat); [done|lia].
   Qed.
 
-  Lemma step_cumul_time_rcpt `{!invG Σ} E n :
+  Lemma step_cumulative_time_receipt `{!invG Σ} E n :
     ↑timeN ⊆ E →
     time_ctx -∗ time_interp n ={E, E∖↑timeN}=∗ time_interp n ∗
     (time_interp (S n) ={E∖↑timeN, E}=∗ time_interp (S n) ∗ ⧗1).
   Proof.
     iIntros (?) "#TIME Hn". iInv "TIME" as (n' m') ">(Hglob & Hn' & Hm')" "Hclose".
     iDestruct (own_valid_2 with "Hn Hglob") as %?%mono_nat_both_valid.
-    iModIntro. iFrame. iIntros "HSn". unfold cumul_time_rcpt.
+    iModIntro. iFrame. iIntros "HSn". unfold cumulative_time_receipt.
     iMod (own_update with "Hn'") as "[HSn' $]".
     { apply auth_update_alloc, nat_local_update. by rewrite -plus_n_O. }
     iDestruct (own_mono _ _ (mono_nat_lb _) with "HSn") as "#H'Sn".
@@ -137,7 +137,7 @@ Section time.
     iApply (own_mono with "H'Sn"). apply mono_nat_lb_mono. lia.
   Qed.
 
-  Lemma time_rcpt_le `{!invG Σ} E n m m' :
+  Lemma time_receipt_le `{!invG Σ} E n m m' :
     ↑timeN ⊆ E →
     time_ctx -∗ time_interp n -∗ ⧖m -∗ ⧗m' ={E}=∗ ⌜m+m' ≤ n⌝%nat ∗ ⧗m'.
   Proof.
@@ -156,9 +156,9 @@ Proof.
   intros ?.
   iMod (own_alloc (mono_nat_auth 1 0 ⋅ mono_nat_lb 0)) as (time_global_name) "[??]";
     [by apply mono_nat_both_valid|].
-  iMod (own_alloc (mono_nat_auth 1 0)) as (time_persist_name) "?";
+  iMod (own_alloc (mono_nat_auth 1 0)) as (time_persistent_name) "?";
     [by apply mono_nat_auth_valid|].
-  iMod (own_alloc (● 0%nat)) as (time_cumul_name) "?"; [by apply auth_auth_valid|].
-  iExists (TimeG _ _ _ time_global_name time_persist_name time_cumul_name).
+  iMod (own_alloc (● 0%nat)) as (time_cumulative_name) "?"; [by apply auth_auth_valid|].
+  iExists (TimeG _ _ _ time_global_name time_persistent_name time_cumulative_name).
   iFrame. iApply inv_alloc. iExists 0%nat, 0%nat. iFrame.
 Qed.

@@ -24,7 +24,7 @@ Section int.
 
   Lemma type_int_instr (z: Z) : typed_val #z int z.
   Proof.
-    iIntros (?????) "_ _ _ _ _ $$ _ Obs". iMod persist_time_rcpt_0 as "⧖".
+    iIntros (?????) "_ _ _ _ _ $$ _ Obs". iMod persistent_time_receipt_0 as "⧖".
     iApply wp_value. iExists -[const z]. iFrame "Obs". iSplit; [|done].
     rewrite tctx_hasty_val'; [|done]. iExists 0%nat. iFrame "⧖". by iExists z.
   Qed.

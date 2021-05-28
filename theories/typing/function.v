@@ -36,8 +36,8 @@ Section fn.
     fp.(fp_ityl) ≡{n}≡ fp'.(fp_ityl) ∧ fp.(fp_oty) ≡{n}≡ fp'.(fp_oty).
 
   Definition fp_E (fp: fn_params) ϝ : elctx :=
-    fp.(fp_E_ex) ϝ ++ tyl_E fp.(fp_ityl) ++ tyl_outlv_E fp.(fp_ityl) ϝ ++
-    fp.(fp_oty).(ty_E) ++ ty_outlv_E fp.(fp_oty) ϝ.
+    fp.(fp_E_ex) ϝ ++ tyl_E fp.(fp_ityl) ++ tyl_outlives_E fp.(fp_ityl) ϝ ++
+    fp.(fp_oty).(ty_E) ++ ty_outlives_E fp.(fp_oty) ϝ.
 
   Global Instance fp_E_ne n : Proper (fn_params_dist n ==> (=) ==> (=)) fp_E.
   Proof.
@@ -104,7 +104,7 @@ Notation "fn( E ) → oty" := (fn (λ _: (), FP E%EL +[] oty%T))
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance fn_type_contr {A 𝔄l 𝔅 ℭ} E
+  Global Instance fn_type_contractive {A 𝔄l 𝔅 ℭ} E
          (IT: A → type ℭ → typel 𝔄l) (OT: A → type ℭ → type 𝔅) :
     (∀x, ListTypeNonExpansive (IT x)) → (∀x, TypeNonExpansive (OT x)) →
     TypeContractive (λ ty, fn (λ x, FP (E x) (IT x ty) (OT x ty))).
@@ -118,7 +118,7 @@ Section typing.
         (fn (λ x, FP (E x) (IT x ty) (OT x ty))).(ty_own) vπ 0 xH vl ≡{n}≡
         (fn (λ x, FP (E x) (IT x ty') (OT x ty'))).(ty_own) vπ 0 xH vl); last first.
     { split; [|done| |].
-      - apply (type_lft_morph_const _ static [])=>//= ?. apply lft_equiv_refl.
+      - apply (type_lft_morphism_const _ static [])=>//= ?. apply lft_equiv_refl.
       - move=> *. by apply Eq.
       - move=>/= n *. apply bi.exist_ne=> ?. apply bi.sep_ne; [done|].
         apply uPred_primitive.later_contractive. destruct n=>/=; [done|by apply Eq]. }
@@ -127,23 +127,23 @@ Section typing.
     (do 5 f_equiv)=> wl. rewrite /typed_body. (do 3 f_equiv)=> aπl. do 2 f_equiv.
     have EqBox: ∀𝔄 (T: type ℭ → type 𝔄), TypeNonExpansive T → ∀vπ d tid vl,
       (box (T ty)).(ty_own) vπ d tid vl ≡{n}≡ (box (T ty')).(ty_own) vπ d tid vl.
-    { move=> ?? Ne. apply box_type_contr=> *.
+    { move=> ?? Ne. apply box_type_contractive=> *.
       - by apply Ne.
-      - by iApply type_lft_morph_lft_equiv_proper.
-      - apply type_lft_morph_elctx_interp_proper=>//. apply _.
+      - by iApply type_lft_morphism_lft_equiv_proper.
+      - apply type_lft_morphism_elctx_interp_proper=>//. apply _.
       - apply dist_dist_later. by apply Ne.
       - apply dist_S. by apply Ne. }
     move: (NeIT x)=> [?[->NeITl]]. do 5 f_equiv; [|do 3 f_equiv; [|f_equiv]].
     - apply equiv_dist. rewrite /fp_E /= !elctx_interp_app.
       do 2 f_equiv; [|f_equiv; [|f_equiv]].
       + elim: NeITl; [done|]=> ????? _ ?. rewrite /tyl_E /= !elctx_interp_app.
-        f_equiv; [|done]. apply type_lft_morph_elctx_interp_proper=>//. apply _.
-      + elim: NeITl; [done|]=> ????? _ ?. rewrite /tyl_outlv_E /= !elctx_interp_app.
-        f_equiv; [|done]. rewrite !elctx_interp_ty_outlv_E.
-        apply lft_incl_equiv_proper_r. by iApply type_lft_morph_lft_equiv_proper.
-      + apply type_lft_morph_elctx_interp_proper=>//. apply _.
-      + rewrite !elctx_interp_ty_outlv_E. apply lft_incl_equiv_proper_r.
-        by iApply type_lft_morph_lft_equiv_proper.
+        f_equiv; [|done]. apply type_lft_morphism_elctx_interp_proper=>//. apply _.
+      + elim: NeITl; [done|]=> ????? _ ?. rewrite /tyl_outlives_E /= !elctx_interp_app.
+        f_equiv; [|done]. rewrite !elctx_interp_ty_outlives_E.
+        apply lft_incl_equiv_proper_r. by iApply type_lft_morphism_lft_equiv_proper.
+      + apply type_lft_morphism_elctx_interp_proper=>//. apply _.
+      + rewrite !elctx_interp_ty_outlives_E. apply lft_incl_equiv_proper_r.
+        by iApply type_lft_morphism_lft_equiv_proper.
     - rewrite !cctx_interp_singleton /cctx_elt_interp. do 3 f_equiv. case=>/= ??.
       do 4 f_equiv. rewrite /tctx_elt_interp. do 6 f_equiv. by apply EqBox.
     - clear -NeITl EqBox. induction NeITl, wl, aπl; [done|]=>/=.
@@ -335,7 +335,7 @@ Section typing.
     typed_val (fnrec: fb bl := e)%V (fn fp) tr.
   Proof.
     move: Cl. rewrite Into. iIntros (? Body ?????) "_ _ _ _ _ $$ _ Obs".
-    iMod persist_time_rcpt_0 as "#⧖". iApply wp_value. iExists -[const tr].
+    iMod persistent_time_receipt_0 as "#⧖". iApply wp_value. iExists -[const tr].
     iFrame "Obs". iSplit; [|done]. iLöb as "IH". iExists _, 0%nat.
     iSplit; [by rewrite/= decide_left|]. iFrame "⧖". iExists tr.
     iSplit; [done|]. iExists fb, "return", bl', e, _. iSplit; [done|].

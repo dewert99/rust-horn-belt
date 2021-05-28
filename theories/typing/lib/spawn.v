@@ -52,10 +52,10 @@ Section join_handle.
     Proper (eqtype E L ==> eqtype E L) join_handle.
   Proof. intros ??[]. by split; apply join_handle_mono. Qed.
 
-  Global Instance join_handle_type_contr : TypeContractive join_handle.
+  Global Instance join_handle_type_contractive : TypeContractive join_handle.
   Proof.
     split=>//.
-    - apply (type_lft_morph_add _ static [] [])=>?.
+    - apply (type_lft_morphism_add _ static [] [])=>?.
       + rewrite left_id. iApply lft_equiv_refl.
       + by rewrite /elctx_interp /= left_id right_id.
     - move=> ??? Hsz ?? Ho ??? [|[[|l|]|] []] //=.
@@ -94,7 +94,7 @@ Section spawn.
 
   Lemma spawn_type fty retty call_once `(!Send fty, !Send retty) :
     typed_val call_once (fn(∅; fty) → retty) → (* fty : FnOnce() -> retty, as witnessed by the impl call_once *)
-    let E ϝ := ty_outlv_E fty static ++ ty_outlv_E retty static in
+    let E ϝ := ty_outlives_E fty static ++ ty_outlives_E retty static in
     typed_val (spawn call_once) (fn(E; fty) → join_handle retty).
   Proof.
     intros Hf ? E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
@@ -106,7 +106,7 @@ Section spawn.
       iIntros (tid) "#LFT #TIME #HE $ $ [Hf' [Henv _]]". rewrite !tctx_hasty_val [fn _]lock.
       iApply wp_fupd. iApply (spawn_spec _ (join_inv retty) with "[-]"); last first.
       { iIntros "!> *". rewrite tctx_interp_singleton tctx_hasty_val.
-        iIntros "?". iExists 0%nat. iMod persist_time_rcpt_0 as "$". by iFrame. }
+        iIntros "?". iExists 0%nat. iMod persistent_time_receipt_0 as "$". by iFrame. }
       simpl_subst. iIntros (c) "Hfin". iMod na_alloc as (tid') "Htl". wp_let. wp_let.
       iDestruct "Hf'" as (?) "[_ Hf']".
       unlock. iApply (type_call_iris _ [] () [_] with "LFT TIME HE Htl [] Hf' [Henv]");

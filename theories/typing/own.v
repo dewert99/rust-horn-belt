@@ -100,9 +100,9 @@ Section own.
   Global Instance own_ne {𝔄} n : NonExpansive (@own_ptr 𝔄 n).
   Proof. solve_ne_type. Qed.
 
-  Global Instance own_type_contr 𝔄 n : TypeContractive (@own_ptr 𝔄 n).
+  Global Instance own_type_contractive 𝔄 n : TypeContractive (@own_ptr 𝔄 n).
   Proof.
-    split; [by apply type_lft_morph_id_like|done| |].
+    split; [by apply type_lft_morphism_id_like|done| |].
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= > *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
@@ -154,9 +154,9 @@ Section box.
   Global Instance box_ne 𝔄 : NonExpansive (@box 𝔄).
   Proof. solve_ne_type. Qed.
 
-  Global Instance box_type_contr 𝔄 : TypeContractive (@box 𝔄).
+  Global Instance box_type_contractive 𝔄 : TypeContractive (@box 𝔄).
   Proof.
-    split; [by apply type_lft_morph_id_like|done| |].
+    split; [by apply type_lft_morphism_id_like|done| |].
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
@@ -218,8 +218,8 @@ Section typing.
     0 ≤ n → let n' := Z.to_nat n in
     typed_instr_ty E L +[] (new [ #n])%E (own_ptr n' (↯ n')) (λ post _, post ()).
   Proof.
-    iIntros (?????) "_ TIME _ _ _ $$ _ ?". iMod persist_time_rcpt_0 as "⧖".
-    iApply (wp_persist_time_rcpt with "TIME ⧖"); [done|].
+    iIntros (?????) "_ TIME _ _ _ $$ _ ?". iMod persistent_time_receipt_0 as "⧖".
+    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
     iApply wp_new=>//. iIntros "!>" (l) "(† & ↦) #⧖". iExists -[const ()].
     iSplit; [|done]. rewrite/= right_id (tctx_hasty_val #l).
     iExists 1%nat. iFrame "⧖". rewrite/= freeable_sz_full Z2Nat.id; [|done].

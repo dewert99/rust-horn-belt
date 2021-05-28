@@ -87,7 +87,7 @@ Section typing.
 
   Global Instance maybe_uninit_type_ne {𝔄} : TypeNonExpansive (@maybe_uninit _ _ 𝔄).
   Proof.
-    constructor; [by apply type_lft_morph_id_like|done| |];
+    constructor; [by apply type_lft_morphism_id_like|done| |];
     [move=>/= > ->*|move=>/= >*]; by do 4 f_equiv.
   Qed.
 

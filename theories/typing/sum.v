@@ -119,7 +119,7 @@ Notation empty_ty := (xsum_ty +[]).
 Section typing.
   Context `{!typeG Σ}.
 
-  Lemma xsum_lft_morph {𝔅 𝔄l} (Tl: hlist (λ 𝔄, type 𝔅 → type 𝔄) 𝔄l) :
+  Lemma xsum_lft_morphism {𝔅 𝔄l} (Tl: hlist (λ 𝔄, type 𝔅 → type 𝔄) 𝔄l) :
     TCHForall (λ 𝔄, TypeLftMorphism) Tl →
     TypeLftMorphism (λ ty: type 𝔅, Σ! (Tl +$ ty))%T.
   Proof.
@@ -163,7 +163,7 @@ Section typing.
       ty_size ty = ty_size ty' → max_ty_size (Tl +$ ty) = max_ty_size (Tl +$ ty').
     { move=> *. elim All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
     split=>/=.
-    - apply xsum_lft_morph. eapply TCHForall_impl; [|done]. by move=> >[].
+    - apply xsum_lft_morphism. eapply TCHForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
     - move=> *. f_equiv=> i. eapply (TCHForall_nth _ (const base) _ i) in All;
       [|apply _]. rewrite !(hnth_apply (const base)).
@@ -173,14 +173,14 @@ Section typing.
       do 8 f_equiv; [| |by apply EqMsz]; f_equiv; [f_equiv|]; by apply All.
   Qed.
   (* TODO : get rid of this duplication *)
-  Global Instance xsum_type_contr {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅l) :
+  Global Instance xsum_type_contractive {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅l) :
     ListTypeContractive T → TypeContractive (Σ! ∘ T)%T.
   Proof.
     move=> [Tl[->All]].
     have EqMsz: ∀ty ty', max_ty_size (Tl +$ ty) = max_ty_size (Tl +$ ty').
     { move=> *. elim All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
     split=>/=.
-    - apply xsum_lft_morph. eapply TCHForall_impl; [|done]. by move=> >[].
+    - apply xsum_lft_morphism. eapply TCHForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
     - move=> *. f_equiv=> i. eapply (TCHForall_nth _ (const base) _ i) in All;
       [|apply _]. rewrite !(hnth_apply (const base)).

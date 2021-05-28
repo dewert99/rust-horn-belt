@@ -146,11 +146,11 @@ Notation "()" := unit_ty : lrust_type_scope.
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance prod_lft_morph {𝔄 𝔅 ℭ} (T: type 𝔄 → type 𝔅) (T': type 𝔄 → type ℭ):
+  Global Instance prod_lft_morphism {𝔄 𝔅 ℭ} (T: type 𝔄 → type 𝔅) (T': type 𝔄 → type ℭ):
     TypeLftMorphism T → TypeLftMorphism T' → TypeLftMorphism (λ ty, T ty * T' ty)%T.
   Proof.
     case=> [α βs E Hα HE|α E Hα HE]; case=> [α' βs' E' Hα' HE'|α' E' Hα' HE'].
-    - apply (type_lft_morph_add _ (α ⊓ α') (βs ++ βs') (E ++ E'))=> ty.
+    - apply (type_lft_morphism_add _ (α ⊓ α') (βs ++ βs') (E ++ E'))=> ty.
       + rewrite lft_intersect_list_app. iApply lft_equiv_trans.
         { iApply lft_intersect_equiv_proper; [iApply Hα|iApply Hα']. }
         rewrite -!assoc (comm (⊓) (ty_lft ty) (α' ⊓ _)) -!assoc.
@@ -158,16 +158,16 @@ Section typing.
         iApply lft_intersect_equiv_idemp.
       + rewrite/= !elctx_interp_app HE HE' big_sepL_app -!assoc.
         iSplit; iIntros "#H"; repeat iDestruct "H" as "[?H]"; iFrame "#".
-    - apply (type_lft_morph_add _ (α ⊓ α') βs (E ++ E'))=>ty.
+    - apply (type_lft_morphism_add _ (α ⊓ α') βs (E ++ E'))=>ty.
       + rewrite lft_intersect_list_app -assoc (comm (⊓) α' (ty_lft ty)) assoc.
         iApply lft_intersect_equiv_proper; [iApply Hα|iApply Hα'].
       + rewrite/= !elctx_interp_app HE HE' -!assoc.
         iSplit; iIntros "#H"; repeat iDestruct "H" as "[?H]"; iFrame "#".
-    - apply (type_lft_morph_add _ (α ⊓ α') βs' (E ++ E'))=>ty.
+    - apply (type_lft_morphism_add _ (α ⊓ α') βs' (E ++ E'))=>ty.
       + rewrite lft_intersect_list_app -assoc.
         iApply lft_intersect_equiv_proper; [iApply Hα|iApply Hα'].
       + by rewrite/= !elctx_interp_app HE HE' -!assoc.
-    - apply (type_lft_morph_const _ (α ⊓ α') (E ++ E'))=>ty.
+    - apply (type_lft_morphism_const _ (α ⊓ α') (E ++ E'))=>ty.
       + rewrite lft_intersect_list_app.
         iApply lft_intersect_equiv_proper; [iApply Hα|iApply Hα'].
       + by rewrite/= !elctx_interp_app HE HE'.
@@ -183,14 +183,14 @@ Section typing.
       f_equiv; by apply type_ne_ty_shr.
   Qed.
   (* TODO : find a way to avoid this duplication. *)
-  Global Instance prod_type_contr {𝔄 𝔅 ℭ} (T: type 𝔄 → type 𝔅) (T': type 𝔄 → type ℭ) :
+  Global Instance prod_type_contractive {𝔄 𝔅 ℭ} (T: type 𝔄 → type 𝔅) (T': type 𝔄 → type ℭ) :
     TypeContractive T → TypeContractive T' → TypeContractive (λ ty, T ty * T' ty)%T.
   Proof.
     move=> ??. split=>/=; first apply _.
-    - move=> *. f_equiv; by apply type_contr_ty_size.
-    - move=> *. do 6 f_equiv; by apply type_contr_ty_own.
-    - move=> ? ty ty' *. rewrite (type_contr_ty_size (T:=T) ty ty').
-      f_equiv; by apply type_contr_ty_shr.
+    - move=> *. f_equiv; by apply type_contractive_ty_size.
+    - move=> *. do 6 f_equiv; by apply type_contractive_ty_own.
+    - move=> ? ty ty' *. rewrite (type_contractive_ty_size (T:=T) ty ty').
+      f_equiv; by apply type_contractive_ty_shr.
   Qed.
 
   Global Instance xprod_type_ne {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅l) :
@@ -199,11 +199,11 @@ Section typing.
     move=> [?[->All]]. clear T. elim All. { rewrite /happly /compose. apply _. }
     move=> ?? T Tl ???. apply (type_ne_ne_compose (mod_ty _) _ _ _).
   Qed.
-  Global Instance xprod_type_contr {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅l) :
+  Global Instance xprod_type_contractive {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅l) :
     ListTypeContractive T → TypeContractive (Π! ∘ T)%T.
   Proof.
     move=> [?[->All]]. clear T. elim All. { rewrite /happly /compose. apply _. }
-    move=> ?? T Tl ???. apply (type_contr_compose_left (mod_ty _) _ _ _).
+    move=> ?? T Tl ???. apply (type_contractive_compose_left (mod_ty _) _ _ _).
   Qed.
 
   Global Instance prod_copy {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) :
@@ -378,14 +378,14 @@ Section typing.
       + fun_ext. by case=> [[??]?].
   Qed.
 
-  Lemma prod_outlv_E {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) κ :
-    ty_outlv_E (ty * ty') κ = ty_outlv_E ty κ ++ ty_outlv_E ty' κ.
-  Proof. by rewrite /ty_outlv_E /= fmap_app. Qed.
+  Lemma prod_outlives_E {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) κ :
+    ty_outlives_E (ty * ty') κ = ty_outlives_E ty κ ++ ty_outlives_E ty' κ.
+  Proof. by rewrite /ty_outlives_E /= fmap_app. Qed.
 
-  Lemma xprod_outlv_E_elctx_sat {𝔄l} E L (tyl: typel 𝔄l) κ:
-    elctx_sat E L (tyl_outlv_E tyl κ) → elctx_sat E L (ty_outlv_E (Π! tyl) κ).
+  Lemma xprod_outlives_E_elctx_sat {𝔄l} E L (tyl: typel 𝔄l) κ:
+    elctx_sat E L (tyl_outlives_E tyl κ) → elctx_sat E L (ty_outlives_E (Π! tyl) κ).
   Proof.
-    move=> ?. eapply eq_ind; [done|]. rewrite /ty_outlv_E /=.
+    move=> ?. eapply eq_ind; [done|]. rewrite /ty_outlives_E /=.
     elim tyl=>/= [|> IH]; [done|]. by rewrite fmap_app -IH.
   Qed.
 End typing.
@@ -393,4 +393,4 @@ End typing.
 Global Hint Resolve prod_leak xprod_leak | 5 : lrust_typing.
 Global Hint Resolve prod_leak_just xprod_leak_just
   prod_subtype prod_eqtype xprod_subtype xprod_eqtype
-  xprod_outlv_E_elctx_sat : lrust_typing.
+  xprod_outlives_E_elctx_sat : lrust_typing.

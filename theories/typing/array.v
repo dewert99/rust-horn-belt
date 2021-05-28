@@ -106,7 +106,7 @@ Section typing.
 
   Global Instance array_type_ne {𝔄} n : TypeNonExpansive (@array _ _ 𝔄 n).
   Proof.
-    split; [by apply type_lft_morph_id_like|by move=>/= ??->| | ]=>/= > Sz *;
+    split; [by apply type_lft_morphism_id_like|by move=>/= ??->| | ]=>/= > Sz *;
     [by do 6 f_equiv|rewrite Sz; by do 3 f_equiv].
   Qed.
 

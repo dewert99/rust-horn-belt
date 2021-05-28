@@ -277,7 +277,7 @@ Proof.
       - simpl in *. lia.
       - apply IHtyl. simpl in *. lia. }
     rewrite heap_mapsto_vec_cons -wp_fupd.
-    iApply (wp_persist_time_rcpt with "TIME Hdepth")=>//.
+    iApply (wp_persistent_time_receipt with "TIME Hdepth")=>//.
     iDestruct "H↦vl" as "[H↦ H↦vl]". wp_write. iIntros "#Hdepth".
     iExists -[_]. rewrite tctx_hasty_val' // -(bi.exist_intro (S _)) bi.sep_assoc.
     iFrame "Hdepth". iSplitR "Hproph".
@@ -317,7 +317,7 @@ Proof.
       iDestruct "H" as (??) "(>(% & % & H) & _)".
     destruct vl as [|? vl]; iDestruct "H" as %[= Hlen].
     rewrite heap_mapsto_vec_cons -wp_fupd. iDestruct "H↦" as "[H↦0 H↦vl]".
-    iApply (wp_persist_time_rcpt with "TIME Hdepth")=>//.
+    iApply (wp_persistent_time_receipt with "TIME Hdepth")=>//.
     wp_write. iIntros "#Hdepth". iExists -[_].
     rewrite right_id bi.sep_assoc tctx_hasty_val' //. iSplitR "Hproph".
     - rewrite -(bi.exist_intro (S _)). iFrame "Hdepth".
@@ -376,7 +376,7 @@ Proof.
     rewrite -(take_drop (ty.(ty_size)) vl) heap_mapsto_vec_app.
     iDestruct "H↦vl1" as "[H↦vl1 H↦pad]".
     iDestruct (ty_size_eq with "Hty") as "#>%Hvl2Len".
-    iApply (wp_persist_time_rcpt with "TIME Hdepth")=>//.
+    iApply (wp_persistent_time_receipt with "TIME Hdepth")=>//.
     iApply (wp_memcpy with "[$H↦vl1 $H↦2]"); [|lia|].
     { rewrite take_length. lia. }
     iNext; iIntros "[H↦vl1 H↦2] #Hdepth". iExists -[_; _].
@@ -384,7 +384,7 @@ Proof.
     iMod ("Hr" with "H↦2") as "($ & $ & Hty2)".
     iMod ("Hw" with "[-Hty2 Hproph] Hdepth") as "[$ Hty]"; last first. iSplitR "Hproph".
     { iSplitL "Hty"; [eauto with iFrame|]. iExists _. iFrame.
-      iApply persist_time_rcpt_mono; [|done]. lia. }
+      iApply persistent_time_receipt_mono; [|done]. lia. }
     { iApply (proph_obs_impl with "Hproph") => /= π post; apply post. }
     iNext. rewrite split_sum_mt /is_pad. iExists i, _.  iFrame.
     iSplitR; [done|iSplitL "H↦pad"].
@@ -413,14 +413,14 @@ Proof.
     done.
   Qed.
 
-  Lemma ty_outlv_E_elctx_sat_sum {𝔄l} E L (tyl : typel 𝔄l) α:
-    elctx_sat E L (tyl_outlv_E tyl α) →
-    elctx_sat E L (ty_outlv_E (xsum_ty tyl) α).
+  Lemma ty_outlives_E_elctx_sat_sum {𝔄l} E L (tyl : typel 𝔄l) α:
+    elctx_sat E L (tyl_outlives_E tyl α) →
+    elctx_sat E L (ty_outlives_E (xsum_ty tyl) α).
   Proof.
     intro Hsat. eapply eq_ind; [done|]. clear Hsat.
-    rewrite /tyl_outlv_E /ty_outlv_E /=.
+    rewrite /tyl_outlives_E /ty_outlives_E /=.
     induction tyl as [|???? IH]=>//=. by rewrite IH fmap_app.
   Qed.
 End case.
 
-Global Hint Resolve ty_outlv_E_elctx_sat_sum : lrust_typing.
+Global Hint Resolve ty_outlives_E_elctx_sat_sum : lrust_typing.
