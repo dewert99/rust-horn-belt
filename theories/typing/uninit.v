@@ -23,7 +23,7 @@ Section typing.
   Lemma uninit_leak n E L : leak E L (↯ n) (const True).
   Proof. apply leak_just. Qed.
 
-  (* TODO: Remove this *)
+  (* TODO: Prove this after the model update *)
   Lemma uninit_plus_prod E L m n :
     eqtype E L (↯ (m + n)) (↯ m * ↯ n) (const ((), ())) (const ()).
   Admitted.

@@ -18,8 +18,7 @@ Section init_prod.
   Proof.
     eapply type_fn; [solve_typing|]=> _ ??[?[?[]]]. simpl_subst. via_tr_impl.
     { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
-      iApply (type_new_subtype (↯ 1 * ↯ 1));
-        [done|eapply proj1, uninit_plus_prod|].
+      iApply (type_new_subtype (↯ 1 * ↯ 1)); [done|eapply proj1, uninit_plus_prod|].
       intro_subst. have ->: Z.to_nat 2 = 2%nat by done.
       iApply (type_assign (own_ptr _ (↯ 1))); [solve_extract|solve_typing|solve_typing|].
       iApply type_assign; [solve_extract|solve_typing|solve_typing|].
