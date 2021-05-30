@@ -47,7 +47,7 @@ Proof.
     { case (decide (i < length 𝔄l)) => [//| ?].
       rewrite hnth_default; [ apply lnth_default; lia | | lia].
       move => eq. destruct eq; by pose proof (wπ inhabitant). }
-    eapply (IxHForall3_nth _ base _ _ _ _ _ i) in Hel as Hety.
+    eapply (IxHForall3_nth _ base _ _ _ _ _ i) in Hel as Hety; last lia.
     wp_read. wp_case.
     { split; [lia|]. destruct (list_to_hlist_length el el'); [done|].
       edestruct (nth_lookup_or_length el i ltac:(done)); [|lia].
@@ -128,7 +128,7 @@ Proof.
     { clear -wπ. case (decide (i < length 𝔄l)) => [//| ?].
       rewrite hnth_default; [ apply lnth_default; lia | | lia].
       move => eq. destruct eq; by pose proof (wπ inhabitant). }
-    eapply (IxHForall3_nth _ _ _ _ _ _ _ i) in Hel as Hety.
+    eapply (IxHForall3_nth _ _ _ _ _ _ _ i) in Hel as Hety; last lia.
     wp_read. wp_case.
     { split; [lia|]. destruct (list_to_hlist_length el el'); [done|].
       edestruct (nth_lookup_or_length el i ltac:(done)); [|lia].
@@ -218,7 +218,7 @@ Proof.
     { clear -vπ. case (decide (i < length 𝔄l)) => [//| ?].
       rewrite hnth_default; [ apply lnth_default; lia | | lia].
       move => eq; destruct eq; by pose proof (vπ inhabitant). }
-    eapply (IxHForall3_nth _ _ _ _ _ _ _ i) in Hel as Hety.
+    eapply (IxHForall3_nth _ _ _ _ _ _ _ i) in Hel as Hety; last lia.
     wp_read. wp_case.
     { split; [lia|]. destruct (list_to_hlist_length el el'); [done|].
       edestruct (nth_lookup_or_length el i ltac:(done)); [|lia].

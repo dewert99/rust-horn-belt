@@ -487,7 +487,7 @@ Inductive HForallTwo (Φ: ∀X, F X → G X → Prop) : ∀{Xl}, hlist F Xl → 
 Inductive IxHForall3 {H: A → Type} {D} :
   ∀ {Xl}  (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop),
   hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
-| HForall3_nil : IxHForall3 (λ _ _ _ _, True) +[] +[] +[]
+| HForall3_nil Φ : IxHForall3 Φ +[] +[] +[]
 | HForall3_cons {X Xl}
   (Φ : ∀ i, F (lnth D (X :: Xl) i) →
             G (lnth D (X :: Xl) i) →
@@ -515,8 +515,12 @@ Lemma IxHForall3_nth {H Xl D}
   (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop)
   (d d' d'': _ D)
   (xl yl zl: _ Xl) i :
+  i < length Xl →
   IxHForall3 Φ xl yl zl → Φ i (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
-Proof. move=> All. move: i. elim All; [done|] => > ???. by case. Qed.
+Proof. move => + All. move: i. elim: All.
+  - move => i /=. lia.
+  - move => > ?? IH [|i] /= ? //=. apply IH. lia.
+Qed.
 
 Lemma HForallTwo_forall `{!Inhabited Y} {Xl}
   (Φ: ∀X, Y → F X → G X → Prop) (xl yl: _ Xl) :
