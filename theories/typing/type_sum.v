@@ -94,13 +94,13 @@ Proof.
     list_to_hlist el = Some el' → lctx_lft_alive E L κ →
     HForallThree
       (λ _ ty e prei, match prei with
-        | inl x => ⊢ typed_body E L C ((p +ₗ #1 ◁ &uniq{κ}ty) +:: T) e x
-        | inr y => ⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T) e y
+        | inl inner => ⊢ typed_body E L C ((p +ₗ #1 ◁ &uniq{κ}ty) +:: T) e inner
+        | inr outer => ⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T) e outer
         end) tyl el' prel →
     ⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T) (case: !p of el)
         (λ post '(v -:: tl), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
-          | inl x => ∀ (w w' : of_syn_type _), v = (pinj i w, pinj i w') → x post ((w, w') -:: tl)
-          | inr y => y post (v -:: tl)
+          | inl inner => ∀ (w w' : of_syn_type _), v = (pinj i w, pinj i w') → inner post ((w, w') -:: tl)
+          | inr outer => outer post (v -:: tl)
           end)%type.
   Proof.
     iIntros (el2el' Halive Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
@@ -187,8 +187,8 @@ Proof.
         end) tyl el' prel →
     ⊢ typed_body E L C T (case: !p of el)
         (fr ∘ (λ post '(v -:: tl), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
-        | inl x => ∀ (w w' : of_syn_type _), v = (pinj i w, pinj i w') → x post ((w, w') -:: tl)
-        | inr y => y post (v -:: tl)
+        | inl inner => ∀ (w w' : of_syn_type _), v = (pinj i w, pinj i w') → inner post ((w, w') -:: tl)
+        | inr outer => outer post (v -:: tl)
         end)%type).
   Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_uniq'; done. Qed.
 
