@@ -484,20 +484,6 @@ Inductive HForallTwo (Φ: ∀X, F X → G X → Prop) : ∀{Xl}, hlist F Xl → 
 | HForallTwo_cons {X Xl} (x: _ X) y (xl: _ Xl) yl :
     Φ _ x y → HForallTwo Φ xl yl → HForallTwo Φ (x +:: xl) (y +:: yl).
 
-(* DEPRECATED(xavier): Remove after type_sum.v updated. *)
-Inductive IxHForall3 {H: A → Type} {D} :
-  ∀ {Xl}  (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop),
-  hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
-| HForall3_nil Φ : IxHForall3 Φ +[] +[] +[]
-| HForall3_cons {X Xl}
-  (Φ : ∀ i, F (lnth D (X :: Xl) i) →
-            G (lnth D (X :: Xl) i) →
-            H (lnth D (X :: Xl) i) → Prop)
-  (x y z: _ X)
-  (xl yl zl: _ Xl) :
-    Φ 0 x y z → IxHForall3 (λ i, Φ (S i)) xl yl zl →
-  IxHForall3 Φ (x +:: xl) (y +:: yl) (z +:: zl).
-
 Inductive HForallThree {G H} (Φ: ∀X, F X → G X → H X → Prop) : ∀{Xl}, hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
 | HForallThree_nil: HForallThree Φ +[] +[] +[]
 | HForallThree_cons {X Xl} (x: _ X) y z (xl: _ Xl) yl zl :
@@ -527,17 +513,6 @@ Proof.
   have All': ∀z, HForallTwo (λ X, Φ X z) xl yl.
   { move=> z. move/(.$ z) in All. by dependent destruction All. }
   auto.
-Qed.
-
-Lemma IxHForall3_nth {H Xl D}
-  (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop)
-  (d d' d'': _ D)
-  (xl yl zl: _ Xl) i :
-  i < length Xl →
-  IxHForall3 Φ xl yl zl → Φ i (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
-Proof. move => + All. move: i. elim: All.
-  - move => i /=. lia.
-  - move => > ?? IH [|i] /= ? //=. apply IH. lia.
 Qed.
 
 Lemma HForallThree_nth {H} {Xl D}
