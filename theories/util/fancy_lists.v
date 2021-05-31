@@ -484,6 +484,7 @@ Inductive HForallTwo (Φ: ∀X, F X → G X → Prop) : ∀{Xl}, hlist F Xl → 
 | HForallTwo_cons {X Xl} (x: _ X) y (xl: _ Xl) yl :
     Φ _ x y → HForallTwo Φ xl yl → HForallTwo Φ (x +:: xl) (y +:: yl).
 
+(* DEPRECATED(xavier): Remove after type_sum.v updated. *)
 Inductive IxHForall3 {H: A → Type} {D} :
   ∀ {Xl}  (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop),
   hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
@@ -496,6 +497,11 @@ Inductive IxHForall3 {H: A → Type} {D} :
   (xl yl zl: _ Xl) :
     Φ 0 x y z → IxHForall3 (λ i, Φ (S i)) xl yl zl →
   IxHForall3 Φ (x +:: xl) (y +:: yl) (z +:: zl).
+
+Inductive HForallThree {G H} (Φ: ∀X, F X → G X → H X → Prop) : ∀{Xl}, hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
+| HForallThree_nil: HForallThree Φ +[] +[] +[]
+| HForallThree_cons {X Xl} (x: _ X) y z (xl: _ Xl) yl zl :
+  Φ _ x y z → HForallThree Φ xl yl zl → HForallThree Φ (x +:: xl) (y +:: yl) (z +:: zl).
 
 Lemma HForallTwo_impl {Xl} (Φ Ψ: ∀X, F X → G X → Prop) (xl: hlist F Xl) (yl: hlist G Xl) :
   (∀X x y, Φ X x y → Ψ X x y) → HForallTwo Φ xl yl → HForallTwo Ψ xl yl.
@@ -511,17 +517,6 @@ Lemma HForallTwo_nth {Xl D}
   Φ _ d d' → HForallTwo Φ xl yl → Φ _ (hnth d xl i) (hnth d' yl i).
 Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
 
-Lemma IxHForall3_nth {H Xl D}
-  (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop)
-  (d d' d'': _ D)
-  (xl yl zl: _ Xl) i :
-  i < length Xl →
-  IxHForall3 Φ xl yl zl → Φ i (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
-Proof. move => + All. move: i. elim: All.
-  - move => i /=. lia.
-  - move => > ?? IH [|i] /= ? //=. apply IH. lia.
-Qed.
-
 Lemma HForallTwo_forall `{!Inhabited Y} {Xl}
   (Φ: ∀X, Y → F X → G X → Prop) (xl yl: _ Xl) :
   (∀z, HForallTwo (λ X, Φ X z) xl yl) ↔ HForallTwo (λ X x y, ∀z, Φ _ z x y) xl yl.
@@ -533,6 +528,28 @@ Proof.
   { move=> z. move/(.$ z) in All. by dependent destruction All. }
   auto.
 Qed.
+
+Lemma IxHForall3_nth {H Xl D}
+  (Φ : ∀ i, F (lnth D Xl i) → G (lnth D Xl i) → H (lnth D Xl i) → Prop)
+  (d d' d'': _ D)
+  (xl yl zl: _ Xl) i :
+  i < length Xl →
+  IxHForall3 Φ xl yl zl → Φ i (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
+Proof. move => + All. move: i. elim: All.
+  - move => i /=. lia.
+  - move => > ?? IH [|i] /= ? //=. apply IH. lia.
+Qed.
+
+Lemma HForallThree_nth {H} {Xl D}
+(Φ: ∀X, F X → G X → H X → Prop) (d: _ D) d' d'' (xl: _ Xl) yl zl i :
+Φ _ d d' d'' → HForallThree Φ xl yl zl → Φ _ (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
+Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
+
+Lemma HForallThree_nth_len { H} {Xl D}
+(Φ: ∀X, F X → G X → H X → Prop) (d: _ D) d' d'' (xl: _ Xl) yl zl i :
+(i < length Xl)%nat → HForallThree Φ xl yl zl → Φ _ (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
+Proof. move=> L All. move: i L. elim All; [simpl; lia|] => > ??? [|?] //=. auto with lia. Qed.
+
 End fa.
 
 Section HForallTwo.
