@@ -95,19 +95,18 @@ Proof.
                ∀ i, hnth (D := empty) (λ _ _, False) prel i post (v -:: w))%type).
   Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_own'; done. Qed.
 
-  Lemma type_case_uniq' {𝔄l ℭ 𝔅l} prel E L (C : cctx ℭ) (T : tctx 𝔅l) p κ tyl el el' :
+  Lemma type_case_uniq' {𝔄l ℭ 𝔅l} prel E L (C : cctx ℭ) (T : tctx 𝔅l) p κ (tyl : typel 𝔄l) el el' :
     list_to_hlist el = Some el' → lctx_lft_alive E L κ →
-    IxHForall3 (D := Empty_setₛ)
-      (λ i ty e (prei : predl_trans' ((Σ! 𝔄l * Σ! 𝔄l)%ST ::  𝔅l) ℭ),
-        (⊢ typed_body E L C
-             ((p +ₗ #1 ◁ &uniq{κ}ty) +:: T)
-             e
-             (λ post '((v, v') -:: w), prei post ((pinj i v, pinj i v') -:: w)))
-        ∨
-        (⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T) e prei)) tyl el' prel →
+    HForallThree
+      (λ _ ty e prei, match prei with
+        | inl x => ⊢ typed_body E L C ((p +ₗ #1 ◁ &uniq{κ}ty) +:: T) e x
+        | inr y => ⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T) e y
+        end) tyl el' prel →
     ⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T) (case: !p of el)
-        (λ post '(v -:: w),
-           ∀ i, hnth (D := Empty_setₛ) (λ _ _, False) prel i post (v -:: w))%type.
+        (λ post '(v -:: tl), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
+          | inl x => ∀ (w w' : of_syn_type _), v = (pinj i w, pinj i w') → x post ((w, w') -:: tl)
+          | inr y => y post (v -:: tl)
+          end)%type.
   Proof.
     iIntros (el2el' Halive Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
     wp_bind p. iApply (wp_hasty with "Hp").
@@ -128,13 +127,13 @@ Proof.
     { clear -wπ. case (decide (i < length 𝔄l)) => [//| ?].
       rewrite hnth_default; [ apply lnth_default; lia | | lia].
       move => eq. destruct eq; by pose proof (wπ inhabitant). }
-    eapply (IxHForall3_nth _ _ _ _ _ _ _ i) in Hel as Hety; last lia.
+    eapply (HForallThree_nth_len _ _ _ (inr (λ _ _, False)) _ _ _ i) in Hel as Hety; last lia.
     wp_read. wp_case.
     { split; [lia|]. destruct (list_to_hlist_length el el'); [done|].
       edestruct (nth_lookup_or_length el i ltac:(done)); [|lia].
       rewrite Nat2Z.id e. erewrite <-list_to_hlist_hnth_nth; [done|apply el2el']. }
     iDestruct (_.(ty_size_eq) with "Hown") as %EQlenvl'.
-    destruct Hety as [Hety|Hety].
+    destruct (hnth _ prel i) eqn:EQty.
     - iMod (uniq_intro wπ depth2 with "PROPH UNIQ") as (ζid) "[ζvo ζpc]"; [done|]; set ζ := PrVar _ ζid.
       iDestruct (uniq_proph_tok with "ζvo ζpc") as "(ζvo & ζ & Toζpc)"; rewrite proph_tok_singleton.
       iMod (uniq_preresolve ξ _ (λ π, pinj i (π ζ)) with "PROPH ξvo ξpc ζ")
@@ -163,11 +162,11 @@ Proof.
         rewrite (proof_irrel (_ wπ) (prval_to_inh' (λ π, (wπ π, π ζ)))).
         iExists _, ζid. by iFrame.
       + iCombine "Hproph' Hproph" as "Hproph".
-        iApply (proph_obs_impl with "Hproph") => π /= [<- >].
+        iApply (proph_obs_impl with "Hproph") => π /= [+ /(_ i)].
         move: (equal_f A π) (equal_f B π).
-        rewrite {4}(_ : vπ = λ π, (fst (vπ π), snd (vπ π))); last first.
+        rewrite EQty {5}(_ : vπ = λ π, (fst (vπ π), snd (vπ π))); last first.
         { fun_ext => π'. by destruct (vπ π'). }
-        move => /= ->-> /= x //.
+        move => /=->->->. auto.
     - iMod ("Hclose'" with "[] [H↦i H↦vl' H↦vl'' Hown ξpc]") as "[Hb Htok]";
         [by iIntros "!>$"| |].
       { iExists _, depth2. iFrame "∗#". iExists (#i::vl'++vl'').
@@ -177,7 +176,8 @@ Proof.
       iApply (Hety $! _ (_ -:: _) with "LFT TIME PROPH UNIQ HE Hna HL HC [-Hproph]").
       + iFrame. rewrite tctx_hasty_val' ?Hv //. iExists (S depth1).
         iFrame "#". iExists _, _. auto with iFrame.
-      + iApply (proph_obs_impl with "Hproph") => π /= ?; auto.
+      + iApply (proph_obs_impl with "Hproph") => π /= /(_ i).
+        by rewrite EQty.
   Qed.
 
   Lemma type_case_uniq {ℭ 𝔄l 𝔅l ℭl} prel E L (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl)
@@ -185,17 +185,16 @@ Proof.
     list_to_hlist el = Some el' → lctx_lft_alive E L κ →
     tctx_extract_elt E L (p ◁ &uniq{κ}(xsum_ty tyl)) T T' fr →
     lctx_lft_alive E L κ →
-    IxHForall3 (D := Empty_setₛ)
-      (λ i ty e (prei : predl_trans' ((Σ! 𝔄l * Σ! 𝔄l)%ST :: ℭl) ℭ),
-        (⊢ typed_body E L C
-             ((p +ₗ #1 ◁ &uniq{κ}ty) +:: T')
-             e
-             (λ post '((v, v') -:: w), prei post ((pinj i v, pinj i v') -:: w)))
-        ∨
-        (⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T') e prei)) tyl el' prel →
+    HForallThree
+      (λ _ ty e prei, match prei with
+        | inl x => ⊢ typed_body E L C ((p +ₗ #1 ◁ &uniq{κ}ty) +:: T') e x
+        | inr y => ⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T') e y
+        end) tyl el' prel →
     ⊢ typed_body E L C T (case: !p of el)
-        (fr ∘ (λ post '(v -:: w),
-           ∀ i, hnth (D := Empty_setₛ) (λ _ _, False) prel i post (v -:: w))%type).
+        (fr ∘ (λ post '(v -:: tl), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
+        | inl x => ∀ (w w' : of_syn_type _), v = (pinj i w, pinj i w') → x post ((w, w') -:: tl)
+        | inr y => y post (v -:: tl)
+        end)%type).
   Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_uniq'; done. Qed.
 
   Lemma type_case_shr' {𝔅l 𝔄l ℭ} prel E L (C : cctx ℭ) (T : tctx 𝔅l) p κ tyl el el' :
