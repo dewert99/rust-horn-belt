@@ -242,7 +242,7 @@ Proof.
     ⊢ typed_body E L C T (case: !p of el)
         (fr ∘ (λ post '(v -:: w), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
             | inl inner => ∀ v', v = pinj i v' → inner post (v' -:: w)
-            | inr outer => outer post (v -:: w)
+            | inr outer => (∃ w, v = pinj (D := Empty_setₛ) i w) → outer post (v -:: w)
           end)%type).
   Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_shr'; done. Qed.
 
