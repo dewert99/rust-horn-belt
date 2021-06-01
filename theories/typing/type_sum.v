@@ -247,50 +247,55 @@ Proof.
   Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_shr'; done. Qed.
 
   Lemma type_sum_assign_instr {E L 𝔄 𝔄' 𝔄l} (i : nat) (ty1: type 𝔄)
-                              (tyl: typel 𝔄l) (ty2: type 𝔄') p1 p2 gt st:
+                              (tyl: typel 𝔄l) (ty2: type 𝔄') p1 p2 gt st Φ:
     typed_write E L ty1 (xsum_ty tyl) ty2 (xsum_ty tyl) gt st  →
+    leak' E L (xsum_ty tyl) Φ →
     typed_instr E L +[p1 ◁ ty1; p2 ◁ hnthb tyl i] (p1 <-{Σ i} p2) (λ _, +[p1 ◁ ty2])
-      (λ post '-[a; b], post -[st a (pinj i b)]).
+      (λ post '-[a; b], Φ (gt a) (post -[st a (pinj i b)])).
   Proof.
-    iIntros ([Eq Hw] tid postπ (? & ? & [])) "#LFT #TIME #PROPH #UNIQ #HE $ HL (Hp1 & Hp2 & _) Hproph".
+    iIntros ([Eq Hw] Lk tid postπ (? & ? & [])) "#LFT #TIME #PROPH #UNIQ #HE $ [HL HL'] (Hp1 & Hp2 & _) Hproph".
     iDestruct (closed_hasty with "Hp1") as "%". iDestruct (closed_hasty with "Hp2") as "%".
     wp_apply (wp_hasty with "Hp1"). iIntros (v1 depth1) "%Hv1 Hdepth1 Hty1".
     iDestruct "Hp2" as (v2 depth2) "(%Hv2 & Hdepth2 & Hty2)".
-    iCombine "Hdepth1 Hdepth2" as "Hdepth".
+    iCombine "Hdepth1 Hdepth2" as "#Hdepth".
     rewrite !(ty_own_depth_mono _ _ (depth1 `max` depth2)); [|lia..].
     iMod (Hw with "LFT UNIQ HE HL Hty1") as (l ->) "(H & Hw)".
     iDestruct "H" as (vl) "(> H↦ & H)". iDestruct "H" as (?) "H".
     iMod (bi.later_exist_except_0 with "H") as (?) "H".
-    iDestruct "H" as (??) "(>(% & % & H) & ?)".
+    iDestruct "H" as (??) "(>(% & % & H) & Leaked)".
     destruct vl as [|? vl]; iDestruct "H" as %[= Hlen].
+    iAssert (▷ ty_own (Σ! tyl) _ _ tid _)%I with "[Leaked]" as "Leaked".
+    { iExists i0, a, vl', _. iFrame. iPureIntro. naive_solver. }
+    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH HE HL' Leaked") as "ToObs"; first set_solver.
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
+    with "TIME Hdepth [ToObs]")=>//. { by iApply step_fupdN_with_emp. }
     rewrite heap_mapsto_vec_cons. iDestruct "H↦" as "[H↦0 H↦vl]".
     wp_write. wp_bind p1. iApply (wp_wand with "[]"); first by iApply (wp_eval_path).
     iIntros (? ->). wp_op. wp_bind p2.
     iApply (wp_wand with "[]"); first by iApply (wp_eval_path). iIntros (? ->).
     iDestruct (ty_size_eq with "Hty2") as %Hlenty. destruct vl as [|? vl].
-    { exfalso. clear Hw H1. generalize dependent i. clear -Hlen. induction tyl => [|[|i]] //=.
-      - simpl in *. lia.
-      - apply IHtyl. simpl in *. lia. }
+    { exfalso. move: (Hlen) (i) Hlenty. elim tyl => //= > IH ? [|?]; eauto with lia.  }
     rewrite heap_mapsto_vec_cons -wp_fupd.
-    iApply (wp_persistent_time_receipt with "TIME Hdepth")=>//.
-    iDestruct "H↦vl" as "[H↦ H↦vl]". wp_write. iIntros "#Hdepth".
+    iApply (wp_persistent_time_receipt with "TIME Hdepth"); first solve_ndisj.
+    iDestruct "H↦vl" as "[H↦ H↦vl]". wp_write. iIntros "#Hdepth' !> [ToObs HL']".
     iExists -[_]. rewrite tctx_hasty_val' // -(bi.exist_intro (S _)) bi.sep_assoc.
-    iFrame "Hdepth". iSplitR "Hproph".
-    - iApply ("Hw" with "[-] [//]").
+    iFrame "Hdepth'". iCombine "ToObs Hproph" as "Hproph". iSplitR "Hproph".
+    - iFrame "HL'". iApply ("Hw" with "[-] [//]").
       iNext. iExists (_::_::_). rewrite !heap_mapsto_vec_cons. iFrame.
       iExists i, _, [_], _. rewrite -Hlen. auto.
-    - iApply (proph_obs_impl with "Hproph") => π /= ? //=.
+    - iApply (proph_obs_impl with "Hproph") => π /= [impl ?]. by apply impl.
   Qed.
 
   Lemma type_sum_assign {E L 𝔅l ℭl 𝔄 𝔄' ℭ 𝔄l}
         (tyl : typel 𝔄l) i (ty1 : type 𝔄) (ty : type ℭ) (ty1' : type 𝔄')
-        (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl) p1 p2 e gt st tr fr:
+        (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl) p1 p2 e gt st tr fr Φ:
     Closed [] e → (0 ≤ i)%nat →
     tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ hnthb tyl i] T T' fr →
     typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
+    leak' E L (xsum_ty tyl) Φ →
     typed_body E L C ((p1 ◁ ty1') +:: T') e tr -∗
     typed_body E L C T (p1 <-{Σ i} p2 ;; e)
-      (fr ∘ (λ post '(a -:: b -:: f), post (st a (pinj i b) -:: f)) ∘ tr).
+      (fr ∘ (λ post '(a -:: b -:: f), Φ (gt a) (post (st a (pinj i b) -:: f))) ∘ tr).
   Proof.
     iIntros. iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ H1). via_tr_impl.
     { iApply type_seq; by [eapply type_sum_assign_instr|solve_typing]. }
