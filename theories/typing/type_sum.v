@@ -24,7 +24,7 @@ Section case.
     ⊢ typed_body E L C ((p ◁ own_ptr n (xsum_ty tyl)) +:: T) (case: !p of el)
          (λ post '(v -:: w), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
           | inl inner => ∀ v', v = pinj i v' → inner post (v' -:: w)
-          | inr outer => outer post (v -:: w)
+          | inr outer => (∃ v', v = pinj (D := Empty_setₛ) i v') →  outer post (v -:: w)
          end)%type.
 Proof.
     iIntros (elEl Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
@@ -68,7 +68,7 @@ Proof.
         rewrite heap_mapsto_vec_cons heap_mapsto_vec_app.
         iFrame. iExists i,_, vl', vl''. rewrite /= app_length /=. auto.
       + iApply (proph_obs_impl with "Hproph") => π /= /(_ i).
-        rewrite EQty. auto.
+        rewrite EQty. eauto.
   Qed.
 
   Lemma type_case_own {ℭ 𝔄l 𝔅l ℭl} prel E L (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl)
@@ -86,7 +86,7 @@ Proof.
     ⊢ typed_body E L C T (case: !p of el)
       (fr ∘ (λ post '(v -:: w), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
         | inl inner => ∀ v', v = pinj i v' → inner post (v' -:: w)
-        | inr outer => outer post (v -:: w)
+        | inr outer => (∃ v', v = pinj (D := Empty_setₛ) i v') → outer post (v -:: w)
         end)%type).
   Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_own'; done. Qed.
 
@@ -100,7 +100,7 @@ Proof.
     ⊢ typed_body E L C ((p ◁ &uniq{κ}(xsum_ty tyl)) +:: T) (case: !p of el)
         (λ post '(v -:: tl), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
           | inl inner => ∀ (w w' : of_syn_type _), v = (pinj i w, pinj i w') → inner post ((w, w') -:: tl)
-          | inr outer => outer post (v -:: tl)
+          | inr outer => (∃ w, v.1 = pinj (D := Empty_setₛ) i w) →  outer post (v -:: tl)
           end)%type.
   Proof.
     iIntros (el2el' Halive Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
@@ -172,7 +172,7 @@ Proof.
       + iFrame. rewrite tctx_hasty_val' ?Hv //. iExists (S depth1).
         iFrame "#". iExists _, _. auto with iFrame.
       + iApply (proph_obs_impl with "Hproph") => π /= /(_ i).
-        by rewrite EQty.
+        move: (equal_f A π). rewrite EQty => /= ->. eauto.
   Qed.
 
   Lemma type_case_uniq {ℭ 𝔄l 𝔅l ℭl} prel E L (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl)
@@ -188,11 +188,11 @@ Proof.
     ⊢ typed_body E L C T (case: !p of el)
         (fr ∘ (λ post '(v -:: tl), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
         | inl inner => ∀ (w w' : of_syn_type _), v = (pinj i w, pinj i w') → inner post ((w, w') -:: tl)
-        | inr outer => outer post (v -:: tl)
+        | inr outer => (∃ w, v.1 = pinj (D := Empty_setₛ) i w) →  outer post (v -:: tl)
         end)%type).
   Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_uniq'; done. Qed.
 
-  Lemma type_case_shr' {𝔅l 𝔄l ℭ} prel E L (C : cctx ℭ) (T : tctx 𝔅l) p κ (tyl : _ 𝔄l) el el' :
+  Lemma type_case_shr' {𝔅l 𝔄l ℭ} prel E L (C : cctx ℭ) (T : tctx 𝔅l) p κ (tyl : typel 𝔄l) el el' :
     list_to_hlist el = Some el' → lctx_lft_alive E L κ →
     HForallThree (λ _ ty e prei,
       match prei with
@@ -202,7 +202,7 @@ Proof.
     ⊢ typed_body E L C ((p ◁ &shr{κ}(xsum_ty tyl)) +:: T) (case: !p of el)
       (λ post '(v -:: w), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
         | inl inner => ∀ v', v = pinj i v' → inner post (v' -:: w)
-        | inr outer => outer post (v -:: w)
+        | inr outer => (∃ w, v = pinj (D := Empty_setₛ) i w) →  outer post (v -:: w)
       end)%type.
   Proof.
     iIntros (el2el' Halive Hel tid [? ?] postπ) "#LFT #TIME #PROPH UNIQ #HE Hna HL HC /= [Hp HT] Hproph". wp_bind p.
