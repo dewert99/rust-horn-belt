@@ -1,5 +1,5 @@
-From lrust.typing Require Export typing.
-From lrust.typing Require Import lib.option.
+From lrust.typing Require Export type.
+From lrust.typing Require Import typing lib.option.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.

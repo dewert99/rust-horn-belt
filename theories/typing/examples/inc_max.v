@@ -15,7 +15,7 @@ Section inc_max.
       else
         "oub" <- "ub";; delete [ #1; "oua"];; return: ["oub"].
 
-  Lemma type_take_max :
+  Lemma take_max_type :
     typed_val take_max (fn<α>(∅; &uniq{α} int, &uniq{α} int) → &uniq{α} int)
       (λ (post: pred' (_*_)) '-[(a, a'); (b, b')], if bool_decide (b ≤ a)
         then b' = b → post (a, a') else a' = a → post (b, b')).
@@ -43,7 +43,7 @@ Section inc_max.
       let: "d" := "a" - "b" in letalloc: "od" <- "d" in
       delete [ #1; "oa"];; delete [ #1; "ob"];; return: ["od"].
 
-  Lemma type_inc_max :
+  Lemma inc_max_type :
     typed_val inc_max (fn(∅; int, int) → int)
       (λ (post: pred' _) _, ∀n, n ≠ 0 → post n).
   Proof.
@@ -51,7 +51,7 @@ Section inc_max.
     via_tr_impl.
     { iApply type_newlft. iIntros (α).
       do 2 (iApply (type_letalloc_1 (&uniq{α} _)); [solve_extract|done|]; intro_subst).
-      iApply type_val; [apply type_take_max|]. intro_subst.
+      iApply type_val; [apply take_max_type|]. intro_subst.
       iApply type_letcall; [solve_typing|solve_extract|solve_typing|].
       intro_subst. via_tr_impl.
       { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
