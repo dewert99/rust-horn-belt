@@ -2,7 +2,7 @@ From iris.proofmode Require Import tactics.
 From lrust.lang.lib Require Import memcpy.
 From lrust.lifetime Require Import na_borrow.
 From lrust.typing Require Export type.
-From lrust.typing Require Export programs cont function own shr_bor.
+From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
