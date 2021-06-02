@@ -2,6 +2,7 @@ From iris.proofmode Require Import tactics.
 From lrust.lang.lib Require Import memcpy.
 From lrust.lifetime Require Import na_borrow.
 From lrust.typing Require Export type.
+From lrust.typing Require Export programs own function cont.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
@@ -124,25 +125,38 @@ Section cell.
     move=> [??]. split; (eapply cell_subtype; [|by split]; split; apply _).
   Qed.
 
-(*
   (** The next couple functions essentially show owned-type equalities, as they
       are all different types for the identity function. *)
-  (* Constructing a cell. *)
-  Definition cell_new : val := fn: ["x"] := return: ["x"].
 
-  Lemma cell_new_type ty : typed_val cell_new (fn(∅; ty) → cell ty).
+  (* Constructing a cell. *)
+
+  Lemma tctx_cell_new {𝔄 𝔅l} (ty: type 𝔄) Φ p (T: tctx 𝔅l) E L :
+    tctx_incl E L (p ◁ box ty +:: T) (p ◁ box (cell ty) +:: T)
+      (λ post '(a -:: bl), Φ a ∧ post (Φ -:: bl)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (_ ϝ ret arg). inv_vec arg=>x. simpl_subst.
-    iApply type_jump; [solve_typing..|].
-    iIntros (??) "#LFT _ $ Hty".
-    rewrite !tctx_interp_singleton /= !tctx_hasty_val.
-    iDestruct "Hty" as ([|depth]) "[#? H]"=>//=. iExists _. iFrame "#".
-    destruct x as [[]|]=>//. iDestruct "H" as "[H $]".
-    iDestruct "H" as (?) "[??]". iExists _. iFrame. iExists _. iFrame "#".
-    iApply ty_own_depth_mono; [|done]. lia.
+    split. { move=>/= ???[??]/=. by f_equiv. }
+    iIntros (??[??]?) "_ _ _ _ $ /=[p T] ? !>". iExists (const Φ -:: _).
+    iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[??]].
+    iDestruct "p" as ([[]|][|]?) "[? box]"=>//. iDestruct "box" as "[(%& ↦ & ty) Fr]".
+    iExists _, _. do 2 (iSplit; [done|]). iFrame "Fr". iNext. iExists _.
+    iFrame "↦". iExists _. iSplit; [done|]. iExists _, _.
+    iSplit; [by iApply proph_obs_impl; [|done]=> ?[??]|].
+    iFrame "ty". iApply persistent_time_receipt_mono; [|done]. lia.
   Qed.
 
+  Definition cell_new: val := fn: ["x"] := return: ["x"].
+
+  Lemma cell_new_type {𝔄} (ty: type 𝔄) Φ :
+    typed_val cell_new (fn(∅; ty) → cell ty) (λ post '-[a], Φ a ∧ post Φ).
+  Proof.
+    eapply type_fn; [solve_typing|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
+    { iApply type_jump; [solve_typing| |].
+      { eapply tctx_extract_ctx_elt; [apply tctx_cell_new|solve_typing]. }
+      solve_typing. }
+    by move=> ?[?[]]?/=.
+  Qed.
+
+(*
   (* The other direction: getting ownership out of a cell. *)
   Definition cell_into_inner : val :=
     fn: ["x"] := Skip ;; return: ["x"].
