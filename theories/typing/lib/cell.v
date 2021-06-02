@@ -137,9 +137,9 @@ Section cell.
     split. { move=>/= ???[??]/=. by f_equiv. }
     iIntros (??[??]?) "_ _ _ _ $ /=[p T] ? !>". iExists (const Φ -:: _).
     iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[_?]].
-    iDestruct "p" as ([[]|][|]?) "[? box]"=>//. iDestruct "box" as "[(%& ↦ & ty) †]".
-    iExists _, _. do 2 (iSplit; [done|]). iFrame "†". iNext. iExists _.
-    iFrame "↦". iExists _. iSplit; [done|]. iExists _, _.
+    iDestruct "p" as ([[]|][|]?) "[? box]"=>//. iExists _, _.
+    do 2 (iSplit; [done|]). iDestruct "box" as "[(%& ↦ & ty) $]". iNext.
+    iExists _. iFrame "↦". iExists _. iSplit; [done|]. iExists _, _.
     iSplit; [by iApply proph_obs_impl; [|done]=> ?[? _]|]. iFrame.
   Qed.
 
@@ -261,52 +261,60 @@ Section cell.
       iMod (cumulative_persistent_time_receipt with "TIME H⧗ Hdepth0") as "$"; [solve_ndisj|].
       iExists vl'. by iFrame.
   Qed.
+*)
 
-  Definition cell_into_box : val :=
-    fn: ["x"] := Skip ;; Skip ;; return: ["x"].
-
-  Lemma cell_into_box_type ty :
-    typed_val cell_into_box (fn(∅;box (cell ty)) → box ty).
+  Lemma tctx_cell_from_box {𝔄 𝔅l} (ty: type 𝔄) Φ p (T: tctx 𝔅l) E L :
+    tctx_incl E L (p ◁ box (box ty) +:: T) (p ◁ box (box (cell ty)) +:: T)
+      (λ post '(a -:: bl), Φ a ∧ post (Φ -:: bl)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros ([] ϝ ret arg). inv_vec arg=>x. simpl_subst.
-    iIntros (tid) "#LFT #TIME #HE Hna HL HC HT".
-    rewrite !tctx_interp_singleton /= !tctx_hasty_val.
-    destruct x as [[]|]; iDestruct "HT" as ([|depth]) "[_ H]"=>//=.
-    iDestruct "H" as "[Ho >H†]". iDestruct "Ho" as (vl) "[>H↦ Ho]".
-    destruct vl as [|[[]|] []], depth as [|depth]=>//; try by iDestruct "Ho" as ">[]".
-    iDestruct "Ho" as "[Ho ?]". iDestruct "Ho" as (?) "[H↦' Ho]".
-    iDestruct "Ho" as (depth') "[Hdepth' Ho]".
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
-    wp_let. iIntros "H⧗1". wp_let.
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
-    wp_let. iIntros "H⧗2". wp_let.
-    iMod (cumulative_persistent_time_receipt with "TIME H⧗1 Hdepth'") as "Hdepth'"; [done|].
-    iMod (cumulative_persistent_time_receipt with "TIME H⧗2 Hdepth'") as "#Hdepth'"; [done|].
-    rewrite cctx_interp_singleton /=. iApply ("HC" $! [# #l] with "Hna HL").
-    rewrite tctx_interp_singleton tctx_hasty_val. iExists (S (S depth')).
-    iFrame "H† Hdepth'". iExists _. iFrame "∗∗". auto with iFrame.
-  Qed.
-
-  Definition cell_from_box : val :=
-    fn: ["x"] := return: ["x"].
-
-  Lemma cell_from_box_type ty :
-    typed_val cell_from_box (fn(∅; box ty) → box (cell ty)).
-  Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
-    iApply type_jump; [solve_typing..|].
-    iIntros (??) "#LFT _ $ Hty". rewrite !tctx_interp_singleton /= !tctx_hasty_val.
-    iDestruct "Hty" as (depth) "[#Hdepth Ho]". iExists depth. iFrame "Hdepth".
-    destruct x as [[]|], depth as [|depth]=>//=. iDestruct "Ho" as "[Ho $]".
-    iDestruct "Ho" as (vl) "[H↦ Ho]". iExists _. iFrame.
-    destruct vl as [|[[]|] []], depth as [|depth]=>//=.
-    iDestruct "Ho" as "[Ho $]". iDestruct "Ho" as (vl) "[H↦ Ho]".
-    iExists _. iFrame. iExists _. iFrame.
+    split. { move=>/= ???[??]/=. by f_equiv. }
+    iIntros (??[??]?) "_ _ _ _ $ /=[p T] ? !>". iExists (const Φ -:: _).
+    iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[_?]].
+    iDestruct "p" as ([[]|][|d]?) "[? bbox]"=>//.
+    iExists _, _. do 2 (iSplit; [done|]). iDestruct "bbox" as "[(%vl & ↦ & box) $]".
+    iNext. iExists _. iFrame "↦". case d as [|]=>//. case vl as [|[[]|][]]=>//.
+    iDestruct "box" as "[(%& ↦ & ty) $]". iNext. iExists _. iFrame "↦".
+    iExists _. iSplit; [done|]. iExists _, _.
+    iSplit; [by iApply proph_obs_impl; [|done]=> ?[? _]|]. iFrame "ty".
     iApply persistent_time_receipt_mono; [|done]. lia.
   Qed.
-*)
+
+  Definition cell_from_box: val := fn: ["x"] := return: ["x"].
+
+  Lemma cell_from_box_type {𝔄} (ty: type 𝔄) Φ :
+    typed_val cell_from_box (fn(∅; box ty) → box (cell ty))
+      (λ post '-[a], Φ a ∧ post Φ).
+  Proof.
+    eapply type_fn; [solve_typing|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
+    { iApply type_jump; [solve_typing| |].
+      { eapply tctx_extract_ctx_elt; [apply tctx_cell_from_box|solve_typing]. }
+      solve_typing. }
+    by move=> ?[?[]]?/=.
+  Qed.
+
+  Definition cell_into_box : val := fn: ["x"] := Skip;; return: ["x"].
+
+  Lemma cell_into_box_type {𝔄} (ty: type 𝔄) :
+    typed_val cell_into_box (fn(∅; box (cell ty)) → box ty)
+      (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
+  Proof.
+    eapply type_fn; [solve_typing|]=> _ ??[x[]]. simpl_subst.
+    iIntros (?[?[]]?) "LFT #TIME PROPH UNIQ E Na L C /=[p _] Obs".
+    rewrite tctx_hasty_val.  iDestruct "p" as ([|d]) "[_ bbox]"=>//.
+    case x as [[|l|]|]=>//. iDestruct "bbox" as "[(%vl & ↦ & box) †]".
+    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
+    wp_seq. iIntros "⧗". wp_seq. case d=>// ?. case vl as [|[[]|][]]=>//=.
+    iDestruct "box" as "[(%& >↦' &%&>->& Big) †']".
+    iMod (bi.later_exist_except_0 with "Big") as (??) "(>Obs' & >⧖ & ty)".
+    iCombine "Obs Obs'" as "#?".
+    iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖") as "#⧖"; [done|].
+    iApply (type_type +[#l ◁ box (box ty)] -[_] with
+      "[] LFT TIME PROPH UNIQ E Na L C [↦ † ↦' †' ty] []").
+    - iApply type_jump; [solve_typing|solve_extract|solve_typing].
+    - iSplit; [|done]. rewrite (tctx_hasty_val #l). iExists _. iFrame "⧖".
+      iFrame "†". iNext. iExists _. iFrame "↦ †'". iNext. iExists _. iFrame.
+    - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
+  Qed.
 
   (** Reading from a cell *)
 
