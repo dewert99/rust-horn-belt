@@ -130,7 +130,7 @@ Section cell.
 
   (* Constructing a cell. *)
 
-  Lemma tctx_cell_new {𝔄 𝔅l} (ty: type 𝔄) Φ p (T: tctx 𝔅l) E L :
+  Lemma tctx_cell_new {𝔄 𝔅l} Φ (ty: type 𝔄) p (T: tctx 𝔅l) E L :
     tctx_incl E L (p ◁ box ty +:: T) (p ◁ box (cell ty) +:: T)
       (λ post '(a -:: bl), Φ a ∧ post (Φ -:: bl)).
   Proof.
@@ -145,7 +145,7 @@ Section cell.
 
   Definition cell_new: val := fn: ["x"] := return: ["x"].
 
-  Lemma cell_new_type {𝔄} (ty: type 𝔄) Φ :
+  Lemma cell_new_type {𝔄} Φ (ty: type 𝔄) :
     typed_val cell_new (fn(∅; ty) → cell ty) (λ post '-[a], Φ a ∧ post Φ).
   Proof.
     eapply type_fn; [solve_typing|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
@@ -171,7 +171,7 @@ Section cell.
     iExists _, _. do 2 (iSplit; [done|]). iFrame "†". iNext. iExists _. iFrame.
   Qed.
 
-  Definition cell_into_inner : val := fn: ["x"] := return: ["x"].
+  Definition cell_into_inner: val := fn: ["x"] := return: ["x"].
 
   Lemma cell_into_inner_type {𝔄} (ty: type 𝔄) :
     typed_val cell_into_inner (fn(∅; cell ty) → ty)
@@ -182,6 +182,98 @@ Section cell.
       { eapply tctx_extract_ctx_elt; [apply tctx_cell_into_inner|solve_typing]. }
       solve_typing. }
     by move=> ?[?[]]?/=.
+  Qed.
+
+  (* Conversion under [box] *)
+
+  Lemma tctx_cell_from_box {𝔄 𝔅l} Φ (ty: type 𝔄) p (T: tctx 𝔅l) E L :
+    tctx_incl E L (p ◁ box (box ty) +:: T) (p ◁ box (box (cell ty)) +:: T)
+      (λ post '(a -:: bl), Φ a ∧ post (Φ -:: bl)).
+  Proof.
+    split. { move=>/= ???[??]/=. by f_equiv. }
+    iIntros (??[??]?) "_ _ _ _ $ /=[p T] ? !>". iExists (const Φ -:: _).
+    iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[_?]].
+    iDestruct "p" as ([[]|][|d]?) "[? bbox]"=>//.
+    iExists _, _. do 2 (iSplit; [done|]). iDestruct "bbox" as "[(%vl & ↦ & box) $]".
+    iNext. iExists _. iFrame "↦". case d as [|]=>//. case vl as [|[[]|][]]=>//.
+    iDestruct "box" as "[(%& ↦ & ty) $]". iNext. iExists _. iFrame "↦".
+    iExists _. iSplit; [done|]. iExists _, _.
+    iSplit; [by iApply proph_obs_impl; [|done]=> ?[? _]|]. iFrame "ty".
+    iApply persistent_time_receipt_mono; [|done]. lia.
+  Qed.
+
+  Definition cell_from_box: val := fn: ["x"] := return: ["x"].
+
+  Lemma cell_from_box_type {𝔄} Φ (ty: type 𝔄) :
+    typed_val cell_from_box (fn(∅; box ty) → box (cell ty))
+      (λ post '-[a], Φ a ∧ post Φ).
+  Proof.
+    eapply type_fn; [solve_typing|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
+    { iApply type_jump; [solve_typing| |].
+      { eapply tctx_extract_ctx_elt; [apply tctx_cell_from_box|solve_typing]. }
+      solve_typing. }
+    by move=> ?[?[]]?/=.
+  Qed.
+
+  Definition cell_into_box: val := fn: ["x"] := Skip;; return: ["x"].
+
+  Lemma cell_into_box_type {𝔄} (ty: type 𝔄) :
+    typed_val cell_into_box (fn(∅; box (cell ty)) → box ty)
+      (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
+  Proof.
+    eapply type_fn; [solve_typing|]=> _ ??[x[]]. simpl_subst.
+    iIntros (?[?[]]?) "LFT #TIME PROPH UNIQ E Na L C /=[p _] Obs".
+    rewrite tctx_hasty_val.  iDestruct "p" as ([|d]) "[_ bbox]"=>//.
+    case x as [[|l|]|]=>//. iDestruct "bbox" as "[(%vl & ↦ & box) †]".
+    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
+    wp_seq. iIntros "⧗". wp_seq. case d=>// ?. case vl as [|[[]|][]]=>//=.
+    iDestruct "box" as "[(%& >↦' &%&>->& Big) †']".
+    iMod (bi.later_exist_except_0 with "Big") as (??) "(>Obs' & >⧖ & ty)".
+    iCombine "Obs Obs'" as "#?".
+    iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖") as "#⧖"; [done|].
+    iApply (type_type +[#l ◁ box (box ty)] -[_] with
+      "[] LFT TIME PROPH UNIQ E Na L C [↦ † ↦' †' ty] []").
+    - iApply type_jump; [solve_typing|solve_extract|solve_typing].
+    - iSplit; [|done]. rewrite (tctx_hasty_val #l). iExists _. iFrame "⧖".
+      iFrame "†". iNext. iExists _. iFrame "↦ †'". iNext. iExists _. iFrame.
+    - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
+  Qed.
+
+  (* Conversion under [&uniq{α}] *)
+
+  Definition cell_from_uniq: val := fn: ["x"] := Skip;; return: ["x"].
+
+  (* In this rule, we lose the prophecy information *)
+  Lemma cell_from_uniq_type {𝔄} (Φ: pred' 𝔄) (ty: type 𝔄) :
+    typed_val cell_from_uniq (fn<α>(∅; &uniq{α} ty) → &uniq{α} (cell ty))
+      (λ post '-[(a, _)], Φ a ∧ ∀Φ': pred' 𝔄, post (Φ, Φ')).
+  Proof.
+    eapply type_fn; [solve_typing|]=> α ??[x[]]. simpl_subst.
+    iIntros (?[vπ[]]?) "#LFT TIME #PROPH #UNIQ E Na L C /=[x _] #?".
+    have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
+    rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[#⧖ box]"=>//.
+    case x as [[|x|]|]=>//. iDestruct "box" as "[(%vl & >↦ & [#? uniq]) †]".
+    wp_bind Skip. wp_seq. wp_seq. case vl as [|[[]|][]]=>//=.
+    iDestruct "uniq" as (? i [? _]) "[Vo Bor]". set ξ := PrVar _ i.
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (bor_acc_cons with "LFT Bor α") as
+      "[(%&%&(%& >↦' & ty)& >#⧖' & Pc) ToBor]"; [done|].
+    iMod (uniq_strip_later with "Vo Pc") as (<-<-) "[Vo Pc]".
+    iMod (uniq_intro (const (Φ: predₛ 𝔄)) with "PROPH UNIQ") as
+      (j) "[Vo' Pc']"; [done|]. set ζ := PrVar _ j.
+    iMod ("ToBor" with "[Vo Pc] [↦' ty Pc']") as "[Bor α]"; last first.
+    - iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton /=.
+      do 2 wp_seq.
+      iApply ("C" $! [# #x] -[λ π, (_, π ζ)] with "Na L [↦ † Vo' Bor] []");
+        [|iApply proph_obs_impl; [|done]=>/= π; by case (vπ π)=> ? _[_ ?]].
+      iSplit; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖ †".
+      iNext. iExists _. iFrame "↦". iSplit; [done|]. iExists _, _. by iFrame.
+    - iNext. iExists _, _. iFrame "⧖' Pc'". iExists _. iFrame "↦'".
+      iExists _. iSplit; [done|]. iExists _, _. iFrame "ty ⧖'".
+      iApply proph_obs_impl; [|done]=>/= π. by case (vπ π)=>/= ??[? _].
+    - iIntros "!> (%&%&(%&?&(%&>->&%&%&_& ⧖'' &?))&_&_)". iExists _, _.
+      iFrame "⧖''". iSplitR "Vo Pc"; [iExists _; by iFrame|].
+      iMod (uniq_update with "UNIQ Vo Pc") as "[_ $]"; [solve_ndisj|done].
   Qed.
 
 (*
@@ -223,98 +315,7 @@ Section cell.
       iExists vl'. iFrame. iExists _. iFrame.
       iApply (persistent_time_receipt_mono with "Hd"). lia.
   Qed.
-
-  Definition cell_from_mut : val :=
-    fn: ["x"] := Skip ;; return: ["x"].
-
-  Lemma cell_from_mut_type ty :
-    typed_val cell_from_mut (fn(∀ α, ∅; &uniq{α} ty) → &uniq{α} (cell ty)).
-  Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
-    iIntros (tid) "#LFT #TIME #HE Hna HL HC HT".
-    rewrite !tctx_interp_singleton /= !tctx_hasty_val.
-    iDestruct "HT" as ([|depth]) "[#Hdepth H]"=>//=. destruct x as [[]|]=>//=.
-    iDestruct "H" as "[H >H†]". iDestruct "H" as (vl) "(>H↦ & #Hout & H)".
-    destruct vl as [|[[]|] []], depth as [|depth]; try by iDestruct "H" as ">[]".
-    iDestruct "H" as (depth' γ) "(>% & H◯ & Hbor)".
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
-    wp_let. iIntros "H⧗". wp_let.
-    iMod (lctx_lft_alive_tok α with "HE HL") as (q) "(Htok & HL & Hclose1)"; [solve_typing..|].
-    iMod (bor_acc_cons with "LFT Hbor Htok") as "[H Hclose]"; [done|].
-    iDestruct "H" as (?) "(>H● & _ & H)". iDestruct "H" as (vl) "[>H↦' H]".
-    iDestruct (own_valid_2 with "H● H◯") as %->%excl_auth_agree_L.
-    iMod (own_alloc (●E _ ⋅ ◯E _)) as (γ') "[H●' H◯']"; [by apply excl_auth_valid|].
-    iMod ("Hclose" with "[H● H◯ H⧗] [H●' H↦' H]") as "[Hbor Htok]"; last first.
-    - iMod ("Hclose1" with "Htok HL") as "HL".
-      rewrite cctx_interp_singleton /=. iApply ("HC" $! [# #l] with "Hna HL").
-      rewrite tctx_interp_singleton tctx_hasty_val. iExists (S (S depth)).
-      iFrame "Hdepth H†". iExists _. iFrame "H↦ Hout". iExists depth, γ'.
-      by iFrame.
-    - iExists _. iFrame. iSplitR; [iApply persistent_time_receipt_mono; [|done]; lia|].
-      iExists _. iFrame. iExists _. iFrame.
-      iApply persistent_time_receipt_mono; [|done]. lia.
-    - iIntros "!> H". iDestruct "H" as (?) "(_ & _ & Ho)".
-      iDestruct "Ho" as (vl') "[>? Ho]". iDestruct "Ho" as (?) "[>Hdepth0 Ho]".
-      iMod (own_update_2 with "H● H◯") as "[H● _]"; [by apply excl_auth_update|].
-      iExists _. iFrame.
-      iMod (cumulative_persistent_time_receipt with "TIME H⧗ Hdepth0") as "$"; [solve_ndisj|].
-      iExists vl'. by iFrame.
-  Qed.
 *)
-
-  Lemma tctx_cell_from_box {𝔄 𝔅l} (ty: type 𝔄) Φ p (T: tctx 𝔅l) E L :
-    tctx_incl E L (p ◁ box (box ty) +:: T) (p ◁ box (box (cell ty)) +:: T)
-      (λ post '(a -:: bl), Φ a ∧ post (Φ -:: bl)).
-  Proof.
-    split. { move=>/= ???[??]/=. by f_equiv. }
-    iIntros (??[??]?) "_ _ _ _ $ /=[p T] ? !>". iExists (const Φ -:: _).
-    iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[_?]].
-    iDestruct "p" as ([[]|][|d]?) "[? bbox]"=>//.
-    iExists _, _. do 2 (iSplit; [done|]). iDestruct "bbox" as "[(%vl & ↦ & box) $]".
-    iNext. iExists _. iFrame "↦". case d as [|]=>//. case vl as [|[[]|][]]=>//.
-    iDestruct "box" as "[(%& ↦ & ty) $]". iNext. iExists _. iFrame "↦".
-    iExists _. iSplit; [done|]. iExists _, _.
-    iSplit; [by iApply proph_obs_impl; [|done]=> ?[? _]|]. iFrame "ty".
-    iApply persistent_time_receipt_mono; [|done]. lia.
-  Qed.
-
-  Definition cell_from_box: val := fn: ["x"] := return: ["x"].
-
-  Lemma cell_from_box_type {𝔄} (ty: type 𝔄) Φ :
-    typed_val cell_from_box (fn(∅; box ty) → box (cell ty))
-      (λ post '-[a], Φ a ∧ post Φ).
-  Proof.
-    eapply type_fn; [solve_typing|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
-    { iApply type_jump; [solve_typing| |].
-      { eapply tctx_extract_ctx_elt; [apply tctx_cell_from_box|solve_typing]. }
-      solve_typing. }
-    by move=> ?[?[]]?/=.
-  Qed.
-
-  Definition cell_into_box : val := fn: ["x"] := Skip;; return: ["x"].
-
-  Lemma cell_into_box_type {𝔄} (ty: type 𝔄) :
-    typed_val cell_into_box (fn(∅; box (cell ty)) → box ty)
-      (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
-  Proof.
-    eapply type_fn; [solve_typing|]=> _ ??[x[]]. simpl_subst.
-    iIntros (?[?[]]?) "LFT #TIME PROPH UNIQ E Na L C /=[p _] Obs".
-    rewrite tctx_hasty_val.  iDestruct "p" as ([|d]) "[_ bbox]"=>//.
-    case x as [[|l|]|]=>//. iDestruct "bbox" as "[(%vl & ↦ & box) †]".
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
-    wp_seq. iIntros "⧗". wp_seq. case d=>// ?. case vl as [|[[]|][]]=>//=.
-    iDestruct "box" as "[(%& >↦' &%&>->& Big) †']".
-    iMod (bi.later_exist_except_0 with "Big") as (??) "(>Obs' & >⧖ & ty)".
-    iCombine "Obs Obs'" as "#?".
-    iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖") as "#⧖"; [done|].
-    iApply (type_type +[#l ◁ box (box ty)] -[_] with
-      "[] LFT TIME PROPH UNIQ E Na L C [↦ † ↦' †' ty] []").
-    - iApply type_jump; [solve_typing|solve_extract|solve_typing].
-    - iSplit; [|done]. rewrite (tctx_hasty_val #l). iExists _. iFrame "⧖".
-      iFrame "†". iNext. iExists _. iFrame "↦ †'". iNext. iExists _. iFrame.
-    - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
-  Qed.
 
   (** Reading from a cell *)
 
@@ -393,34 +394,32 @@ Section cell.
     by move=> ?[?[?[]]]/=.
   Qed.
 
-(*
-  (** Create a shared cell from a mutable borrow.
+  (** Create a shared cell from a unique borrow.
       Called alias::one in Rust.
-      This is really just [cell_from_mut] followed by sharing. *)
-  Definition fake_shared_cell : val :=
-    fn: ["x"] :=
-      let: "cell_from_mut" := cell_from_mut in
-      letcall: "r" := "cell_from_mut" ["x"]%E in
-      let: "r'" := !"r" in
-      delete [ #1; "r"];;
-      Share;;
-      letalloc: "r" <- "r'" in
-      return: ["r"].
+      This is really just [cell_from_uniq] followed by sharing. *)
 
-  Lemma fake_shared_cell_type ty :
-    typed_val fake_shared_cell (fn(∀ α, ∅; &uniq{α} ty) → &shr{α}(cell ty)).
+  Definition fake_shared_cell: val :=
+    fn: ["x"] :=
+      let: "cell_from_uniq" := cell_from_uniq in
+      letcall: "c" := "cell_from_uniq" ["x"]%E in let: "c'" := !"c" in
+      Share;; letalloc: "r" <- "c'" in
+      delete [ #1; "c"];; return: ["r"].
+
+  (* In this rule, we lose the prophecy information *)
+  Lemma fake_shared_cell_type {𝔄} Φ (ty: type 𝔄) :
+    typed_val fake_shared_cell (fn<α>(∅; &uniq{α} ty) → &shr{α} (cell ty))
+      (λ post '-[(a, _)], Φ a ∧ post Φ).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
-    iApply type_let; [apply cell_from_mut_type|solve_typing|]. iIntros (f). simpl_subst.
-    iApply type_letcall; [solve_typing..|]. iIntros (r). simpl_subst.
-    iApply type_deref; [solve_typing..|]. iIntros (r'). simpl_subst.
-    iApply type_delete; [solve_typing..|].
-    iApply (type_share r'); [solve_typing..|].
-    iApply type_letalloc_1; [solve_typing..|]. iIntros (r''). simpl_subst.
-    iApply type_jump; solve_typing.
+    eapply type_fn; [solve_typing|]=> ???[?[]]. simpl_subst. via_tr_impl.
+    { iApply type_let; [apply (cell_from_uniq_type Φ)|solve_extract|done|].
+      intro_subst. iApply type_letcall; [solve_typing|solve_extract|solve_typing|].
+      intro_subst. iApply type_deref; [solve_extract|solve_typing|done|].
+      intro_subst. iApply type_share; [solve_extract|solve_typing|].
+      iApply type_letalloc_1; [solve_extract|done|]. intro_subst.
+      iApply type_delete; [solve_extract|done|done|].
+      iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+    by move=> ?[[??][]][??]/=.
   Qed.
-*)
 End cell.
 
 Global Hint Resolve cell_leak_just cell_subtype cell_eqtype : lrust_typing.
