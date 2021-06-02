@@ -82,11 +82,22 @@ Section typing.
     ∀E L, typed_instr_ty E L +[] (of_val v) ty (λ post _, post a).
   Global Arguments typed_val {_} _%V _%T _%type.
 
-  (* This lemma is helpful when switching from proving unsafe code in Iris
-     back to proving it in the type system. *)
-  Lemma type_type {𝔄l 𝔅} E L (C: cctx 𝔅) (T: tctx 𝔄l) e tr :
+  (* This lemma is helpful for specifying the predicate transformer. *)
+  Lemma type_with_tr 𝔄l {𝔅} tr E L (C: cctx 𝔅) (T: tctx 𝔄l) e :
     typed_body E L C T e tr -∗ typed_body E L C T e tr.
   Proof. done. Qed.
+
+  (* This lemma is helpful when switching from proving unsafe code in Iris
+     back to proving it in the type system. *)
+  Lemma type_type {𝔄l 𝔅} (T: tctx 𝔄l) vπl tr E L (C: cctx 𝔅) e tid postπ :
+    typed_body E L C T e tr -∗
+    lft_ctx -∗ time_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
+    llctx_interp L 1 -∗ cctx_interp tid postπ C -∗ tctx_interp tid T vπl -∗
+    ⟨π, tr (postπ π) (vπl -$ π)⟩ -∗ WP e {{ _, cont_postcondition }}.
+  Proof.
+    iIntros "Bd LFT TIME PROPH UNIQ E Na L C T Obs".
+    iApply ("Bd" with "LFT TIME PROPH UNIQ E Na L C T Obs").
+  Qed.
 
   (* TODO: Proof a version of this that substitutes into a compatible context...
      if we really want to do that. *)
