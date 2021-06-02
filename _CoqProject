@@ -73,7 +73,7 @@ theories/typing/lib/panic.v
 theories/typing/lib/option.v
 theories/typing/lib/list.v
 # theories/typing/lib/fake_shared.v
-# theories/typing/lib/cell.v
+theories/typing/lib/cell.v
 # theories/typing/lib/spawn.v
 # theories/typing/lib/join.v
 # theories/typing/lib/take_mut.v

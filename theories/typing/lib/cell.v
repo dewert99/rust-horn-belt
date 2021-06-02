@@ -2,100 +2,129 @@ From iris.proofmode Require Import tactics.
 From lrust.lang.lib Require Import memcpy.
 From lrust.lifetime Require Import na_borrow.
 From lrust.typing Require Export type.
-From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
+
+Implicit Type 𝔄 𝔅: syn_type.
 
 Section cell.
   Context `{!typeG Σ}.
 
-  Program Definition cell (ty : type) :=
-    {| ty_size := ty.(ty_size); ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
-       ty_own _ tid vl := (∃ depth, ⧖depth ∗ ty.(ty_own) depth tid vl)%I;
-       ty_shr κ tid l :=
-         (* Depth is frozen by shargin *)
-         (&na{κ, tid, shrN.@l}(∃ depth, ⧖depth ∗ l ↦∗: ty.(ty_own) depth tid))%I
-    |}.
-  Next Obligation. intros. iDestruct 1 as (?) "[_ ?]". by iApply ty_size_eq. Qed.
+  Lemma split_mt_cell {A} l q (Φπ: proph A) (Ψ: A → _) :
+    (l ↦∗{q}: λ vl, ∃Φ, ⌜Φπ = const Φ⌝ ∗ Ψ Φ vl)%I ⊣⊢
+    ∃Φ, ⌜Φπ = const Φ⌝ ∗ l ↦∗{q}: Ψ Φ.
+  Proof.
+    iSplit.
+    - iIntros "(%&?&%&%&?)". iExists _. iSplit; [done|]. iExists _. iFrame.
+    - iIntros "(%&%&%& ↦ &?)". iExists _. iFrame "↦". iExists _. by iFrame.
+  Qed.
+
+  Program Definition cell {𝔄} (ty: type 𝔄) : type (𝔄 → Propₛ) := {|
+    ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_own Φπ _ tid vl := ∃Φ, ⌜Φπ = const Φ⌝ ∗
+      ∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖d ∗ ty.(ty_own) vπ d tid vl;
+    ty_shr Φπ _ κ tid l := ∃Φ, ⌜Φπ = const Φ⌝ ∗
+      &na{κ, tid, shrN.@l}
+        (∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖d ∗ l ↦∗: ty.(ty_own) vπ d tid)
+  |}%I.
+  Next Obligation. iIntros "* (%&%&%&%&_&_& ty)". by rewrite ty_size_eq. Qed.
+  Next Obligation. done. Qed.
   Next Obligation. done. Qed.
   Next Obligation.
-    iIntros (ty E depth κ l tid q ?) "#LFT #Hout Hown Htok !>".
-    iApply step_fupdN_intro; [done|]. iModIntro. iFrame. iApply bor_na; [done|].
-    iApply (bor_iff with "[] Hown"). iIntros "!> !>". iSplit; iIntros "H".
-    - iDestruct "H" as (vl) "[? H]". iDestruct "H" as (depth') "[??]".
-      iExists _. iFrame. iExists _. iFrame.
-    - iDestruct "H" as (depth') "[? H]". iDestruct "H" as (vl) "[??]".
-      iExists _. iFrame. iExists _. iFrame.
+    iIntros "* In (%&%&?)". iExists _. iSplit; [done|].
+    by iApply (na_bor_shorten with "In").
   Qed.
   Next Obligation.
-    iIntros (ty ?? tid l) "#H⊑ H". by iApply (na_bor_shorten with "H⊑").
+    iIntros "* % #LFT In Bor κ !>". iApply step_fupdN_full_intro.
+    rewrite split_mt_cell. iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor κ") as "(>% & Bor & $)"; [done|].
+    iExists _. iSplitR; [done|]. iApply bor_na; [done|].
+    iApply (bor_iff with "[] Bor"). iIntros "!>!>". iSplit.
+    - iIntros "(%&?&%&%&?&?&?)". iExists _, _. iFrame. iExists _. iFrame.
+    - iIntros "(%&%&?&?&%&?&?)". iExists _. iFrame. iExists _, _. iFrame.
+  Qed.
+  Next Obligation.
+    iIntros "* _ _ _ (%&->&?) $ !>". iApply step_fupdN_full_intro.
+    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
+    iExists _. by iSplit.
+  Qed.
+  Next Obligation.
+    iIntros "* _ _ _ _ (%&->&?) $ !>!>!>". iApply step_fupdN_full_intro.
+    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
+    iExists _. by iSplit.
   Qed.
 
-  Global Instance cell_type_ne : TypeNonExpansive cell.
-  Proof.
-    split=>//.
-    - apply (type_lft_morphism_add _ static [] []).
-      + intros. rewrite left_id. iApply lft_equiv_refl.
-      + intros. by rewrite /elctx_interp /= left_id right_id.
-    - intros. simpl. do 3 (f_contractive || f_equiv). done.
-    - intros. simpl. do 7 (f_contractive || f_equiv). simpl in *. done.
-  Qed.
-
-  Global Instance cell_ne : NonExpansive cell.
+  Global Instance cell_ne {𝔄} : NonExpansive (@cell 𝔄).
   Proof. solve_ne_type. Qed.
 
-  Global Instance cell_mono E L : Proper (eqtype E L ==> subtype E L) cell.
+  Global Instance cell_type_ne {𝔄} : TypeNonExpansive (@cell 𝔄).
   Proof.
-    move=>?? /eqtype_unfold EQ. iIntros (?) "HL".
-    iDestruct (EQ with "HL") as "#EQ". iIntros "!> #HE".
-    iDestruct ("EQ" with "HE") as "(% & #[Hout1 Hout2] & #Hown & #Hshr)".
-    iSplit; [done|iSplit; [done|iSplit; iIntros "!> * H"]].
-    - iDestruct "H" as (depth') "[? H]". iExists _. iFrame. iApply ("Hown" with "H").
-    - iApply na_bor_iff; last done. iNext; iModIntro; iSplit; iIntros "H";
-      iDestruct "H" as (depth) "[? H]"; iExists depth; iFrame;
-      iDestruct "H" as (vl) "[??]"; iExists vl; iFrame; by iApply "Hown".
+    split; [by apply type_lft_morphism_id_like|done| |].
+    - move=> */=. by do 9 f_equiv.
+    - move=> */=. do 13 (f_contractive || f_equiv). by simpl in *.
   Qed.
-  Lemma cell_mono' E L ty1 ty2 : eqtype E L ty1 ty2 → subtype E L (cell ty1) (cell ty2).
-  Proof. eapply cell_mono. Qed.
-  Global Instance cell_proper E L : Proper (eqtype E L ==> eqtype E L) cell.
-  Proof. by split; apply cell_mono. Qed.
-  Lemma cell_proper' E L ty1 ty2 : eqtype E L ty1 ty2 → eqtype E L (cell ty1) (cell ty2).
-  Proof. eapply cell_proper. Qed.
 
-  Global Instance cell_copy ty :
-    Copy ty → Copy (cell ty).
+  (* In order to prove [cell_leak] with a non-trivial postcondition,
+    we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
+  Lemma cell_leak_just {𝔄} (ty: type 𝔄) E L :
+    leak E L ty (const True) → leak E L (cell ty) (const True).
+  Proof. move=> _. apply leak_just. Qed.
+
+  Global Instance cell_copy {𝔄} (ty: type 𝔄) : Copy ty → Copy (cell ty).
   Proof.
-    intros Hcopy. split; first by intros; simpl; unfold ty_own; apply _.
-    iIntros (depth κ tid E F l q ??) "#LFT #Hshr Htl Htok". iExists 1%Qp. simpl in *.
+    move=> ?. split; [apply _|]=>/= *. iIntros "#LFT (%&%& Bor) Na κ".
+    iExists 1%Qp.
     (* Size 0 needs a special case as we can't keep the thread-local invariant open. *)
-    destruct (ty_size ty) as [|sz] eqn:Hsz; simpl in *.
-    { iMod (na_bor_acc with "LFT Hshr Htok Htl") as "(Hown & Htl & Hclose)";
-        [solve_ndisj..|].
-      iDestruct "Hown" as (depth') "[#Hdepth' Hown]". iDestruct "Hown" as (vl) "[H↦ #Hown]".
-      assert (F ∖ ∅ = F) as -> by set_solver+.
-      iDestruct (ty_size_eq with "Hown") as "#>%". rewrite ->Hsz in *.
-      iMod ("Hclose" with "[H↦] Htl") as "[$ $]".
-      { iExists depth'. iFrame "Hdepth'". iExists vl. by iFrame. }
-      iModIntro. iExists vl. iSplitL "".
-      { destruct vl; last done. by iApply heap_mapsto_vec_nil. }
-      iSplit; [by eauto|]. by iIntros "$ _". }
+    case (ty_size ty) as [|?] eqn:EqSz; simpl in *.
+    { iMod (na_bor_acc with "LFT Bor κ Na") as "(Big & Na & ToNa)"; [solve_ndisj..|].
+      iMod (bi.later_exist_except_0 with "Big") as (??) "(>#?&>#?& %vl & >↦ & #ty)".
+      iDestruct (ty_size_eq with "ty") as "#>%EqLen". move: EqLen.
+      rewrite EqSz. case vl; [|done]=> _. rewrite difference_empty_L.
+      iMod ("ToNa" with "[↦] Na") as "[$$]".
+      { iNext. iExists _, _. do 2 (iSplit; [done|]). iExists _. by iFrame. }
+      iModIntro. iExists []. rewrite heap_mapsto_vec_nil. iSplit; [done|].
+      iSplit; [|by iIntros]. iNext. iExists _. iSplit; [done|]. iExists _, _.
+      by iSplit; [|iSplit]. }
     (* Now we are in the non-0 case. *)
-    iMod (na_bor_acc with "LFT Hshr Htok Htl") as "(H & Htl & Hclose)"; [solve_ndisj..|].
-    iDestruct "H" as (depth') "[#Hdepth' H]". iDestruct "H" as (vl) "[>Hvl #Hown]".
-    iExists vl. iDestruct (na_own_acc with "Htl") as "($ & Hclose')"; first by set_solver.
-    iIntros "{$Hvl}". iSplitR; [by eauto|]. iIntros " !> Htl Hvl".
-    iPoseProof ("Hclose'" with "Htl") as "Htl".
-    iMod ("Hclose" with "[Hvl] Htl") as "[$ $]"=>//. iExists depth'. iFrame "Hdepth'".
-    iExists vl; auto.
+    iMod (na_bor_acc with "LFT Bor κ Na") as "(Big & Na & ToNa)"; [solve_ndisj..|].
+    iMod (bi.later_exist_except_0 with "Big") as (??) "(>#?&>#?&%& >↦ & #ty)".
+    iExists _. iDestruct (na_own_acc with "Na") as "[$ ToNa']"; [set_solver+|].
+    iIntros "!>{$↦}". iSplitR.
+    { iNext. iExists _. iSplit; [done|]. iExists _, _. by iSplit; [|iSplit]. }
+    iIntros "Na ↦". iDestruct ("ToNa'" with "Na") as "Na".
+    iMod ("ToNa" with "[↦] Na") as "[$$]"; [|done]. iNext. iExists _, _.
+    do 2 (iSplit; [done|]). iExists _. by iFrame.
   Qed.
 
-  Global Instance cell_send ty :
-    Send ty → Send (cell ty).
-  Proof. rewrite /cell /Send /=. intros H12 **. do 3 f_equiv. apply H12. Qed.
-End cell.
+  Global Instance cell_send {𝔄} (ty: type 𝔄) : Send ty → Send (cell ty).
+  Proof. move=> ?>/=. by do 9 f_equiv. Qed.
 
-Section typing.
-  Context `{!typeG Σ}.
+  Lemma cell_subtype {𝔄 𝔅} E L ty ty' f g `{!@Iso 𝔄 𝔅 f g} :
+    eqtype E L ty ty' f g → subtype E L (cell ty) (cell ty') (.∘ g).
+  Proof.
+    move=> /eqtype_unfold Eq. iIntros (?) "L".
+    iDestruct (Eq with "L") as "#Eq". iIntros "!> #E".
+    iDestruct ("Eq" with "E") as "(%&[_?]& #EqOwn & #EqShr)".
+    do 2 (iSplit; [done|]). iSplit; iModIntro.
+    - iIntros "* (%&->& %vπ &%&?&?& ty)". iExists _. iSplit; [done|].
+      iExists (f ∘ vπ), _=>/=. iSplit.
+      { iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'. }
+      iSplit; [done|]. by iApply "EqOwn".
+    - iIntros "* (%&->& Bor)". iExists _. iSplit; [done|]=>/=.
+      iApply (na_bor_iff with "[] Bor"). iIntros "!>!>".
+      iSplit; iIntros "(%vπ &%&?& ⧖ &%& ↦ &?)".
+      + iExists (f ∘ vπ), _. iFrame "⧖". iSplit.
+        { iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'. }
+        iExists _. iFrame "↦". by iApply "EqOwn".
+      + iExists (g ∘ vπ), _. iFrame "⧖". iSplit; [done|]. iExists _.
+        iFrame "↦". iApply "EqOwn". by rewrite compose_assoc semi_iso.
+  Qed.
+  Lemma cell_eqtype {𝔄 𝔅} E L ty ty' f g `{!@Iso 𝔄 𝔅 f g} :
+    eqtype E L ty ty' f g → eqtype E L (cell ty) (cell ty') (.∘ g) (.∘ f).
+  Proof.
+    move=> [??]. split; (eapply cell_subtype; [|by split]; split; apply _).
+  Qed.
 
+(*
   (** The next couple functions essentially show owned-type equalities, as they
       are all different types for the identity function. *)
   (* Constructing a cell. *)
@@ -366,6 +395,7 @@ Section typing.
     iApply type_letalloc_1; [solve_typing..|]. iIntros (r''). simpl_subst.
     iApply type_jump; solve_typing.
   Qed.
-End typing.
+*)
+End cell.
 
-Global Hint Resolve cell_mono' cell_proper' : lrust_typing.
+Global Hint Resolve cell_leak_just cell_subtype cell_eqtype : lrust_typing.
