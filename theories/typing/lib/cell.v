@@ -2,7 +2,7 @@ From iris.proofmode Require Import tactics.
 From lrust.lang.lib Require Import memcpy.
 From lrust.lifetime Require Import na_borrow.
 From lrust.typing Require Export type.
-From lrust.typing Require Export programs own function cont.
+From lrust.typing Require Export programs cont function own shr_bor.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
@@ -306,34 +306,33 @@ Section cell.
     iExists _. iFrame. iExists _. iFrame.
     iApply persistent_time_receipt_mono; [|done]. lia.
   Qed.
+*)
 
   (** Reading from a cell *)
-  Definition cell_get ty : val :=
+
+  Definition cell_get {𝔄} (ty: type 𝔄) : val :=
     fn: ["x"] :=
       let: "x'" := !"x" in
       letalloc: "r" <-{ty.(ty_size)} !"x'" in
-      let: "cell_into_inner" := cell_into_inner in
-      letcall: "r" := "cell_into_inner" ["r"]%E in
       delete [ #1; "x"];;
       return: ["r"].
 
   (* Interestingly, this is syntactically well-typed: we do not need
      to enter the model. *)
-  Lemma cell_get_type ty `(!Copy ty) :
-    typed_val (cell_get ty) (fn(∀ α, ∅; &shr{α} (cell ty)) → ty).
+  Lemma cell_get_type {𝔄} (ty: type 𝔄) `{!Copy ty} :
+    typed_val (cell_get ty) (fn<α>(∅; &shr{α} (cell ty)) → ty)
+      (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
-    iApply type_deref; [solve_typing..|]. iIntros (x'). simpl_subst.
-    iApply (type_letalloc_n (cell ty)); [solve_typing..|].
-    iIntros (r); simpl_subst.
-    iApply type_let; [iApply cell_into_inner_type|solve_typing|].
-    iIntros (cell_into_inner_type'). simpl_subst.
-    iApply (type_letcall ()); [solve_typing..|]. iIntros (r'). simpl_subst.
-    iApply type_delete; [solve_typing..|].
-    iApply type_jump; solve_typing.
+    eapply type_fn; [solve_typing|]=> ???[?[]]. simpl_subst. via_tr_impl.
+    { iApply type_deref; [solve_extract|solve_typing|done|]. intro_subst.
+      iApply (type_letalloc_n (cell ty)); [solve_extract|solve_typing|].
+      intro_subst. iApply typed_body_tctx_incl; [apply tctx_cell_into_inner|].
+      iApply type_delete; [solve_extract|done|done|].
+      iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+    by move=> ?[?[]]/=.
   Qed.
 
+(*
   (** Writing to a cell *)
   Definition cell_replace ty : val :=
     fn: ["c"; "x"] :=
