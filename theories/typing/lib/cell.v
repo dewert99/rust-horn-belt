@@ -244,16 +244,16 @@ Section cell.
   Definition cell_from_uniq: val := fn: ["x"] := Skip;; return: ["x"].
 
   (* In this rule, we lose the prophecy information *)
-  Lemma cell_from_uniq_type {𝔄} (Φ: pred' 𝔄) (ty: type 𝔄) :
+  Lemma cell_from_uniq_type {𝔄} (Φ: pred' 𝔄) ty :
     typed_val cell_from_uniq (fn<α>(∅; &uniq{α} ty) → &uniq{α} (cell ty))
       (λ post '-[(a, _)], Φ a ∧ ∀Φ': pred' 𝔄, post (Φ, Φ')).
   Proof.
     eapply type_fn; [solve_typing|]=> α ??[x[]]. simpl_subst.
-    iIntros (?[vπ[]]?) "#LFT TIME #PROPH #UNIQ E Na L C /=[x _] #?".
+    iIntros (?[vπ[]]?) "#LFT _ #PROPH #UNIQ E Na L C /=[x _] #?".
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
     rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[#⧖ box]"=>//.
     case x as [[|x|]|]=>//. iDestruct "box" as "[(%vl & >↦ & [#? uniq]) †]".
-    wp_bind Skip. wp_seq. wp_seq. case vl as [|[[]|][]]=>//=.
+    do 2 wp_seq. case vl as [|[[]|][]]=>//=.
     iDestruct "uniq" as (? i [? _]) "[Vo Bor]". set ξ := PrVar _ i.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as
@@ -262,10 +262,9 @@ Section cell.
     iMod (uniq_intro (const (Φ: predₛ 𝔄)) with "PROPH UNIQ") as
       (j) "[Vo' Pc']"; [done|]. set ζ := PrVar _ j.
     iMod ("ToBor" with "[Vo Pc] [↦' ty Pc']") as "[Bor α]"; last first.
-    - iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton /=.
-      do 2 wp_seq.
-      iApply ("C" $! [# #x] -[λ π, (_, π ζ)] with "Na L [↦ † Vo' Bor] []");
-        [|iApply proph_obs_impl; [|done]=>/= π; by case (vπ π)=> ? _[_ ?]].
+    - iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton. do 2 wp_seq.
+      iApply ("C" $! [# #x] -[λ π, (_, π ζ)] with "Na L [↦ † Vo' Bor] []"); last first.
+      { iApply proph_obs_impl; [|done]=>/= π. by case (vπ π)=> ? _[_ ?]. }
       iSplit; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖ †".
       iNext. iExists _. iFrame "↦". iSplit; [done|]. iExists _, _. by iFrame.
     - iNext. iExists _, _. iFrame "⧖' Pc'". iExists _. iFrame "↦'".
@@ -276,46 +275,43 @@ Section cell.
       iMod (uniq_update with "UNIQ Vo Pc") as "[_ $]"; [solve_ndisj|done].
   Qed.
 
-(*
-  Definition cell_get_mut : val :=
-    fn: ["x"] := Skip ;; Skip ;; return: ["x"].
+  Definition cell_get_uniq: val := fn: ["x"] := Skip;; return: ["x"].
 
-  Lemma cell_get_mut_type ty :
-    typed_val cell_get_mut (fn(∀ α, ∅; &uniq{α} (cell ty)) → &uniq{α} ty).
+  (* Only the trivial invariant is allowed when we take a unique reference *)
+  Lemma cell_get_uniq_type {𝔄} (ty: type 𝔄) :
+    typed_val cell_get_uniq (fn<α>(∅; &uniq{α} (cell ty)) → &uniq{α} ty)
+      (λ post '-[(Φ, Φ')], (∀b: 𝔄, Φ b) ∧ ((∀b: 𝔄, Φ' b) → ∀a a': 𝔄, post (a, a'))).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
-    iIntros (tid) "#LFT #TIME #HE Hna HL HC HT".
-    rewrite !tctx_interp_singleton /= !tctx_hasty_val.
-    iDestruct "HT" as ([|depth]) "[? H]"=>//=. destruct x as [[]|]=>//=.
-    iDestruct "H" as "[H >H†]". iDestruct "H" as (vl) "(>H↦ & #Hout & H)".
-    destruct vl as [|[[]|] []], depth as [|depth]; try by iDestruct "H" as ">[]".
-    iDestruct "H" as (depth' γ) "(>% & _ & Hbor)".
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
-    wp_let. iIntros "H⧗1". wp_let.
-    wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
-    wp_let. iIntros "H⧗2". wp_let.
-    iMod (lctx_lft_alive_tok α with "HE HL") as (q) "(Htok & HL & Hclose1)"; [solve_typing..|].
-    iMod (bor_acc_cons with "LFT Hbor Htok") as "[H Hclose]"; [done|].
-    iDestruct "H" as (depth2') "(>H● & >Hdepth2' & H)". iDestruct "H" as (vl) "[>H↦' H]".
-    iDestruct "H" as (depth'') "[>Hdepth'' H]".
-    iMod (cumulative_persistent_time_receipt with "TIME H⧗1 Hdepth''") as "Hdepth''"; [done|].
-    iMod (cumulative_persistent_time_receipt with "TIME H⧗2 Hdepth''") as "#Hdepth''"; [done|].
-    iMod (own_alloc (●E _ ⋅ ◯E _)) as (γ') "[H●' H◯']"; [by apply excl_auth_valid|].
-    iMod ("Hclose" with "[H● Hdepth2'] [H●' H↦' H]") as "[Hbor Htok]"; last first.
-    - iMod ("Hclose1" with "Htok HL") as "HL".
-      rewrite cctx_interp_singleton /=. iApply ("HC" $! [# #l] with "Hna HL").
-      rewrite tctx_interp_singleton tctx_hasty_val. iExists (S (S depth'')).
-      iFrame "H† Hdepth''". iExists _. iFrame "∗ Hout". iExists depth''. auto with iFrame.
-    - iExists _. iFrame "H●'".
-      iDestruct (persistent_time_receipt_mono with "Hdepth''") as "$"; [lia|].
-      iExists _. iFrame.
-    - iIntros "!> H". iExists _. iFrame "H● ∗".
-      iDestruct "H" as (?) "(_ & >Hd & Ho)". iDestruct "Ho" as (vl') "[>? ?]".
-      iExists vl'. iFrame. iExists _. iFrame.
-      iApply (persistent_time_receipt_mono with "Hd"). lia.
+    eapply type_fn; [solve_typing|]=> α ??[x[]]. simpl_subst.
+    iIntros (?[vπ[]]?) "LFT #TIME #PROPH #UNIQ E Na L C /=[x _] Obs".
+    rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[_ box]"=>//. case x as [[|x|]|]=>//.
+    iDestruct "box" as "[(%vl & ↦ & [#? uniq]) †]". wp_bind Skip.
+    iApply (wp_cumulative_time_receipt with "TIME"); [done|]. wp_seq.
+    iIntros "⧗". wp_seq. case vl as [|[[]|][]]=>//.
+    iDestruct "uniq" as (??[? Eq]) "[Vo Bor]". move: Eq. set ξ := PrVar _ i=> Eq.
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (bor_acc_cons with "LFT Bor α") as
+      "[(%&%&(%& >↦' &%&>->& Big)&_& Pc) ToBor]"; [done|].
+    iMod (bi.later_exist_except_0 with "Big") as (aπ ?) "(_& >#⧖ & ty)".
+    iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖") as "#⧖S"; [done|].
+    iMod (uniq_strip_later with "Vo Pc") as (-><-) "[Vo Pc]".
+    iMod (uniq_preresolve ξ [] (λ _ _, True) 1%Qp with "PROPH Vo Pc []")
+      as "(Obs' &_& ToPc)"; [done..|]. iCombine "Obs' Obs" as "#?".
+    iMod (uniq_intro aπ with "PROPH UNIQ") as (j) "[Vo' Pc']"; [done|].
+    set ζ := PrVar _ j. have ?: Inhabited 𝔄 := populate (aπ inhabitant).
+    iMod ("ToBor" with "[ToPc] [↦' ty Pc']") as "[Bor α]"; last first.
+    - iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton. do 2 wp_seq.
+      iApply ("C" $! [# #x] -[λ π, (_, π ζ)] with "Na L [↦ † Vo' Bor] []"); last first.
+      { iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq π)=>/=.
+        case (vπ π)=>/= ??<-[->[_ Imp]]. by apply Imp. }
+      iSplit; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖S †". iNext.
+      iExists _. iFrame "↦". iSplit; [done|]. iExists _, _. iSplit; [done|]. iFrame.
+    - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame.
+    - iIntros "!> (%&%&((%& ↦ & ty)& #⧖' & Pc')) !>!>". iExists _, _.
+      iFrame "⧖'". iSplitR "ToPc"; [|iApply "ToPc"; by iApply proph_eqz_eq].
+      iExists _. iFrame "↦". iExists _. iSplit; [done|]. iExists _, _.
+      iFrame "⧖' ty". by iApply proph_obs_true.
   Qed.
-*)
 
   (** Reading from a cell *)
 

@@ -153,7 +153,7 @@ Proof.
   iDestruct (vo_vo2 with "Vo2") as "[$?]". iLeft. iFrame.
 Qed.
 
-Lemma uniq_resolve ξ vπ d vπ' d' ζl q E : ↑prophN ⊆ E → vπ ./ ζl →
+Lemma uniq_resolve ξ ζl q vπ d vπ' d' E : ↑prophN ⊆ E → vπ ./ ζl →
   proph_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' -∗ q:+[ζl] ={E}=∗
     ⟨π, π ξ = vπ π⟩ ∗ .PC[ξ] vπ d ∗ q:+[ζl].
 Proof.
@@ -163,7 +163,7 @@ Proof.
   by iApply proph_eqz_obs.
 Qed.
 
-Lemma uniq_preresolve ξ ζl uπ vπ d vπ'' d'' q E : ↑prophN ⊆ E → uπ ./ ζl →
+Lemma uniq_preresolve ξ ζl uπ q vπ d vπ'' d'' E : ↑prophN ⊆ E → uπ ./ ζl →
   proph_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ] vπ'' d'' -∗ q:+[ζl] ={E}=∗
     ⟨π, π ξ = uπ π⟩ ∗ q:+[ζl] ∗ (∀vπ' d', uπ :== vπ' -∗ .PC[ξ] vπ' d').
 Proof.
