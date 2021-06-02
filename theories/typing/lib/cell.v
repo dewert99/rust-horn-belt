@@ -22,10 +22,10 @@ Section cell.
   Program Definition cell {𝔄} (ty: type 𝔄) : type (𝔄 → Propₛ) := {|
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own Φπ _ tid vl := ∃Φ, ⌜Φπ = const Φ⌝ ∗
-      ∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖d ∗ ty.(ty_own) vπ d tid vl;
+      ∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ty.(ty_own) vπ d tid vl;
     ty_shr Φπ _ κ tid l := ∃Φ, ⌜Φπ = const Φ⌝ ∗
       &na{κ, tid, shrN.@l}
-        (∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖d ∗ l ↦∗: ty.(ty_own) vπ d tid)
+        (∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ l ↦∗: ty.(ty_own) vπ d tid)
   |}%I.
   Next Obligation. iIntros "* (%&%&%&%&_&_& ty)". by rewrite ty_size_eq. Qed.
   Next Obligation. done. Qed.
@@ -136,12 +136,11 @@ Section cell.
   Proof.
     split. { move=>/= ???[??]/=. by f_equiv. }
     iIntros (??[??]?) "_ _ _ _ $ /=[p T] ? !>". iExists (const Φ -:: _).
-    iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[??]].
+    iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[_?]].
     iDestruct "p" as ([[]|][|]?) "[? box]"=>//. iDestruct "box" as "[(%& ↦ & ty) Fr]".
     iExists _, _. do 2 (iSplit; [done|]). iFrame "Fr". iNext. iExists _.
     iFrame "↦". iExists _. iSplit; [done|]. iExists _, _.
-    iSplit; [by iApply proph_obs_impl; [|done]=> ?[??]|].
-    iFrame "ty". iApply persistent_time_receipt_mono; [|done]. lia.
+    iSplit; [by iApply proph_obs_impl; [|done]=> ?[? _]|]. iFrame.
   Qed.
 
   Definition cell_new: val := fn: ["x"] := return: ["x"].
@@ -156,27 +155,36 @@ Section cell.
     by move=> ?[?[]]?/=.
   Qed.
 
-(*
   (* The other direction: getting ownership out of a cell. *)
-  Definition cell_into_inner : val :=
-    fn: ["x"] := Skip ;; return: ["x"].
 
-  Lemma cell_into_inner_type ty :
-    typed_val cell_into_inner (fn(∅; cell ty) → ty).
+  Lemma tctx_cell_into_inner {𝔄 𝔅l} (ty: type 𝔄) p (T: tctx 𝔅l) E L :
+    tctx_incl E L (p ◁ box (cell ty) +:: T) (p ◁ box ty +:: T)
+      (λ post '(Φ -:: bl), ∀a: 𝔄, Φ a → post (a -:: bl)).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (_ ϝ ret arg). inv_vec arg=>x. simpl_subst.
-    iIntros (tid) "#LFT #TIME #HE Hna HL HC HT".
-    rewrite !tctx_interp_singleton /= !tctx_hasty_val.
-    iDestruct "HT" as (depth) "[_ H]". destruct depth as [|depth]; [done|].
-    destruct x as [[]|]=>//=. iDestruct "H" as "[H ?]".
-    iDestruct "H" as (vl) "[? H]". iDestruct "H" as (depth') "[>Hdepth' ?]".
-    wp_bind Skip. iApply (wp_persistent_time_receipt with "TIME Hdepth'"); [done|].
-    wp_let. iIntros "Hdepth'". wp_let.
-    rewrite cctx_interp_singleton /=. iApply ("HC" $! [# #l] with "Hna HL").
-    rewrite tctx_interp_singleton tctx_hasty_val. iExists _. iFrame. iExists _. iFrame.
+    split. { move=>/= ?? Eq [??]/=. by do 2 (apply forall_proper=> ?). }
+    iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs".
+    iDestruct "p" as ([[]|][|]?) "[? box]"=>//.
+    iDestruct "box" as "[(%& ↦ & (%&>->& Big)) Fr]".
+    iMod (bi.later_exist_except_0 with "Big") as (vπ ?) "(>Obs' &>?& ?)".
+    iCombine "Obs Obs'" as "Obs". iModIntro. iExists (vπ -:: _). iFrame "T".
+    iSplit; last first. { iApply proph_obs_impl; [|done]=>/= ? [Imp ?]. by apply Imp. }
+    iExists _, _. do 2 (iSplit; [done|]). iFrame "Fr". iNext. iExists _. iFrame.
   Qed.
 
+  Definition cell_into_inner : val := fn: ["x"] := return: ["x"].
+
+  Lemma cell_into_inner_type {𝔄} (ty: type 𝔄) :
+    typed_val cell_into_inner (fn(∅; cell ty) → ty)
+      (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
+  Proof.
+    eapply type_fn; [solve_typing|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
+    { iApply type_jump; [solve_typing| |].
+      { eapply tctx_extract_ctx_elt; [apply tctx_cell_into_inner|solve_typing]. }
+      solve_typing. }
+    by move=> ?[?[]]?/=.
+  Qed.
+
+(*
   Definition cell_get_mut : val :=
     fn: ["x"] := Skip ;; Skip ;; return: ["x"].
 
