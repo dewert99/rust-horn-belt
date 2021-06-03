@@ -246,10 +246,10 @@ Proof.
           end)%type).
   Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_shr'; done. Qed.
 
-  Lemma type_sum_assign_instr {E L 𝔄 𝔄' 𝔄l} (i : nat) (ty1: type 𝔄)
-                              (tyl: typel 𝔄l) (ty2: type 𝔄') p1 p2 gt st Φ:
-    typed_write E L ty1 (xsum_ty tyl) ty2 (xsum_ty tyl) gt st  →
-    leak' E L (xsum_ty tyl) Φ →
+  Lemma type_sum_assign_instr {E L 𝔄 𝔄' 𝔅 𝔄l} (i : nat) (ty1: type 𝔄)
+                              (ty' : type 𝔅) (tyl: typel 𝔄l) (ty2: type 𝔄') p1 p2 gt st Φ:
+    typed_write E L ty1 ty' ty2 (xsum_ty tyl) gt st  →
+    leak' E L ty' Φ →
     typed_instr E L +[p1 ◁ ty1; p2 ◁ hnthb tyl i] (p1 <-{Σ i} p2) (λ _, +[p1 ◁ ty2])
       (λ post '-[a; b], Φ (gt a) (post -[st a (pinj i b)])).
   Proof.
@@ -260,16 +260,14 @@ Proof.
     iCombine "Hdepth1 Hdepth2" as "#Hdepth".
     rewrite !(ty_own_depth_mono _ _ (depth1 `max` depth2)); [|lia..].
     iMod (Hw with "LFT UNIQ HE HL Hty1") as (l ->) "(H & Hw)".
-    iDestruct "H" as (vl) "(> H↦ & H)". iDestruct "H" as (?) "H".
-    iMod (bi.later_exist_except_0 with "H") as (?) "H".
-    iDestruct "H" as (??) "(>(% & % & H) & Leaked)".
-    destruct vl as [|? vl]; iDestruct "H" as %[= Hlen].
-    iAssert (▷ ty_own (Σ! tyl) _ _ tid _)%I with "[Leaked]" as "Leaked".
-    { iExists i0, a, vl', _. iFrame. iPureIntro. naive_solver. }
+    iDestruct "H" as (vl) "(> H↦ & Leaked)".
+    iAssert (▷ (ty_own ty' (gt ∘ phd) (depth1 `max` depth2) tid vl ∗ ⌜ length vl = ty_size ty' ⌝) )%I with "[Leaked]" as "[Leaked >%Hlen]".
+    { iNext. iDestruct (ty_size_eq with "Leaked") as %<-. by iFrame. }
+    destruct vl as [|? vl]; rewrite Eq //= in Hlen. rewrite heap_mapsto_vec_cons.
     iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH HE HL' Leaked") as "ToObs"; first set_solver.
     iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
     with "TIME Hdepth [ToObs]")=>//. { by iApply step_fupdN_with_emp. }
-    rewrite heap_mapsto_vec_cons. iDestruct "H↦" as "[H↦0 H↦vl]".
+    iDestruct "H↦" as "[H↦0 H↦vl]".
     wp_write. wp_bind p1. iApply (wp_wand with "[]"); first by iApply (wp_eval_path).
     iIntros (? ->). wp_op. wp_bind p2.
     iApply (wp_wand with "[]"); first by iApply (wp_eval_path). iIntros (? ->).
@@ -286,13 +284,13 @@ Proof.
     - iApply (proph_obs_impl with "Hproph") => π /= [impl ?]. by apply impl.
   Qed.
 
-  Lemma type_sum_assign {E L 𝔅l ℭl 𝔄 𝔄' ℭ 𝔄l}
-        (tyl : typel 𝔄l) i (ty1 : type 𝔄) (ty : type ℭ) (ty1' : type 𝔄')
+  Lemma type_sum_assign {E L 𝔅l ℭl 𝔄 𝔄' 𝔅 ℭ 𝔄l}
+        (ty' : type 𝔅) (tyl : typel 𝔄l) i (ty1 : type 𝔄) (ty : type ℭ) (ty1' : type 𝔄')
         (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl) p1 p2 e gt st tr fr Φ:
     Closed [] e → (0 ≤ i)%nat →
     tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ hnthb tyl i] T T' fr →
-    typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
-    leak' E L (xsum_ty tyl) Φ →
+    typed_write E L ty1 ty' ty1' (xsum_ty tyl) gt st →
+    leak' E L ty' Φ →
     typed_body E L C ((p1 ◁ ty1') +:: T') e tr -∗
     typed_body E L C T (p1 <-{Σ i} p2 ;; e)
       (fr ∘ (λ post '(a -:: b -:: f), Φ (gt a) (post (st a (pinj i b) -:: f))) ∘ tr).
@@ -302,20 +300,18 @@ Proof.
     done.
   Qed.
 
-  Lemma type_sum_unit_instr {E L 𝔄 𝔅 𝔄l} (i: nat) (tyl: typel 𝔄l) (ty1: type 𝔄)
-                            (ty2: type 𝔅) p gt st eq:
+  Lemma type_sum_unit_instr {E L 𝔄 𝔄' 𝔅 𝔄l} (i: nat) (ty' : type 𝔅) (tyl: typel 𝔄l) (ty1: type 𝔄)
+                            (ty2: type 𝔄') p gt st eq:
     hnthb tyl i = eq_rect _ _ unit_ty _ eq →
-    typed_write E L ty1 (xsum_ty tyl) ty2 (xsum_ty tyl) gt st →
+    typed_write E L ty1 ty' ty2 (xsum_ty tyl) gt st →
     typed_instr E L +[p ◁ ty1] (p <-{Σ i} ())
     (λ _, +[p ◁ ty2]) (λ post '-[a], post -[st a (pinj i (eq_rect unitₛ _ () _ eq))]).
   Proof.
     iIntros (Hty [Eq Hw] tid postπ [vπ []]) "#LFT #TIME #PROPH #UNIQ #HE $ HL [Hp _] Hproph".
     wp_apply (wp_hasty with "Hp"). iIntros (depth v) "%Hv Hdepth Hty".
     iMod (Hw with "LFT UNIQ HE HL Hty") as (l ->) "(H & Hw)". clear Hw.
-    iDestruct "H" as (vl) "(>H↦ & H)".
-    iDestruct "H" as (?) "H"; iMod (bi.later_exist_except_0 with "H") as (?) "H";
-      iDestruct "H" as (??) "(>(% & % & H) & _)".
-    destruct vl as [|? vl]; iDestruct "H" as %[= Hlen].
+    iDestruct "H" as (vl) "(>H↦ & H)". iMod (ty'.(ty_size_eq) with "H") as "H".
+    destruct vl as [|? vl]; iDestruct "H" as %[= Hlen]; rewrite Eq //= in Hlen.
     rewrite heap_mapsto_vec_cons -wp_fupd. iDestruct "H↦" as "[H↦0 H↦vl]".
     iApply (wp_persistent_time_receipt with "TIME Hdepth")=>//.
     wp_write. iIntros "#Hdepth". iExists -[_].
@@ -328,13 +324,13 @@ Proof.
     - by iApply (proph_obs_impl with "Hproph").
   Qed.
 
-  Lemma type_sum_unit {E L 𝔄 𝔄' ℭ 𝔄l 𝔅l ℭl} (tyl : typel 𝔄l) i (ty1 : type 𝔄)
+  Lemma type_sum_unit {E L 𝔄 𝔄' 𝔅 ℭ 𝔄l 𝔅l ℭl} (ty' : type 𝔅) (tyl : typel 𝔄l) i (ty1 : type 𝔄)
                       (ty1' : type 𝔄') (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl) p e
     gt st fr tr (eq : ()%ST = lnthe 𝔄l i):
     Closed [] e → (0 ≤ i)%nat →
     tctx_extract_elt E L (p ◁ ty1) T T' fr →
     hnthb tyl i = eq_rect _ _ unit_ty _ eq →
-    typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
+    typed_write E L ty1 ty' ty1' (xsum_ty tyl) gt st →
     typed_body E L C ((p ◁ ty1') +:: T') e tr -∗
     typed_body E L C T (p <-{Σ i} () ;; e)
       (fr ∘ (λ post '(a -:: f), post (st a (pinj i (eq_rect unitₛ _ () _ eq)) -:: f) ) ∘ tr).
@@ -345,10 +341,10 @@ Proof.
     done.
   Qed.
 
-  Lemma type_sum_memcpy_instr {E L 𝔄l 𝔄 𝔄' 𝔅 𝔅'} (i : nat) (tyl : typel 𝔄l)
+  Lemma type_sum_memcpy_instr {E L 𝔄l 𝔄 𝔄' 𝔅 𝔅' ℭ} (i : nat) (ty' : type ℭ) (tyl : typel 𝔄l)
     (ty1 : type 𝔄) (ty1' : type 𝔄') (ty2 : type 𝔅) (ty2' : type 𝔅') p1 p2 gt st rd wt Φ:
-    let ty := hnthb tyl i in leak' E L (xsum_ty tyl) Φ →
-    typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
+    let ty := hnthb tyl i in leak' E L ty' Φ →
+    typed_write E L ty1 ty' ty1' (xsum_ty tyl) gt st →
     typed_read E L ty2 ty ty2' rd wt →
     typed_instr E L +[p1 ◁ ty1; p2 ◁ ty2]
       (p1 <-{ty.(ty_size),Σ i} !p2) (λ _, +[p1 ◁ ty1'; p2 ◁ ty2'])
@@ -361,22 +357,22 @@ Proof.
     iCombine "Hdepth1 Hdepth2" as "#Hdepth".
     rewrite !(ty_own_depth_mono _ _ (depth1 `max` depth2)); [|lia..].
     iMod (Hw with "LFT UNIQ HE HL1 Hty1") as (l1 ->) "(H & Hw)".
-    iDestruct "H" as (?) "(>H↦ & H)".
-    iMod (bi.later_exist_except_0 with "H") as (i') "H";
+    iDestruct "H" as (?) "(>H↦ & Leaked)".
+    (* iMod (bi.later_exist_except_0 with "H") as (i') "H";
     iMod (bi.later_exist_except_0 with "H") as (?) "H";
-    iDestruct "H" as (??) "(>(% & % & H) & Leaked)".
-    clear Hw. destruct vl as [|? vl]; iDestruct "H" as %[= Hlen].
+    iDestruct "H" as (??) "(>(% & % & H) & Leaked)". *)
+    iAssert (▷ (ty_own ty' (gt ∘ vπ) (depth1 `max` depth2) tid vl ∗ ⌜ length vl = ty_size ty' ⌝) )%I with "[Leaked]" as "[Leaked >%Hlen]".
+    { iNext. iDestruct (ty_size_eq with "Leaked") as %<-. by iFrame. }
+    destruct vl as [|? vl]; rewrite -Hlen //= in Eq.
     rewrite heap_mapsto_vec_cons -wp_fupd. iDestruct "H↦" as "[H↦0 H↦vl1]". wp_write.
     wp_bind p1. iApply (wp_wand with "[]"); first by iApply (wp_eval_path). iIntros (? ->).
     wp_op. wp_bind p2. iApply (wp_wand with "[]"); first by iApply (wp_eval_path). iIntros (? ->).
     iMod (Hr with "LFT HE Htl HL2 Hty2") as (l2 vl2 q) "(% & H↦2 & Hty & Hr)" => //=.
-    iAssert (▷ ty_own (Σ! tyl) _ _ tid _)%I with "[Leaked]" as "Leaked".
-    { iExists i', a, vl', _. iFrame. iPureIntro. naive_solver. }
     iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH HE HL3 Leaked") as "ToObs"; first set_solver.
     iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN) with "TIME Hdepth [ToObs]")=>//.
     { by iApply step_fupdN_with_emp. }
     clear Hr. subst. assert (ty.(ty_size) ≤ length vl).
-    { rewrite Hlen. clear. generalize dependent i. elim tyl => //= > + [|i] => [_|/(_ i)]; lia. }
+    { move: Eq => [= ->]. clear. generalize dependent i. elim tyl => //= > + [|i] => [_|/(_ i)]; lia. }
     rewrite -(take_drop (ty.(ty_size)) vl) heap_mapsto_vec_app.
     iDestruct "H↦vl1" as "[H↦vl1 H↦pad]".
     iDestruct (ty_size_eq with "Hty") as "#>%Hvl2Len".
@@ -390,21 +386,21 @@ Proof.
     { iSplitL "Hty"; [eauto with iFrame|]. iExists _. iFrame.
       iApply persistent_time_receipt_mono; [|done]. lia. }
     { iApply (proph_obs_impl with "Hproph") => /= π [impl post]. apply impl. apply post. }
-    iNext. rewrite split_sum_mt /is_pad. iExists i, _.  iFrame.
+    iNext. rewrite split_sum_mt /is_pad. iExists i, _. iFrame.
     iSplitR; [done|iSplitL "H↦pad"].
     - rewrite (shift_loc_assoc_nat _ 1) take_length Nat.min_l; last lia.
       iExists _. iFrame. rewrite /= drop_length. iPureIntro. rewrite -Hvl2Len. lia.
     - iExists _. iFrame.
   Qed.
 
-  Lemma type_sum_memcpy {E L 𝔄l 𝔄 𝔄' 𝔅 𝔅' ℭ 𝔅l ℭl} (tyl : typel 𝔄l) i
+  Lemma type_sum_memcpy {E L 𝔄l 𝔄 𝔄' 𝔅 𝔅' ℭ 𝔇 𝔅l ℭl} (ty' : type ℭ) (tyl : typel 𝔄l) i
                         (ty1 : type 𝔄) (ty2 : type 𝔅) n (ty1' : type 𝔄')
-                        (ty2' : type 𝔅') (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl) p1 p2 e
+                        (ty2' : type 𝔅') (C : cctx 𝔇) (T : tctx 𝔅l) (T' : tctx ℭl) p1 p2 e
     fr tr gt st rd wt Φ:
     let ty := hnthb tyl i in
-    leak' E L (xsum_ty tyl) Φ → Closed [] e → (0 ≤ i)%nat →
+    leak' E L ty' Φ → Closed [] e → (0 ≤ i)%nat →
     tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ ty2] T T' fr →
-    typed_write E L ty1 (xsum_ty tyl) ty1' (xsum_ty tyl) gt st →
+    typed_write E L ty1 ty' ty1' (xsum_ty tyl) gt st →
     typed_read E L ty2 ty ty2' rd wt →
     Z.of_nat (ty.(ty_size)) = n →
     typed_body E L C ((p1 ◁ ty1') +:: (p2 ◁ ty2') +:: T') e tr -∗
