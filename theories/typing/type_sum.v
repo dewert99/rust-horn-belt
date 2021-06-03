@@ -18,12 +18,12 @@ Section case.
         | inl inner => ⊢ typed_body E L C
             ((p +ₗ #0 ◁ own_ptr n (uninit 1)) +:: (p +ₗ #1 ◁ own_ptr n ty) +::
               (p +ₗ #(S (ty.(ty_size))) ◁ own_ptr n (uninit (max_ty_size tyl - ty_size ty))) +:: T)
-            e (λ post '(_ -:: a -:: _ -:: tl), inner post (a -:: tl))
+            e inner
         | inr outer => ⊢ typed_body E L C ((p ◁ own_ptr n (xsum_ty tyl)) +:: T) e outer
         end) tyl el' prel →
     ⊢ typed_body E L C ((p ◁ own_ptr n (xsum_ty tyl)) +:: T) (case: !p of el)
          (λ post '(v -:: w), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
-          | inl inner => ∀ v', v = pinj i v' → inner post (v' -:: w)
+          | inl inner => ∀ v', v = pinj i v' → inner post (tt -:: v' -:: tt -:: w)
           | inr outer => (∃ v', v = pinj (D := Empty_setₛ) i v') →  outer post (v -:: w)
          end)%type.
 Proof.
@@ -80,12 +80,12 @@ Proof.
         | inl inner => ⊢ typed_body E L C
             ((p +ₗ #0 ◁ own_ptr n (uninit 1)) +:: (p +ₗ #1 ◁ own_ptr n ty) +::
               (p +ₗ #(S (ty.(ty_size))) ◁ own_ptr n (uninit (max_ty_size tyl - ty_size ty))) +:: T')
-            e (λ post '(_ -:: a -:: _ -:: tl), inner post (a -:: tl))
+            e inner
         | inr outer => ⊢ typed_body E L C ((p ◁ own_ptr n (xsum_ty tyl)) +:: T') e outer
         end) tyl el' prel →
     ⊢ typed_body E L C T (case: !p of el)
       (fr ∘ (λ post '(v -:: w), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
-        | inl inner => ∀ v', v = pinj i v' → inner post (v' -:: w)
+        | inl inner => ∀ v', v = pinj i v' → inner post (tt -:: v' -:: tt -:: w)
         | inr outer => (∃ v', v = pinj (D := Empty_setₛ) i v') → outer post (v -:: w)
         end)%type).
   Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_own'; done. Qed.
