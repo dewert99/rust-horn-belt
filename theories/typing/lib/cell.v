@@ -277,10 +277,11 @@ Section cell.
 
   Definition cell_get_uniq: val := fn: ["x"] := Skip;; return: ["x"].
 
-  (* Only the trivial invariant is allowed when we take a unique reference *)
+  (* The final invariant of [&uniq{α} (cell ty)] should be trivial,
+    because [&uniq{α} ty] does not restrict the target value *)
   Lemma cell_get_uniq_type {𝔄} (ty: type 𝔄) :
     typed_val cell_get_uniq (fn<α>(∅; &uniq{α} (cell ty)) → &uniq{α} ty)
-      (λ post '-[(Φ, Φ')], (∀b: 𝔄, Φ b) ∧ ((∀b: 𝔄, Φ' b) → ∀a a': 𝔄, post (a, a'))).
+      (λ post '-[(Φ, Φ')], ∀a a': 𝔄, Φ a → Φ' = const True → post (a, a')).
   Proof.
     eapply type_fn; [solve_typing|]=> α ??[x[]]. simpl_subst.
     iIntros (?[vπ[]]?) "LFT #TIME #PROPH #UNIQ E Na L C /=[x _] Obs".
@@ -288,22 +289,23 @@ Section cell.
     iDestruct "box" as "[(%vl & ↦ & [#? uniq]) †]". wp_bind Skip.
     iApply (wp_cumulative_time_receipt with "TIME"); [done|]. wp_seq.
     iIntros "⧗". wp_seq. case vl as [|[[]|][]]=>//.
-    iDestruct "uniq" as (??[? Eq]) "[Vo Bor]". move: Eq. set ξ := PrVar _ i=> Eq.
+    iDestruct "uniq" as (??[? Eq]) "[Vo Bor]". set ξ := PrVar _ i.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as
       "[(%&%&(%& >↦' &%&>->& Big)&_& Pc) ToBor]"; [done|].
-    iMod (bi.later_exist_except_0 with "Big") as (aπ ?) "(_& >#⧖ & ty)".
+    iMod (bi.later_exist_except_0 with "Big") as (aπ ?) "(>Obs' & >#⧖ & ty)".
+    iCombine "Obs Obs'" as "Obs".
     iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖") as "#⧖S"; [done|].
-    iMod (uniq_strip_later with "Vo Pc") as (-><-) "[Vo Pc]".
-    iMod (uniq_preresolve ξ [] (λ _ _, True) 1%Qp with "PROPH Vo Pc []")
+    iMod (uniq_strip_later with "Vo Pc") as (Eq' <-) "[Vo Pc]".
+    iMod (uniq_preresolve ξ [] (const (const True)) 1%Qp with "PROPH Vo Pc []")
       as "(Obs' &_& ToPc)"; [done..|]. iCombine "Obs' Obs" as "#?".
     iMod (uniq_intro aπ with "PROPH UNIQ") as (j) "[Vo' Pc']"; [done|].
     set ζ := PrVar _ j. have ?: Inhabited 𝔄 := populate (aπ inhabitant).
     iMod ("ToBor" with "[ToPc] [↦' ty Pc']") as "[Bor α]"; last first.
     - iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton. do 2 wp_seq.
       iApply ("C" $! [# #x] -[λ π, (_, π ζ)] with "Na L [↦ † Vo' Bor] []"); last first.
-      { iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq π)=>/=.
-        case (vπ π)=>/= ??<-[->[_ Imp]]. by apply Imp. }
+      { iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq π) (equal_f Eq' π)=>/=.
+        case (vπ π)=>/= ??<-->[->[Imp ?]]. by apply Imp. }
       iSplit; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖S †". iNext.
       iExists _. iFrame "↦". iSplit; [done|]. iExists _, _. iSplit; [done|]. iFrame.
     - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame.
