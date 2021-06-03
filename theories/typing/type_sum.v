@@ -85,8 +85,8 @@ Proof.
         end) tyl el' prel →
     ⊢ typed_body E L C T (case: !p of el)
       (fr ∘ (λ post '(v -:: w), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
-        | inl inner => ∀ v', v = pinj i v' → inner post (tt -:: v' -:: tt -:: w)
-        | inr outer => (∃ v', v = pinj (D := Empty_setₛ) i v') → outer post (v -:: w)
+        | inl inner => ∀ (v' : of_syn_type _), v = pinj i v' → inner post (tt -:: v' -:: tt -:: w)
+        | inr outer => (∃ (v' : of_syn_type _), v = pinj (D := Empty_setₛ) i v') → outer post (v -:: w)
         end)%type).
   Proof. intros. iApply typed_body_tctx_incl; [done|]. iApply type_case_own'; done. Qed.
 
@@ -285,7 +285,7 @@ Proof.
   Qed.
 
   Lemma type_sum_assign {E L 𝔅l ℭl 𝔄 𝔄' 𝔅 ℭ 𝔄l}
-        (ty' : type 𝔅) (tyl : typel 𝔄l) i (ty1 : type 𝔄) (ty : type ℭ) (ty1' : type 𝔄')
+        (ty' : type 𝔅) (tyl : typel 𝔄l) i (ty1 : type 𝔄) (ty1' : type 𝔄')
         (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl) p1 p2 e gt st tr fr Φ:
     Closed [] e → (0 ≤ i)%nat →
     tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ hnthb tyl i] T T' fr →
