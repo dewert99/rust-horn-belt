@@ -128,17 +128,17 @@ Section cell.
   (** The next couple functions essentially show owned-type equalities, as they
       are all different types for the identity function. *)
 
-  (* Constructing a cell. *)
+  (** Constructing a cell. *)
 
-  Lemma tctx_cell_new {𝔄 𝔅l} Φ (ty: type 𝔄) p (T: tctx 𝔅l) E L :
-    tctx_incl E L (p ◁ box ty +:: T) (p ◁ box (cell ty) +:: T)
+  Lemma tctx_cell_new {𝔄 𝔅l} Φ (ty: type 𝔄) n p (T: tctx 𝔅l) E L :
+    tctx_incl E L (p ◁ own_ptr n ty +:: T) (p ◁ own_ptr n (cell ty) +:: T)
       (λ post '(a -:: bl), Φ a ∧ post (Φ -:: bl)).
   Proof.
     split. { move=>/= ???[??]/=. by f_equiv. }
     iIntros (??[??]?) "_ _ _ _ $ /=[p T] ? !>". iExists (const Φ -:: _).
     iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[_?]].
-    iDestruct "p" as ([[]|][|]?) "[? box]"=>//. iExists _, _.
-    do 2 (iSplit; [done|]). iDestruct "box" as "[(%& ↦ & ty) $]". iNext.
+    iDestruct "p" as ([[]|][|]?) "[? own]"=>//. iExists _, _.
+    do 2 (iSplit; [done|]). iDestruct "own" as "[(%& ↦ & ty) $]". iNext.
     iExists _. iFrame "↦". iExists _. iSplit; [done|]. iExists _, _.
     iSplit; [by iApply proph_obs_impl; [|done]=> ?[? _]|]. iFrame.
   Qed.
@@ -155,16 +155,16 @@ Section cell.
     by move=> ?[?[]]?/=.
   Qed.
 
-  (* The other direction: getting ownership out of a cell. *)
+  (** The Other Direction: Getting Ownership out of a Cell. *)
 
-  Lemma tctx_cell_into_inner {𝔄 𝔅l} (ty: type 𝔄) p (T: tctx 𝔅l) E L :
-    tctx_incl E L (p ◁ box (cell ty) +:: T) (p ◁ box ty +:: T)
+  Lemma tctx_cell_into_inner {𝔄 𝔅l} (ty: type 𝔄) n p (T: tctx 𝔅l) E L :
+    tctx_incl E L (p ◁ own_ptr n (cell ty) +:: T) (p ◁ own_ptr n ty +:: T)
       (λ post '(Φ -:: bl), ∀a: 𝔄, Φ a → post (a -:: bl)).
   Proof.
     split. { move=>/= ?? Eq [??]/=. by do 2 (apply forall_proper=> ?). }
     iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs".
-    iDestruct "p" as ([[]|][|]?) "[? box]"=>//.
-    iDestruct "box" as "[(%& ↦ & (%&>->& Big)) †]".
+    iDestruct "p" as ([[]|][|]?) "[? own]"=>//.
+    iDestruct "own" as "[(%& ↦ & (%&>->& Big)) †]".
     iMod (bi.later_exist_except_0 with "Big") as (vπ ?) "(>Obs' &>?& ?)".
     iCombine "Obs Obs'" as "Obs". iModIntro. iExists (vπ -:: _). iFrame "T".
     iSplit; last first. { iApply proph_obs_impl; [|done]=>/= ? [Imp ?]. by apply Imp. }
@@ -184,17 +184,17 @@ Section cell.
     by move=> ?[?[]]?/=.
   Qed.
 
-  (* Conversion under [box] *)
+  (** Conversion under [box] *)
 
-  Lemma tctx_cell_from_box {𝔄 𝔅l} Φ (ty: type 𝔄) p (T: tctx 𝔅l) E L :
-    tctx_incl E L (p ◁ box (box ty) +:: T) (p ◁ box (box (cell ty)) +:: T)
+  Lemma tctx_cell_from_box {𝔄 𝔅l} Φ (ty: type 𝔄) n p (T: tctx 𝔅l) E L :
+    tctx_incl E L (p ◁ own_ptr n (box ty) +:: T) (p ◁ own_ptr n (box (cell ty)) +:: T)
       (λ post '(a -:: bl), Φ a ∧ post (Φ -:: bl)).
   Proof.
     split. { move=>/= ???[??]/=. by f_equiv. }
     iIntros (??[??]?) "_ _ _ _ $ /=[p T] ? !>". iExists (const Φ -:: _).
     iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[_?]].
-    iDestruct "p" as ([[]|][|d]?) "[? bbox]"=>//.
-    iExists _, _. do 2 (iSplit; [done|]). iDestruct "bbox" as "[(%vl & ↦ & box) $]".
+    iDestruct "p" as ([[]|][|d]?) "[? obox]"=>//.
+    iExists _, _. do 2 (iSplit; [done|]). iDestruct "obox" as "[(%vl & ↦ & box) $]".
     iNext. iExists _. iFrame "↦". case d as [|]=>//. case vl as [|[[]|][]]=>//.
     iDestruct "box" as "[(%& ↦ & ty) $]". iNext. iExists _. iFrame "↦".
     iExists _. iSplit; [done|]. iExists _, _.
@@ -239,11 +239,13 @@ Section cell.
     - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
   Qed.
 
-  (* Conversion under [&uniq{α}] *)
+  (** Conversion under [&uniq{α}] *)
 
   Definition cell_from_uniq: val := fn: ["x"] := Skip;; return: ["x"].
 
-  (* In this rule, we lose the prophecy information *)
+  (* In this rule, we lose the prophecy information of the input.
+    We need a stronger model of prophecy to know that
+    the prophetic value of the input satisfies [Φ']. *)
   Lemma cell_from_uniq_type {𝔄} (Φ: pred' 𝔄) ty :
     typed_val cell_from_uniq (fn<α>(∅; &uniq{α} ty) → &uniq{α} (cell ty))
       (λ post '-[(a, _)], Φ a ∧ ∀Φ': pred' 𝔄, post (Φ, Φ')).
@@ -315,7 +317,7 @@ Section cell.
       iFrame "⧖' ty". by iApply proph_obs_true.
   Qed.
 
-  (** Reading from a cell *)
+  (** Reading from a Cell *)
 
   Definition cell_get {𝔄} (ty: type 𝔄) : val :=
     fn: ["x"] :=
@@ -338,7 +340,8 @@ Section cell.
     by move=> ?[?[]]/=.
   Qed.
 
-  (** Writing to a cell *)
+  (** Writing to a Cell *)
+
   Definition cell_replace {𝔄} (ty: type 𝔄) : val :=
     fn: ["c"; "x"] :=
       let: "c'" := !"c" in
@@ -380,8 +383,7 @@ Section cell.
       (* Now go back to typing level. *)
       iApply (type_type
         +[c ◁ box (&shr{α} (cell ty)); #x ◁ box (↯ ty.(ty_size)); #r ◁ box ty]
-        -[_;_;_]
-      with "[] LFT TIME PROPH UNIQ E Na L C [ty' c ↦x †x ↦r †r] []").
+        -[_;_;_] with "[] LFT TIME PROPH UNIQ E Na L C [ty' c ↦x †x ↦r †r] []").
       - do 2 (iApply type_delete; [solve_extract|done|done|]).
         iApply type_jump; [solve_typing|solve_extract|solve_typing].
       - rewrite/= tctx_hasty_val right_id. iFrame "c".
