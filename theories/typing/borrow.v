@@ -33,7 +33,7 @@ Section borrow.
       iIntros "!>!>". iDestruct (proph_ctrl_eqz with "PROPH Pc") as "$".
   Qed.
 
-  Lemma type_share_instr {𝔄} E L p κ (ty : type 𝔄) :
+  Lemma type_share_instr {𝔄} p κ (ty : type 𝔄) E L :
     lctx_lft_alive E L κ →
     typed_instr E L +[p ◁ &uniq{κ}ty] Share (const +[p ◁ &shr{κ} ty])
       (λ post '-[(a, a')], a' = a -> post -[a]).
@@ -72,8 +72,8 @@ Section borrow.
       move: (equal_f Eq π)=>/=. case (vπ π)=>/= ??<-[<-Imp]. by apply Imp.
   Qed.
 
-  Lemma type_share {𝔄 𝔅l ℭl 𝔇} p e κ (ty: type 𝔄) (T: tctx 𝔅l) (T' : tctx ℭl)
-    trx tr E L (C: cctx 𝔇) :
+  Lemma type_share {𝔄 𝔅l ℭl 𝔇} p κ (ty: type 𝔄) (T: tctx 𝔅l) (T' : tctx ℭl)
+    trx tr e E L (C: cctx 𝔇) :
     Closed [] e → tctx_extract_ctx E L +[p ◁ &uniq{κ} ty] T T' trx →
     lctx_lft_alive E L κ →
     typed_body E L C (p ◁ &shr{κ} ty +:: T') e tr -∗

@@ -24,6 +24,11 @@ Section typing.
   Proof. apply leak_just. Qed.
 
   (* TODO: Prove this after the model update *)
+  Lemma uninit_unit E L :
+    eqtype E L (↯ 0) (()) (const ()) (const ()).
+  Admitted.
+
+  (* TODO: Prove this after the model update *)
   Lemma uninit_plus_prod E L m n :
     eqtype E L (↯ (m + n)) (↯ m * ↯ n) (const ((), ())) (const ()).
   Admitted.

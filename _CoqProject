@@ -101,5 +101,5 @@ theories/typing/examples/get_x.v
 theories/typing/examples/rebor.v
 theories/typing/examples/unbox.v
 theories/typing/examples/init_prod.v
-# theories/typing/examples/lazy_lft.v
+theories/typing/examples/lazy_lft.v
 # theories/typing/examples/nonlexical.v
