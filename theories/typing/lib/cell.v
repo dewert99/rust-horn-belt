@@ -317,6 +317,54 @@ Section cell.
       iFrame "⧖' ty". by iApply proph_obs_true.
   Qed.
 
+  (** Updating the Invariant *)
+
+  Lemma tctx_cell_set_inv {𝔄 𝔅l} (Φ: pred' 𝔄) ty n p (T: tctx 𝔅l) E L :
+    tctx_incl E L (p ◁ own_ptr n (cell ty) +:: T) (p ◁ own_ptr n (cell ty) +:: T)
+      (λ post '(Φ' -:: bl), (∀a: 𝔄, Φ' a → Φ a) ∧ post (Φ -:: bl)).
+  Proof.
+    eapply tctx_incl_impl.
+    - eapply tctx_incl_trans; [apply tctx_cell_into_inner|apply (tctx_cell_new Φ)].
+    - move=> ?[??][Imp ?]??. split; by [apply Imp|].
+    - move=>/= ???[??]. by f_equiv.
+  Qed.
+
+  Definition cell_set_inv: val :=
+    fn: ["x"] := let: "r" := new [ #0] in delete [ #1; "x"];; return: ["r"].
+
+  Lemma cell_set_inv_type {𝔄} (Φ: pred' 𝔄) ty :
+    typed_val cell_set_inv (fn<α>(∅; &uniq{α} (cell ty)) → ())
+      (λ post '-[(Φ', Φ'')], (∀a: 𝔄, Φ' a → Φ a) ∧ (Φ'' = Φ → post ())).
+  Proof.
+    eapply type_fn; [solve_typing|]=> α ??[x[]]. simpl_subst.
+    iIntros (?[vπ[]]?) "LFT _ PROPH UNIQ E Na L C /=[x _] Obs".
+    rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[_ box]"=>//. case x as [[|x|]|]=>//.
+    iDestruct "box" as "[(%& ↦x & [_ uniq]) †x]".
+    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (?) "[†r ↦r]". wp_seq.
+    case vl as [|[[]|][]]=>//.
+    iDestruct "uniq" as (? i [? Eq']) "[Vo Bor]". set ξ := PrVar _ i.
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (bor_acc with "LFT Bor α") as "[Big Toα]"; [done|].
+    wp_bind (delete _). iApply (wp_delete with "[$↦x †x]");
+      [done|by rewrite freeable_sz_full|].
+    iIntros "!> _". do 3 wp_seq.
+    iDestruct "Big" as (??) "((%& ↦ &(%&->&(%&%&(Obs' & #⧖ & ty))))&_& Pc)".
+    iDestruct (uniq_agree with "Vo Pc") as %[Eq <-].
+    iMod (uniq_update ξ (const Φ) with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
+    iMod (uniq_resolve _ [] 1%Qp with "PROPH Vo Pc []") as "(Obs'' & Pc &_)"; [done..|].
+    iCombine "Obs Obs'" as "Obs". iCombine "Obs'' Obs" as "#?".
+    iMod ("Toα" with "[↦ ty Pc]") as "[_ α]".
+    { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame "↦". iExists _.
+      iSplit; [done|]. iExists _, _. iFrame "⧖ ty". iApply proph_obs_impl; [|done]=>/= π.
+      move: (equal_f Eq π)=>/=. case (vπ π)=>/= ??->[_[[Imp _]?]]. by apply Imp. }
+    iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
+    iApply ("C" $! [# #_] -[const ()] with "Na L [↦r †r] []").
+    - iSplit; [|done]. rewrite tctx_hasty_val -freeable_sz_full. iExists _.
+      iFrame "⧖ †r". iNext. iExists _. iFrame "↦r". by iExists (const -[]).
+    - iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq π) (equal_f Eq' π)=>/=.
+      case (vπ π)=>/= ??->->[->[[_ Imp]_]]. by apply Imp.
+  Qed.
+
   (** Reading from a Cell *)
 
   Definition cell_get {𝔄} (ty: type 𝔄) : val :=
