@@ -196,8 +196,8 @@ Section typing.
     rewrite eval_path_of_val. by iFrame.
   Qed.
 
-  Lemma type_letpath {𝔄 𝔅l ℭl 𝔇} E L (ty: type 𝔄) (T: tctx 𝔅l) (T': tctx ℭl)
-    (C: cctx 𝔇) x p e trx tr :
+  Lemma type_letpath {𝔄 𝔅l ℭl 𝔇} (ty: type 𝔄) (T: tctx 𝔅l) (T': tctx ℭl)
+    (C: cctx 𝔇) x p e trx tr E L :
     Closed (x :b: []) e → tctx_extract_ctx E L +[p ◁ ty] T T' trx →
     (∀v: val, typed_body E L C (v ◁ ty +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := p in e) (trx ∘ tr).

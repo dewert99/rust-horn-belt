@@ -49,7 +49,7 @@ Section inc_max.
   Proof.
     eapply type_fn; [solve_typing|]=>/= _ ??[?[?[]]]. simpl_fp_E. simpl_subst.
     via_tr_impl.
-    { iApply type_newlft. iIntros (α).
+    { iApply (type_newlft []). iIntros (α).
       do 2 (iApply (type_letalloc_1 (&uniq{α} _)); [solve_extract|done|]; intro_subst).
       iApply type_val; [apply take_max_type|]. intro_subst.
       iApply type_letcall; [solve_typing|solve_extract|solve_typing|].

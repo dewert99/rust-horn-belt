@@ -98,7 +98,7 @@ theories/typing/lib/cell.v
 # theories/typing/lib/rwlock/rwlockwriteguard_code.v
 theories/typing/examples/inc_max.v
 theories/typing/examples/get_x.v
-# theories/typing/examples/rebor.v
+theories/typing/examples/rebor.v
 theories/typing/examples/unbox.v
 theories/typing/examples/init_prod.v
 # theories/typing/examples/lazy_lft.v

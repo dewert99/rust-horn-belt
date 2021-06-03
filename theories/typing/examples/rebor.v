@@ -7,31 +7,33 @@ Section rebor.
 
   Definition rebor : val :=
     fn: ["t1"; "t2"] :=
-       Newlft;;
-       letalloc: "x" <- "t1" in
-       let: "x'" := !"x" in let: "y" := "x'" +ₗ #0 in
-       "x" <- "t2";;
-       let: "y'" := !"y" in
-       letalloc: "r" <- "y'" in
-       Endlft ;; delete [ #2; "t1"] ;; delete [ #2; "t2"] ;;
-                 delete [ #1; "x"] ;; return: ["r"].
+      Newlft;;
+      letalloc: "x" <- "t1" in
+      let: "x'" := !"x" in let: "y" := "x'" +ₗ #0 in
+      "x" <- "t2";;
+      let: "y'" := !"y" in
+      letalloc: "r" <- "y'" in
+      delete [ #1; "x"];; Endlft;;
+      delete [ #2; "t1"];; delete [ #2; "t2"];; return: ["r"].
 
   Lemma rebor_type :
-    typed_val rebor (fn(∅; Π[int; int], Π[int; int]) → int).
+    typed_val rebor (fn(∅; int * int, int * int) → int)
+      (λ post '-[(z, _); _], post z).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros ([] ϝ ret p). inv_vec p=>t1 t2. simpl_subst.
-    iApply (type_newlft []). iIntros (α).
-    iApply (type_letalloc_1 (&uniq{α}(Π[int; int]))); [solve_typing..|]. iIntros (x). simpl_subst.
-    iApply type_deref; [solve_typing..|]. iIntros (x'). simpl_subst.
-    iApply (type_letpath (&uniq{α}int)); [solve_typing|]. iIntros (y). simpl_subst.
-    iApply (type_assign _ (&uniq{α}(Π[int; int]))); [solve_typing..|].
-    iApply type_deref; [solve_typing..|]. iIntros (y'). simpl_subst.
-    iApply type_letalloc_1; [solve_typing..|]. iIntros (r). simpl_subst.
-    iApply type_endlft.
-    iApply type_delete; [solve_typing..|].
-    iApply type_delete; [solve_typing..|].
-    iApply type_delete; [solve_typing..|].
-    iApply type_jump; solve_typing.
+    eapply type_fn; [solve_typing|]=> _??[?[?[]]]. simpl_subst. via_tr_impl.
+    { iApply (type_newlft []). iIntros (α).
+      iApply (type_letalloc_1 (&uniq{α} (int * int))); [solve_extract|done|].
+      intro_subst. iApply type_deref; [solve_extract|solve_typing|done|].
+      intro_subst. iApply (type_letpath (&uniq{α} int)); [solve_extract|].
+      intro_subst. iApply (type_assign _ _ _ (&uniq{α} (int * int)));
+        [solve_extract|solve_typing|solve_typing|].
+      iApply type_deref; [solve_extract|solve_typing|done|]. intro_subst.
+      iApply type_letalloc_1; [solve_extract|done|]. intro_subst.
+      iApply type_delete; [solve_extract|done|done|]. via_tr_impl.
+      { iApply type_endlft; [solve_leak_unblock|solve_typing|].
+        do 2 (iApply type_delete; [solve_extract|done|done|]).
+        iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+      move=>/= ??. exact id. }
+    by move=>/= ?[[??][?[]]]?[??]_ _ _.
   Qed.
 End rebor.
