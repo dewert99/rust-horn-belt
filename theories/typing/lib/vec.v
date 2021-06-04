@@ -3,24 +3,26 @@ From lrust.typing Require Import array_util typing.
 
 Open Scope nat.
 
-Notation "l ↦∗len n" := (l ↦∗: (λ vl, ⌜length vl = n%nat⌝))%I
+Notation "l ↦∗len n" := (∃vl, ⌜length vl = n%nat⌝ ∗ l ↦∗ vl)%I
   (at level 20, format "l  ↦∗len  n") : bi_scope.
-Notation freeable_sz' sz l := (freeable_sz sz%nat sz%nat l).
 
 Section vec.
   Context `{!typeG Σ}.
+
+  Definition freeable_sz' (sz: nat) (l: loc) : iProp Σ :=
+    †{1}l…sz ∨ ⌜Z.of_nat sz = 0⌝.
 
   Program Definition vec {𝔄} (ty: type 𝔄) : type (listₛ 𝔄) := {|
     ty_size := 3;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own alπ d tid vl :=
       [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
-        ⌜vl = [ #len; #ex; #l] ∧ alπ = vec_to_list ∘ vapply aπl⌝ ∗
+        ⌜vl = [ #len; #ex; #l] ∧ alπ = lapply aπl⌝ ∗
         ▷ ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d' tid) ∗
         (l +ₗ[ty] len) ↦∗len (ex * ty.(ty_size)) ∗
         freeable_sz' ((ex + len) * ty.(ty_size)) l;
     ty_shr alπ d κ tid l' :=
       [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
-        ⌜alπ = (λ π, vapply aπl π)⌝ ∗ &frac{κ} (λ q, l' ↦∗{q} [ #len; #ex; #l]) ∗
+        ⌜alπ = lapply aπl⌝ ∗ &frac{κ} (λ q, l' ↦∗{q} [ #len; #ex; #l]) ∗
         ▷ [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d' κ tid (l +ₗ[ty] i);
   |}%I.
   Next Obligation.
@@ -41,7 +43,7 @@ Section vec.
     iApply ty_shr_lft_mono; by [|iApply "All"].
   Qed.
   Next Obligation.
-    iIntros (???? d ? l' tid q ?) "#LFT #In Bor κ".
+    iIntros (???? d ? l' tid q ?) "#LFT In Bor κ".
     iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
     iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
     move: d=> [|d]. { by iMod (bor_persistent with "LFT Bor κ") as "[>[] _]". }
@@ -52,66 +54,30 @@ Section vec.
     iMod (bor_sep with "LFT Bor") as "[Bor _]"; [done|].
     iMod (bor_fracture (λ q', _ ↦∗{q'} _)%I with "LFT Bor↦") as "Bor↦"; [done|].
     iMod (bor_later_tok with "LFT Bor κ") as "Borκ"; [done|]. iIntros "/=!>!>!>".
-    iMod "Borκ" as "[Bor κ]". iMod (bor_big_sepL with "LFT Bor") as "Bors"; [done|].
-    iAssert (|={E}=> |={E}▷=>^d |={E}=>
-      ([∗ list] i ↦ aπ ∈ aπl, ty_shr ty aπ d κ tid (l +ₗ[ty] i)) ∗ q.[κ])%I
-      with "[κ Bors]" as "Upd"; last first.
-    { iApply (step_fupdN_wand with "Upd"). iIntros ">[?$] !>".
-      iExists _, _, _, _. iSplit; [done|]. iFrame. }
-    iInduction aπl as [|] "IH" forall (l q)=>/=.
-    { iApply step_fupdN_full_intro. by iFrame. }
-    iDestruct "κ" as "[κ κ₊]". iDestruct "Bors" as "[Bor Bors]".
-    iMod (ty_share with "LFT In Bor κ") as "Toshr"; [done|].
-    setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "κ₊ Bors") as "Toshrs".
-    iCombine "Toshr Toshrs" as "Toshrs". iApply (step_fupdN_wand with "Toshrs").
-    by iIntros "!> [>[$$] >[$$]]".
+    iMod "Borκ" as "[Bor κ]".
+    iMod (ty_share_big_sepL with "LFT In Bor κ") as "Toshrs"; [done|].
+    iApply (step_fupdN_wand with "Toshrs"). iIntros "!> >[?$] !>".
+    iExists _, _, _, _. iSplit; [done|]. iFrame.
   Qed.
   Next Obligation.
-    iIntros (????[|d] tid ?? q ?) "#LFT #In vec κ //=".
+    iIntros (????[|d] tid ?? q ?) "LFT In vec κ //=".
     iDestruct "vec" as (??? aπl[->->]) "(↦tys & ex & †)". iIntros "!>!>!>".
-    iAssert (|={E}=> |={E}▷=>^d |={E}=> ∃ξl q',
-      ⌜vec_to_list ∘ vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗ (q':+[ξl] ={E}=∗
-        ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) ∗ q.[κ]))%I
-      with "[↦tys κ]" as "To↦tys"; last first.
-    { iApply (step_fupdN_wand with "To↦tys"). iIntros ">(%&%&%& ξl & To↦tys) !>".
-      iExists _, _. iSplit; [done|]. iIntros "{$ξl}ξl".
-      iMod ("To↦tys" with "ξl") as "[?$]". iModIntro. iExists _, _, _, _. by iFrame. }
-    iInduction aπl as [|] "IH" forall (l q)=>/=.
-    { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
-      iFrame "κ". do 2 (iSplit; [done|]). by iIntros. }
-    iDestruct "κ" as "[κ κ₊]". iDestruct "↦tys" as "[(% & ↦ & ty) ↦tys]".
-    iMod (ty_own_proph with "LFT In ty κ") as "Toty"; [done|].
-    setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "↦tys κ₊") as "To↦tys".
-    iCombine "Toty To↦tys" as "Upd". iApply (step_fupdN_wand with "Upd").
-    iIntros "!> [>(%&%&%& ξl & Toty) >(%&%&%& ζl & To↦tys)] !>".
-    iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
-    iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_constr2|].
-    iIntros "ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
-    iMod ("Toty" with "ξl") as "[?$]". iMod ("To↦tys" with "ζl") as "[$$]".
-    iExists _. by iFrame.
+    iMod (ty_own_proph_mt_big_sepL_v with "LFT In ↦tys κ") as "To↦tys"; [done|].
+    iApply (step_fupdN_wand with "To↦tys"). iIntros "!> >(%&%&%& ξl & To↦tys) !>".
+    iExists _, _. iSplit.
+    { iPureIntro. rewrite lapply_vapply. by apply proph_dep_constr. }
+    iIntros "{$ξl}ξl". iMod ("To↦tys" with "ξl") as "[?$]". iModIntro.
+    iExists _, _, _, _. by iFrame.
   Qed.
   Next Obligation.
-    iIntros (????[|d] κ ? l' κ' q ?) "#LFT #In #In' vec κ' //=".
+    iIntros (????[|d] κ ? l' κ' q ?) "LFT In In' vec κ' //=".
     iDestruct "vec" as (?? l aπl ->) "[? tys]". iIntros "!>!>!>".
-    iAssert (|={E}▷=> |={E}▷=>^d |={E}=> ∃ξl q',
-      ⌜vec_to_list ∘ vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗ (q':+[ξl] ={E}=∗
-        ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i)) ∗ q.[κ']))%I
-      with "[tys κ']" as "Totys"; last first.
-    { iApply (step_fupdN_wand with "Totys"). iIntros "!> >(%&%&%& ξl & Totys)!>".
-      iExists _, _. iSplit; [done|]. iIntros "{$ξl}ξl".
-      iMod ("Totys" with "ξl") as "[?$]". iExists _, _, _, _. by iFrame. }
-    iInduction aπl as [|] "IH" forall (l q)=>/=.
-    { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
-      iFrame "κ'". do 2 (iSplit; [done|]). by iIntros. }
-    iDestruct "κ'" as "[κ' κ'₊]". iDestruct "tys" as "[ty tys]".
-    iMod (ty_shr_proph with "LFT In In' ty κ'") as "Toty"; [done|].
-    setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "tys κ'₊") as "Totys".
-    iIntros "!>!>". iCombine "Toty Totys" as "Upd". iApply (step_fupdN_wand with "Upd").
-    iIntros "[>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
-    iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
-    iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_constr2|].
-    iIntros "ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
-    iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
+    iMod (ty_shr_proph_big_sepL_v with "LFT In In' tys κ'") as "Totys"; [done|].
+    iIntros "!>!>". iApply (step_fupdN_wand with "Totys").
+    iIntros ">(%&%&%& ξl & Totys)!>". iExists _, _. iSplit.
+    { iPureIntro. rewrite lapply_vapply. by apply proph_dep_constr. }
+    iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[?$]". iModIntro.
+    iExists _, _, _, _. by iFrame.
   Qed.
 
   Global Instance vec_ne {𝔄} : NonExpansive (@vec 𝔄).

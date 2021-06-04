@@ -48,15 +48,9 @@ Section array.
     iApply (ty_shr_lft_mono with "In"). by iApply "All".
   Qed.
   Next Obligation.
-    iIntros (??????? l ? q ?) "#LFT #In Bor κ". rewrite split_array_mt.
-    iMod (bor_big_sepL with "LFT Bor") as "Bors"; [done|].
-    move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl. iInduction aπl as [|] "IH" forall (l q)=>/=.
-    { iApply step_fupdN_full_intro. by iFrame. }
-    iDestruct "κ" as "[κ κ+]". iDestruct "Bors" as "[Bor Bors]".
-    iMod (ty_share with "LFT In Bor κ") as "Toshr"; [done|].
-    setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "κ+ Bors") as "Toshrs".
-    iCombine "Toshr Toshrs" as "Toshrs". iApply (step_fupdN_wand with "Toshrs").
-    by iIntros "!> [>[$$] >[$$]]".
+    iIntros (??????? l ? q ?) "LFT In Bor κ". rewrite split_array_mt.
+    iMod (ty_share_big_sepL with "LFT In Bor κ") as "Toshrs"; [done|].
+    iApply (step_fupdN_wand with "Toshrs"). by iIntros "!> >[$$]".
   Qed.
   Next Obligation.
     iIntros (????????? q ?) "#LFT #In (%&->& tys) κ".
@@ -64,9 +58,9 @@ Section array.
     iInduction aπl as [] "IH" forall (q); inv_vec wll=>/=.
     { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
       do 2 (iSplitR; [done|]). iIntros "_!>". iFrame "κ". by iExists [#]=>/=. }
-    move=> ??. iDestruct "κ" as "[κ κ+]". iDestruct "tys" as "[ty tys]".
+    move=> ??. iDestruct "κ" as "[κ κ₊]". iDestruct "tys" as "[ty tys]".
     iMod (ty_own_proph with "LFT In ty κ") as "Toty"; [done|].
-    iMod ("IH" with "tys κ+") as "Totys". iCombine "Toty Totys" as "Totys".
+    iMod ("IH" with "tys κ₊") as "Totys". iCombine "Toty Totys" as "Totys".
     iApply (step_fupdN_wand with "Totys").
     iIntros "!>[>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
     iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
@@ -77,21 +71,12 @@ Section array.
     iExists (_ ::: wll). iSplitR; [iPureIntro=>/=; by f_equal|]. iFrame.
   Qed.
   Next Obligation.
-    iIntros (???????? l ? q ?) "#LFT #In #In' tys κ'".
+    iIntros (???????? l ? q ?) "LFT In In' tys κ'".
     rewrite -{2}[vπ]vapply_funsep. move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
-    iInduction aπl as [] "IH" forall (q l)=>/=.
-    { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
-      do 2 (iSplitR; [done|]). iIntros "_!>". iFrame. }
-    iDestruct "κ'" as "[κ' κ'+]". iDestruct "tys" as "[ty tys]".
-    iMod (ty_shr_proph with "LFT In In' ty κ'") as "Toty"; [done|].
-    setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "tys κ'+") as "Totys".
-    iCombine "Toty Totys" as "Totys". iIntros "!>!>".
-    iApply (step_fupdN_wand with "Totys").
-    iIntros "[>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
-    iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
-    iExists _, _. iSplit. { iPureIntro. by apply proph_dep_vcons. }
-    iIntros "{$ξζl}ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
-    iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
+    iMod (ty_shr_proph_big_sepL_v with "LFT In In' tys κ'") as "Totys"; [done|].
+    iIntros "!>!>". iApply (step_fupdN_wand with "Totys").
+    iIntros ">(%&%&%& ξl & Totys) !>". iExists _, _. iSplit; [done|].
+    iIntros "{$ξl}ξl". by iMod ("Totys" with "ξl") as "[$$]".
   Qed.
 
   Global Instance array_ne {𝔄} n : NonExpansive (@array 𝔄 n).
@@ -116,11 +101,11 @@ Section typing.
     move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl. iInduction aπl as [] "IH" forall (q l F HF)=>/=.
     { iModIntro. iExists 1%Qp, []. rewrite difference_empty_L heap_mapsto_vec_nil.
       iFrame "Na κ". iSplitR; [by iExists [#]=>/=|]. by iIntros. }
-    rewrite shift_loc_0. iDestruct "tys" as "[ty tys]". iDestruct "κ" as "[κ κ+]".
+    rewrite shift_loc_0. iDestruct "tys" as "[ty tys]". iDestruct "κ" as "[κ κ₊]".
     iMod (copy_shr_acc with "LFT ty Na κ") as (q' ?) "(Na & ↦ & #ty & Toκ)";
     [done| |]. { rewrite <-HF. apply shr_locsE_subseteq=>/=. lia. }
     setoid_rewrite <-shift_loc_assoc_nat.
-    iMod ("IH" with "[%] tys Na κ+") as (q'' ?) "(Na & ↦' & (%&>->& #tys) & Toκ+)".
+    iMod ("IH" with "[%] tys Na κ₊") as (q'' ?) "(Na & ↦' & (%&>->& #tys) & Toκ₊)".
     { apply subseteq_difference_r. { symmetry. apply shr_locsE_disj. }
       move: HF. rewrite -plus_assoc shr_locsE_shift. set_solver. }
     case (Qp_lower_bound q' q'')=> [q'''[?[?[->->]]]]. iExists q''', (_ ++ _).
@@ -131,7 +116,7 @@ Section typing.
     iSplitR.
     - iIntros "!>!>". iExists (_:::_)=>/=. iSplit; by [|iSplit].
     - iIntros "!> Na [↦ ↦']". iDestruct ("ToNa" with "Na") as "Na".
-      iMod ("Toκ+" with "Na [$↦' $↦r']") as "[Na $]". iApply ("Toκ" with "Na [$↦ $↦r]").
+      iMod ("Toκ₊" with "Na [$↦' $↦r']") as "[Na $]". iApply ("Toκ" with "Na [$↦ $↦r]").
   Qed.
 
   Global Instance array_send {𝔄} n (ty: type 𝔄) : Send ty → Send [ty;^ n].

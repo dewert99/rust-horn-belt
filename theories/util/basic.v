@@ -104,6 +104,8 @@ Proof.
   induction i; destruct As; simpl; intros; auto with lia.
 Qed.
 
+Definition lapply {A B} (fl: list (B → A)) (x: B) : list A := map (.$ x) fl.
+
 (** Fixpoint version of List.Forall *)
 Fixpoint lforall {A} (Φ: A → Prop) (xl: list A) : Prop :=
   match xl with [] => True | x :: xl' => Φ x ∧ lforall Φ xl' end.

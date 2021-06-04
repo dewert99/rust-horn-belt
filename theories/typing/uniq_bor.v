@@ -70,14 +70,14 @@ Section uniq_bor.
     move=> 𝔄 ??? vπ *. iIntros "#LFT #?". setoid_rewrite by_just_loc_ex at 1.
     iIntros "[In (%&->& Big)]". iDestruct "Big" as (d i [Le Eq]) "[Vo Bor]".
     set ξ := PrVar (𝔄 ↾ prval_to_inh' vπ) i. move: Le=> /succ_le [?[->Le]].
-    iIntros "[κ1 κ1']".
+    iIntros "[κ1 κ1₊]".
     iMod (lft_incl_acc with "[] κ1") as (?) "[κ1 Toκ1]"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     iMod (bor_acc with "LFT Bor κ1") as "[Big ToBor]"; [done|]. iIntros "!>!>!>".
     iDestruct "Big" as (??) "((%vl & ↦ & ty) & #⧖ & Pc)".
     iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     iDestruct (uniq_proph_tok with "Vo Pc") as "(Vo & ξ & ToPc)".
-    iMod (ty_own_proph with "LFT [] ty κ1'") as "Upd"; [done| |].
+    iMod (ty_own_proph with "LFT [] ty κ1₊") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
     iModIntro. iApply step_fupdN_nmono; [by apply Le|].
     iApply (step_fupdN_wand with "Upd"). iMod 1 as (ζl ??) "[ζl Toty]". iModIntro.
@@ -94,19 +94,19 @@ Section uniq_bor.
   Qed.
   Next Obligation.
     move=> ?????[|?]*; [by iIntros|].
-    iIntros "#LFT #In #? (%l & %ξ &%&?& #Bor & ty) [κ' κ'+] !>!>".
+    iIntros "#LFT #In #? (%l & %ξ &%&?& #Bor & ty) [κ' κ'₊] !>!>".
     iDestruct (ty_shr_proph with "LFT In [] ty κ'") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
     iModIntro. iApply (step_fupdN_wand with "Upd"). iNext.
     iMod 1 as (ζl q' ?) "[ζl Toty]".
-    iMod (lft_incl_acc with "In κ'+") as (?) "[κ1 Toκ'+]"; [done|].
+    iMod (lft_incl_acc with "In κ'₊") as (?) "[κ1 Toκ'₊]"; [done|].
     iMod (frac_bor_acc with "LFT Bor κ1") as (?) "[>ξ Toκ1]"; [done|].
     rewrite proph_tok_singleton.
     iDestruct (proph_tok_combine with "ζl [$ξ]") as (q) "[ζlξ Toζlξ]". iModIntro.
     iExists (ζl ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_pair|].
     iIntros "{$ζlξ}ζlξ". iDestruct ("Toζlξ" with "ζlξ") as "[ζl ξ]".
     iMod ("Toty" with "ζl") as "[?$]". iMod ("Toκ1" with "ξ") as "κ1".
-    iMod ("Toκ'+" with "κ1") as "$". iModIntro. iExists l, ξ. by do 3 (iSplit; [done|]).
+    iMod ("Toκ'₊" with "κ1") as "$". iModIntro. iExists l, ξ. by do 3 (iSplit; [done|]).
   Qed.
 
   Global Instance uniq_bor_ne {𝔄} κ : NonExpansive (@uniq_bor 𝔄 κ).
@@ -142,15 +142,17 @@ Section typing.
   Proof.
     move=>/= Alv ?? vπ d ? vl ?. iIntros "#LFT PROPH E L [In uniq]".
     case vl as [|[[]|][]]=>//. iDestruct "uniq" as (??[Le Eq]) "[Vo Bor]".
-    move: Le=> /succ_le[?[->Le]]. have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
-    iMod (Alv with "E L") as (?) "[[κ κ+] ToL]"; [solve_ndisj|].
-    iMod (bor_acc with "LFT Bor κ") as "[(%&%&(%& ↦ & ty)&⧖& Pc) ToBor]"; [solve_ndisj|].
-    iIntros "/= !>!>!>". iMod (ty_own_proph with "LFT In ty κ+") as "Toξl";
-    [solve_ndisj|]. iDestruct (uniq_agree with "Vo Pc") as %[<-->].
+    move: Le=> /succ_le[?[->Le]]/=.
+    have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
+    iMod (Alv with "E L") as (?) "[[κ κ₊] ToL]"; [solve_ndisj|].
+    iMod (bor_acc with "LFT Bor κ") as "[(%&%&(%& ↦ & ty)& ⧖ & Pc) ToBor]";
+      [solve_ndisj|]. iIntros "!>!>!>".
+    iMod (ty_own_proph with "LFT In ty κ₊") as "Toξl"; [solve_ndisj|].
+    iDestruct (uniq_agree with "Vo Pc") as %[<-->].
     iApply step_fupdN_nmono; [by apply Le|].
     iApply (step_fupdN_wand with "Toξl"). iIntros "!> >(%&%&%& ξl & Toty)".
     iMod (uniq_resolve with "PROPH Vo Pc ξl") as "(Obs & Pc & ξl)"; [solve_ndisj|done|].
-    iMod ("Toty" with "ξl") as "[ty κ+]". iMod ("ToBor" with "[↦ ty ⧖ Pc]") as "[_ κ]".
+    iMod ("Toty" with "ξl") as "[ty κ₊]". iMod ("ToBor" with "[↦ ty ⧖ Pc]") as "[_ κ]".
     { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. }
     iSplitL "Obs"; [|iApply "ToL"; by iFrame]. iApply proph_obs_eq; [|done]=>/= π.
     move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.

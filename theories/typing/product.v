@@ -76,23 +76,23 @@ Section product.
     iIntros "* In [??]". iSplit; by iApply (ty_shr_lft_mono with "In").
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT #? Bor [κ κ+]". rewrite split_prod_mt.
+    move=> */=. iIntros "#LFT #? Bor [κ κ₊]". rewrite split_prod_mt.
     iMod (bor_sep with "LFT Bor") as "[Bor Bor']"; first done.
     iMod (ty_share with "LFT [] Bor κ") as "ty"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iMod (ty_share with "LFT [] Bor' κ+") as "ty'"; first done.
+    iMod (ty_share with "LFT [] Bor' κ₊") as "ty'"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
     iCombine "ty ty'" as "ty2". iApply (step_fupdN_wand with "ty2").
     by iIntros "!> [>[$$] >[$$]]".
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #? (%wl & %wl' &->& ty & ty') [κ κ+]".
+    move=> *. iIntros "#LFT #? (%wl & %wl' &->& ty & ty') [κ κ₊]".
     iDestruct (ty_own_proph with "LFT [] ty κ") as ">Toty"; [done| |].
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iDestruct (ty_own_proph with "LFT [] ty' κ+") as ">Toty'"; [done| |].
+    iDestruct (ty_own_proph with "LFT [] ty' κ₊") as ">Toty'"; [done| |].
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
     iCombine "Toty Toty'" as "Toty2". iApply (step_fupdN_wand with "Toty2").
@@ -106,11 +106,11 @@ Section product.
       iModIntro. iExists wl, wl'. iSplit; [done|]. iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #In #? [ty ty'] [κ κ+]".
+    move=> *. iIntros "#LFT #In #? [ty ty'] [κ κ₊]".
     iDestruct (ty_shr_proph with "LFT In [] ty κ") as "> Toty"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iDestruct (ty_shr_proph with "LFT In [] ty' κ+") as "> Toty'"; first done.
+    iDestruct (ty_shr_proph with "LFT In [] ty' κ₊") as "> Toty'"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
     iIntros "!>!>". iCombine "Toty Toty'" as ">Toty2".
@@ -209,11 +209,11 @@ Section typing.
   Global Instance prod_copy {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) :
     Copy ty → Copy ty' → Copy (ty * ty').
   Proof.
-    move=> ??. split; [by apply _|]=>/= > ? HF. iIntros "#LFT [ty ty'] Na [κ κ+]".
+    move=> ??. split; [by apply _|]=>/= > ? HF. iIntros "#LFT [ty ty'] Na [κ κ₊]".
     iMod (copy_shr_acc with "LFT ty Na κ") as (q wl) "(Na & ↦ & #ty & Toκ)";
       first done.
     { rewrite <-HF. apply shr_locsE_subseteq=>/=. lia. }
-    iMod (copy_shr_acc with "LFT ty' Na κ+") as (q' wl') "(Na & ↦' & #ty' & Toκ+)";
+    iMod (copy_shr_acc with "LFT ty' Na κ₊") as (q' wl') "(Na & ↦' & #ty' & Toκ₊)";
       first done.
     { apply subseteq_difference_r. { symmetry. apply shr_locsE_disj. }
       move: HF. rewrite -plus_assoc shr_locsE_shift. set_solver. }
@@ -224,7 +224,7 @@ Section typing.
     iDestruct "↦" as "[$ ↦r]". iDestruct "↦'" as "[$ ↦r']". iSplitR.
     { iIntros "!>!>". iExists wl, wl'. iSplit; by [|iSplit]. }
     iIntros "!> Na [↦ ↦']". iDestruct ("ToNa" with "Na") as "Na".
-    iMod ("Toκ+" with "Na [$↦' $↦r']") as "[Na $]".
+    iMod ("Toκ₊" with "Na [$↦' $↦r']") as "[Na $]".
     iApply ("Toκ" with "Na [$↦ $↦r]").
   Qed.
 
