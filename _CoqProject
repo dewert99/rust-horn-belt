@@ -72,6 +72,7 @@ theories/typing/soundness.v
 theories/typing/lib/panic.v
 theories/typing/lib/option.v
 theories/typing/lib/list.v
+theories/typing/lib/vec.v
 # theories/typing/lib/fake_shared.v
 theories/typing/lib/cell.v
 # theories/typing/lib/spawn.v
