@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import product.
+From lrust.typing Require Import array_util product.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅 ℭ: syn_type.
@@ -10,7 +10,7 @@ Section array.
   Lemma split_array_mt {𝔄 n} (ty: type 𝔄) l q (aπl: _ n) d tid :
     (l ↦∗{q}: λ vl, ∃wll: vec _ _, ⌜vl = concat wll⌝ ∗
       [∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2)%I ⊣⊢
-    [∗ list] i ↦ aπ ∈ aπl, (l +ₗ (i * ty.(ty_size))%nat) ↦∗{q}: ty.(ty_own) aπ d tid.
+    [∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{q}: ty.(ty_own) aπ d tid.
   Proof.
     iSplit.
     - iIntros "(%& ↦s &%&->& tys)". iInduction aπl as [] "IH" forall (l);
@@ -32,8 +32,8 @@ Section array.
     ty_size := n * ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own vπ d tid vl := ∃wll: vec _ _, ⌜vl = concat wll⌝ ∗
       [∗ list] aπwl ∈ vzip (vfunsep vπ) wll, ty.(ty_own) aπwl.1 d tid aπwl.2;
-    ty_shr vπ d κ tid l := [∗ list] i ↦ aπ ∈ vfunsep vπ,
-      ty.(ty_shr) aπ d κ tid (l +ₗ (i * ty.(ty_size))%nat);
+    ty_shr vπ d κ tid l :=
+      [∗ list] i ↦ aπ ∈ vfunsep vπ, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i);
   |}%I.
   Next Obligation.
     iIntros "* (%&->& All)". setoid_rewrite ty_size_eq.
@@ -71,7 +71,7 @@ Section array.
     iIntros "!>[>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
     iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
     iExists _, _. iSplit. { iPureIntro. by apply proph_dep_vcons. }
-    iFrame "ξζl". iIntros "ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
+    iIntros "{$ξζl}ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
     iMod ("Toty" with "ξl") as "[ty $]".
     iMod ("Totys" with "ζl") as "[(%wll &%& tys) $]". iModIntro.
     iExists (_ ::: wll). iSplitR; [iPureIntro=>/=; by f_equal|]. iFrame.
@@ -90,7 +90,7 @@ Section array.
     iIntros "[>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
     iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
     iExists _, _. iSplit. { iPureIntro. by apply proph_dep_vcons. }
-    iFrame "ξζl". iIntros "ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
+    iIntros "{$ξζl}ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
     iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
   Qed.
 

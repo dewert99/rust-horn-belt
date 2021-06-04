@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import typing.
+From lrust.typing Require Import array_util typing.
 
 Open Scope nat.
 
@@ -15,14 +15,13 @@ Section vec.
     ty_own alπ d tid vl :=
       [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
         ⌜vl = [ #len; #ex; #l] ∧ alπ = vec_to_list ∘ vapply aπl⌝ ∗
-        ▷ ([∗ list] i ↦ aπ ∈ aπl,
-          (l +ₗ (i * ty.(ty_size))%nat) ↦∗: ty.(ty_own) aπ d' tid) ∗
-        (l +ₗ (len * ty.(ty_size))%nat) ↦∗len (ex * ty.(ty_size)) ∗
+        ▷ ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d' tid) ∗
+        (l +ₗ[ty] len) ↦∗len (ex * ty.(ty_size)) ∗
         freeable_sz' ((ex + len) * ty.(ty_size)) l;
     ty_shr alπ d κ tid l' :=
       [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
         ⌜alπ = (λ π, vapply aπl π)⌝ ∗ &frac{κ} (λ q, l' ↦∗{q} [ #len; #ex; #l]) ∗
-        ▷ [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d' κ tid (l +ₗ (i * ty.(ty_size))%nat);
+        ▷ [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d' κ tid (l +ₗ[ty] i);
   |}%I.
   Next Obligation.
     iIntros (???[]??) "vec //". by iDestruct "vec" as (????[-> _]) "?".
@@ -55,8 +54,8 @@ Section vec.
     iMod (bor_later_tok with "LFT Bor κ") as "Borκ"; [done|]. iIntros "/=!>!>!>".
     iMod "Borκ" as "[Bor κ]". iMod (bor_big_sepL with "LFT Bor") as "Bors"; [done|].
     iAssert (|={E}=> |={E}▷=>^d |={E}=>
-      ([∗ list] i ↦ aπ ∈ aπl, ty_shr ty aπ d κ tid (l +ₗ (i * ty.(ty_size))%nat)) ∗
-      q.[κ])%I with "[κ Bors]" as "Upd"; last first.
+      ([∗ list] i ↦ aπ ∈ aπl, ty_shr ty aπ d κ tid (l +ₗ[ty] i)) ∗ q.[κ])%I
+      with "[κ Bors]" as "Upd"; last first.
     { iApply (step_fupdN_wand with "Upd"). iIntros ">[?$] !>".
       iExists _, _, _, _. iSplit; [done|]. iFrame. }
     iInduction aπl as [|] "IH" forall (l q)=>/=.
@@ -72,8 +71,8 @@ Section vec.
     iDestruct "vec" as (??? aπl[->->]) "(↦tys & ex & †)". iIntros "!>!>!>".
     iAssert (|={E}=> |={E}▷=>^d |={E}=> ∃ξl q',
       ⌜vec_to_list ∘ vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗ (q':+[ξl] ={E}=∗
-        ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ (i * ty.(ty_size))%nat) ↦∗: ty.(ty_own) aπ d tid) ∗
-        q.[κ]))%I with "[↦tys κ]" as "To↦tys"; last first.
+        ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) ∗ q.[κ]))%I
+      with "[↦tys κ]" as "To↦tys"; last first.
     { iApply (step_fupdN_wand with "To↦tys"). iIntros ">(%&%&%& ξl & To↦tys) !>".
       iExists _, _. iSplit; [done|]. iIntros "{$ξl}ξl".
       iMod ("To↦tys" with "ξl") as "[?$]". iModIntro. iExists _, _, _, _. by iFrame. }
@@ -96,8 +95,8 @@ Section vec.
     iDestruct "vec" as (?? l aπl ->) "[? tys]". iIntros "!>!>!>".
     iAssert (|={E}▷=> |={E}▷=>^d |={E}=> ∃ξl q',
       ⌜vec_to_list ∘ vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗ (q':+[ξl] ={E}=∗
-        ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ (i * ty.(ty_size))%nat)) ∗
-        q.[κ']))%I with "[tys κ']" as "Totys"; last first.
+        ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i)) ∗ q.[κ']))%I
+      with "[tys κ']" as "Totys"; last first.
     { iApply (step_fupdN_wand with "Totys"). iIntros "!> >(%&%&%& ξl & Totys)!>".
       iExists _, _. iSplit; [done|]. iIntros "{$ξl}ξl".
       iMod ("Totys" with "ξl") as "[?$]". iExists _, _, _, _. by iFrame. }

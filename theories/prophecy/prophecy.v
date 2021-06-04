@@ -251,7 +251,7 @@ Lemma proph_tok_combine ξl ζl q q' :
     ∃q'', q'':+[ξl ++ ζl] ∗ (q'':+[ξl ++ ζl] -∗ q:+[ξl] ∗ q':+[ζl]).
 Proof.
   case (Qp_lower_bound q q')=> [q''[?[?[->->]]]]. iIntros "[ξl $][ζl $]".
-  iExists q''. iFrame "ξl ζl". iIntros "[$$]".
+  iExists q''. iIntros "{$ξl $ζl}[$$]".
 Qed.
 
 (** Initialization *)

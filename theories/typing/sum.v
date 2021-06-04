@@ -83,7 +83,7 @@ Section sum.
     iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toty]".
     iModIntro. iExists ξl, q'. iSplit.
     - iPureIntro. by apply proph_dep_constr.
-    - iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[?$]".
+    - iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[?$]".
       iModIntro. iExists i, vπ', vl', vl''. by iSplit.
   Qed.
   Next Obligation.
@@ -93,7 +93,7 @@ Section sum.
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toty]".
     iModIntro. iExists ξl, q'. iSplit.
     - iPureIntro. by apply proph_dep_constr.
-    - iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[?$]".
+    - iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[?$]".
       iModIntro. iExists i, vπ'. by do 2 (iSplit; [done|]).
   Qed.
 

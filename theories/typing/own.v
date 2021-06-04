@@ -85,7 +85,7 @@ Section own.
     iIntros "#LFT #In (%&->& [%[↦ ty]] & †) κ !>!>!>".
     iDestruct (ty_own_proph with "LFT In ty κ") as "Upd"; [done|].
     iApply (step_fupdN_wand with "Upd"). iIntros ">(%ξl & %q &%& ξl & Toty) !>".
-    iExists ξl, q. iSplit; [done|]. iFrame "ξl †". iIntros "ξl".
+    iExists ξl, q. iSplit; [done|]. iIntros "{$† $ξl}ξl".
     iMod ("Toty" with "ξl") as "[?$]". iExists vl. by iFrame.
   Qed.
   Next Obligation.
@@ -93,7 +93,7 @@ Section own.
     iDestruct (ty_shr_proph with "LFT In In' ty κ") as "> Upd"; [done|].
     iIntros "!>!>!>". iApply (step_fupdN_wand with "Upd").
     iIntros ">(%ξl & %q &%& ξl & Toty) !>". iExists ξl, q. iSplit; [done|].
-    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[? $]".
+    iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[? $]".
     iExists l. by iFrame.
   Qed.
 

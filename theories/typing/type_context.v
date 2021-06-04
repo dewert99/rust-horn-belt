@@ -495,7 +495,7 @@ Section lemmas.
   Lemma unblock_tctx_nil κ E L : unblock_tctx E L κ +[] +[].
   Proof.
     iIntros (??[]) "_ _ $ _ _". iMod persistent_time_receipt_0 as "⧖". iExists 0%nat, -[].
-    iFrame "⧖". iIntros "!>!>!>!>!>". iSplit; [done|]. by iApply proph_obs_true.
+    iIntros "{$⧖}!>!>!>!>!>". iSplit; [done|]. by iApply proph_obs_true.
   Qed.
 
   Lemma unblock_tctx_cons_unblock {𝔄 𝔄l} p (ty: type 𝔄) (T T': tctx 𝔄l) κ E L :

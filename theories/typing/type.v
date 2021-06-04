@@ -192,11 +192,11 @@ Next Obligation.
 Qed.
 Next Obligation. move=> >. apply st_own_proph. Qed.
 Next Obligation.
-  move=> *. iIntros "#LFT _ Incl [%vl[? st]]". iIntros "κ !>!>".
-  iMod (st_own_proph with "LFT Incl st κ") as "Upd"; [done|].
-  iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Tost]".
-  iModIntro. iExists ξl, q'. iSplit; [done|]. iFrame "ξl". iIntros "κ".
-  iMod ("Tost" with "κ") as "[?$]". iModIntro. iExists vl. iFrame.
+  move=> *. iIntros "#LFT _ In [%vl[? st]]". iIntros "κ !>!>".
+  iMod (st_own_proph with "LFT In st κ") as "Upd"; [done|].
+  iModIntro. iApply (step_fupdN_wand with "Upd").
+  iIntros ">(%&%&%& ξl & Tost)!>". iExists _, _. iSplit; [done|]. iIntros "{$ξl}ξl".
+  iMod ("Tost" with "ξl") as "[?$]". iModIntro. iExists _. iFrame.
 Qed.
 
 Coercion ty_of_st: simple_type >-> type.
@@ -717,7 +717,7 @@ Section traits.
     move=> *. iIntros "#LFT #[%vl[Bor st]] Na κ".
     iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [solve_ndisj|].
     iMod (frac_bor_acc with "LFT Bor κ") as (q) "[>↦ Toκ]"; [solve_ndisj|].
-    iModIntro. iExists q, vl. iFrame "↦ st". iIntros "Na".
+    iModIntro. iExists q, vl. iIntros "{$↦ $st} Na".
     iDestruct ("ToNa" with "Na") as "$". iIntros "?". by iApply "Toκ".
   Qed.
 

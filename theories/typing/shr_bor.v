@@ -25,7 +25,7 @@ Section shr_bor.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
     iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξl q ?) "[ξl Upd]".
-    iModIntro. iExists ξl, q. iSplit; [done|]. iFrame "ξl". iIntros "ξl".
+    iModIntro. iExists ξl, q. iSplit; [done|]. iIntros "{$ξl}ξl".
     by iMod ("Upd" with "ξl") as "$".
   Qed.
 

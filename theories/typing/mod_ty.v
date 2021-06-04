@@ -47,7 +47,7 @@ Section mod_ty.
     iMod (ty_own_proph with "LFT In ty κ") as "Upd"; [done|]. iModIntro.
     iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q ?) "[ξl Toty]".
     iModIntro. iExists ξl, q. iSplit; [iPureIntro; by apply (proph_dep_constr _)|].
-    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[? $]".
+    iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[? $]".
     iModIntro. iExists vπ. by iSplit.
   Qed.
   Next Obligation.
@@ -55,7 +55,7 @@ Section mod_ty.
     iMod (ty_shr_proph with "LFT In In' ty κ") as "Upd"; [done|]. iIntros "!>!>".
     iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q ?) "[ξl Toty]".
     iModIntro. iExists ξl, q. iSplit; [iPureIntro; by apply (proph_dep_constr _)|].
-    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[? $]".
+    iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[? $]".
     iModIntro. iExists vπ. by iSplit.
   Qed.
 

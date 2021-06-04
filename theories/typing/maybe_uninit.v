@@ -62,7 +62,7 @@ Section maybe_uninit.
     iMod (ty_own_proph with "LFT In ty κ") as "Upd"; [done|].
     iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%ξl & %q &%& ξl & Toty) !>".
     iExists ξl, q. iSplit; [iPureIntro; by apply proph_dep_constr|].
-    iFrame "ξl". iIntros "ξl". iMod ("Toty" with "ξl") as "[?$]".
+    iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[?$]".
     iRight. iExists vπ. by iFrame.
   Qed.
   Next Obligation.
@@ -72,7 +72,7 @@ Section maybe_uninit.
     iMod (ty_shr_proph with "LFT In In' ty κ") as "Upd"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
     iIntros ">(%ξl&%q&%& ξl & Toty) !>". iExists ξl, q.
-    iSplit; [iPureIntro; by apply proph_dep_constr|]. iFrame "ξl". iIntros "ξl".
+    iSplit; [iPureIntro; by apply proph_dep_constr|]. iIntros "{$ξl}ξl".
     iMod ("Toty" with "ξl") as "[?$]". iRight. iExists vπ. by iFrame.
   Qed.
 

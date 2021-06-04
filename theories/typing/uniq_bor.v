@@ -85,7 +85,7 @@ Section uniq_bor.
     iDestruct (proph_tok_combine with "ζl ξ") as (q) "[ζlξ Toζlξ]".
     iExists (ζl ++ [ξ]), q. iSplit.
     { iPureIntro. apply proph_dep_pair; [done|]. rewrite Eq. apply proph_dep_one. }
-    iFrame "ζlξ". iIntros "ζlξ". iDestruct ("Toζlξ" with "ζlξ") as "[ζl ξ]".
+    iIntros "{$ζlξ}ζlξ". iDestruct ("Toζlξ" with "ζlξ") as "[ζl ξ]".
     iMod ("Toty" with "ζl") as "[ty $]". iDestruct ("ToPc" with "ξ") as "Pc".
     iMod ("ToBor" with "[↦ ty Pc]") as "[Bor κ1]".
     { iModIntro. iExists (fst ∘ vπ), d. iFrame "Pc ⧖". iExists vl. iFrame. }
@@ -104,7 +104,7 @@ Section uniq_bor.
     rewrite proph_tok_singleton.
     iDestruct (proph_tok_combine with "ζl [$ξ]") as (q) "[ζlξ Toζlξ]". iModIntro.
     iExists (ζl ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_pair|].
-    iFrame "ζlξ". iIntros "ζlξ". iDestruct ("Toζlξ" with "ζlξ") as "[ζl ξ]".
+    iIntros "{$ζlξ}ζlξ". iDestruct ("Toζlξ" with "ζlξ") as "[ζl ξ]".
     iMod ("Toty" with "ζl") as "[?$]". iMod ("Toκ1" with "ξ") as "κ1".
     iMod ("Toκ'+" with "κ1") as "$". iModIntro. iExists l, ξ. by do 3 (iSplit; [done|]).
   Qed.
