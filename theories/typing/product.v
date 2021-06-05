@@ -374,14 +374,14 @@ Section typing.
     elim: tyl=> [|> Eq].
     - eapply eqtype_eq.
       + eapply eqtype_trans; [apply eqtype_symm, prod_ty_left_id|].
-        apply prod_eqtype; [|solve_typing]. apply mod_ty_outin, _.
+        apply prod_eqtype; solve_typing.
       + done.
       + done.
     - eapply eqtype_eq.
       + eapply eqtype_trans; [by apply mod_ty_outin, _|].
         eapply eqtype_trans. { eapply prod_eqtype; [solve_typing|apply Eq]. }
         eapply eqtype_trans; [by apply prod_ty_assoc|].
-        apply prod_eqtype; [apply mod_ty_inout, _|solve_typing].
+        apply prod_eqtype; solve_typing.
       + fun_ext. by case.
       + fun_ext. by case=> [[??]?].
   Qed.

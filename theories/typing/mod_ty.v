@@ -102,6 +102,10 @@ Section typing.
     ?[?[/(f_equal g) + ?]]. by rewrite semi_iso'=> ->.
   Qed.
 
+  Lemma mod_ty_leak_just {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty :
+    leak E L ty (const True) → leak E L (<{f}> ty) (const True).
+  Proof. move=> ?. apply leak_just. Qed.
+
   Lemma mod_ty_own {𝔄 𝔅} g f `{!@Iso 𝔄 𝔅 f g} ty vπ d tid vl :
     (<{f}> ty).(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) (g ∘ vπ) d tid vl.
   Proof.
@@ -163,4 +167,7 @@ Section typing.
   Proof. move=> [??]. split; by apply mod_ty_subtype. Qed.
 End typing.
 
-Global Hint Resolve mod_ty_leak mod_ty_subtype mod_ty_eqtype : lrust_typing.
+Global Hint Resolve mod_ty_in mod_ty_out mod_ty_inout mod_ty_outin
+  | 20 : lrust_typing.
+Global Hint Resolve mod_ty_leak | 5 : lrust_typing.
+Global Hint Resolve mod_ty_leak_just mod_ty_subtype mod_ty_eqtype : lrust_typing.

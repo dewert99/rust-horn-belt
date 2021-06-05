@@ -86,17 +86,17 @@ Section uninit.
   Next Obligation. by iIntros. Qed.
   Next Obligation. iIntros "* #In shr". by iApply uninit_shr_shorten. Qed.
   Next Obligation.
-    iIntros (????? l ???) "#LFT _ Bor κ !>". iApply step_fupdN_full_intro.
+    iIntros "*% #LFT _ Bor κ !>". iApply step_fupdN_full_intro.
     by iApply (bor_to_uninit_shr with "LFT Bor κ").
   Qed.
   Next Obligation.
-    iIntros (?????????) "_ _ $$ !>". iApply step_fupdN_full_intro.
+    iIntros "*% _ _ $$ !>". iApply step_fupdN_full_intro.
     iModIntro. iExists [], 1%Qp. iSplit.
     { iPureIntro. apply proph_dep_singleton. by case=> [][]. }
     iSplit; [done|]. by iIntros.
   Qed.
   Next Obligation.
-    iIntros (??????????) "_ _ _ $$ !>!>!>". iApply step_fupdN_full_intro.
+    iIntros "*% _ _ _ $$ !>!>!>". iApply step_fupdN_full_intro.
     iModIntro. iExists [], 1%Qp. iSplit.
     { iPureIntro. apply proph_dep_singleton. by case=> [][]. }
     iSplit; [done|]. by iIntros.
@@ -149,7 +149,7 @@ Section typing.
       move=> ? IH [|v vl]; [done|]=>/=[=?].
       case (IH vl); [done|]=> wl[wl' [->[??]]]. exists (v :: wl), wl'.
       split; [done|]. split; [|done]=>/=. by f_equal.
-    - iIntros (?????). rewrite -uninit_shr_add. iSplit; by iIntros.
+    - iIntros. rewrite -uninit_shr_add. iSplit; by iIntros.
   Qed.
   Lemma uninit_plus_prod_1 E L m n :
     subtype E L (↯ (m + n)) (↯ m * ↯ n) (const ((), ())).
