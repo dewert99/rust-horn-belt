@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import uninit.
+From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
@@ -22,15 +22,15 @@ Section maybe_uninit.
       iRight. iExists vπ'. by iSplit.
   Qed.
 
-  Program Definition maybe_uninit {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
-    {| ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
-       ty_own vπ d tid vl :=
-         ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
-         ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl;
-       ty_shr vπ d κ tid l :=
-         ▷ ⌜vπ = const None⌝ ∨
-         ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_shr) vπ' d κ tid l;
-    |}%I.
+  Program Definition maybe_uninit {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) := {|
+    ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_own vπ d tid vl :=
+      ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
+      ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl;
+    ty_shr vπ d κ tid l :=
+      ⌜vπ = const None⌝ ∗ uninit_shr κ l ty.(ty_size) 0 ∨
+      ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_shr) vπ' d κ tid l;
+  |}%I.
   Next Obligation. iIntros "* [[_$]|(%&_&?)]". by rewrite ty_size_eq. Qed.
   Next Obligation.
     move=> *. iIntros "[?|(%vπ &?&?)]"; [by iLeft|iRight]. iExists vπ.
@@ -41,14 +41,16 @@ Section maybe_uninit.
     iSplit; [done|]. by iApply ty_shr_depth_mono.
   Qed.
   Next Obligation.
-    move=> *. iIntros "#? [?|(%vπ &?&?)]"; [by iLeft|iRight]. iExists vπ.
-    iSplit; [done|]. by iApply ty_shr_lft_mono.
+    move=> ? ty *. iIntros "#? [[-> ?]|(%vπ &?&?)]"; [iLeft|iRight].
+    { iSplit; [done|]. by iApply uninit_shr_shorten. }
+    iExists vπ. iSplit; [done|]. by iApply ty_shr_lft_mono.
   Qed.
   Next Obligation.
     move=> *. iIntros "#LFT In Bor κ". rewrite maybe_uninit_mt.
     iMod (bor_or with "LFT Bor") as "[Bor|Bor]"; first done.
     { iApply step_fupdN_full_intro.
-      iMod (bor_sep_persistent with "LFT Bor κ") as "(>->&?&$)"; by [|iLeft]. }
+      iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].
+      iMod (bor_to_uninit_shr with "LFT Bor κ") as "[?$]"; by [|iLeft; iFrame]. }
     iMod (bor_exists_tok with "LFT Bor κ") as (vπ) "[Bor κ]"; [done|].
     iMod (bor_sep_persistent with "LFT Bor κ") as "(>->& Bor & κ)"; [done|].
     iMod (ty_share with "LFT In Bor κ") as "Upd"; [done|].
@@ -66,9 +68,9 @@ Section maybe_uninit.
     iRight. iExists vπ. by iFrame.
   Qed.
   Next Obligation.
-    move=> *. iIntros "LFT In In' [>->|(%vπ &->& ty)] κ".
+    move=> *. iIntros "LFT In In' [[-> ?]|(%vπ &->& ty)] κ".
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
-      do 2 (iSplit; [done|]). iIntros "_!>". iFrame "κ". by iLeft. }
+      do 2 (iSplit; [done|]). iIntros "_!>". iFrame "κ". iLeft. by iFrame. }
     iMod (ty_shr_proph with "LFT In In' ty κ") as "Upd"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
     iIntros ">(%ξl&%q&%& ξl & Toty) !>". iExists ξl, q.
@@ -85,10 +87,21 @@ Notation "?" := maybe_uninit : lrust_type_scope.
 Section typing.
   Context `{!typeG Σ}.
 
-  Global Instance maybe_uninit_type_ne {𝔄} : TypeNonExpansive (@maybe_uninit _ _ 𝔄).
+  Global Instance maybe_uninit_type_ne {𝔄} : TypeNonExpansive (maybe_uninit (𝔄:=𝔄)).
   Proof.
     constructor; [by apply type_lft_morphism_id_like|done| |];
-    [move=>/= > ->*|move=>/= >*]; by do 4 f_equiv.
+    move=>/= > ->*; by do 4 f_equiv.
+  Qed.
+
+  Global Instance maybe_uninit_copy {𝔄} (ty: type 𝔄) : Copy ty → Copy (? ty).
+  Proof.
+    move=> ?. split; [apply _|]=> *. iIntros "LFT [[-> shr]|(%&->& ty)] Na κ".
+    - iMod (uninit_shr_acc with "LFT shr κ") as (???) "[↦ Toκ]"; [solve_ndisj|].
+      iModIntro. iExists _, _.
+      iDestruct (na_own_acc with "Na") as "[$ ToNa]"; [set_solver+|]. iFrame "↦".
+      iSplit; [by iLeft|]. iIntros "Na". by iDestruct ("ToNa" with "Na") as "$".
+    - iMod (copy_shr_acc with "LFT ty Na κ") as (??) "($& ↦ &?& Toκ)"; [done..|].
+      iModIntro. iExists _, _. iFrame "↦ Toκ". iNext. iRight. iExists _. by iFrame.
   Qed.
 
   Global Instance maybe_uninit_send {𝔄} (ty: type 𝔄) : Send ty → Send (? ty).
@@ -115,12 +128,12 @@ Section typing.
     subtype E L ty ty' f → subtype E L (? ty) (? ty') (option_map f).
   Proof.
     move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Sub".
-    iIntros "!> E". iDestruct ("Sub" with "E") as "(%&?& #InOwn & #InShr)".
+    iIntros "!> E". iDestruct ("Sub" with "E") as "(%EqSz &?& #InOwn & #InShr)".
     do 2 (iSplit; [done|]). iSplit; iIntros "!>*/=".
     - iIntros "[[->->]|(%vπ' &->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
       iSplit; [done|]. by iApply "InOwn".
-    - iIntros "[Hvπ|(%vπ' &->&?)]".
-      + iLeft. by iDestruct "Hvπ" as ">->".
+    - iIntros "[[-> ?]|(%vπ' &->&?)]".
+      + iLeft. rewrite EqSz. by iFrame.
       + iRight. iExists (f ∘ vπ'). iSplit; [done|]. by iApply "InShr".
   Qed.
   Lemma maybe_uninit_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' E L :
@@ -131,9 +144,7 @@ Section typing.
     subtype E L (↯ ty.(ty_size)) (? ty) (const None).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_static|].
-    iSplit; iIntros "!>* /=".
-    - iIntros "(% & -> & %)". auto.
-    - iIntros "H". iLeft. iNext. by iDestruct "H" as "(% & ? & (% & -> & _))".
+    iSplit; iIntros "!>** /="; iLeft; by iSplit.
   Qed.
 
   Lemma into_maybe_uninit {𝔄} (ty: type 𝔄) E L : subtype E L ty (? ty) Some.
@@ -143,16 +154,14 @@ Section typing.
   Qed.
 
   Lemma maybe_uninit_join {𝔄} (ty: type 𝔄) E L :
-    subtype E L (? (? ty)) (? ty) (option_join _).
+    subtype E L (? (? ty)) (? ty) (option_join 𝔄).
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*/=".
-    - iIntros "[[->->]|(%&->&[[->->]|(%vπ'' &->&?)])]"; [by iLeft|by iLeft|].
+    - iIntros "[[->->]|(%&->&[[->->]|(%vπ'' &->&?)])]"; [by iLeft..|].
       iRight. iExists vπ''. by iFrame.
-    - iIntros "[Eq|(%&->&[Eq|(%vπ'' &->&?)])]".
-      + iLeft. iNext. iDestruct "Eq" as %->. done.
-      + by iLeft.
-      + iRight. iExists vπ''. by iFrame.
+    - iIntros "[[->?]|(%&->&[[->?]|(%vπ'' &->&?)])]"; [iLeft; by iFrame..|].
+      iRight. iExists vπ''. by iFrame.
   Qed.
 End typing.
 

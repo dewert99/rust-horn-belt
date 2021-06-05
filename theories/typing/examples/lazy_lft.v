@@ -22,8 +22,7 @@ Section lazy_lft.
   Proof.
     eapply type_fn; [solve_typing|]=> _??[]. simpl_subst. via_tr_impl.
     { iApply (type_newlft []). iIntros (α).
-      iApply (type_new_subtype (↯ 1 * ↯ 1));
-        [done|eapply proj1, uninit_plus_prod|]. intro_subst.
+      iApply (type_new_subtype (↯ 1 * ↯ 1)); [done|solve_typing|]. intro_subst.
       iApply type_new; [done|]. intro_subst_as f. iApply type_new; [done|].
       intro_subst_as g. iApply type_int. intro_subst.
       iApply type_assign; [solve_extract|solve_typing|solve_typing|]. via_tr_impl.
@@ -38,7 +37,7 @@ Section lazy_lft.
           iApply (type_delete (&shr{α} int * &shr{α} int)); [solve_extract|done|done|].
           via_tr_impl.
           { iApply type_endlft; [solve_leak_unblock|solve_typing|].
-            iApply (type_new_subtype ()); [done|eapply proj1, uninit_unit|].
+            iApply (type_new_subtype ()); [done|solve_typing|].
             intro_subst. do 2 (iApply type_delete; [solve_extract|done|done|]).
             iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
           move=> ??/=. exact id. }

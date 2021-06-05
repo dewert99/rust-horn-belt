@@ -110,6 +110,8 @@ Notation "-[ x ; .. ; z ]" := (x -:: .. (z -:: -[]) ..)
 
 Global Instance nil_unit_iso : Iso (const -[]) (const ()).
 Proof. split; fun_ext; by case. Qed.
+Global Instance nil_unit_iso' : Iso (const ()) (const -[]) | 10.
+Proof. split; apply _. Qed.
 
 Definition to_cons_prod {A B} : A * B → cons_prod A  B := λ '(a, al), a -:: al.
 Definition of_cons_prod {A B} : cons_prod A B → A * B := λ '(a -:: al), (a, al).

@@ -10,10 +10,10 @@ Implicit Type 𝔄 𝔅 ℭ: syn_type.
 Section product.
   Context `{!typeG Σ}.
 
-  Program Definition unit0 : type (Π![]) :=
-    {| ty_size := 0; ty_lfts := []; ty_E := [];
-       ty_own vπ d tid vl := ⌜vl = []⌝%I;
-       ty_shr vπ  d κ tid l := True%I |}.
+  Program Definition unit0 : type (Π! []) :=
+    {| ty_size := 0;  ty_lfts := [];  ty_E := [];
+       ty_own vπ d tid vl := ⌜vl = []⌝;
+       ty_shr vπ d κ tid l := True; |}%I.
   Next Obligation. iIntros (????) "-> //". Qed.
   Next Obligation. done. Qed.
   Next Obligation. done. Qed.
@@ -136,7 +136,7 @@ Section product.
   Global Instance product_ne {𝔄l} : NonExpansive (@xprod_ty 𝔄l).
   Proof. move=> ???. elim; [done|]=> */=. by do 2 f_equiv. Qed.
 
-  Definition unit_ty := (<{const (A:=()%ST) tt}> (xprod_ty +[]))%T.
+  Definition unit_ty := (<{const ((): ()%ST)}> (xprod_ty +[]))%T.
 End product.
 
 Notation "ty * ty'" := (prod_ty ty%T ty'%T) : lrust_type_scope.
@@ -145,6 +145,14 @@ Notation "()" := unit_ty : lrust_type_scope.
 
 Section typing.
   Context `{!typeG Σ}.
+
+  Lemma unit_ty_own vπ d tid vl :
+    ().(ty_own) vπ d tid vl ⊣⊢ ⌜vl = []⌝.
+  Proof. by rewrite /unit_ty mod_ty_own. Qed.
+
+  Lemma unit_ty_shr vπ d κ tid l :
+    ().(ty_shr) vπ d κ tid l ⊣⊢ True.
+  Proof. by rewrite /unit_ty mod_ty_shr. Qed.
 
   Global Instance prod_lft_morphism {𝔄 𝔅 ℭ} (T: type 𝔄 → type 𝔅) (T': type 𝔄 → type ℭ):
     TypeLftMorphism T → TypeLftMorphism T' → TypeLftMorphism (λ ty, T ty * T' ty)%T.

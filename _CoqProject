@@ -49,7 +49,6 @@ theories/typing/type_context.v
 theories/typing/cont_context.v
 theories/typing/uninit.v
 theories/typing/base_type.v
-theories/typing/maybe_uninit.v
 theories/typing/mod_ty.v
 theories/typing/own.v
 theories/typing/uniq_bor.v
@@ -73,6 +72,7 @@ theories/typing/soundness.v
 theories/typing/lib/panic.v
 theories/typing/lib/option.v
 theories/typing/lib/list.v
+theories/typing/lib/maybe_uninit.v
 theories/typing/lib/vec.v
 # theories/typing/lib/fake_shared.v
 theories/typing/lib/cell.v

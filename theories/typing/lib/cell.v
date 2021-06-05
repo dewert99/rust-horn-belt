@@ -359,7 +359,7 @@ Section cell.
     iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[const ()] with "Na L [↦r †r] []").
     - iSplit; [|done]. rewrite tctx_hasty_val -freeable_sz_full. iExists _.
-      iFrame "⧖ †r". iNext. iExists _. iFrame "↦r". by iExists (const -[]).
+      iFrame "⧖ †r". iNext. iExists _. iFrame "↦r". by rewrite unit_ty_own.
     - iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq π) (equal_f Eq' π)=>/=.
       case (vπ π)=>/= ??->->[->[[_ Imp]_]]. by apply Imp.
   Qed.
@@ -415,11 +415,10 @@ Section cell.
       iDestruct "bty" as "[(%& >↦x & ty) †x]".
       iDestruct (ty_size_eq with "ty") as "#>%".
       iDestruct "r" as ([|]) "[_ own]"; case r as [[|r|]|]=>//.
-      iDestruct "own" as "[(%& >↦r &>(%&_& %)) †r]".
+      iDestruct "own" as "[(%& >↦r & >%) †r]".
       iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
       iMod (na_bor_acc with "LFT Bor α Na") as "(Big & Na & Toα)"; [solve_ndisj..|].
-      iMod (bi.later_exist_except_0 with "Big") as
-        (??) "(>Obs' & >#⧖' &(%& >↦c & ty'))".
+      iMod (bi.later_exist_except_0 with "Big") as (??) "(>Obs' & >#⧖' &(%& >↦c & ty'))".
       iCombine "Obs Obs'" as "#Obs". iDestruct (ty_size_eq with "ty'") as "#>%".
       wp_bind (_ <-{_} !_)%E. wp_apply (wp_memcpy with "[$↦r $↦c]"); [lia..|].
       iIntros "[↦r ↦c]". wp_seq. wp_apply (wp_memcpy with "[$↦c $↦x]"); [by f_equal..|].
@@ -430,13 +429,13 @@ Section cell.
       (* Now go back to typing level. *)
       iApply (type_type
         +[c ◁ box (&shr{α} (cell ty)); #x ◁ box (↯ ty.(ty_size)); #r ◁ box ty]
-        -[_;_;_] with "[] LFT TIME PROPH UNIQ E Na L C [ty' c ↦x †x ↦r †r] []").
+        -[_; const (); _]
+        with "[] LFT TIME PROPH UNIQ E Na L C [ty' c ↦x †x ↦r †r] []").
       - do 2 (iApply type_delete; [solve_extract|done|done|]).
         iApply type_jump; [solve_typing|solve_extract|solve_typing].
       - rewrite/= tctx_hasty_val right_id. iFrame "c".
         have Eq: ∀l: loc, (#l)%E = (#l)%V by done. rewrite !Eq !tctx_hasty_val.
-        iSplitL "↦x †x"; iExists _; iFrame "⧖'"; iFrame; iNext; iExists _; iFrame.
-        iPureIntro. by exists ().
+        iSplitL "↦x †x"; iExists _; iFrame "⧖'"; iFrame; iNext; iExists _; by iFrame.
       - iApply proph_obs_impl; [|done]=>/= ?[[_ Imp]?]. by apply Imp. }
     by move=> ?[?[?[]]]/=.
   Qed.
