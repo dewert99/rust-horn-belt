@@ -13,13 +13,13 @@ Section array.
     [∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{q}: ty.(ty_own) aπ d tid.
   Proof.
     iSplit.
-    - iIntros "(%& ↦s &%&->& tys)". iInduction aπl as [] "IH" forall (l);
+    - iIntros "(%& ↦s &%&->& tys)". iInduction aπl as [|] "IH" forall (l);
       inv_vec wll; [done|]=>/= ??. iRevert "↦s tys".
       rewrite heap_mapsto_vec_app. iIntros "[↦ ↦s][ty tys]".
       iDestruct (ty_size_eq with "ty") as %->. iSplitL "↦ ty".
       { iExists _. rewrite shift_loc_0. iFrame. }
       setoid_rewrite <-shift_loc_assoc_nat. iApply ("IH" with "↦s tys").
-    - iIntros "↦owns". iInduction aπl as [] "IH" forall (l)=>/=.
+    - iIntros "↦owns". iInduction aπl as [|] "IH" forall (l)=>/=.
       { iExists []. iSplitR; by [rewrite heap_mapsto_vec_nil|iExists [#]=>/=]. }
       iDestruct "↦owns" as "[(%& ↦ & ty) ↦owns]".
       rewrite shift_loc_0. setoid_rewrite <-shift_loc_assoc_nat.
@@ -38,7 +38,7 @@ Section array.
   Next Obligation.
     iIntros "* (%&->& All)". setoid_rewrite ty_size_eq.
     move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
-    iInduction aπl as [] "IH"; inv_vec wll; [done|]=>/= ??. rewrite/= app_length.
+    iInduction aπl as [|] "IH"; inv_vec wll; [done|]=>/= ??. rewrite/= app_length.
     iDestruct "All" as "[-> All]". by iDestruct ("IH" with "All") as %->.
   Qed.
   Next Obligation. move=>/= *. do 6 f_equiv. by apply ty_own_depth_mono. Qed.
@@ -55,7 +55,7 @@ Section array.
   Next Obligation.
     iIntros (????????? q ?) "#LFT #In (%&->& tys) κ".
     rewrite -{2}[vπ]vapply_funsep. move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
-    iInduction aπl as [] "IH" forall (q); inv_vec wll=>/=.
+    iInduction aπl as [|] "IH" forall (q); inv_vec wll=>/=.
     { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
       do 2 (iSplitR; [done|]). iIntros "_!>". iFrame "κ". by iExists [#]=>/=. }
     move=> ??. iDestruct "κ" as "[κ κ₊]". iDestruct "tys" as "[ty tys]".
@@ -98,7 +98,8 @@ Section typing.
   Global Instance array_copy {𝔄} n (ty: type 𝔄) : Copy ty → Copy [ty;^ n].
   Proof.
     split; [apply _|]=>/= vπ ???? F l q ? HF. iIntros "#LFT tys Na κ".
-    move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl. iInduction aπl as [] "IH" forall (q l F HF)=>/=.
+    move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
+    iInduction aπl as [|] "IH" forall (q l F HF)=>/=.
     { iModIntro. iExists 1%Qp, []. rewrite difference_empty_L heap_mapsto_vec_nil.
       iFrame "Na κ". iSplitR; [by iExists [#]=>/=|]. by iIntros. }
     rewrite shift_loc_0. iDestruct "tys" as "[ty tys]". iDestruct "κ" as "[κ κ₊]".
@@ -116,7 +117,7 @@ Section typing.
     iSplitR.
     - iIntros "!>!>". iExists (_:::_)=>/=. iSplit; by [|iSplit].
     - iIntros "!> Na [↦ ↦']". iDestruct ("ToNa" with "Na") as "Na".
-      iMod ("Toκ₊" with "Na [$↦' $↦r']") as "[Na $]". iApply ("Toκ" with "Na [$↦ $↦r]").
+      iMod ("Toκ₊" with "Na [$↦' $↦r']") as "[Na $]". iApply ("Toκ" with "Na"). iFrame.
   Qed.
 
   Global Instance array_send {𝔄} n (ty: type 𝔄) : Send ty → Send [ty;^ n].
@@ -135,9 +136,9 @@ Section typing.
       move: {vπ}(vfunsep vπ)=> aπl. by elim aπl; [done|]=>/= ???<-. }
     iSplit; iIntros "!> %vπ %/="; rewrite Eq; move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
     - iIntros "* (%wll &->& tys)". iExists _. iSplit; [done|].
-      iInduction aπl as [] "IH"; inv_vec wll; [done|]=>/= ??.
+      iInduction aπl as [|] "IH"; inv_vec wll; [done|]=>/= ??.
       iDestruct "tys" as "[ty tys]". iSplitL "ty"; by [iApply "InOwn"|iApply "IH"].
-    - iIntros "%% %l". iInduction aπl as [] "IH" forall (l); [by iIntros|]=>/=.
+    - iIntros "%% %l". iInduction aπl as [|] "IH" forall (l); [by iIntros|]=>/=.
       iIntros "[#ty #tys]". rewrite Sz. setoid_rewrite <-shift_loc_assoc_nat.
       iSplitL "ty"; by [iApply "InShr"|iApply "IH"].
   Qed.
