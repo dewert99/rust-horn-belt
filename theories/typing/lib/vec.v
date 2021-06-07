@@ -4,14 +4,27 @@ From lrust.typing Require Import array_util typing.
 Open Scope nat.
 Implicit Type 𝔄 𝔅: syn_type.
 
-Notation "l ↦∗len n" := (∃vl, ⌜length vl = n%nat⌝ ∗ l ↦∗ vl)%I
-  (at level 20, format "l  ↦∗len  n") : bi_scope.
-
 Section vec.
   Context `{!typeG Σ}.
 
   Definition freeable_sz' (sz: nat) (l: loc) : iProp Σ :=
     †{1}l…sz ∨ ⌜Z.of_nat sz = 0⌝.
+
+  Lemma split_vec_mt {𝔄} l' q d alπ Φ :
+    (l' ↦∗{q}: (λ vl, [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
+      ⌜vl = [ #len; #ex; #l] ∧ alπ = lapply aπl⌝ ∗ Φ d' len ex l aπl))%I ⊣⊢
+    [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
+      ⌜alπ = lapply aπl⌝ ∗
+      l' ↦{q} #len ∗ (l' +ₗ 1) ↦{q} #ex ∗ (l' +ₗ 2) ↦{q} #l ∗ Φ d' len ex l aπl.
+  Proof.
+    iSplit.
+    - iIntros "(%& ↦ & big)". case d=>// ?. iDestruct "big" as (????[->->]) "Φ".
+      iExists _, _, _, _. iSplit; [done|]. iFrame "Φ".
+      rewrite !heap_mapsto_vec_cons shift_loc_assoc. iDestruct "↦" as "($&$&$&_)".
+    - iIntros "big". case d=>// ?. iDestruct "big" as (????->) "(↦ & ↦' & ↦'' & ?)".
+      iExists [_;_;_]. rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil.
+      iFrame "↦ ↦' ↦''". iExists _, _, _, _. by iFrame.
+  Qed.
 
   Program Definition vec_ty {𝔄} (ty: type 𝔄) : type (listₛ 𝔄) := {|
     ty_size := 3;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
@@ -20,10 +33,11 @@ Section vec.
         ⌜vl = [ #len; #ex; #l] ∧ alπ = lapply aπl⌝ ∗
         ▷ ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d' tid) ∗
         (l +ₗ[ty] len) ↦∗len (ex * ty.(ty_size)) ∗
-        freeable_sz' ((ex + len) * ty.(ty_size)) l;
+        freeable_sz' ((len + ex) * ty.(ty_size)) l;
     ty_shr alπ d κ tid l' :=
       [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
-        ⌜alπ = lapply aπl⌝ ∗ &frac{κ} (λ q, l' ↦∗{q} [ #len; #ex; #l]) ∗
+        ⌜alπ = lapply aπl⌝ ∗
+        &frac{κ} (λ q, l' ↦{q} #len ∗ (l' +ₗ 1) ↦{q} #ex ∗ (l' +ₗ 2) ↦{q} #l) ∗
         ▷ [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d' κ tid (l +ₗ[ty] i);
   |}%I.
   Next Obligation.
@@ -44,21 +58,21 @@ Section vec.
     iApply ty_shr_lft_mono; by [|iApply "All"].
   Qed.
   Next Obligation.
-    iIntros (???? d ? l' tid q ?) "#LFT In Bor κ".
-    iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
-    iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
-    move: d=> [|d]. { by iMod (bor_persistent with "LFT Bor κ") as "[>[] _]". }
-    do 2 (iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|]).
+    iIntros (???? d ? l' tid q ?) "#LFT In Bor κ". rewrite split_vec_mt. case d.
+    { by iMod (bor_persistent with "LFT Bor κ") as "[>[] _]". }
+    move=> ?. do 2 (iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|]).
     iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
     iMod (bor_exists_tok with "LFT Bor κ") as (aπl) "[Bor κ]"; [done|].
-    iMod (bor_sep_persistent with "LFT Bor κ") as "(>[->->] & Bor & κ)"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].
+    do 2 rewrite assoc. iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
+    rewrite -assoc. iMod (bor_fracture (λ q', _ ↦{q'} _ ∗ _ ↦{q'} _ ∗ _ ↦{q'} _)%I
+      with "LFT Bor↦") as "Bor↦"; [done|].
     iMod (bor_sep with "LFT Bor") as "[Bor _]"; [done|].
-    iMod (bor_fracture (λ q', _ ↦∗{q'} _)%I with "LFT Bor↦") as "Bor↦"; [done|].
-    iMod (bor_later_tok with "LFT Bor κ") as "Borκ"; [done|]. iIntros "/=!>!>!>".
-    iMod "Borκ" as "[Bor κ]".
+    iMod (bor_later_tok with "LFT Bor κ") as "Borκ"; [done|].
+    iIntros "/=!>!>!>". iMod "Borκ" as "[Bor κ]".
     iMod (ty_share_big_sepL with "LFT In Bor κ") as "Toshrs"; [done|].
     iApply (step_fupdN_wand with "Toshrs"). iIntros "!> >[?$] !>".
-    iExists _, _, _, _. iSplit; [done|]. iFrame.
+    iExists _, _, _, _. by iFrame.
   Qed.
   Next Obligation.
     iIntros (????[|d] tid ?? q ?) "LFT In vec κ //=".
@@ -163,6 +177,44 @@ Section vec.
     rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil.
     iFrame "↦ ↦' ↦''". iExists 0, 0, l, [#]. iSplit; [done|]. iFrame "†'".
     iSplit; [by iNext|]. iExists []. by rewrite heap_mapsto_vec_nil.
+  Qed.
+
+  Definition vec_delete {𝔄} (ty: type 𝔄) : val :=
+    fn: ["v"] :=
+      let: "len" := !"v" in let: "ex" := !("v" +ₗ #1) in let: "l" := !("v" +ₗ #2) in
+      let: "sz" := "len" + "ex" in
+      delete [ "sz" * #ty.(ty_size); "l"];; delete [ #3; "v"];;
+      let: "r" := new [ #0] in return: ["r"].
+
+  Lemma vec_delete_type {𝔄} (ty: type 𝔄) :
+    typed_val (vec_delete ty) (fn(∅; vec_ty ty) → ()) (λ post _, post ()).
+  Proof.
+    eapply type_fn; [solve_typing|]=> _ ??[v[]]. simpl_subst.
+    iIntros (?[?[]]?) "_ TIME _ _ _ Na L C [v _] Obs".
+    rewrite tctx_hasty_val. iDestruct "v" as ([|d]) "[_ bvec]"=>//.
+    case v as [[]|]=>//=. rewrite split_vec_mt.
+    case d; [by iDestruct "bvec" as "[>[] _]"|]=> ?.
+    iDestruct "bvec" as "[(%&%&%& big) †]".
+    iMod (bi.later_exist_except_0 with "big") as (?) "(>-> & >↦ & >↦' & >↦'' & big)".
+    wp_read. wp_seq. do 2 (wp_op; wp_read; wp_seq). wp_op. wp_let. wp_op.
+    rewrite leak_mt_big_sepL.
+    iDestruct "big" as "((%& %Eq & ↦len) & (%& %Eq' & ↦ex) & †')".
+    wp_bind (delete _). iApply (wp_delete _ _ _ (_ ++ _) with "[↦len ↦ex †']").
+    { rewrite app_length -Nat2Z.inj_add -Nat2Z.inj_mul Nat.mul_add_distr_r.
+      by do 2 f_equal. }
+    { rewrite heap_mapsto_vec_app /freeable_sz' app_length
+        -Nat2Z.inj_add -Nat2Z.inj_mul Nat.mul_add_distr_r Eq Eq'. iFrame. }
+    iIntros "!>_". wp_seq. wp_bind (delete _).
+    iApply (wp_delete _ _ _ [_;_;_] with "[↦ ↦' ↦'' †]"); [done| |].
+    { rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil
+        freeable_sz_full. iFrame. }
+    iIntros "!>_". wp_seq. wp_bind (new _). iApply wp_new; [done..|].
+    iIntros "!>" (?) "[† ↦]". wp_seq. iMod persistent_time_receipt_0 as "⧖".
+    wp_bind Skip. iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
+    wp_seq. iIntros "⧖". wp_seq. rewrite cctx_interp_singleton.
+    iApply ("C" $! [# #_] -[const ()] with "Na L [-Obs] Obs"). iSplit; [|done].
+    rewrite tctx_hasty_val. iExists _. iFrame "⧖". iSplit; [|done]. iNext.
+    iExists _. iFrame "↦". by rewrite unit_ty_own.
   Qed.
 End vec.
 

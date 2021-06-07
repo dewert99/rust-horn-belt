@@ -9,7 +9,7 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section cell.
   Context `{!typeG Σ}.
 
-  Lemma split_mt_cell {A} l q (Φπ: proph A) (Ψ: A → _) :
+  Lemma split_cell_mt {A} l q (Φπ: proph A) (Ψ: A → _) :
     (l ↦∗{q}: λ vl, ∃Φ, ⌜Φπ = const Φ⌝ ∗ Ψ Φ vl)%I ⊣⊢
     ∃Φ, ⌜Φπ = const Φ⌝ ∗ l ↦∗{q}: Ψ Φ.
   Proof.
@@ -35,7 +35,7 @@ Section cell.
   Qed.
   Next Obligation.
     iIntros "* % #LFT In Bor κ !>". iApply step_fupdN_full_intro.
-    rewrite split_mt_cell. iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
+    rewrite split_cell_mt. iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
     iMod (bor_sep_persistent with "LFT Bor κ") as "(>% & Bor & $)"; [done|].
     iExists _. iSplitR; [done|]. iApply bor_na; [done|].
     iApply (bor_iff with "[] Bor"). iIntros "!>!>". iSplit.
