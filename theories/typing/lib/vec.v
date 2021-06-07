@@ -154,8 +154,8 @@ Section vec.
 
   Definition vec_new: val :=
     fn: [] :=
-      let: "r" := new [ #3] in let: "l" := new [ #0] in
-      "r" <- #0;; "r" +ₗ #1 <- #0;; "r" +ₗ #2 <- "l";;
+      let: "r" := new [ #3] in
+      "r" <- #0;; "r" +ₗ #1 <- #0;; "r" +ₗ #2 <- new [ #0];;
       return: ["r"].
 
   Lemma vec_new_type {𝔄} (ty: type 𝔄) :
@@ -165,12 +165,12 @@ Section vec.
     iIntros (???) "_ #TIME _ _ _ Na L C _ Obs".
     wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (r).
     rewrite !heap_mapsto_vec_cons shift_loc_assoc. iIntros "[† (↦ & ↦' & ↦'' &_)]".
-    wp_seq. wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (l) "[†' _]".
     wp_seq. iMod persistent_time_receipt_0 as "⧖". wp_bind (_ <- _)%E.
     iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|]. wp_write.
-    iIntros "⧖". wp_seq. do 2 (wp_op; wp_write). wp_bind Skip.
-    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|]. wp_seq.
-    iIntros "⧖". wp_seq. rewrite cctx_interp_singleton.
+    iIntros "⧖". wp_seq. wp_op. wp_write. wp_op. wp_bind (new _).
+    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
+    iApply wp_new; [done..|]. iIntros "!>" (l) "[†' _] ?". wp_write.
+    do 2 wp_seq. rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[const []] with "Na L [-Obs] Obs"). iSplit; [|done].
     iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full.
     iFrame "†". iNext. iExists [_; _; _].
@@ -181,9 +181,8 @@ Section vec.
 
   Definition vec_delete {𝔄} (ty: type 𝔄) : val :=
     fn: ["v"] :=
-      let: "len" := !"v" in let: "ex" := !("v" +ₗ #1) in let: "l" := !("v" +ₗ #2) in
-      let: "sz" := "len" + "ex" in
-      delete [ "sz" * #ty.(ty_size); "l"];; delete [ #3; "v"];;
+      delete [(!"v" + !("v" +ₗ #1)) * #ty.(ty_size); !("v" +ₗ #2)];;
+      delete [ #3; "v"];;
       let: "r" := new [ #0] in return: ["r"].
 
   Lemma vec_delete_type {𝔄} (ty: type 𝔄) :
@@ -196,8 +195,7 @@ Section vec.
     case d; [by iDestruct "bvec" as "[>[] _]"|]=> ?.
     iDestruct "bvec" as "[(%&%&%& big) †]".
     iMod (bi.later_exist_except_0 with "big") as (?) "(>-> & >↦ & >↦' & >↦'' & big)".
-    wp_read. wp_seq. do 2 (wp_op; wp_read; wp_seq). wp_op. wp_let. wp_op.
-    rewrite leak_mt_big_sepL.
+    wp_read. wp_op. wp_read. do 3 wp_op. wp_read. rewrite leak_mt_big_sepL.
     iDestruct "big" as "((%& %Eq & ↦len) & (%& %Eq' & ↦ex) & †')".
     wp_bind (delete _). iApply (wp_delete _ _ _ (_ ++ _) with "[↦len ↦ex †']").
     { rewrite app_length -Nat2Z.inj_add -Nat2Z.inj_mul Nat.mul_add_distr_r.
