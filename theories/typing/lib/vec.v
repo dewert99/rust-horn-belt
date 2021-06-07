@@ -137,6 +137,33 @@ Section vec.
   Lemma vec_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' E L :
     eqtype E L ty ty' f g → eqtype E L (vec_ty ty) (vec_ty ty') (map f) (map g).
   Proof. move=> [??]. split; by apply vec_subtype. Qed.
+
+  Definition vec_new: val :=
+    fn: [] :=
+      let: "r" := new [ #3] in let: "l" := new [ #0] in
+      "r" <- #0;; "r" +ₗ #1 <- #0;; "r" +ₗ #2 <- "l";;
+      return: ["r"].
+
+  Lemma vec_new_type {𝔄} (ty: type 𝔄) :
+    typed_val vec_new (fn(∅) → vec_ty ty) (λ post _, post []).
+  Proof.
+    eapply type_fn; [solve_typing|]=> _ ???. simpl_subst.
+    iIntros (???) "_ #TIME _ _ _ Na L C _ Obs".
+    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (r).
+    rewrite !heap_mapsto_vec_cons shift_loc_assoc. iIntros "[† (↦ & ↦' & ↦'' &_)]".
+    wp_seq. wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (l) "[†' _]".
+    wp_seq. iMod persistent_time_receipt_0 as "⧖". wp_bind (_ <- _)%E.
+    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|]. wp_write.
+    iIntros "⧖". wp_seq. do 2 (wp_op; wp_write). wp_bind Skip.
+    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|]. wp_seq.
+    iIntros "⧖". wp_seq. rewrite cctx_interp_singleton.
+    iApply ("C" $! [# #_] -[const []] with "Na L [-Obs] Obs"). iSplit; [|done].
+    iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full.
+    iFrame "†". iNext. iExists [_; _; _].
+    rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil.
+    iFrame "↦ ↦' ↦''". iExists 0, 0, l, [#]. iSplit; [done|]. iFrame "†'".
+    iSplit; [by iNext|]. iExists []. by rewrite heap_mapsto_vec_nil.
+  Qed.
 End vec.
 
 Global Hint Resolve vec_leak | 5 : lrust_typing.
