@@ -12,20 +12,9 @@ Section array.
       [∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2)%I ⊣⊢
     [∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{q}: ty.(ty_own) aπ d tid.
   Proof.
-    iSplit.
-    - iIntros "(%& ↦s &%&->& tys)". iInduction aπl as [|] "IH" forall (l);
-      inv_vec wll; [done|]=>/= ??. iRevert "↦s tys".
-      rewrite heap_mapsto_vec_app. iIntros "[↦ ↦s][ty tys]".
-      iDestruct (ty_size_eq with "ty") as %->. iSplitL "↦ ty".
-      { iExists _. rewrite shift_loc_0. iFrame. }
-      setoid_rewrite <-shift_loc_assoc_nat. iApply ("IH" with "↦s tys").
-    - iIntros "↦owns". iInduction aπl as [|] "IH" forall (l)=>/=.
-      { iExists []. iSplitR; by [rewrite heap_mapsto_vec_nil|iExists [#]=>/=]. }
-      iDestruct "↦owns" as "[(%& ↦ & ty) ↦owns]".
-      rewrite shift_loc_0. setoid_rewrite <-shift_loc_assoc_nat.
-      iDestruct ("IH" with "↦owns") as (?) "(↦s &%&->& tys)". iExists (_++_).
-      rewrite heap_mapsto_vec_app. iDestruct (ty_size_eq with "ty") as %->.
-      iFrame "↦ ↦s". iExists (_:::_). iSplit; [done|]. iFrame.
+    rewrite split_big_sepL_mt_ty_own. iSplit.
+    - iIntros "(%&?&%&->&?)". iExists _. iFrame.
+    - iIntros "(%& ↦ &?)". iExists _. iFrame "↦". iExists _. by iFrame.
   Qed.
 
   Program Definition array {𝔄} n (ty: type 𝔄) : type (vecₛ 𝔄 n) := {|
@@ -44,11 +33,11 @@ Section array.
   Next Obligation. move=>/= *. do 6 f_equiv. by apply ty_own_depth_mono. Qed.
   Next Obligation. move=>/= *. do 3 f_equiv. by apply ty_shr_depth_mono. Qed.
   Next Obligation.
-    iIntros "* #In". rewrite !big_sepL_forall. iIntros "All %%%".
+    iIntros "* #In". rewrite !big_sepL_forall. iIntros "All" (???).
     iApply (ty_shr_lft_mono with "In"). by iApply "All".
   Qed.
   Next Obligation.
-    iIntros (??????? l ? q ?) "LFT In Bor κ". rewrite split_array_mt.
+    iIntros "*% LFT In Bor κ". rewrite split_array_mt.
     iMod (ty_share_big_sepL with "LFT In Bor κ") as "Toshrs"; [done|].
     iApply (step_fupdN_wand with "Toshrs"). by iIntros "!> >[$$]".
   Qed.
@@ -71,8 +60,7 @@ Section array.
     iExists (_ ::: wll). iSplitR; [iPureIntro=>/=; by f_equal|]. iFrame.
   Qed.
   Next Obligation.
-    iIntros (???????? l ? q ?) "LFT In In' tys κ'".
-    rewrite -{2}[vπ]vapply_funsep. move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
+    iIntros "*% LFT In In' tys κ'". rewrite -{2}[vπ]vapply_funsep.
     iMod (ty_shr_proph_big_sepL_v with "LFT In In' tys κ'") as "Totys"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Totys").
     iIntros ">(%&%&%& ξl & Totys) !>". iExists _, _. iSplit; [done|].
@@ -196,7 +184,7 @@ Section typing.
     leak E L ty Φ → leak E L [ty;^ n] (λ al, lforall Φ al).
   Proof.
     move=> ?. elim n. { eapply leak_impl; [apply leak_just|]=> v. by inv_vec v. }
-    move=> ? IH. eapply leak_impl.
+    move=> ??. eapply leak_impl.
     { eapply leak_subtype; [by eapply proj1, array_succ_prod|]. solve_typing. }
     move=> v. by inv_vec v.
   Qed.

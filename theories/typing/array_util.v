@@ -10,6 +10,36 @@ Notation "l ↦∗len n" := (∃vl, ⌜length vl = n%nat⌝ ∗ l ↦∗ vl)%I
 Section array_util.
   Context `{!typeG Σ}.
 
+  Lemma split_big_sepL_mt_ty_own {𝔄} (ty: type 𝔄) n (aπl: vec _ n) l d tid q :
+    ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{q}: ty.(ty_own) aπ d tid)%I ⊣⊢
+    ∃wll: vec (list val) n, l ↦∗{q} concat wll ∗
+      [∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2.
+  Proof.
+    iSplit.
+    - iIntros "↦owns". iInduction aπl as [|] "IH" forall (l)=>/=.
+      { iExists [#]. by rewrite heap_mapsto_vec_nil /=. }
+      iDestruct "↦owns" as "[(%& ↦ & ty) ↦owns]".
+      rewrite shift_loc_0. setoid_rewrite <-shift_loc_assoc_nat.
+      iDestruct ("IH" with "↦owns") as (?) "(↦s & tys)". iExists (_:::_).
+      rewrite heap_mapsto_vec_app. iDestruct (ty_size_eq with "ty") as %->.
+      iFrame.
+    - iIntros "(%& ↦s & tys)".
+      iInduction aπl as [|] "IH" forall (l); inv_vec wll; [done|]=>/= ??.
+      iRevert "↦s tys". rewrite heap_mapsto_vec_app. iIntros "[↦ ↦s][ty tys]".
+      iDestruct (ty_size_eq with "ty") as %->. iSplitL "↦ ty".
+      { iExists _. rewrite shift_loc_0. iFrame. }
+      setoid_rewrite <-shift_loc_assoc_nat. iApply ("IH" with "↦s tys").
+  Qed.
+
+  Lemma big_sepL_ty_own_length {𝔄} (ty: type 𝔄) n (aπl: vec _ n) wll d tid :
+    ([∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2) -∗
+    ⌜length (concat wll) = (n * ty.(ty_size))%nat⌝.
+  Proof.
+    induction aπl as [|??? IH]; inv_vec wll; [by iIntros|].
+    iIntros (??) "/=[ty tys]". iDestruct (ty_size_eq with "ty") as %?.
+    iDestruct (IH with "tys") as %?. iPureIntro. rewrite app_length. lia.
+  Qed.
+
   Lemma ty_share_big_sepL {𝔄} (ty: type 𝔄) E aπl d κ l tid q :
     ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty.(ty_lft) -∗
     &{κ} ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) -∗ q.[κ]
@@ -27,7 +57,7 @@ Section array_util.
     by iIntros "!> [>[$$] >[$$]]".
   Qed.
 
-  Lemma ty_own_proph_mt_big_sepL_v {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) l d tid κ q :
+  Lemma ty_own_proph_big_sepL_mt_v {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) l d tid κ q :
     ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty.(ty_lft) -∗
     ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) -∗ q.[κ]
       ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
@@ -70,8 +100,8 @@ Section array_util.
     iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
   Qed.
 
-  Lemma leak_mt_big_sepL {𝔄} (ty: type 𝔄) n (aπl: vec _ n) d tid l :
-    ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid)%I ⊢
+  Lemma leak_big_sepL_mt_ty_own {𝔄} (ty: type 𝔄) n (aπl: vec _ n) d tid l :
+    ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid)%I -∗
     l ↦∗len (n * ty.(ty_size)).
   Proof.
     iInduction aπl as [|] "IH" forall (l)=>/=.

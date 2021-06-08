@@ -51,6 +51,14 @@ Proof.
     by rewrite [vsepat _ _]surjective_pairing /= IHm -surjective_vcons.
 Qed.
 
+(** [vsnoc] *)
+
+Fixpoint vsnoc {A n} (xl: vec A n) (y: A) : vec A (S n) :=
+  match xl with [#] => [#y] | x ::: xl' => x ::: vsnoc xl' y end.
+
+Lemma vsnoc_list {A n} (xl: vec A n) y : (vsnoc xl y: list _) = xl ++ [y].
+Proof. by elim xl; [done|]=>/= ???->. Qed.
+
 (** [vapply] and [vfunsep] *)
 
 Definition vapply {A B n} (fl: vec (B → A) n) (x: B) : vec A n := vmap (.$ x) fl.

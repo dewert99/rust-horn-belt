@@ -89,6 +89,13 @@ Proof. split; fun_ext; by [case=> [?[]]|]. Qed.
 
 (** * Utility for Lists *)
 
+Lemma app_length_ex {A} (xl: list A) m n :
+  length xl = m + n → ∃yl zl, xl = yl ++ zl ∧ length yl = m ∧ length zl = n.
+Proof.
+  move=> ?. exists (take m xl), (drop m xl).
+  rewrite take_length drop_length take_drop. split; [done|lia].
+Qed.
+
 (** List.nth with better pattern matching *)
 Fixpoint lnth {A} (d: A) (xl: list A) (i: nat) : A :=
   match xl with
@@ -105,6 +112,10 @@ Proof.
 Qed.
 
 Definition lapply {A B} (fl: list (B → A)) (x: B) : list A := (.$ x) <$> fl.
+
+Lemma lapply_app {A B} (fl gl: list (B → A)) x :
+  lapply (fl ++ gl) x = lapply fl x ++ lapply gl x.
+Proof. by elim fl; [done|]=>/= ??->. Qed.
 
 (** Fixpoint version of List.Forall *)
 Fixpoint lforall {A} (Φ: A → Prop) (xl: list A) : Prop :=

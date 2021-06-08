@@ -145,10 +145,7 @@ Section typing.
     iSplit; iModIntro=>/=.
     - iIntros (??? vl). iSplit; last first.
       { iIntros ((?&?&->&?&?)) "!%". rewrite app_length. by f_equal. }
-      iIntros (Len) "!%". move: vl Len. elim m. { move=> vl ?. by exists [], vl. }
-      move=> ? IH [|v vl]; [done|]=>/=[=?].
-      case (IH vl); [done|]=> wl[wl' [->[??]]]. exists (v :: wl), wl'.
-      split; [done|]. split; [|done]=>/=. by f_equal.
+      iIntros (?) "!%". by apply app_length_ex.
     - iIntros. rewrite -uninit_shr_add. iSplit; by iIntros.
   Qed.
   Lemma uninit_plus_prod_1 E L m n :
