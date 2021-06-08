@@ -19,14 +19,14 @@ Global Instance vhd_vsingleton_iso {A} : Iso vhd (λ x: A, [#x]).
 Proof. split; [|done]. fun_ext=> v. by inv_vec v. Qed.
 
 Global Instance vhd_vtl_vcons_iso {A n} :
-  Iso (λ v: _ A (S n), (vhd v, vtl v)) (curry (λ x, vcons x)).
+  Iso (λ v: vec A (S n), (vhd v, vtl v)) (curry (λ x, vcons x)).
 Proof. split; fun_ext; [|by case]=> v. by inv_vec v. Qed.
 
 (** [vzip] *)
 
 Notation vzip := (vzip_with pair).
 
-Lemma vzip_with_app {A B C m n} (f: A → B → C) (xl: _ m) (xl': _ n) yl yl' :
+Lemma vzip_with_app {A B C m n} (f: A → B → C) (xl: vec _ m) (xl': vec _ n) yl yl' :
   vzip_with f (xl +++ xl') (yl +++ yl') = vzip_with f xl yl +++ vzip_with f xl' yl'.
 Proof. induction xl; inv_vec yl; [done|]=>/= ??. by rewrite IHxl. Qed.
 
@@ -62,20 +62,20 @@ Lemma lapply_vapply {A B n} (fl: vec (B → A) n) :
   lapply (vec_to_list fl) = vec_to_list ∘ vapply fl.
 Proof. elim fl; [done|]=>/= ??? Eq. fun_ext=>/= ?. by rewrite Eq. Qed.
 
-Lemma vapply_lookup {A B n} (fl: _ (B → A) n) (i: fin n) :
+Lemma vapply_lookup {A B n} (fl: vec (B → A) n) (i: fin n) :
   (.!!! i) ∘ vapply fl = fl !!! i.
 Proof. by induction fl; inv_fin i. Qed.
 
-Global Instance vapply_vfunsep_iso {A B n} : Iso vapply (@vfunsep A B n).
+Global Instance vapply_vfunsep_iso {A B n} : Iso (@vapply A B n) vfunsep.
 Proof.
   split; fun_ext; [by elim; [done|]=>/= ???->|]. move=> f. fun_ext=>/= x.
   induction n=>/=; [|rewrite IHn /=]; move: (f x)=> xl; by inv_vec xl.
 Qed.
 
-Lemma vapply_funsep {A B n} (f: B → _ A n) : vapply (vfunsep f) = f.
+Lemma vapply_funsep {A B n} (f: B → vec A n) : vapply (vfunsep f) = f.
 Proof. by rewrite semi_iso'. Qed.
 
-Lemma vfunsep_lookup {A B n} (f: B → _ A n) (i: fin n) :
+Lemma vfunsep_lookup {A B n} (f: B → vec A n) (i: fin n) :
   vfunsep f !!! i = (.!!! i) ∘ f.
 Proof. by rewrite -{2}[f]vapply_funsep vapply_lookup. Qed.
 

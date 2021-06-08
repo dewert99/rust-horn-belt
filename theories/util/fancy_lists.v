@@ -60,9 +60,9 @@ Fixpoint happly {Y Xl} (fl: hlist (λ X, Y → F X) Xl) (x: Y)
   : hlist F Xl :=
   match fl with +[] => +[] | f +:: fl' => f x +:: happly fl' x end.
 
-Lemma hnth_default `{EqDecision A} {D As} (d : F D) (l : hlist F As) i :
-  ∀ (H : D = lnth D As i),
-    length As <= i →
+Lemma hnth_default `{EqDecision A} {D Xl} (d : F D) (l : hlist F Xl) i :
+  ∀ (H : D = lnth D Xl i),
+    length Xl <= i →
     hnth d l i = eq_rect D _ d _ H.
 Proof.
   generalize dependent i. induction l.
@@ -241,17 +241,19 @@ Lemma list_to_hlist_length {A T Xl} (l : list A) (l' : hlist (λ _: T, A) Xl) :
   length l = length Xl.
 Proof.
   revert l'. generalize dependent Xl.
-  induction l => - [|? ?] //= ?; destruct (list_to_hlist (Xl := _) _) eqn: X; rewrite ?(IHl _ h) //.
+  induction l => - [|? ?] //= ?.
+  destruct (list_to_hlist (Xl := _) _) eqn: X; rewrite ?(IHl _ h) //.
 Qed.
 
-Lemma list_to_hlist_hnth_nth {A T Xl} (t: T) (d : A) i (l : list A) (l' : hlist (λ _: T, A) Xl) :
+Lemma list_to_hlist_hnth_nth {A T Xl} (t: T) (d : A) i
+    (l : list A) (l' : hlist (λ _: T, A) Xl) :
   list_to_hlist l = Some l' →
   hnth (D := t) d l' i = nth i l d.
 Proof.
-    generalize dependent Xl. revert i.
-    induction l => i [| ? Xl] ? //=.
-    - case: i => [|?] [= <-] //=.
-    - destruct (list_to_hlist (Xl := _) _) eqn:X, i => //= [= <-] //=. auto.
+  generalize dependent Xl. revert i.
+  induction l => i [| ? Xl] ? //=.
+  - case: i => [|?] [= <-] //=.
+  - destruct (list_to_hlist (Xl := _) _) eqn:X, i => //= [= <-] //=. auto.
 Qed.
 
 (** * Passive Heterogeneous List over Two Lists *)
@@ -361,7 +363,7 @@ Fixpoint pinj {Xl} `{!Void (F D)} i : F (lnth D Xl i) → psum Xl :=
   | X :: Xl' => match i with 0 => inl | S j => λ x, inr (pinj j x) end
   end.
 
-Lemma pinj_inj {Xl} `{!Void (F D)} i j (x: _ (_ _ Xl _)) y :
+Lemma pinj_inj {Xl} `{!Void (F D)} i j (x: F (lnth D Xl i)) y :
   pinj i x = pinj j y → i = j ∧ x ~= y.
 Proof.
   move: Xl i j x y. elim. { move=>/= ???. by apply absurd. }
@@ -486,7 +488,8 @@ Inductive HForallTwo (Φ: ∀X, F X → G X → Prop) : ∀{Xl}, hlist F Xl → 
 | HForallTwo_cons {X Xl} (x: _ X) y (xl: _ Xl) yl :
     Φ _ x y → HForallTwo Φ xl yl → HForallTwo Φ (x +:: xl) (y +:: yl).
 
-Inductive HForallThree {G H} (Φ: ∀X, F X → G X → H X → Prop) : ∀{Xl}, hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
+Inductive HForallThree {G H} (Φ: ∀X, F X → G X → H X → Prop) :
+    ∀{Xl}, hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
 | HForallThree_nil: HForallThree Φ +[] +[] +[]
 | HForallThree_cons {X Xl} (x: _ X) y z (xl: _ Xl) yl zl :
   Φ _ x y z → HForallThree Φ xl yl zl → HForallThree Φ (x +:: xl) (y +:: yl) (z +:: zl).
@@ -517,16 +520,19 @@ Proof.
   auto.
 Qed.
 
-Lemma HForallThree_nth {H} {Xl D}
-(Φ: ∀X, F X → G X → H X → Prop) (d: _ D) d' d'' (xl: _ Xl) yl zl i :
-Φ _ d d' d'' → HForallThree Φ xl yl zl → Φ _ (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
+Lemma HForallThree_nth {H} {Xl D} (Φ: ∀X, F X → G X → H X → Prop)
+    (d: _ D) d' d'' (xl: _ Xl) yl zl i :
+  Φ _ d d' d'' → HForallThree Φ xl yl zl →
+  Φ _ (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
 Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
 
-Lemma HForallThree_nth_len { H} {Xl D}
-(Φ: ∀X, F X → G X → H X → Prop) (d: _ D) d' d'' (xl: _ Xl) yl zl i :
-(i < length Xl)%nat → HForallThree Φ xl yl zl → Φ _ (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
-Proof. move=> L All. move: i L. elim All; [simpl; lia|] => > ??? [|?] //=. auto with lia. Qed.
-
+Lemma HForallThree_nth_len {H} {Xl D} (Φ: ∀X, F X → G X → H X → Prop)
+    (d: _ D) d' d'' (xl: _ Xl) yl zl i :
+  (i < length Xl)%nat → HForallThree Φ xl yl zl →
+  Φ _ (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
+Proof.
+  move=> L All. move: i L. elim All; [simpl; lia|] => > ??? [|?] //=. auto with lia.
+Qed.
 End fa.
 
 Section HForallTwo.

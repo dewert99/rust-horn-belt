@@ -337,15 +337,14 @@ Section cell.
   Proof.
     eapply type_fn; [solve_typing|]=> α ??[x[]]. simpl_subst.
     iIntros (?[vπ[]]?) "LFT _ PROPH UNIQ E Na L C /=[x _] Obs".
-    rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[_ box]"=>//. case x as [[|x|]|]=>//.
-    iDestruct "box" as "[(%& ↦x & [_ uniq]) †x]".
-    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (?) "[†r ↦r]". wp_seq.
-    case vl as [|[[]|][]]=>//.
+    rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[_ box]"=>//.
+    case x as [[|x|]|]=>//. iDestruct "box" as "[(%& ↦x & [_ uniq]) †x]".
+    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (?) "[†r ↦r]".
+    wp_seq. case vl as [|[[]|][]]=>//.
     iDestruct "uniq" as (? i [? Eq']) "[Vo Bor]". set ξ := PrVar _ i.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-    iMod (bor_acc with "LFT Bor α") as "[Big Toα]"; [done|].
-    wp_bind (delete _). iApply (wp_delete with "[$↦x †x]");
-      [done|by rewrite freeable_sz_full|].
+    iMod (bor_acc with "LFT Bor α") as "[Big Toα]"; [done|]. wp_bind (delete _).
+    rewrite freeable_sz_full. iApply (wp_delete with "[$↦x $†x]"); [done|].
     iIntros "!> _". do 3 wp_seq.
     iDestruct "Big" as (??) "((%& ↦ &(%&->&(%&%&(Obs' & #⧖ & ty))))&_& Pc)".
     iDestruct (uniq_agree with "Vo Pc") as %[Eq <-].
@@ -357,7 +356,7 @@ Section cell.
       iSplit; [done|]. iExists _, _. iFrame "⧖ ty". iApply proph_obs_impl; [|done]=>/= π.
       move: (equal_f Eq π)=>/=. case (vπ π)=>/= ??->[_[[Imp _]?]]. by apply Imp. }
     iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
-    iApply ("C" $! [# #_] -[const ()] with "Na L [↦r †r] []").
+    iApply ("C" $! [# #_] -[_] with "Na L [↦r †r] []").
     - iSplit; [|done]. rewrite tctx_hasty_val -freeable_sz_full. iExists _.
       iFrame "⧖ †r". iNext. iExists _. iFrame "↦r". by rewrite unit_ty_own.
     - iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq π) (equal_f Eq' π)=>/=.

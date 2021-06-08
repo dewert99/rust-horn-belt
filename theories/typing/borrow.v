@@ -43,9 +43,9 @@ Section borrow.
     iDestruct "Huniq" as ([[]|] [|d]) "(% & _ & [#? H]) /="; try done;
       iDestruct "H" as (? ?) "([% %Eq] & Hvo & Huniq)"; try lia.
     move: Eq. set (ξ := PrVar _ i)=> Eq.
-    iMod (bor_exists_tok with "LFT Huniq Htok1") as (vπ') "[Huniq Htok1]"; first solve_ndisj.
-    iMod (bor_exists_tok with "LFT Huniq Htok1") as (d'') "[Huniq Htok1]"; first solve_ndisj.
-    iMod (bor_acc with "LFT Huniq Htok1") as "[(Hown & > #Hd'' & Hpc) Hclose']"; first solve_ndisj.
+    iMod (bor_exists_tok with "LFT Huniq Htok1") as (vπ') "[Huniq Htok1]"; [done|].
+    iMod (bor_exists_tok with "LFT Huniq Htok1") as (d'') "[Huniq Htok1]"; [done|].
+    iMod (bor_acc with "LFT Huniq Htok1") as "[(Hown & > #Hd'' & Hpc) Hclose']"; [done|].
     iDestruct "Hown" as (?) "[H↦ Hown]".
     iDestruct (ty.(ty_own_proph) with "LFT [$] Hown [$Htok2]") as "H"; first solve_ndisj.
     wp_bind Skip.
@@ -85,11 +85,13 @@ Section borrow.
     destruct Extr as [Htrx _]=>??. apply Htrx. by case.
   Qed.
 
-  Lemma tctx_extract_hasty_borrow {𝔄 𝔅 As} E L p n (ty : type 𝔄) (ty' : type 𝔅) κ (T : tctx As) f:
+  Lemma tctx_extract_hasty_borrow {𝔄 𝔅 ℭl} E L p n
+      (ty : type 𝔄) (ty' : type 𝔅) κ (T : tctx ℭl) f:
     subtype E L ty' ty f →
     elctx_sat E L (ty_outlives_E ty κ) →
-    tctx_extract_elt E L (p ◁ &uniq{κ}ty) ((p ◁ own_ptr n ty')+::T)
-                       ((p ◁{κ} own_ptr n ty)+::T) (λ post '(b -:: bs), ∀ (b' : 𝔄), post ((f b, b') -:: b' -:: bs)).
+    tctx_extract_elt E L (p ◁ &uniq{κ}ty) (p ◁ own_ptr n ty' +:: T)
+      (p ◁{κ} own_ptr n ty +:: T)
+      (λ post '(b -:: bs), ∀b': 𝔄, post ((f b, b') -:: b' -:: bs)).
   Proof.
     intros. eapply tctx_incl_impl.
     - eapply tctx_incl_trans; [by eapply subtype_tctx_incl, own_subtype|].
@@ -180,20 +182,17 @@ Section borrow.
     destruct Extr as [Htrx _]=>??. apply Htrx. by case.
   Qed.
 
-  Definition tr_unnest {𝔄} (post : pred' (𝔄 * 𝔄)%ST)
-                            (vs : Π!%ST[((𝔄 * 𝔄) * (𝔄 * 𝔄))%ST]) : Prop :=
-    let '-[(v, v')] := vs in v.2 = v'.2 → post (v.1, v'.1).
-
   Lemma type_deref_uniq_uniq_instr {𝔄 E L} κ κ' p (ty : type 𝔄) :
     lctx_lft_alive E L κ →
-    typed_instr_ty E L +[p ◁ &uniq{κ}(&uniq{κ'}ty)] (!p) (&uniq{κ} ty) tr_unnest.
+    typed_instr_ty E L +[p ◁ &uniq{κ}(&uniq{κ'}ty)] (!p) (&uniq{κ} ty)
+      (λ post '-[((v, w), (v', w'))], w' = w → post (v, v')).
   Proof.
     iIntros (Hκ tid ? [vπ []]) "/= #LFT #TIME #PROPH #UNIQ #HE $ HL [Hp _] Hproph".
     iMod (Hκ with "HE HL") as (q) "[Htok Hclose]"; first solve_ndisj.
     wp_apply (wp_hasty with "Hp").
     iIntros ([[]|] [|depth1]) "% #Hdepth1 [#Hκκ' H] //=";
       iDestruct "H" as (d' ξi) "([% %vπEqξ] & ξVo & Huniq)"; first lia.
-    set ξ := PrVar _ ξi.
+    move: vπEqξ. set ξ := PrVar _ ξi=> vπEqξ.
     iAssert (κ ⊑ foldr meet static (ty_lfts ty))%I as "Hκ".
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_r. }
     iMod (bor_acc_cons with "LFT Huniq Htok") as "[H Hclose']"; [done|].
@@ -213,7 +212,8 @@ Section borrow.
       iDestruct "VoPc" as (??) "(>ωVo & ? & >#?)".
       iExists _,(S d'). iFrame "#∗".
       iExists [ #l' ]. rewrite heap_mapsto_vec_singleton. iFrame "H↦".
-      iExists d', ωi. rewrite (proof_irrel (prval_to_inh' (λ π, (vπ' π, π ω))) (prval_to_inh' (fst ∘ vπ))).
+      iExists d', ωi.
+      rewrite (proof_irrel (prval_to_inh' (λ π, (vπ' π, π ω))) (prval_to_inh' (fst ∘ vπ))).
       by iFrame. }
     { iExists l0. rewrite heap_mapsto_vec_singleton. iFrame.
       iExists _, _. iFrame. iApply (persistent_time_receipt_mono); [|done]. lia. }
@@ -242,7 +242,8 @@ Section borrow.
     set (ζ := PrVar _ ζi).
     iDestruct (uniq_proph_tok with "ζVo ζPc") as "(ζVo & ζ & ToζPc)".
     iDestruct (uniq_proph_tok with "ωVo ωPc") as "(ωVo & ω & ToωPc)".
-    iMod (uniq_preresolve ξ [ζ; ω] (λ π, (π ζ, π ω)) with "PROPH ξVo ξPc [$ζ $ω]") as "(Hobs & (ζ & ω &_) & Heqz)"; [done| |done|].
+    iMod (uniq_preresolve ξ [ζ; ω] (λ π, (π ζ, π ω)) with "PROPH ξVo ξPc [$ζ $ω]")
+      as "(Hobs & (ζ & ω &_) & Heqz)"; [done| |done|].
     { apply (proph_dep_pair [_] [_]); apply proph_dep_one. }
     iDestruct ("ToζPc" with "ζ") as "ζPc".
     iDestruct ("ToωPc" with "ω") as "ωPc".
@@ -265,9 +266,9 @@ Section borrow.
     iSplitR "Hproph Hobs".
     - iExists _, _. iFrame "#". iSplitR; [done|].
       iExists _, ζi. by iFrame.
-    - iCombine "Hproph Hobs" as "?". iApply proph_obs_impl; [|done].
-      move => π. move: (equal_f vπEqξ π) (equal_f ωEq π) => /=.
-      destruct (vπ π) as [v v'] => /= -> ? /= [+ b]; rewrite b => /= ?; auto.
+    - iCombine "Hproph Hobs" as "?". iApply proph_obs_impl; [|done]=>/= π.
+      move: (equal_f vπEqξ π) (equal_f ωEq π)=>/=. case (vπ π)=> [[??][??]]/=.
+      case (π ξ)=> ??[=<-<-<-][Imp[=<-?]]. by apply Imp.
   Qed.
 
   Lemma type_deref_uniq_uniq {𝔄 𝔅l ℭl 𝔇} κ κ' x p e (ty: type 𝔄)
@@ -276,9 +277,8 @@ Section borrow.
     tctx_extract_elt E L (p ◁ &uniq{κ} (&uniq{κ'} ty)) T T' trx →
     lctx_lft_alive E L κ → lctx_lft_incl E L κ κ' →
     (∀v: val, typed_body E L C (v ◁ &uniq{κ} ty +:: T') (subst' x v e) tr) -∗
-    typed_body E L C T (let: x := !p in e)
-      (trx ∘ (λ post '(v -:: bl),
-                tr_unnest (λ v', tr post (v' -:: bl)) -[v])).
+    typed_body E L C T (let: x := !p in e) (trx ∘
+      (λ post '(((v, w), (v', w')) -:: cl), w' = w → tr post ((v, v') -:: cl)))%type.
   Proof.
     iIntros. by iApply type_let; [by eapply type_deref_uniq_uniq_instr|solve_typing| |done].
   Qed.
@@ -289,7 +289,7 @@ Section borrow.
   Proof.
     iIntros (Hκ tid ? [vπ []]) "#LFT #TIME #PROPH #UNIQ HE $ HL [Hp _] Hproph".
     iMod (Hκ with "HE HL") as (q) "[Htok Hclose]"; first solve_ndisj.
-    wp_apply (wp_hasty with "Hp"). iIntros ([[]|] [|[|depth]]) "% #Hdepth Hshr"; try done.
+    wp_apply (wp_hasty with "Hp"). iIntros ([[]|] [|[|depth]]) "% #Hdepth Hshr //".
     iDestruct "Hshr" as (l' ξ) "(% & H↦ & Hdep & Hshr)".
     iMod (frac_bor_acc with "LFT H↦ Htok") as (q'') "[>H↦ Hclose']". done.
     iApply wp_fupd. wp_read.

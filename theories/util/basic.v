@@ -97,11 +97,11 @@ Fixpoint lnth {A} (d: A) (xl: list A) (i: nat) : A :=
   end.
 Notation lnthe := (lnth ∅).
 
-Lemma lnth_default {A} D (As : list A) i :
-  length As <= i → D = lnth D As i.
+Lemma lnth_default {A} D (xl : list A) i :
+  length xl <= i → D = lnth D xl i.
 Proof.
-  generalize dependent As.
-  induction i; destruct As; simpl; intros; auto with lia.
+  generalize dependent xl.
+  induction i; destruct xl; simpl; intros; auto with lia.
 Qed.
 
 Definition lapply {A B} (fl: list (B → A)) (x: B) : list A := (.$ x) <$> fl.
