@@ -79,6 +79,18 @@ Lemma vfunsep_lookup {A B n} (f: B → vec A n) (i: fin n) :
   vfunsep f !!! i = (.!!! i) ∘ f.
 Proof. by rewrite -{2}[f]vapply_funsep vapply_lookup. Qed.
 
+(** [vinit] and [vlast] *)
+
+Fixpoint vlast' {A n} (x: A) (yl: vec A n) : A :=
+  match yl with [#] => x | y ::: yl' => vlast' y yl' end.
+Definition vlast {A n} (xl: vec A (S n)) : A :=
+  let '(x ::: xl') := xl in vlast' x xl'.
+
+Fixpoint vinit' {A n} (x: A) (yl: vec A n) : vec A n :=
+  match yl with [#] => [#] | y ::: yl' => x ::: vinit' y yl' end.
+Definition vinit {A n} (xl: vec A (S n)) : vec A n :=
+  let '(x ::: xl') := xl in vinit' x xl'.
+
 (** Iris *)
 
 Lemma big_sepL_vlookup_acc {A n} {PROP: bi}
@@ -91,3 +103,13 @@ Lemma big_sepL_vlookup {A n} {PROP: bi} (Φ: nat → A → PROP)
   (xl: vec A n) (i: fin n) `{!Absorbing (Φ i (xl !!! i))} :
   ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊢ Φ i (xl !!! i).
 Proof. rewrite big_sepL_vlookup_acc. apply bi.sep_elim_l, _. Qed.
+
+Lemma big_sepL_vinitlast {A n} {PROP: bi} (Φ: nat → A → PROP)
+    (xl: vec A (S n)) :
+  ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊣⊢
+  ([∗ list] k ↦ x ∈ vinit xl, Φ k x) ∗ Φ n (vlast xl).
+Proof.
+  inv_vec xl=>/= x xl. move: Φ x.
+  elim xl; [move=> ??; by rewrite comm|]=>/= ??? IH Φ ?.
+  by rewrite (IH (λ n, Φ (S n))) assoc.
+Qed.

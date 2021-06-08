@@ -221,6 +221,7 @@ Section vec.
       delete [ #1; "v"];; delete [ #1; "i"];;
       return: ["r"].
 
+  (* The precondition requires that the index is within bounds of the list *)
   Lemma vec_index_shr_type {𝔄} (ty: type 𝔄) :
     typed_val (vec_index_shr ty) (fn<α>(∅; &shr{α} (vec_ty ty), int) → &shr{α} ty)
       (λ post '-[al; z], ∃(i: nat) (a: 𝔄), z = i ∧ al !! i = Some a ∧ post a).
@@ -256,6 +257,79 @@ Section vec.
       rewrite/= -Nat2Z.inj_mul iEq. iApply (big_sepL_vlookup with "tys").
     - iApply proph_obs_impl; [|done]=>/= ?[?[?[/Nat2Z.inj <-[++]]]].
       by rewrite iEq -vlookup_lookup -vapply_lookup=> <-.
+  Qed.
+
+  Local Lemma lapply_app_vinitlast {A B n} (fl: vec (B → A) (S n)) x al a :
+    lapply fl x = al ++ [a] → al = lapply (vinit fl) x ∧ a = vlast fl x.
+  Proof.
+    inv_vec fl=>/= f fl. move: al f. elim: fl=>/= [|??? IH] al ? Eq;
+    move/(f_equal length): (Eq); rewrite last_length; case al as [|a' al]=>// _.
+    { by move: Eq=> [=?]. } { by move: Eq=>/= [=->/IH[<-<-]]. }
+  Qed.
+
+  Definition vec_pop {𝔄} (ty: type 𝔄) : val :=
+    fn: ["v"] :=
+      let: "v'" := !"v" in delete [ #1; "v"];;
+      let: "len" := !"v'" in let: "ex" := !("v'" +ₗ #1) in
+      let: "len'" := "len" - #1 in
+      "v'" <- "len'";; "v'" +ₗ #1 <- "ex" + #1;;
+      letalloc: "r" <-{ty.(ty_size)} ! !("v'" +ₗ #2) +ₗ "len'" * #ty.(ty_size) in
+      return: ["r"].
+
+  (* The precondition requires that the input list has a positive length *)
+  Lemma vec_pop_type {𝔄} (ty: type 𝔄) :
+    typed_val (vec_pop ty) (fn<α>(∅; &uniq{α} (vec_ty ty)) → ty)
+      (λ post '-[(al, al')],
+        ∃alᵢ (a: 𝔄), al = alᵢ ++ [a] ∧ (al' = alᵢ → post a)).
+  Proof.
+    eapply type_fn; [solve_typing|]=> α ??[v[]]. simpl_subst.
+    iIntros (?[vπ[]]?) "#LFT TIME #PROPH #UNIQ #E Na L C /=[v _] #Obs".
+    rewrite tctx_hasty_val. iDestruct "v" as ([|]) "[_ box]"=>//.
+    case v as [[|v|]|]=>//. iDestruct "box" as "[(%vl & >↦ & [#LftIn uniq]) †]".
+    case vl as [|[[|v'|]|][]]; try by iDestruct "uniq" as ">[]".
+    rewrite heap_mapsto_vec_singleton. wp_read. wp_seq. wp_bind (delete _).
+    rewrite -heap_mapsto_vec_singleton freeable_sz_full.
+    iApply (wp_delete _ with "[$↦ $†]"); [done|]. iIntros "!>_".
+    iDestruct "uniq" as (d i [? Eq2]) "[Vo Bor]".
+    move: Eq2. set ξ := PrVar _ i=> Eq2.
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (bor_acc with "LFT Bor α") as "[(%&%& ↦vec & #⧖ & Pc) ToBor]"; [done|].
+    wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
+    rewrite split_vec_mt. case d=>// ?.
+    iDestruct "↦vec" as (? ex ? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".
+    wp_read. wp_seq. wp_op. wp_read. wp_seq. wp_op. wp_seq. wp_write.
+    do 2 wp_op. wp_write. wp_bind (new _). iApply wp_new; [lia|done|].
+    iIntros "!>" (r) "[†r ↦r]". rewrite Nat2Z.id. wp_seq. wp_op. wp_read. do 2 wp_op.
+    iMod (proph_obs_sat with "PROPH Obs") as %[π' Obs]; [done|].
+    move: Obs (equal_f Eq1 π')=>/=. case (vπ π')=>/= ??[?[?[-> _]]] /(f_equal length).
+    rewrite last_length. case aπl as [|aπ len' aπl]=>// _.
+    iDestruct (big_sepL_vinitlast with "↦tys") as "[↦tys (%vl & ↦last & ty)]".
+    set aπl' := vinit' aπ aπl. set vπ' := λ π, (lapply aπl' π, π ξ).
+    iDestruct (ty_size_eq with "ty") as %Eqvl. have ->: (S len' - 1)%Z = len' by lia.
+    rewrite -Nat2Z.inj_mul. wp_bind (_ <-{_} !_)%E.
+    iApply (wp_memcpy with "[$↦r $↦last]"); [by rewrite repeat_length|lia|].
+    iIntros "!>[↦r ↦last]". wp_seq.
+    iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
+    iMod ("ToBor" with "[↦₀ ↦₁ ↦₂ ↦tys ↦last ↦ex † ⧖ Pc]") as "(Bor & α)".
+    { iNext. iExists _, _. iFrame "⧖ Pc". rewrite split_vec_mt.
+      have ->: ∀sz, sz + (len' + ex) * sz = (len' + S ex) * sz by lia.
+      have ->: (ex + 1)%Z = S ex by lia. iExists _, _, _, _.
+      iFrame "↦₀ ↦₁ ↦₂ ↦tys †". iSplit; [done|]. iExists (vl ++ wl).
+      rewrite app_length heap_mapsto_vec_app shift_loc_assoc_nat plus_comm Eqvl.
+      iSplit; [iPureIntro; lia|]. iFrame. }
+    iMod ("ToL" with "α L") as "L".
+    iApply (type_type +[#v' ◁ &uniq{α} (vec_ty ty); #r ◁ box ty]
+      -[vπ'; _] with "[] LFT TIME PROPH UNIQ E Na L C [-] []").
+    - iApply type_jump; [solve_typing|solve_extract|solve_typing].
+    - rewrite/= !(tctx_hasty_val #_) right_id. iSplitL "Vo Bor".
+      + iExists _. iFrame "⧖ LftIn". iExists _, _.
+        rewrite (proof_irrel (@prval_to_inh' (listₛ 𝔄) vπ')
+          (@prval_to_inh' (listₛ 𝔄) vπ)). by iFrame.
+      + iExists _. rewrite -freeable_sz_full. iFrame "⧖ †r". iNext. iExists _.
+        iFrame "↦r". iApply ty_own_depth_mono; [|done]. lia.
+    - iApply proph_obs_impl; [|done]=> π. move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=.
+      case (vπ π)=>/= ??->->[?[?[Eq +]]]+. apply (lapply_app_vinitlast (_:::_)) in Eq.
+      move: Eq=> [->->] Imp ?. by apply Imp.
   Qed.
 End vec.
 
