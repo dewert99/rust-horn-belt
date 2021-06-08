@@ -92,7 +92,7 @@ Section lemmas.
   Lemma tctx_idx_shr_array {𝔄 𝔅l} (ty: type 𝔄) n κ p (i: fin n) (T: tctx 𝔅l) E L :
     tctx_incl E L (p ◁ &shr{κ} [ty;^ n] +:: T)
       (p +ₗ #(i * ty.(ty_size))%nat ◁ &shr{κ} ty +:: T)
-      (λ post '(xl -:: bl), post (xl !!! i -:: bl))%type.
+      (λ post '(xl -:: bl), post (xl !!! i -:: bl)).
   Proof.
     split; [by intros ??? [??]|].
     iIntros (??[??]?) "_ _ _ _ $ [p T] Obs !>". iExists (_-::_).
@@ -104,7 +104,7 @@ Section lemmas.
       n κ p (i: fin n) (T: tctx 𝔅l) E L :
     tctx_extract_elt E L (p +ₗ #(i * ty.(ty_size))%nat ◁ &shr{κ} ty)
       (p ◁ &shr{κ} [ty;^ n] +:: T) (p ◁ &shr{κ} [ty;^ n] +:: T)
-      (λ post '(xl -:: bl), post (xl !!! i -:: xl -:: bl))%type.
+      (λ post '(xl -:: bl), post (xl !!! i -:: xl -:: bl)).
   Proof.
     eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [apply copy_tctx_incl, _|apply tctx_idx_shr_array]. }
@@ -113,8 +113,8 @@ Section lemmas.
 
   Lemma type_idx_shr_array_instr {𝔄} (ty: type 𝔄) n κ p q E L :
     typed_instr_ty E L +[p ◁ &shr{κ} [ty;^ n]; q ◁ int]
-      (p +ₗ q * #ty.(ty_size))%E (&shr{κ} ty)
-      (λ post '-[xl; z], ∃i: fin n, z = i ∧ post (xl !!! i))%type.
+      (p +ₗ q * #ty.(ty_size)) (&shr{κ} ty)
+      (λ post '-[xl; z], ∃i: fin n, z = i ∧ post (xl !!! i)).
   Proof.
     iIntros (??(vπ&?&[])) "_ _ PROPH _ _ $$ (p & q &_) #Obs".
     wp_apply (wp_hasty with "p"). iIntros ([[]|][|]) "_ ⧖ ? //".

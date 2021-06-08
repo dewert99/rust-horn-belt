@@ -183,7 +183,7 @@ Section vec.
     fn: ["v"] :=
       delete [(!"v" + !("v" +ₗ #1)) * #ty.(ty_size); !("v" +ₗ #2)];;
       delete [ #3; "v"];;
-      let: "r" := new [ #0] in return: ["r"].
+      return: [new [ #0]].
 
   Lemma vec_delete_type {𝔄} (ty: type 𝔄) :
     typed_val (vec_delete ty) (fn(∅; vec_ty ty) → ()) (λ post _, post ()).
@@ -206,13 +206,56 @@ Section vec.
     iApply (wp_delete _ _ _ [_;_;_] with "[↦ ↦' ↦'' †]"); [done| |].
     { rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil
         freeable_sz_full. iFrame. }
-    iIntros "!>_". wp_seq. wp_bind (new _). iApply wp_new; [done..|].
-    iIntros "!>" (?) "[† ↦]". wp_seq. iMod persistent_time_receipt_0 as "⧖".
+    iIntros "!>_". wp_seq. iMod persistent_time_receipt_0 as "⧖".
     wp_bind Skip. iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
-    wp_seq. iIntros "⧖". wp_seq. rewrite cctx_interp_singleton.
+    wp_seq. iIntros "⧖". wp_seq. wp_bind (new _). iApply wp_new; [done..|].
+    iIntros "!>" (?) "[† ↦]". rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[const ()] with "Na L [-Obs] Obs"). iSplit; [|done].
     rewrite tctx_hasty_val. iExists _. iFrame "⧖". iSplit; [|done]. iNext.
     iExists _. iFrame "↦". by rewrite unit_ty_own.
+  Qed.
+
+  Definition vec_index_shr {𝔄} (ty: type 𝔄) : val :=
+    fn: ["v"; "i"] :=
+      letalloc: "r" <- !(!"v" +ₗ #2) +ₗ !"i" * #ty.(ty_size) in
+      delete [ #1; "v"];; delete [ #1; "i"];;
+      return: ["r"].
+
+  Lemma vec_index_shr_type {𝔄} (ty: type 𝔄) :
+    typed_val (vec_index_shr ty) (fn<α>(∅; &shr{α} (vec_ty ty), int) → &shr{α} ty)
+      (λ post '-[al; z], ∃(i: nat) (a: 𝔄), z = i ∧ al !! i = Some a ∧ post a).
+  Proof.
+    eapply type_fn; [solve_typing|]=> α ??[v[i[]]]. simpl_subst.
+    iIntros (?(?&?&[])?) "LFT TIME PROPH _ E Na L C (v & i & _) #Obs".
+    rewrite !tctx_hasty_val.
+    iDestruct "v" as ([|d]) "[⧖ v]"=>//. case v as [[|v|]|]=>//=.
+    iDestruct "i" as ([|]) "[_ i]"=>//. case i as [[|i|]|]=>//=.
+    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>% [†r ↦r]".
+    iDestruct "v" as "[(%vl & ↦v & vec) †v]". move: d=> [|d]//=.
+    case vl as [|[[]|][]]=>//=. move: d=> [|d]//=.
+    iDestruct "vec" as (??? aπl ->) "[Bor tys]".
+    iDestruct "i" as "[(%& ↦i & (%&->&->)) †i]"=>/=.
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (frac_bor_acc with "LFT Bor α") as (?) "[(↦ & ↦' & ↦'') Toα]"; [done|].
+    rewrite !heap_mapsto_vec_singleton.
+    wp_let. wp_read. wp_op. wp_read. wp_read. do 2 wp_op. wp_write.
+    iMod ("Toα" with "[$↦ $↦' $↦'']") as "α". iMod ("ToL" with "α L") as "L".
+    do 2 rewrite -heap_mapsto_vec_singleton freeable_sz_full.
+    wp_bind (delete _). iApply (wp_delete with "[$↦v $†v]"); [done|].
+    iIntros "!> _". wp_seq. wp_bind (delete _).
+    iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!> _". do 3 wp_seq.
+    iMod (proph_obs_sat with "PROPH Obs") as %(?& inat &?&->& Lkup &_); [done|].
+    move: Lkup. rewrite lapply_vapply -vlookup_lookup'. move=> [In _].
+    set ifin := nat_to_fin In. have iEq: inat = ifin by rewrite fin_to_nat_to_fin.
+    rewrite cctx_interp_singleton.
+    iApply ("C" $! [# #_] -[aπl !!! ifin] with "Na L [-] []").
+    - iSplit; [|done]. rewrite tctx_hasty_val. iExists (S (S d)).
+      iSplit. { iApply persistent_time_receipt_mono; [|done]. lia. }
+      rewrite/= freeable_sz_full. iFrame "†r". iNext. iExists [_].
+      rewrite heap_mapsto_vec_singleton. iFrame "↦r".
+      rewrite/= -Nat2Z.inj_mul iEq. iApply (big_sepL_vlookup with "tys").
+    - iApply proph_obs_impl; [|done]=>/= ?[?[?[/Nat2Z.inj <-[++]]]].
+      by rewrite iEq -vlookup_lookup -vapply_lookup=> <-.
   Qed.
 End vec.
 
