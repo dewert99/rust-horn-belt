@@ -238,7 +238,7 @@ Section borrow.
     (* TODO(xavier): remove usage of fun_ext here.  *)
     { fun_ext => x /=. move: (equal_f H x) => /= y. by inversion y.  }
     iMod (uniq_strip_later with "Hvo Hpcω") as "(<- & -> & ωVo & ωPc)".
-    iMod (uniq_intro (fst ∘ (fst ∘ vπ)) _ with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; first done.
+    iMod (uniq_intro (fst ∘ (fst ∘ vπ)) with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; first done.
     set (ζ := PrVar _ ζi).
     iDestruct (uniq_proph_tok with "ζVo ζPc") as "(ζVo & ζ & ToζPc)".
     iDestruct (uniq_proph_tok with "ωVo ωPc") as "(ωVo & ω & ToωPc)".

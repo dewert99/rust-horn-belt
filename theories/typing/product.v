@@ -302,7 +302,7 @@ Section typing.
 
   Lemma prod_real {𝔄 𝔅 ℭ 𝔇} ty ty' (f: 𝔄 → ℭ) (g: 𝔅 → 𝔇) E L :
     real E L ty f → real E L ty' g →
-    real (𝔅 := ℭ * 𝔇) E L (ty * ty') (prod_map f g).
+    real (𝔅:=_*_) E L (ty * ty') (prod_map f g).
   Proof.
     move=> [Rlo Rls][Rlo' Rls']. split.
     - iIntros (?? vπ) "*% #LFT #E [L L₊] (%&%&->& ty & ty')".
@@ -326,7 +326,7 @@ Section typing.
 
   Hint Resolve prod_real : lrust_typing.
   Lemma xprod_real {𝔄l 𝔅l} tyl (fl: plist2 _ 𝔄l 𝔅l) E L :
-    reall E L tyl fl → real (𝔅 := Π! 𝔅l) E L (Π! tyl) (plist_map fl).
+    reall E L tyl fl → real (𝔅:=Π! _) E L (Π! tyl) (plist_map fl).
   Proof.
     elim; [solve_typing|]=>/= > Rl _ Rl'. eapply real_eq.
     { apply mod_ty_real; [by apply _|].

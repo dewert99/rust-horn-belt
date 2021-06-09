@@ -14,19 +14,19 @@ Section case.
   Lemma type_case_own' {ℭ 𝔄l 𝔅l} prel E L (C : cctx ℭ) (T : tctx 𝔅l) p n (tyl : typel 𝔄l) el el' :
     list_to_hlist el = Some el' →
     HForallThree (λ _ ty e prei,
-        match prei with
-        | inl inner => ⊢ typed_body E L C
-            ((p +ₗ #0 ◁ own_ptr n (uninit 1)) +:: (p +ₗ #1 ◁ own_ptr n ty) +::
-              (p +ₗ #(S (ty.(ty_size))) ◁ own_ptr n (uninit (max_ty_size tyl - ty_size ty))) +:: T)
-            e inner
-        | inr outer => ⊢ typed_body E L C ((p ◁ own_ptr n (xsum_ty tyl)) +:: T) e outer
-        end) tyl el' prel →
+      match prei with
+      | inl inner => ⊢ typed_body E L C
+          ((p +ₗ #0 ◁ own_ptr n (uninit 1)) +:: (p +ₗ #1 ◁ own_ptr n ty) +::
+            (p +ₗ #(S ty.(ty_size)) ◁ own_ptr n (uninit (max_ty_size tyl - ty_size ty))) +:: T)
+          e inner
+      | inr outer => ⊢ typed_body E L C ((p ◁ own_ptr n (xsum_ty tyl)) +:: T) e outer
+      end) tyl el' prel →
     ⊢ typed_body E L C ((p ◁ own_ptr n (xsum_ty tyl)) +:: T) (case: !p of el)
-         (λ post '(v -:: w), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
+        (λ post '(v -:: w), ∀ i, match hnth (D := Empty_setₛ) (inr (λ _ _, False)) prel i with
           | inl inner => ∀ v', v = pinj i v' → inner post (tt -:: v' -:: tt -:: w)
           | inr outer => (∃ v', v = pinj (D := Empty_setₛ) i v') →  outer post (v -:: w)
-         end)%type.
-Proof.
+        end)%type.
+  Proof.
     iIntros (elEl Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
     wp_bind p. iApply (wp_hasty with "Hp").
     iIntros ([[]|] [|depth1]) "%Hv #Hdepth Hp /= //".
@@ -74,12 +74,12 @@ Proof.
   Lemma type_case_own {ℭ 𝔄l 𝔅l ℭl} prel E L (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl)
                       p n (tyl : typel 𝔄l) el el' fr :
     list_to_hlist el = Some el' →
-    tctx_extract_elt E L (p ◁ own_ptr n (xsum_ty tyl)) T T' fr →
+    tctx_extract_ctx E L +[p ◁ own_ptr n (xsum_ty tyl)] T T' fr →
     HForallThree (λ _ ty e prei,
         match prei with
         | inl inner => ⊢ typed_body E L C
             ((p +ₗ #0 ◁ own_ptr n (uninit 1)) +:: (p +ₗ #1 ◁ own_ptr n ty) +::
-              (p +ₗ #(S (ty.(ty_size))) ◁ own_ptr n (uninit (max_ty_size tyl - ty_size ty))) +:: T')
+              (p +ₗ #(S ty.(ty_size)) ◁ own_ptr n (uninit (max_ty_size tyl - ty_size ty))) +:: T')
             e inner
         | inr outer => ⊢ typed_body E L C ((p ◁ own_ptr n (xsum_ty tyl)) +:: T') e outer
         end) tyl el' prel →
@@ -178,7 +178,7 @@ Proof.
   Lemma type_case_uniq {ℭ 𝔄l 𝔅l ℭl} prel E L (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl)
                        p κ (tyl : typel 𝔄l) el el' fr :
     list_to_hlist el = Some el' → lctx_lft_alive E L κ →
-    tctx_extract_elt E L (p ◁ &uniq{κ}(xsum_ty tyl)) T T' fr →
+    tctx_extract_ctx E L +[p ◁ &uniq{κ}(xsum_ty tyl)] T T' fr →
     lctx_lft_alive E L κ →
     HForallThree
       (λ _ ty e prei, match prei with
@@ -205,8 +205,9 @@ Proof.
         | inr outer => (∃ w, v = pinj (D := Empty_setₛ) i w) →  outer post (v -:: w)
       end)%type.
   Proof.
-    iIntros (el2el' Halive Hel tid [? ?] postπ) "#LFT #TIME #PROPH UNIQ #HE Hna HL HC /= [Hp HT] Hproph". wp_bind p.
-    iApply (wp_hasty with "Hp").
+    iIntros (el2el' Halive Hel tid [? ?] postπ)
+      "#LFT #TIME #PROPH UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
+    wp_bind p. iApply (wp_hasty with "Hp").
     iIntros ([[]|] [|depth]) "% Hdepth Hp //".
     iDestruct "Hp" as (i vπ) "(%Hvπ & #Hb & Hshr)".
     iMod (Halive with "HE HL") as (q) "[Htok Hclose]". done.
@@ -222,7 +223,8 @@ Proof.
       rewrite Nat2Z.id e. erewrite <-list_to_hlist_hnth_nth; [done|apply el2el']. }
     iMod ("Hclose'" with "[$H↦i $H↦vl'']") as "Htok".
     iMod ("Hclose" with "Htok") as "HL".
-    destruct (hnth _ prel i) eqn:EQty; iApply (Hety $! _ (_ -:: _) with "LFT TIME PROPH UNIQ HE Hna HL HC [-Hproph]").
+    destruct (hnth _ prel i) eqn:EQty;
+    iApply (Hety $! _ (_ -:: _) with "LFT TIME PROPH UNIQ HE Hna HL HC [-Hproph]").
     - rewrite /= tctx_hasty_val' /= -?H //. iFrame. iExists _. by iFrame.
     - iApply (proph_obs_impl with "Hproph") => /= π /(_ i); rewrite Hvπ EQty; eauto.
     - rewrite /= tctx_hasty_val' /= -?H //. iFrame.
@@ -233,7 +235,7 @@ Proof.
   Lemma type_case_shr {ℭ 𝔄l 𝔅l ℭl} prel E L (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl)
                       p κ (tyl : typel 𝔄l) el el' fr :
     list_to_hlist el = Some el' → lctx_lft_alive E L κ →
-    tctx_extract_elt E L (p ◁ &shr{κ}(xsum_ty tyl)) T T' fr →
+    tctx_extract_ctx E L +[p ◁ &shr{κ}(xsum_ty tyl)] T T' fr →
     HForallThree (λ _ ty e prei,
       match prei with
       | inl inner => ⊢ typed_body E L C ((p +ₗ #1 ◁ &shr{κ}ty) +:: T') e inner
@@ -253,7 +255,8 @@ Proof.
     typed_instr E L +[p1 ◁ ty1; p2 ◁ hnthb tyl i] (p1 <-{Σ i} p2) (λ _, +[p1 ◁ ty2])
       (λ post '-[a; b], Φ (gt a) (post -[st a (pinj i b)])).
   Proof.
-    iIntros ([Eq Hw] Lk tid postπ (? & ? & [])) "#LFT #TIME #PROPH #UNIQ #HE $ [HL HL'] (Hp1 & Hp2 & _) Hproph".
+    iIntros ([Eq Hw] Lk tid postπ (? & ? & []))
+      "#LFT #TIME #PROPH #UNIQ #HE $ [HL HL'] (Hp1 & Hp2 & _) Hproph".
     iDestruct (closed_hasty with "Hp1") as "%". iDestruct (closed_hasty with "Hp2") as "%".
     wp_apply (wp_hasty with "Hp1"). iIntros (v1 depth1) "%Hv1 Hdepth1 Hty1".
     iDestruct "Hp2" as (v2 depth2) "(%Hv2 & Hdepth2 & Hty2)".
@@ -261,10 +264,12 @@ Proof.
     rewrite !(ty_own_depth_mono _ _ (depth1 `max` depth2)); [|lia..].
     iMod (Hw with "LFT UNIQ HE HL Hty1") as (l ->) "(H & Hw)".
     iDestruct "H" as (vl) "(> H↦ & Leaked)".
-    iAssert (▷ (ty_own ty' (gt ∘ phd) (depth1 `max` depth2) tid vl ∗ ⌜ length vl = ty_size ty' ⌝) )%I with "[Leaked]" as "[Leaked >%Hlen]".
+    iAssert (▷ (ty_own ty' (gt ∘ phd) (depth1 `max` depth2) tid vl ∗
+      ⌜length vl = ty_size ty'⌝) )%I with "[Leaked]" as "[Leaked >%Hlen]".
     { iNext. iDestruct (ty_size_eq with "Leaked") as %<-. by iFrame. }
     destruct vl as [|? vl]; rewrite Eq //= in Hlen. rewrite heap_mapsto_vec_cons.
-    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH HE HL' Leaked") as "ToObs"; first set_solver.
+    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH HE HL' Leaked") as "ToObs";
+      first set_solver.
     iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
     with "TIME Hdepth [ToObs]")=>//. { by iApply step_fupdN_with_emp. }
     iDestruct "H↦" as "[H↦0 H↦vl]".
@@ -293,9 +298,9 @@ Proof.
     leak' E L ty' Φ →
     typed_body E L C ((p1 ◁ ty1') +:: T') e tr -∗
     typed_body E L C T (p1 <-{Σ i} p2 ;; e)
-      (fr ∘ (λ post '(a -:: b -:: f), Φ (gt a) (post (st a (pinj i b) -:: f))) ∘ tr).
+      (fr ∘ (λ post '(a -:: b -:: f), Φ (gt a) (tr post (st a (pinj i b) -:: f)))).
   Proof.
-    iIntros. iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ H1). via_tr_impl.
+    iIntros. iApply typed_body_tctx_incl; [done|]. via_tr_impl.
     { iApply type_seq; by [eapply type_sum_assign_instr|solve_typing]. }
     done.
   Qed.
@@ -326,19 +331,17 @@ Proof.
 
   Lemma type_sum_unit {E L 𝔄 𝔄' 𝔅 ℭ 𝔄l 𝔅l ℭl} (ty' : type 𝔅) (tyl : typel 𝔄l) i (ty1 : type 𝔄)
                       (ty1' : type 𝔄') (C : cctx ℭ) (T : tctx 𝔅l) (T' : tctx ℭl) p e
-    gt st fr tr (eq : ()%ST = lnthe 𝔄l i):
+                      gt st fr tr (eq : ()%ST = lnthe 𝔄l i) :
     Closed [] e → (0 ≤ i)%nat →
-    tctx_extract_elt E L (p ◁ ty1) T T' fr →
+    tctx_extract_ctx E L +[p ◁ ty1] T T' fr →
     hnthb tyl i = eq_rect _ _ unit_ty _ eq →
     typed_write E L ty1 ty' ty1' (xsum_ty tyl) gt st →
-    typed_body E L C ((p ◁ ty1') +:: T') e tr -∗
+    typed_body E L C (p ◁ ty1' +:: T') e tr -∗
     typed_body E L C T (p <-{Σ i} () ;; e)
-      (fr ∘ (λ post '(a -:: f), post (st a (pinj i (eq_rect unitₛ _ () _ eq)) -:: f) ) ∘ tr).
+      (fr ∘ (λ post '(a -:: f), tr post (st a (pinj i (eq_rect unitₛ _ () _ eq)) -:: f))).
   Proof.
-    iIntros (?? Incl) "* **". iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ Incl).
-    via_tr_impl.
-    { iApply type_seq; by [eapply type_sum_unit_instr|solve_typing]. }
-    done.
+    iIntros (???) "* **". iApply typed_body_tctx_incl; [done|].
+    iApply type_seq; [by eapply type_sum_unit_instr|solve_extract| |done]. done.
   Qed.
 
   Lemma type_sum_memcpy_instr {E L 𝔄l 𝔄 𝔄' 𝔅 𝔅' ℭ} (i : nat) (ty' : type ℭ) (tyl : typel 𝔄l)
@@ -350,7 +353,8 @@ Proof.
       (p1 <-{ty.(ty_size),Σ i} !p2) (λ _, +[p1 ◁ ty1'; p2 ◁ ty2'])
       (λ post '-[a; b], Φ (gt a) (post -[st a (pinj i (rd b)); wt b])).
   Proof.
-    iIntros (ty Lk [Eq Hw] Hr tid postπ (vπ & wπ & [])) "#LFT #TIME #PROPH #UNIQ #HE Htl (HL1 & HL2 & HL3) (Hp1 & Hp2 & _) Hproph".
+    iIntros (ty Lk [Eq Hw] Hr tid postπ (vπ & wπ & []))
+      "#LFT #TIME #PROPH #UNIQ #HE Htl (HL1 & HL2 & HL3) (Hp1 & Hp2 & _) Hproph".
     iDestruct (closed_hasty with "Hp1") as "%". iDestruct (closed_hasty with "Hp2") as "%".
     wp_apply (wp_hasty with "Hp1"). iIntros (v1 depth1) "%Hv1 Hdepth1 Hty1".
     iDestruct "Hp2" as (v2 depth2) "(%Hv2 & Hdepth2 & Hty2)".
@@ -361,7 +365,8 @@ Proof.
     (* iMod (bi.later_exist_except_0 with "H") as (i') "H";
     iMod (bi.later_exist_except_0 with "H") as (?) "H";
     iDestruct "H" as (??) "(>(% & % & H) & Leaked)". *)
-    iAssert (▷ (ty_own ty' (gt ∘ vπ) (depth1 `max` depth2) tid vl ∗ ⌜ length vl = ty_size ty' ⌝) )%I with "[Leaked]" as "[Leaked >%Hlen]".
+    iAssert (▷ (ty_own ty' (gt ∘ vπ) (depth1 `max` depth2) tid vl ∗
+      ⌜length vl = ty_size ty'⌝))%I with "[Leaked]" as "[Leaked >%Hlen]".
     { iNext. iDestruct (ty_size_eq with "Leaked") as %<-. by iFrame. }
     destruct vl as [|? vl]; rewrite -Hlen //= in Eq.
     rewrite heap_mapsto_vec_cons -wp_fupd. iDestruct "H↦" as "[H↦0 H↦vl1]". wp_write.
@@ -373,7 +378,7 @@ Proof.
     { by iApply step_fupdN_with_emp. }
     clear Hr. subst. assert (ty.(ty_size) ≤ length vl).
     { move: Eq => [= ->]. clear. generalize dependent i. elim tyl => //= > + [|i] => [_|/(_ i)]; lia. }
-    rewrite -(take_drop (ty.(ty_size)) vl) heap_mapsto_vec_app.
+    rewrite -(take_drop ty.(ty_size) vl) heap_mapsto_vec_app.
     iDestruct "H↦vl1" as "[H↦vl1 H↦pad]".
     iDestruct (ty_size_eq with "Hty") as "#>%Hvl2Len".
     iApply (wp_persistent_time_receipt with "TIME Hdepth"); first solve_ndisj.
@@ -381,7 +386,8 @@ Proof.
     { rewrite take_length. lia. }
     iNext; iIntros "[H↦vl1 H↦2] #Hdepth' [ToObs HL'] !>". iExists -[_; _].
     rewrite right_id !tctx_hasty_val' //.
-    iMod ("Hr" with "H↦2") as "($ & HL & Hty2)". iCombine "HL HL'" as "$". iCombine "ToObs Hproph" as "Hproph".
+    iMod ("Hr" with "H↦2") as "($ & HL & Hty2)". iCombine "HL HL'" as "$".
+    iCombine "ToObs Hproph" as "Hproph".
     iMod ("Hw" with "[-Hty2 Hproph] Hdepth'") as "[$ Hty]"; last first. iSplitR "Hproph".
     { iSplitL "Hty"; [eauto with iFrame|]. iExists _. iFrame.
       iApply persistent_time_receipt_mono; [|done]. lia. }
@@ -396,21 +402,19 @@ Proof.
   Lemma type_sum_memcpy {E L 𝔄l 𝔄 𝔄' 𝔅 𝔅' ℭ 𝔇 𝔅l ℭl} (ty' : type ℭ) (tyl : typel 𝔄l) i
                         (ty1 : type 𝔄) (ty2 : type 𝔅) n (ty1' : type 𝔄')
                         (ty2' : type 𝔅') (C : cctx 𝔇) (T : tctx 𝔅l) (T' : tctx ℭl) p1 p2 e
-    fr tr gt st rd wt Φ:
+                        fr tr gt st rd wt Φ:
     let ty := hnthb tyl i in
     leak' E L ty' Φ → Closed [] e → (0 ≤ i)%nat →
     tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ ty2] T T' fr →
     typed_write E L ty1 ty' ty1' (xsum_ty tyl) gt st →
     typed_read E L ty2 ty ty2' rd wt →
-    Z.of_nat (ty.(ty_size)) = n →
+    Z.of_nat ty.(ty_size) = n →
     typed_body E L C ((p1 ◁ ty1') +:: (p2 ◁ ty2') +:: T') e tr -∗
     typed_body E L C T (p1 <-{n,Σ i} !p2 ;; e)
-      (fr ∘ (λ post '(a -:: b -:: f), Φ (gt a) (post (st a (pinj i (rd b)) -:: wt b -:: f))) ∘ tr).
+      (fr ∘ (λ post '(a -:: b -:: f), Φ (gt a) (tr post (st a (pinj i (rd b)) -:: wt b -:: f)))).
   Proof.
-    iIntros (???? Incl ?? <-) "* **". iApply (typed_body_tctx_incl _ _  _ _ _ _ _ _ Incl).
-    via_tr_impl.
-    { iApply type_seq; by [eapply type_sum_memcpy_instr|solve_typing]. }
-    done.
+    iIntros (??????? <-) "* **". iApply typed_body_tctx_incl; [done|].
+    iApply type_seq; [by eapply type_sum_memcpy_instr|solve_extract| |done]. done.
   Qed.
 
   Lemma ty_outlives_E_elctx_sat_sum {𝔄l} E L (tyl : typel 𝔄l) α:

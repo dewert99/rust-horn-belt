@@ -112,7 +112,7 @@ Section typing.
   Proof. move=> ?. apply leak_just. Qed.
 
   Lemma array_real {𝔄 𝔅} (ty: type 𝔄) n (f: 𝔄 → 𝔅) E L :
-    real E L ty f → real (𝔅 := vecₛ 𝔅 n) E L [ty;^ n] (vmap f).
+    real E L ty f → real (𝔅:=vecₛ _ _) E L [ty;^ n] (vmap f).
   Proof.
     move=> Rl. split.
     - iIntros "*% LFT E L (%&->& tys)".

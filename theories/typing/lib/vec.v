@@ -129,7 +129,7 @@ Section vec.
   Proof. move=> ?. apply leak_just. Qed.
 
   Lemma vec_real {𝔄 𝔅} (ty: type 𝔄) (f: 𝔄 → 𝔅) E L :
-    real E L ty f → real (𝔅 := listₛ 𝔅) E L (vec_ty ty) (map f).
+    real E L ty f → real (𝔅:=listₛ _) E L (vec_ty ty) (map f).
   Proof.
     move=> Rl. split; iIntros (???[|]) "*% LFT E L vec //=".
     - iDestruct "vec" as (????[->->]) "(↦tys & ex & †)". iIntros "!>!>!>".
@@ -308,7 +308,7 @@ Section vec.
     rewrite heap_mapsto_vec_singleton. wp_read. wp_let. wp_bind (delete _).
     rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     iApply (wp_persistent_time_receipt with "TIME ⧖x"); [done|].
-    iApply (wp_delete _ with "[$↦ $†]"); [done|]. iIntros "!>_ ⧖x".
+    iApply (wp_delete with "[$↦ $†]"); [done|]. iIntros "!>_ ⧖x".
     iDestruct "uniq" as (du i [? Eq2]) "[Vo Bor]".
     move: Eq2. set ξ := PrVar _ i=> Eq2.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
@@ -409,7 +409,7 @@ Section vec.
     case vl as [|[[|v'|]|][]]; try by iDestruct "uniq" as ">[]".
     rewrite heap_mapsto_vec_singleton. wp_read. wp_let. wp_bind (delete _).
     rewrite -heap_mapsto_vec_singleton freeable_sz_full.
-    iApply (wp_delete _ with "[$↦ $†]"); [done|]. iIntros "!>_".
+    iApply (wp_delete with "[$↦ $†]"); [done|]. iIntros "!>_".
     iDestruct "uniq" as (d i [? Eq2]) "[Vo Bor]".
     move: Eq2. set ξ := PrVar _ i=> Eq2.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].

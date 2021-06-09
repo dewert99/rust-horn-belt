@@ -163,7 +163,7 @@ Section typing.
     wp_bind (v: expr). iApply (wp_wand with "[Na L Obs]").
     { iApply (Val b _ _ _ (λ _ '-[a], tr _ (a -:: _)) -[]
         with "LFT TIME PROPH UNIQ E Na L [//]").
-      iApply proph_obs_impl; [|done]=>/= π.
+      iApply proph_obs_eq; [|done]=>/= π.
       rewrite papply_app papp_sepl -papply_app. by move: (equal_f Eq π)=>/= ->. }
     iIntros (?). iDestruct 1 as ([?[]]) "(Na & L & [v _] & Obs)"=>/=. wp_let.
     iApply ("e" $! _ _ (_-::_-++_) with
