@@ -1,6 +1,8 @@
 From lrust.typing Require Export type.
 Set Default Proof Using "Type".
 
+Implicit Type 𝔄 𝔅: syn_type.
+
 Notation "l +ₗ[ ty ] i" := (l%L +ₗ Z.of_nat (i%nat * ty.(ty_size))%nat)
   (format "l  +ₗ[ ty ]  i", at level 50, left associativity) : loc_scope.
 
@@ -23,9 +25,9 @@ Section array_util.
       iDestruct ("IH" with "↦owns") as (?) "(↦s & tys)". iExists (_:::_).
       rewrite heap_mapsto_vec_app. iDestruct (ty_size_eq with "ty") as %->.
       iFrame.
-    - iIntros "(%& ↦s & tys)".
-      iInduction aπl as [|] "IH" forall (l); inv_vec wll; [done|]=>/= ??.
-      iRevert "↦s tys". rewrite heap_mapsto_vec_app. iIntros "[↦ ↦s][ty tys]".
+    - iIntros "(%& ↦s & tys)". iInduction aπl as [|] "IH" forall (l); [done|].
+      inv_vec wll=>/= ??. rewrite heap_mapsto_vec_app.
+      iDestruct "↦s" as "[↦ ↦s]". iDestruct "tys" as "[ty tys]".
       iDestruct (ty_size_eq with "ty") as %->. iSplitL "↦ ty".
       { iExists _. rewrite shift_loc_0. iFrame. }
       setoid_rewrite <-shift_loc_assoc_nat. iApply ("IH" with "↦s tys").
@@ -57,26 +59,25 @@ Section array_util.
     by iIntros "!> [>[$$] >[$$]]".
   Qed.
 
-  Lemma ty_own_proph_big_sepL_mt_v {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) l d tid κ q :
+  Lemma ty_own_proph_big_sepL_v {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) wll d tid κ q :
     ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty.(ty_lft) -∗
-    ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) -∗ q.[κ]
+    ([∗ list] i ↦ aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2) -∗ q.[κ]
       ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
         (q':+[ξl] ={E}=∗
-          ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) ∗ q.[κ]).
+          ([∗ list] i ↦ aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2) ∗ q.[κ]).
   Proof.
-    iIntros (?) "#LFT #In ↦tys κ". iInduction aπl as [|] "IH" forall (l q)=>/=.
+    iIntros (?) "#LFT #In tys κ". iInduction aπl as [|] "IH" forall (q)=>/=.
     { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
       iFrame "κ". do 2 (iSplit; [done|]). by iIntros. }
-    iDestruct "κ" as "[κ κ₊]". iDestruct "↦tys" as "[(% & ↦ & ty) ↦tys]".
-    iMod (ty_own_proph with "LFT In ty κ") as "Toty"; [done|].
-    setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "↦tys κ₊") as "To↦tys".
-    iCombine "Toty To↦tys" as "Upd". iApply (step_fupdN_wand with "Upd").
-    iIntros "!> [>(%&%&%& ξl & Toty) >(%&%&%& ζl & To↦tys)] !>".
+    inv_vec wll=> ??. iDestruct "tys" as "[ty tys]". iDestruct "κ" as "[κ κ₊]".
+    iMod (ty_own_proph with "LFT In ty κ") as "Upd"; [done|].
+    iMod ("IH" with "tys κ₊") as "Upd'". iCombine "Upd Upd'" as "Upd".
+    iApply (step_fupdN_wand with "Upd").
+    iIntros "!> [>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
     iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
     iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_vcons|].
     iIntros "ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
-    iMod ("Toty" with "ξl") as "[?$]". iMod ("To↦tys" with "ζl") as "[$$]".
-    iExists _. by iFrame.
+    iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
   Qed.
 
   Lemma ty_shr_proph_big_sepL_v {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) d κ tid l κ' q :
@@ -90,9 +91,9 @@ Section array_util.
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
       iFrame "κ'". do 2 (iSplit; [done|]). by iIntros. }
     iDestruct "κ'" as "[κ' κ'₊]". iDestruct "tys" as "[ty tys]".
-    iMod (ty_shr_proph with "LFT In In' ty κ'") as "Toty"; [done|].
-    setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "tys κ'₊") as "Totys".
-    iIntros "!>!>". iCombine "Toty Totys" as "Upd". iApply (step_fupdN_wand with "Upd").
+    iMod (ty_shr_proph with "LFT In In' ty κ'") as "Upd"; [done|].
+    setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "tys κ'₊") as "Upd'".
+    iIntros "!>!>". iCombine "Upd Upd'" as "Upd". iApply (step_fupdN_wand with "Upd").
     iIntros "[>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
     iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
     iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_vcons|].
@@ -100,15 +101,77 @@ Section array_util.
     iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
   Qed.
 
-  Lemma leak_big_sepL_mt_ty_own {𝔄} (ty: type 𝔄) n (aπl: vec _ n) d tid l :
-    ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid)%I -∗
-    l ↦∗len (n * ty.(ty_size)).
+  Lemma leak_big_sepL_ty_own {𝔄} (ty: type 𝔄) Φ n (aπl: vec _ n) wll d tid F q E L :
+    leak E L ty Φ → ↑lftN ∪ ↑prophN ⊆ F →
+    lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    ([∗ list] i ↦ aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2)
+      ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, lforall Φ (lapply aπl π)⟩ ∗ llctx_interp L q.
   Proof.
-    iInduction aπl as [|] "IH" forall (l)=>/=.
-    { iIntros. iExists []. by rewrite heap_mapsto_vec_nil. }
-    iIntros "((%& ↦ & ty) & ↦tys)". rewrite ty_size_eq. iDestruct "ty" as %Eq.
-    setoid_rewrite <-shift_loc_assoc_nat. iDestruct ("IH" with "↦tys") as "(%&%& ↦')".
-    iExists (_++_). rewrite app_length heap_mapsto_vec_app shift_loc_0 -{3}Eq.
-    iFrame "↦ ↦'". iPureIntro. by f_equal.
+    iIntros (Lk ?) "#LFT #PROPH #E L tys".
+    iInduction aπl as [|] "IH" forall (q).
+    { iApply step_fupdN_full_intro. iFrame "L". by iApply proph_obs_true. }
+    inv_vec wll=>/= ??. iDestruct "tys" as "[ty tys]". iDestruct "L" as "[L L₊]".
+    iMod (Lk with "LFT PROPH E L ty") as "Upd"; [done|].
+    iMod ("IH" with "L₊ tys") as "Upd'". iCombine "Upd Upd'" as "Upd".
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> [>[#? $] >[#? $]]".
+    by iApply proph_obs_and.
+  Qed.
+
+  Lemma real_big_sepL_ty_own {𝔄 𝔅} (ty: type 𝔄) (f: 𝔄 → 𝔅) n
+      (aπl: vec _ n) wll d tid E L F q :
+    real E L ty f → ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    ([∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2)
+      ={F}=∗ |={F}▷=>^d |={F}=>
+        ⌜∃bl, vmap f ∘ vapply aπl = const bl⌝ ∗ llctx_interp L q ∗
+        [∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2.
+  Proof.
+    iIntros ([Rl _]?) "#LFT #E L tys". iInduction aπl as [|] "IH" forall (q).
+    { iApply step_fupdN_full_intro. iFrame "L tys". iPureIntro. by exists [#]. }
+    inv_vec wll=>/= ??. iDestruct "tys" as "[ty tys]". iDestruct "L" as "[L L₊]".
+    iMod (Rl with "LFT E L ty") as "Upd"; [done|].
+    iMod ("IH" with "L₊ tys") as "Upd'". iCombine "Upd Upd'" as "Upd".
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> [>(%Eq &$&$) >(%Eq' &$&$)] !%".
+    move: Eq=> [b Eq]. move: Eq'=> [bl Eq']. exists (b ::: bl).
+    fun_ext=>/= π. by move: (equal_f Eq π) (equal_f Eq' π)=>/= <-<-.
+  Qed.
+
+  Lemma real_big_sepL_ty_shr {𝔄 𝔅} (ty: type 𝔄) (f: 𝔄 → 𝔅) n
+      (aπl: vec _ n) d κ tid l E L F q :
+    real E L ty f → ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i))
+      ={F}▷=∗ |={F}▷=>^d |={F}=>
+        ⌜∃bl, vmap f ∘ vapply aπl = const bl⌝ ∗ llctx_interp L q ∗
+        [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i).
+  Proof.
+    iIntros ([_ Rl]?) "#LFT #E L tys". iInduction aπl as [|] "IH" forall (l q)=>/=.
+    { iApply step_fupdN_full_intro. iFrame "L". iPureIntro. by exists [#]. }
+    iDestruct "tys" as "[ty tys]". iDestruct "L" as "[L L₊]".
+    setoid_rewrite <-shift_loc_assoc_nat. iMod (Rl with "LFT E L ty") as "Upd"; [done|].
+    iMod ("IH" with "L₊ tys") as "Upd'". iCombine "Upd Upd'" as "Upd". iIntros "!>!>".
+    iApply (step_fupdN_wand with "Upd"). iIntros "[>(%Eq &$&$) >(%Eq' &$&$)] !%".
+    move: Eq=> [b Eq]. move: Eq'=> [bl Eq']. exists (b ::: bl).
+    fun_ext=>/= π. by move: (equal_f Eq π) (equal_f Eq' π)=>/= <-<-.
+  Qed.
+
+  Lemma incl_big_sepL_ty_own {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅)
+      f n (aπl: vec _ n) wll d tid :
+    □ (∀aπ d tid vl, ty.(ty_own) aπ d tid vl -∗ ty'.(ty_own) (f ∘ aπ) d tid vl) -∗
+    ([∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2) -∗
+    [∗ list] bπwl ∈ vzip (vmap (f ∘.) aπl) wll, ty'.(ty_own) bπwl.1 d tid bπwl.2.
+  Proof.
+    iIntros "#In tys". iInduction aπl as [|] "IH"; inv_vec wll; [done|]=>/= ??.
+    iDestruct "tys" as "[ty tys]". iSplitL "ty"; by [iApply "In"|iApply "IH"].
+  Qed.
+
+  Lemma incl_big_sepL_ty_shr {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅)
+      f n (aπl: vec _ n) d κ tid l :
+    ty.(ty_size) = ty'.(ty_size) →
+    □ (∀aπ d κ tid l', ty.(ty_shr) aπ d κ tid l' -∗ ty'.(ty_shr) (f ∘ aπ) d κ tid l') -∗
+    ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i)) -∗
+    [∗ list] i ↦ bπ ∈ vmap (f ∘.) aπl, ty'.(ty_shr) bπ d κ tid (l +ₗ[ty'] i).
+  Proof.
+    iIntros (->) "#In tys". iInduction aπl as [|] "IH" forall (l); [done|]=>/=.
+    iDestruct "tys" as "[ty tys]". setoid_rewrite <-shift_loc_assoc_nat.
+    iSplitL "ty"; by [iApply "In"|iApply "IH"].
   Qed.
 End array_util.

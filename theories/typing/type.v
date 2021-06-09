@@ -5,7 +5,7 @@ From lrust.prophecy Require Export prophecy.
 From lrust.lifetime Require Export frac_borrow.
 From lrust.lang Require Export proofmode notation.
 From lrust.typing Require Export base uniq_cmra.
-From lrust.typing Require Import lft_contexts.
+From lrust.typing Require Export lft_contexts.
 Set Default Proof Using "Type".
 
 Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l: syn_typel).
@@ -195,7 +195,7 @@ Next Obligation.
   move=> *. iIntros "#LFT _ In [%vl[? st]]". iIntros "κ !>!>".
   iMod (st_own_proph with "LFT In st κ") as "Upd"; [done|].
   iModIntro. iApply (step_fupdN_wand with "Upd").
-  iIntros ">(%&%&%& ξl & Tost)!>". iExists _, _. iSplit; [done|]. iIntros "{$ξl}ξl".
+  iIntros ">(%&%&%& ξl & Tost) !>". iExists _, _. iSplit; [done|]. iIntros "{$ξl}ξl".
   iMod ("Tost" with "ξl") as "[?$]". iModIntro. iExists _. iFrame.
 Qed.
 
@@ -782,6 +782,68 @@ Section leak.
   Proof. move=> _. by eapply leak_impl; [apply leak_just|]=>/=. Qed.
 End leak.
 
+(** * Real *)
+(** It is for taking the prophecy-independent part of a value *)
+
+Definition real `{!typeG Σ} {𝔄 𝔅} (E: elctx) (L: llctx) (ty: type 𝔄) (f: 𝔄 → 𝔅) : Prop :=
+  (∀F q vπ d tid vl, ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    ty.(ty_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=>
+      ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L q ∗ ty.(ty_own) vπ d tid vl) ∧
+  (∀F q vπ d κ tid l, ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    ty.(ty_shr) vπ d κ tid l ={F}▷=∗ |={F}▷=>^d |={F}=>
+      ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L q ∗ ty.(ty_shr) vπ d κ tid l).
+
+Definition reall `{!typeG Σ} {𝔄l 𝔅l} E L (tyl: typel 𝔄l)
+    (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) : Prop :=
+  HForall_1' (λ _ _ ty f, real E L ty f) tyl fl.
+
+Section real.
+  Context `{!typeG Σ}.
+
+  Lemma simple_type_real {𝔄 𝔅} (st: simple_type 𝔄) (f: _ → 𝔅) E L :
+    (∀F q vπ d tid vl, ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+      st.(st_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=>
+        ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L q ∗ st.(st_own) vπ d tid vl) →
+    real E L st f.
+  Proof.
+    move=> H. split; iIntros "*%"; [by iApply H|].
+    iIntros "LFT E L (%& bor & st) !>!>". iMod (H with "LFT E L st") as "Upd"; [done|].
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >($&$&?) !>". iExists _. iFrame.
+  Qed.
+
+  Lemma plain_type_real {𝔄} (pt: plain_type 𝔄) E L : real E L pt id.
+  Proof.
+    apply simple_type_real. iIntros "*% _ _ $ (%&%& pt)".
+    iApply step_fupdN_full_intro. iIntros "!>!>". iSplit; iExists _; by [|iFrame].
+  Qed.
+
+  Lemma real_compose {𝔄 𝔅 ℭ} (g: _ → ℭ) (f: 𝔄 → 𝔅) ty E L :
+    real E L ty f → real E L ty (g ∘ f).
+  Proof.
+    move=> [Rlo Rls]. split.
+    - iIntros "*% LFT E L ty". iMod (Rlo with "LFT E L ty") as "Upd"; [done|].
+      iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%Eq &$&$) !%".
+      move: Eq=> [b Eq]. exists (g b). fun_ext=>/= ?. f_equal. apply (equal_f Eq).
+    - iIntros "*% LFT E L ty". iMod (Rls with "LFT E L ty") as "Upd"; [done|].
+      iIntros "!>!>". iApply (step_fupdN_wand with "Upd"). iIntros ">(%Eq &$&$) !%".
+      move: Eq=> [b Eq]. exists (g b). fun_ext=>/= ?. f_equal. apply (equal_f Eq).
+  Qed.
+
+  Lemma real_eq {𝔄 𝔅} (f g: 𝔄 → 𝔅) ty E L :
+    real E L ty f → f = g → real E L ty g.
+  Proof. by move=> ?<-. Qed.
+
+  (** List *)
+
+  Lemma reall_nil E L : reall (𝔅l := []) E L +[] -[].
+  Proof. constructor. Qed.
+
+  Lemma reall_cons {𝔄 𝔅 𝔄l 𝔅l} ty tyl (f: 𝔄 → 𝔅) (fl: plist2 _ 𝔄l 𝔅l) E L :
+    real E L ty f → reall E L tyl fl →
+    reall E L (ty +:: tyl) (f -:: fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) (_::_) (_::_)).
+  Proof. by constructor. Qed.
+End real.
+
 (** * Subtyping *)
 
 Definition type_incl `{!typeG Σ} {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) (f: 𝔄 → 𝔅)
@@ -1096,14 +1158,15 @@ Notation "[loc[ l ] := vl ] P" := (by_just_loc vl (λ l, P)) (at level 200,
 
 Global Hint Resolve ty_outlives_E_elctx_sat tyl_outlives_E_elctx_sat : lrust_typing.
 Global Hint Resolve leak'_post | 5 : lrust_typing.
-Global Hint Resolve leakl_nil leak'_just
+Global Hint Resolve leakl_nil leak'_just plain_type_real reall_nil
   subtype_refl eqtype_refl subtypel_nil eqtypel_nil : lrust_typing.
 (* We use [Hint Extern] instead of [Hint Resolve] here, because
-  [into_plistc_cons], [leakl_cons], [subtypel_cons] and [eqtypel_cons]
+  [into_plistc_cons], [leakl_cons], [reall_cons], [subtypel_cons] and [eqtypel_cons]
   work with [apply] but not with [simple apply] *)
 Global Hint Extern 0 (IntoPlistc _ _) => apply into_plistc_cons : lrust_typing.
 Global Hint Extern 0 (leakl _ _ _ _) => apply leakl_cons : lrust_typing.
+Global Hint Extern 0 (reall _ _ _ _) => apply reall_cons : lrust_typing.
 Global Hint Extern 0 (subtypel _ _ _ _ _) => apply subtypel_cons : lrust_typing.
 Global Hint Extern 0 (eqtypel _ _ _ _ _ _) => apply eqtypel_cons : lrust_typing.
 
-Global Hint Opaque leak leak' subtype eqtype : lrust_typing.
+Global Hint Opaque leak leak' real subtype eqtype : lrust_typing.

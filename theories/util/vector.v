@@ -56,7 +56,7 @@ Qed.
 Fixpoint vsnoc {A n} (xl: vec A n) (y: A) : vec A (S n) :=
   match xl with [#] => [#y] | x ::: xl' => x ::: vsnoc xl' y end.
 
-Lemma vsnoc_list {A n} (xl: vec A n) y : (vsnoc xl y: list _) = xl ++ [y].
+Lemma vec_to_list_snoc {A n} (xl: vec A n) y : vec_to_list (vsnoc xl y) = xl ++ [y].
 Proof. by elim xl; [done|]=>/= ???->. Qed.
 
 (** [vapply] and [vfunsep] *)
@@ -66,9 +66,9 @@ Definition vapply {A B n} (fl: vec (B → A) n) (x: B) : vec A n := vmap (.$ x) 
 Fixpoint vfunsep {A B n} : (B → vec A n) → vec (B → A) n :=
   match n with 0 => λ _, [#] | S _ => λ f, (vhd ∘ f) ::: vfunsep (vtl ∘ f) end.
 
-Lemma lapply_vapply {A B n} (fl: vec (B → A) n) :
-  lapply (vec_to_list fl) = vec_to_list ∘ vapply fl.
-Proof. elim fl; [done|]=>/= ??? Eq. fun_ext=>/= ?. by rewrite Eq. Qed.
+Lemma vec_to_list_apply {A B n} (fl: vec (B → A) n) :
+  vec_to_list ∘ vapply fl = lapply fl.
+Proof. elim fl; [done|]=>/= ??? Eq. fun_ext=>/= ?. by rewrite -Eq. Qed.
 
 Lemma vapply_lookup {A B n} (fl: vec (B → A) n) (i: fin n) :
   (.!!! i) ∘ vapply fl = fl !!! i.

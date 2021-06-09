@@ -65,9 +65,14 @@ Section cell.
 
   (* In order to prove [cell_leak] with a non-trivial postcondition,
     we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
-  Lemma cell_leak_just {𝔄} (ty: type 𝔄) E L :
-    leak E L ty (const True) → leak E L (cell ty) (const True).
-  Proof. move=> _. apply leak_just. Qed.
+  Lemma cell_leak {𝔄} (ty: type 𝔄) E L : leak E L (cell ty) (const True).
+  Proof. apply leak_just. Qed.
+
+  Lemma cell_real {𝔄} (ty: type 𝔄) E L : real E L (cell ty) id.
+  Proof.
+    split; iIntros "*% _ _ $ (%&->& big)"; iApply step_fupdN_full_intro;
+    iIntros "!>!>"; [|iIntros "!>!>"]; (iSplit; iExists _; by [|iSplit]).
+  Qed.
 
   Global Instance cell_copy {𝔄} (ty: type 𝔄) : Copy ty → Copy (cell ty).
   Proof.
@@ -467,4 +472,4 @@ Section cell.
   Qed.
 End cell.
 
-Global Hint Resolve cell_leak_just cell_subtype cell_eqtype : lrust_typing.
+Global Hint Resolve cell_leak cell_real cell_subtype cell_eqtype : lrust_typing.

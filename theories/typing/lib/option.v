@@ -16,7 +16,7 @@ Section option.
   Definition sum'_to_option {A} (s: sum' () A) : option A :=
     match s with inl _ => None | inr (inl x) => Some x
       | inr (inr a) => absurd a end.
-  Global Instance option_sum'_iso {A} : Iso (@option_to_sum' A) sum'_to_option.
+  Global Instance option_sum'_iso {A} : Iso (@sum'_to_option A) option_to_sum'.
   Proof. split; fun_ext; case=>//; by case. Qed.
 
   Definition option_ty {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
@@ -31,6 +31,16 @@ Section option.
     leak E L ty (const True) → leak E L (option_ty ty) (const True).
   Proof. move=> ?. apply leak_just. Qed.
 
+  Lemma option_real {𝔄 𝔅} (f: 𝔄 → 𝔅) ty E L :
+    real E L ty f → real (𝔅:=optionₛ _) E L (option_ty ty) (option_map f).
+  Proof.
+    move=> ?. eapply real_eq.
+    { apply mod_ty_real; [apply _|].
+      apply (real_compose (𝔅:=Σ! [()%ST;_]) (ℭ:=optionₛ _) sum'_to_option).
+      solve_typing. }
+    fun_ext. by case.
+  Qed.
+
   Lemma option_subtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty ty' :
     subtype E L ty ty' f → subtype E L (option_ty ty) (option_ty ty') (option_map f).
   Proof. move=> ?. eapply subtype_eq; [solve_typing|]. fun_ext. by case. Qed.
@@ -39,7 +49,6 @@ Section option.
     eqtype E L ty ty' f g →
     eqtype E L (option_ty ty) (option_ty ty') (option_map f) (option_map g).
   Proof. move=> [??]. split; by apply option_subtype. Qed.
-
 
   (* Variant indices. *)
   Definition none := 0%nat.
@@ -179,4 +188,5 @@ Proof. by move=> ? ->. Qed.
 End option.
 
 Global Hint Resolve option_leak | 5 : lrust_typing.
-Global Hint Resolve option_leak_just option_subtype option_eqtype : lrust_typing.
+Global Hint Resolve option_leak_just option_real option_subtype option_eqtype
+  : lrust_typing.

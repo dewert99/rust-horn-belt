@@ -54,6 +54,14 @@ Section typing.
   Lemma shr_leak {𝔄} κ (ty: type 𝔄) E L : leak E L (&shr{κ} ty) (const True).
   Proof. apply leak_just. Qed.
 
+  Lemma shr_real {𝔄 𝔅} κ ty E L (f: 𝔄 → 𝔅) :
+    real E L ty f → real E L (&shr{κ} ty) f.
+  Proof.
+    move=> [_ Rl]. apply simple_type_real=>/=.
+    iIntros (???[|]?[|[[]|][]]?) "LFT E L ty //=".
+    by iMod (Rl with "LFT E L ty") as "$".
+  Qed.
+
   Lemma shr_type_incl {𝔄 𝔅} κ κ' (f: 𝔄 → 𝔅) ty ty' :
     κ' ⊑ κ -∗ type_incl ty ty' f -∗ type_incl (&shr{κ} ty) (&shr{κ'} ty') f.
   Proof.

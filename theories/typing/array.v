@@ -25,10 +25,7 @@ Section array.
       [∗ list] i ↦ aπ ∈ vfunsep vπ, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i);
   |}%I.
   Next Obligation.
-    iIntros "* (%&->& All)". setoid_rewrite ty_size_eq.
-    move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
-    iInduction aπl as [|] "IH"; inv_vec wll; [done|]=>/= ??. rewrite/= app_length.
-    iDestruct "All" as "[-> All]". by iDestruct ("IH" with "All") as %->.
+    iIntros "* (%&->& tys)". by iApply (big_sepL_ty_own_length with "tys").
   Qed.
   Next Obligation. move=>/= *. do 6 f_equiv. by apply ty_own_depth_mono. Qed.
   Next Obligation. move=>/= *. do 3 f_equiv. by apply ty_shr_depth_mono. Qed.
@@ -43,26 +40,15 @@ Section array.
   Qed.
   Next Obligation.
     iIntros (????????? q ?) "#LFT #In (%&->& tys) κ".
-    rewrite -{2}[vπ]vapply_funsep. move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
-    iInduction aπl as [|] "IH" forall (q); inv_vec wll=>/=.
-    { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
-      do 2 (iSplitR; [done|]). iIntros "_!>". iFrame "κ". by iExists [#]=>/=. }
-    move=> ??. iDestruct "κ" as "[κ κ₊]". iDestruct "tys" as "[ty tys]".
-    iMod (ty_own_proph with "LFT In ty κ") as "Toty"; [done|].
-    iMod ("IH" with "tys κ₊") as "Totys". iCombine "Toty Totys" as "Totys".
-    iApply (step_fupdN_wand with "Totys").
-    iIntros "!>[>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
-    iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
-    iExists _, _. iSplit. { iPureIntro. by apply proph_dep_vcons. }
-    iIntros "{$ξζl}ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
-    iMod ("Toty" with "ξl") as "[ty $]".
-    iMod ("Totys" with "ζl") as "[(%wll &%& tys) $]". iModIntro.
-    iExists (_ ::: wll). iSplitR; [iPureIntro=>/=; by f_equal|]. iFrame.
+    iMod (ty_own_proph_big_sepL_v with "LFT In tys κ") as "Upd"; [done|].
+    iApply (step_fupdN_wand with "Upd"). rewrite vapply_funsep.
+    iIntros "!> >(%&%&%& ξl & Totys) !>". iExists _, _. iSplit; [done|].
+    iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[? $]". iExists _. by iFrame.
   Qed.
   Next Obligation.
     iIntros "*% LFT In In' tys κ'". rewrite -{2}[vπ]vapply_funsep.
-    iMod (ty_shr_proph_big_sepL_v with "LFT In In' tys κ'") as "Totys"; [done|].
-    iIntros "!>!>". iApply (step_fupdN_wand with "Totys").
+    iMod (ty_shr_proph_big_sepL_v with "LFT In In' tys κ'") as "Upd"; [done|].
+    iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
     iIntros ">(%&%&%& ξl & Totys) !>". iExists _, _. iSplit; [done|].
     iIntros "{$ξl}ξl". by iMod ("Totys" with "ξl") as "[$$]".
   Qed.
@@ -113,22 +99,44 @@ Section typing.
   Global Instance array_sync {𝔄} n (ty: type 𝔄) : Sync ty → Sync [ty;^ n].
   Proof. move=> >/=. by do 3 f_equiv. Qed.
 
+  Lemma array_leak {𝔄} (ty: type 𝔄) n Φ E L :
+    leak E L ty Φ → leak E L [ty;^ n] (λ al, lforall Φ al).
+  Proof.
+    iIntros "% * LFT PROPH E L (%&->& tys)".
+    iMod (leak_big_sepL_ty_own with "LFT PROPH E L tys"); [done..|].
+    by rewrite -vec_to_list_apply vapply_funsep.
+  Qed.
+
+  Lemma array_leak_just {𝔄} (ty: type 𝔄) n E L :
+    leak E L ty (const True) → leak E L [ty;^ n] (const True).
+  Proof. move=> ?. apply leak_just. Qed.
+
+  Lemma array_real {𝔄 𝔅} (ty: type 𝔄) n (f: 𝔄 → 𝔅) E L :
+    real E L ty f → real (𝔅 := vecₛ 𝔅 n) E L [ty;^ n] (vmap f).
+  Proof.
+    move=> Rl. split.
+    - iIntros "*% LFT E L (%&->& tys)".
+      iMod (real_big_sepL_ty_own with "LFT E L tys") as "Upd"; [done..|].
+      iApply (step_fupdN_wand with "Upd"). rewrite vapply_funsep.
+      iIntros "!> >($&$&?) !>". iExists _. by iFrame.
+    - iIntros "*% LFT E L tys".
+      iMod (real_big_sepL_ty_shr with "LFT E L tys") as "Upd"; [done..|].
+      iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
+      rewrite vapply_funsep. by iIntros ">($&$&$) !>".
+  Qed.
+
   Lemma array_subtype {𝔄 𝔅} E L n (f: 𝔄 → 𝔅) ty ty' :
     subtype E L ty ty' f → subtype E L [ty;^ n] [ty';^ n] (vmap f).
   Proof.
     iIntros (Sub ?) "L". iDestruct (Sub with "L") as "#Sub".
-    iIntros "!> E". iDestruct ("Sub" with "E") as "(%Sz & ? & #InOwn & #InShr)".
+    iIntros "!> E". iDestruct ("Sub" with "E") as "(%Sz &?&#?&#?)".
     iSplit; [by rewrite/= Sz|]. iSplit; [done|].
     have Eq: ∀vπ, vfunsep (vmap f ∘ vπ) = vmap (f ∘.) (vfunsep vπ).
     { move=> ?? vπ. rewrite -{1}[vπ]vapply_funsep.
       move: {vπ}(vfunsep vπ)=> aπl. by elim aπl; [done|]=>/= ???<-. }
-    iSplit; iIntros "!> %vπ %/="; rewrite Eq; move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl.
-    - iIntros "* (%wll &->& tys)". iExists _. iSplit; [done|].
-      iInduction aπl as [|] "IH"; inv_vec wll; [done|]=>/= ??.
-      iDestruct "tys" as "[ty tys]". iSplitL "ty"; by [iApply "InOwn"|iApply "IH"].
-    - iIntros "%% %l". iInduction aπl as [|] "IH" forall (l); [by iIntros|]=>/=.
-      iIntros "[#ty #tys]". rewrite Sz. setoid_rewrite <-shift_loc_assoc_nat.
-      iSplitL "ty"; by [iApply "InShr"|iApply "IH"].
+    iSplit; iIntros "!> */="; rewrite Eq.
+    - iIntros "(%&->&?)". iExists _. iSplit; [done|]. by iApply incl_big_sepL_ty_own.
+    - iIntros "?". by iApply incl_big_sepL_ty_shr.
   Qed.
   Lemma array_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' n E L :
     eqtype E L ty ty' f g → eqtype E L [ty;^ n] [ty';^ n] (vmap f) (vmap g).
@@ -179,20 +187,8 @@ Section typing.
     - done.
     - fun_ext. by case.
   Qed.
-
-  Lemma array_leak {𝔄} (ty: type 𝔄) n Φ E L :
-    leak E L ty Φ → leak E L [ty;^ n] (λ al, lforall Φ al).
-  Proof.
-    move=> ?. elim n. { eapply leak_impl; [apply leak_just|]=> v. by inv_vec v. }
-    move=> ??. eapply leak_impl.
-    { eapply leak_subtype; [by eapply proj1, array_succ_prod|]. solve_typing. }
-    move=> v. by inv_vec v.
-  Qed.
-
-  Lemma array_leak_just {𝔄} (ty: type 𝔄) n E L :
-    leak E L ty (const True) → leak E L [ty;^ n] (const True).
-  Proof. move=> ?. apply leak_just. Qed.
 End typing.
 
 Global Hint Resolve array_leak | 5 : lrust_typing.
-Global Hint Resolve array_leak_just array_subtype array_eqtype : lrust_typing.
+Global Hint Resolve array_leak_just array_real array_subtype array_eqtype
+  : lrust_typing.

@@ -125,6 +125,12 @@ Section typing.
   Lemma uninit_leak n E L : leak E L (↯ n) (const True).
   Proof. apply leak_just. Qed.
 
+  Lemma uninit_real n E L : real E L (↯ n) id.
+  Proof.
+    split; iIntros (?? vπ) "*% _ _ $$ !>"; iApply step_fupdN_full_intro;
+    iPureIntro; exists (); fun_ext=>/= π; by case (vπ π).
+  Qed.
+
   Lemma uninit_unit E L : eqtype E L (↯ 0) () id id.
   Proof.
     apply eqtype_id_unfold. iIntros (?) "_!>_". iSplit; [done|].
@@ -156,5 +162,5 @@ Section typing.
   Proof. eapply proj2, uninit_plus_prod. Qed.
 End typing.
 
-Global Hint Resolve uninit_leak uninit_unit_1 uninit_unit_2
+Global Hint Resolve uninit_leak uninit_real uninit_unit_1 uninit_unit_2
   uninit_plus_prod_1 uninit_plus_prod_2 : lrust_typing.

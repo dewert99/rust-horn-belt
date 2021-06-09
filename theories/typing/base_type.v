@@ -23,6 +23,13 @@ Section base.
   Lemma base_leak {𝔄} E L Φ : leak E L (@base 𝔄) Φ.
   Proof. by iIntros "* _ _ _ _" ([?[??]]). Qed.
 
+  Lemma base_real {𝔄 𝔅} E L (f: 𝔄 → 𝔅) : real E L base f.
+  Proof.
+    split.
+    - iIntros "*% _ _ _ (%&_&[])".
+    - iIntros "*% _ _ _ (%&_& own) !>!>". iDestruct "own" as (?) "[_[]]".
+  Qed.
+
   Lemma base_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) E L : subtype E L base base f.
   Proof.
     apply subtype_plain_type. iIntros "*_!>_/=". iSplit; [done|].

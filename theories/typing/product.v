@@ -5,7 +5,7 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import mod_ty.
 Set Default Proof Using "Type".
 
-Implicit Type 𝔄 𝔅 ℭ: syn_type.
+Implicit Type 𝔄 𝔅 ℭ 𝔇: syn_type.
 
 Section product.
   Context `{!typeG Σ}.
@@ -40,9 +40,16 @@ Section product.
 
   Global Instance unit0_send : Send unit0.
   Proof. done. Qed.
-
   Global Instance unit0_sync : Sync unit0.
   Proof. done. Qed.
+
+  Lemma unit0_leak E L : leak E L unit0 (const True).
+  Proof. apply leak_just. Qed.
+
+  Lemma unit0_real E L : real E L unit0 id.
+  Proof.
+    split; iIntros (?? vπ) "*% _ _ $ %"; iApply step_fupdN_full_intro; iPureIntro; [split; [|done]|]; exists -[]; fun_ext=>/= π; by case (vπ π).
+  Qed.
 
   Lemma split_prod_mt {𝔄 𝔅} vπ d vπ' d' tid (ty: type 𝔄) (ty': type 𝔅) q l :
     (l ↦∗{q}: λ vl, ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
@@ -129,7 +136,7 @@ Section product.
   Fixpoint xprod_ty {𝔄l} (tyl: typel 𝔄l) : type (Π! 𝔄l) :=
     match tyl in hlist _ 𝔄l return type (Π! 𝔄l) with
     | +[] => unit0
-    | ty +:: tyl' => mod_ty (𝔄:=_ * Π! _) (𝔅:=Π! (_::_))
+    | ty +:: tyl' => mod_ty (𝔄:=_*Π!_) (𝔅:=Π!(_::_))
                             to_cons_prod (prod_ty ty (xprod_ty tyl'))
     end.
 
@@ -153,6 +160,18 @@ Section typing.
   Lemma unit_ty_shr vπ d κ tid l :
     ().(ty_shr) vπ d κ tid l ⊣⊢ True.
   Proof. by rewrite /unit_ty mod_ty_shr. Qed.
+
+  Lemma unit_leak E L : leak E L () (const True).
+  Proof. apply leak_just. Qed.
+
+  Hint Resolve unit0_real : lrust_typing.
+  Lemma unit_real E L : real E L () id.
+  Proof.
+    eapply real_eq.
+    { apply mod_ty_real; [apply _|].
+      apply (real_compose (𝔅:=Π![]) (ℭ:=()) (const ())). solve_typing. }
+    fun_ext. by case.
+  Qed.
 
   Global Instance prod_lft_morphism {𝔄 𝔅 ℭ} (T: type 𝔄 → type 𝔅) (T': type 𝔄 → type ℭ):
     TypeLftMorphism T → TypeLftMorphism T' → TypeLftMorphism (λ ty, T ty * T' ty)%T.
@@ -260,13 +279,13 @@ Section typing.
     iIntros "!> [>[Obs $] >[Obs' $]] !>". iCombine "Obs Obs'" as "?".
     iApply proph_obs_eq; [|done]=>/= π. by case (vπ π).
   Qed.
-  Hint Resolve prod_leak : lrust_typing.
 
   Lemma prod_leak_just {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) E L :
     leak E L ty (const True) → leak E L ty' (const True) →
     leak E L (ty * ty') (const True).
   Proof. move=> ??. apply leak_just. Qed.
 
+  Hint Resolve prod_leak : lrust_typing.
   Lemma xprod_leak {𝔄l} (tyl: typel 𝔄l) Φl E L :
     leakl E L tyl Φl →
     leak E L (Π! tyl) (λ al, pforall (λ _, curry ($)) (pzip Φl al)).
@@ -279,6 +298,40 @@ Section typing.
     HForall (λ _ ty, leak E L ty (const True)) tyl →
     leak E L (Π! tyl) (const True).
   Proof. move=> ?. apply leak_just. Qed.
+
+  Lemma prod_real {𝔄 𝔅 ℭ 𝔇} ty ty' (f: 𝔄 → ℭ) (g: 𝔅 → 𝔇) E L :
+    real E L ty f → real E L ty' g →
+    real (𝔅 := ℭ * 𝔇) E L (ty * ty') (prod_map f g).
+  Proof.
+    move=> [Rlo Rls][Rlo' Rls']. split.
+    - iIntros (?? vπ) "*% #LFT #E [L L₊] (%&%&->& ty & ty')".
+      iMod (Rlo with "LFT E L ty") as "Upd"; [done|].
+      iMod (Rlo' with "LFT E L₊ ty'") as "Upd'"; [done|].
+      iCombine "Upd Upd'" as "Upd". iApply (step_fupdN_wand with "Upd").
+      iIntros "!>[>(%Eq &$&?) >(%Eq' &$&?)] !>".
+      iSplit; last first. { iExists _, _. by iFrame. }
+      iPureIntro. move: Eq=> [a Eq]. move: Eq'=> [b Eq']. exists (a, b).
+      fun_ext=>/= π. move: (equal_f Eq π) (equal_f Eq' π)=>/=.
+      by case (vπ π)=>/= ??<-<-.
+    - iIntros (?? vπ) "*% #LFT #E [L L₊] [ty ty']".
+      iMod (Rls with "LFT E L ty") as "Upd"; [done|].
+      iMod (Rls' with "LFT E L₊ ty'") as "Upd'"; [done|]. iIntros "!>!>".
+      iCombine "Upd Upd'" as "Upd". iApply (step_fupdN_wand with "Upd").
+      iIntros "[>(%Eq &$&$) >(%Eq' &$&$)] !%".
+      move: Eq=> [a Eq]. move: Eq'=> [b Eq']. exists (a, b).
+      fun_ext=>/= π. move: (equal_f Eq π) (equal_f Eq' π)=>/=.
+      by case (vπ π)=>/= ??<-<-.
+  Qed.
+
+  Hint Resolve prod_real : lrust_typing.
+  Lemma xprod_real {𝔄l 𝔅l} tyl (fl: plist2 _ 𝔄l 𝔅l) E L :
+    reall E L tyl fl → real (𝔅 := Π! 𝔅l) E L (Π! tyl) (plist_map fl).
+  Proof.
+    elim; [solve_typing|]=>/= > Rl _ Rl'. eapply real_eq.
+    { apply mod_ty_real; [by apply _|].
+      apply (real_compose (𝔅:=_*Π!_) (ℭ:=Π!(_::_)) to_cons_prod). solve_typing. }
+    fun_ext=>/=. by case.
+  Qed.
 
   Lemma prod_subtype {𝔄 𝔅 𝔄' 𝔅'} E L f g
                      (ty1: type 𝔄) (ty2: type 𝔅) (ty1': type 𝔄') (ty2': type 𝔅') :
@@ -399,6 +452,7 @@ Section typing.
 End typing.
 
 Global Hint Resolve prod_leak xprod_leak | 5 : lrust_typing.
-Global Hint Resolve prod_leak_just xprod_leak_just
+Global Hint Resolve unit_leak prod_leak_just xprod_leak_just
+  unit_real prod_real xprod_real
   prod_subtype prod_eqtype xprod_subtype xprod_eqtype
   xprod_outlives_E_elctx_sat : lrust_typing.

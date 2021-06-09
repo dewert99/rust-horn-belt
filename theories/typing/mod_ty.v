@@ -68,6 +68,26 @@ Notation "<{ f }>" := (mod_ty f) (format "<{ f }>"): lrust_type_scope.
 Section typing.
   Context `{!typeG Σ}.
 
+  Lemma mod_ty_own' {𝔄 𝔅} g f `{!@SemiIso 𝔄 𝔅 f g} ty vπ d tid vl :
+    (<{f}> ty).(ty_own) vπ d tid vl ⊢ ty.(ty_own) (g ∘ vπ) d tid vl.
+  Proof. iIntros "[%[->?]]". by rewrite compose_assoc semi_iso. Qed.
+  Lemma mod_ty_own {𝔄 𝔅} g f `{!@Iso 𝔄 𝔅 f g} ty vπ d tid vl :
+    (<{f}> ty).(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) (g ∘ vπ) d tid vl.
+  Proof.
+    iSplit; [by iApply mod_ty_own'|]. iIntros "ty". iExists _. iFrame "ty".
+    by rewrite compose_assoc semi_iso.
+  Qed.
+
+  Lemma mod_ty_shr' {𝔄 𝔅} g f `{!@SemiIso 𝔄 𝔅 f g} ty vπ d κ tid l :
+    (<{f}> ty).(ty_shr) vπ d κ tid l ⊢ ty.(ty_shr) (g ∘ vπ) d κ tid l.
+  Proof. iIntros "[%[->?]]". by rewrite compose_assoc semi_iso. Qed.
+  Lemma mod_ty_shr {𝔄 𝔅} g f `{!@Iso 𝔄 𝔅 f g} ty vπ d κ tid l :
+    (<{f}> ty).(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) (g ∘ vπ) d κ tid l.
+  Proof.
+    iSplit; [by iApply mod_ty_shr'|]. iIntros "ty". iExists _. iFrame "ty".
+    by rewrite compose_assoc semi_iso.
+  Qed.
+
   Global Instance mod_ty_type_ne {𝔄 𝔅} (f: 𝔄 → 𝔅) : TypeNonExpansive <{f}>%T.
   Proof.
     split=>/= *; by [apply type_lft_morphism_id_like| |do 3 f_equiv|do 3 f_equiv].
@@ -106,19 +126,16 @@ Section typing.
     leak E L ty (const True) → leak E L (<{f}> ty) (const True).
   Proof. move=> ?. apply leak_just. Qed.
 
-  Lemma mod_ty_own {𝔄 𝔅} g f `{!@Iso 𝔄 𝔅 f g} ty vπ d tid vl :
-    (<{f}> ty).(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) (g ∘ vπ) d tid vl.
+  Lemma mod_ty_real {𝔄 𝔅 ℭ} E L f g `{!@Iso 𝔄 𝔅 f g} (h: _ → ℭ) ty :
+    real E L ty h → real E L (<{f}> ty) (h ∘ g).
   Proof.
-    iSplit=>/=.
-    - iIntros "[%[->?]]". by rewrite compose_assoc semi_iso.
-    - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
-  Qed.
-  Lemma mod_ty_shr {𝔄 𝔅} g f `{!@Iso 𝔄 𝔅 f g} ty vπ d κ tid l :
-    (<{f}> ty).(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) (g ∘ vπ) d κ tid l.
-  Proof.
-    iSplit=>/=.
-    - iIntros "[%[->?]]". by rewrite compose_assoc semi_iso.
-    - iIntros "?". iExists (g ∘ vπ). iFrame. by rewrite compose_assoc semi_iso.
+    move=> [Rlo Rls]. split.
+    - iIntros "*% LFT E L ty". rewrite mod_ty_own.
+      iMod (Rlo with "LFT E L ty") as "Upd"; [done|].
+      iApply (step_fupdN_wand with "Upd"). by iIntros "!> >($&$&$)".
+    - iIntros "*% LFT E L ty". rewrite mod_ty_shr.
+      iMod (Rls with "LFT E L ty") as "Upd"; [done|]. iIntros "!>!>".
+      iApply (step_fupdN_wand with "Upd"). by iIntros ">($&$&$)".
   Qed.
 
   Lemma mod_ty_id {𝔄} (ty: type 𝔄) : <{id}>%T ty ≡ ty.

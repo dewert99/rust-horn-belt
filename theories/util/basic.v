@@ -134,5 +134,5 @@ Definition list_to_option {A} (xl: list A) : option (A * list A) :=
   match xl with [] => None | x :: xl' => Some (x, xl') end.
 Definition option_to_list {A} (o: option (A * list A)) : list A :=
   match o with None => [] | Some (x, xl') => x :: xl' end.
-Global Instance list_option_iso {A} : Iso (@list_to_option A) option_to_list.
+Global Instance list_option_iso {A} : Iso (@option_to_list A) list_to_option.
 Proof. split; fun_ext; case=>//; by case. Qed.

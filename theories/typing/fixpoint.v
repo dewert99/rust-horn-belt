@@ -275,9 +275,21 @@ Section lemmas.
   Proof.
     move=> Loop. have Lk: ∀n, leak E L (Tn T n) Φ.
     { elim=> [|? H]; apply Loop; [apply base_leak|apply H]. }
-    rewrite /fix_ty=> > /=. eapply @limit_preserving; [|move=> ?; by apply Lk].
+    rewrite /fix_ty=> > /=. eapply @limit_preserving; [|move=> ?; apply Lk].
     apply limit_preserving_forall=> ?.
     apply limit_preserving_entails; [done|]=> ??? Eq. do 4 f_equiv. apply Eq.
+  Qed.
+
+  Lemma fix_real {𝔅} E L (f: _ → 𝔅) :
+    (∀ty, real E L ty f → real E L (T ty) f) → real E L (fix_ty T) f.
+  Proof.
+    move=> Loop. have Rl: ∀n, real E L (Tn T n) f.
+    { elim=> [|? H]; apply Loop; [apply base_real|apply H]. }
+    rewrite /fix_ty. split=>/= >; (
+      eapply @limit_preserving; [|move=> ?; apply Rl];
+      apply limit_preserving_forall=> ?;
+      apply limit_preserving_entails; [done|]=> ??? Eq;
+      do 3 f_equiv; [apply Eq|]; do 5 f_equiv); [|do 2 f_equiv]; apply Eq.
   Qed.
 End lemmas.
 

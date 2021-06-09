@@ -124,6 +124,28 @@ Section typing.
     leak E L ty (const True) → leak E L (? ty) (const True).
   Proof. move=> ?. apply leak_just. Qed.
 
+  Lemma maybe_uninit_real {𝔄 𝔅} ty E L (f: 𝔄 → 𝔅) :
+    real E L ty f → real (𝔅:=optionₛ _) E L (? ty) (option_map f).
+  Proof.
+    move=> [Rlo Rls]. split.
+    - iIntros "*% LFT E L [[->%]|(%&->& ty)]".
+      { iApply step_fupdN_full_intro. iIntros "!>!>". iFrame "L".
+        iSplit; by [iExists _|iLeft]. }
+      iMod (Rlo with "LFT E L ty") as "Upd"; [done|].
+      iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%Eq &$&?) !>".
+      iSplit; last first. { iRight. iExists _. by iFrame. }
+      iPureIntro. move: Eq=> [b Eq]. exists (Some b). fun_ext=>/= π.
+      by move: (equal_f Eq π)=>/= <-.
+    - iIntros "*% LFT E L [[-> ?]|(%&->& ty)]".
+      { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iFrame "L".
+        iSplit; by [iExists _|iLeft; iFrame]. }
+      iMod (Rls with "LFT E L ty") as "Upd"; [done|]. iIntros "!>!>".
+      iApply (step_fupdN_wand with "Upd"). iIntros ">(%Eq &$&?) !>".
+      iSplit; last first. { iRight. iExists _. by iFrame. }
+      iPureIntro. move: Eq=> [b Eq]. exists (Some b). fun_ext=>/= π.
+      by move: (equal_f Eq π)=>/= <-.
+  Qed.
+
   Lemma maybe_uninit_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty' E L :
     subtype E L ty ty' f → subtype E L (? ty) (? ty') (option_map f).
   Proof.
@@ -166,5 +188,5 @@ Section typing.
 End typing.
 
 Global Hint Resolve maybe_uninit_leak | 5 : lrust_typing.
-Global Hint Resolve maybe_uninit_leak_just
+Global Hint Resolve maybe_uninit_leak_just maybe_uninit_real
   maybe_uninit_subtype maybe_uninit_eqtype : lrust_typing.

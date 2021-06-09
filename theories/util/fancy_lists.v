@@ -470,6 +470,13 @@ Inductive HForall_1 (Φ: ∀X, F X → G X → Prop)
 | HForall_1_cons {X Xl} (x: _ X) y (xl: _ Xl) yl :
     Φ _ x y → HForall_1 Φ xl yl → HForall_1 Φ (x +:: xl) (y -:: yl).
 
+Inductive HForall_1' {H: A → A → Type} (Φ: ∀X Y, F X → H X Y → Prop)
+  : ∀{Xl Yl}, hlist F Xl → plist2 H Xl Yl → Prop :=
+| HForall_1'_nil: HForall_1' Φ +[] (-[]: plist2 _ [] [])
+| HForall_1'_cons {X Y Xl Yl} x z xl zl :
+    Φ _ _ x z → HForall_1' Φ xl zl →
+    HForall_1' Φ (x +:: xl) (z -:: zl: plist2 _ (X :: Xl) (Y :: Yl)).
+
 Inductive HForall2_1 {H: A → A → Type} (Φ: ∀X Y, F X → G Y → H X Y → Prop)
   : ∀{Xl Yl}, hlist F Xl → hlist G Yl → plist2 H Xl Yl → Prop :=
 | HForall2_1_nil: HForall2_1 Φ +[] +[] -[]
@@ -488,7 +495,7 @@ Inductive HForallTwo (Φ: ∀X, F X → G X → Prop) : ∀{Xl}, hlist F Xl → 
 | HForallTwo_cons {X Xl} (x: _ X) y (xl: _ Xl) yl :
     Φ _ x y → HForallTwo Φ xl yl → HForallTwo Φ (x +:: xl) (y +:: yl).
 
-Inductive HForallThree {G H} (Φ: ∀X, F X → G X → H X → Prop) :
+Inductive HForallThree {H} (Φ: ∀X, F X → G X → H X → Prop) :
     ∀{Xl}, hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
 | HForallThree_nil: HForallThree Φ +[] +[] +[]
 | HForallThree_cons {X Xl} (x: _ X) y z (xl: _ Xl) yl zl :
@@ -501,6 +508,11 @@ Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
 Lemma HForall_1_nth {Xl D} (Φ: ∀X, F X → G X → Prop)
   (d: _ D) d' (xl: _ Xl) yl i :
   Φ _ d d' → HForall_1 Φ xl yl → Φ _ (hnth d xl i) (pnth d' yl i).
+Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
+
+Lemma HForall_1'_nth {H: A → A → Type} {Xl Yl D D'} (Φ: ∀X Y, F X → H X Y → Prop)
+  (d: _ D) (d': _ D') xl (yl: plist2 _ Xl Yl) i :
+  Φ _ _ d d' → HForall_1' Φ xl yl → Φ _ _ (hnth d xl i) (p2nth d' yl i).
 Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
 
 Lemma HForallTwo_nth {Xl D}

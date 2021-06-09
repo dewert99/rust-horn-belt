@@ -158,6 +158,30 @@ Section typing.
     move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.
   Qed.
 
+  Lemma uniq_real {𝔄 𝔅} E L κ ty (f: 𝔄 → 𝔅) :
+    lctx_lft_alive E L κ → real E L ty f →
+    real E L (&uniq{κ} ty) (f ∘ fst).
+  Proof.
+    move=> Alv [Rlo Rls]. split.
+    - iIntros (????? [|[[]|][]] ?) "#LFT #E [L L₊] [$ uniq] //".
+      iDestruct "uniq" as (d' ?[Le Eq]) "[Vo Bor]".
+      move: Le=> /succ_le[?[-> Le]]/=.
+      iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
+      iMod (bor_acc with "LFT Bor κ") as "[big ToBor]"; [done|].
+      iIntros "!>!>!>". iDestruct "big" as (??) "((%& ↦ & ty) & ⧖' & Pc)".
+      iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
+      iMod (Rlo with "LFT E L₊ ty") as "Upd"; [done|].
+      iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Upd").
+      iIntros "!> >($&$& ty)". iMod ("ToBor" with "[↦ ty ⧖' Pc]") as "[Bor κ]".
+      { iNext. iExists _, _. iFrame "⧖' Pc". iExists _. iFrame. }
+      iMod ("ToL" with "κ") as "$". iModIntro. iExists d', _. iFrame "Vo Bor".
+      iPureIntro. split; [lia|done].
+    - iIntros (???[|]????) "LFT E L uniq //".
+      iDestruct "uniq" as (???) "(Bor & Bor' & ty)". iIntros "!>!>!>/=".
+      iMod (Rls with "LFT E L ty") as "Upd"; [done|]. iIntros "!>!>".
+      iApply (step_fupdN_wand with "Upd"). iIntros ">($&$&?)". iExists _, _. by iFrame.
+  Qed.
+
   Lemma uniq_subtype {𝔄} E L κ κ' (ty ty': type 𝔄) :
     lctx_lft_incl E L κ' κ → eqtype E L ty ty' id id →
     subtype E L (&uniq{κ} ty) (&uniq{κ'} ty') id.
@@ -377,7 +401,7 @@ Section typing.
   Qed.
 End typing.
 
-Global Hint Resolve uniq_leak uniq_subtype uniq_eqtype : lrust_typing.
+Global Hint Resolve uniq_leak uniq_real uniq_subtype uniq_eqtype : lrust_typing.
 
 (* Registering [write_uniq]/[read_uniq] to [Hint Resolve]
   doesnt't help automation in some situations,

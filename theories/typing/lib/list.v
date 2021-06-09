@@ -21,6 +21,16 @@ Section list.
     leak E L ty (const True) → leak E L (list_ty ty) (const True).
   Proof. move=> ?. apply leak_just. Qed.
 
+  Lemma list_real {𝔄 𝔅} ty (f: 𝔄 → 𝔅) E L :
+    real E L ty f → real (𝔅:=listₛ _) E L (list_ty ty) (map f).
+  Proof.
+    move=> ?. apply fix_real=> ??. eapply real_eq.
+    { apply mod_ty_real; [apply _|].
+      apply (real_compose (𝔅:=optionₛ(_*listₛ _)) (ℭ:=listₛ _) option_to_list).
+      solve_typing. }
+    fun_ext. by case.
+  Qed.
+
   Lemma list_subtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty ty' :
     subtype E L ty ty' f → subtype E L (list_ty ty) (list_ty ty') (map f).
   Proof.
@@ -34,4 +44,5 @@ Section list.
 End list.
 
 Global Hint Resolve list_leak | 5 : lrust_typing.
-Global Hint Resolve list_leak_just list_subtype list_eqtype : lrust_typing.
+Global Hint Resolve list_leak_just list_real list_subtype list_eqtype
+  : lrust_typing.

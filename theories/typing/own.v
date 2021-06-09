@@ -124,6 +124,21 @@ Section own.
     by iApply (Lk with "LFT PROPH E L").
   Qed.
 
+  Lemma own_real {𝔄 𝔅} E L n ty (f: 𝔄 → 𝔅) :
+    real E L ty f → real E L (own_ptr n ty) f.
+  Proof.
+    move=> [Rlo Rls]. split.
+    - iIntros (???[|]?[|[[]|][]]?) "LFT E L own //". iIntros "/=!>!>!>".
+      iDestruct "own" as "[(%& ↦ & ty) $]".
+      iMod (Rlo with "LFT E L ty") as "Upd"; [done|].
+      iApply (step_fupdN_wand with "Upd"). iIntros "!> >($&$&?) !>!>".
+      iExists _. iFrame.
+    - iIntros (???[|]????) "LFT E L own //". iDestruct "own" as (?) "[Bor ty]".
+      iIntros "!>!>". iMod (Rls with "LFT E L ty") as "Upd"; [done|].
+      iIntros "/=!>!>!>". iApply (step_fupdN_wand with "Upd").
+      iIntros ">($&$& ?) !>". iExists _. iFrame.
+  Qed.
+
   Lemma own_type_incl {𝔄 𝔅} n (f: 𝔄 → 𝔅) ty1 ty2 :
     type_incl ty1 ty2 f -∗ type_incl (own_ptr n ty1) (own_ptr n ty2) f.
   Proof.
@@ -328,8 +343,8 @@ Section typing.
   Qed.
 End typing.
 
-Global Hint Resolve own_leak own_subtype own_eqtype box_subtype box_eqtype
-  write_own read_own_copy : lrust_typing.
+Global Hint Resolve own_leak own_real own_subtype own_eqtype
+  box_subtype box_eqtype write_own read_own_copy : lrust_typing.
 (* By setting the priority high, we make sure copying is tried before
    moving. *)
 Global Hint Resolve read_own_move | 100 : lrust_typing.

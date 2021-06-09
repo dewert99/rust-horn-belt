@@ -236,11 +236,30 @@ Section typing.
     revert Φl i vπ'. induction 𝔄l as [|𝔄 𝔄l IH]; [by intros ?? []|].
     intros [Φ Φl] [] ?; [done|by simpl; auto].
   Qed.
-  Hint Resolve xsum_leak : lrust_typing.
 
   Lemma xsum_leak_just {𝔄l} E L (tyl: typel 𝔄l) :
     HForall (λ _ ty, leak E L ty (const True)) tyl → leak E L (Σ! tyl) (const True).
   Proof. move=> ?. apply leak_just. Qed.
+
+  Lemma xsum_real {𝔄l 𝔅l} E L tyl (fl: plist2 _ 𝔄l 𝔅l) :
+    reall E L tyl fl → real (𝔅:=Σ!_) E L (Σ! tyl) (psum_map fl).
+  Proof.
+    move=> Rl. split.
+    - iIntros "*% LFT E L (%i &%&%&%&[->%]&ty)".
+      eapply (HForall_1'_nth _ _ id) in Rl; [|apply base_real].
+      iMod (proj1 Rl with "LFT E L ty") as "Upd"; [done|].
+      iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%Eq &$&?) !>".
+      iSplit; last first. { iExists _, _, _, _. by iFrame. }
+      iPureIntro. move: Eq=> [b Eq]. exists (pinj i b). fun_ext=>/= π.
+      move: (equal_f Eq π)=>/= <-. by rewrite psum_map_pinj.
+    - iIntros "*% LFT E L (%&%&->& Bor & ty)".
+      eapply (HForall_1'_nth _ _ id) in Rl; [|apply base_real].
+      iMod (proj2 Rl with "LFT E L ty") as "Upd"; [done|]. iIntros "!>!>".
+      iApply (step_fupdN_wand with "Upd"). iIntros ">(%Eq &$&?) !>".
+      iSplit; last first. { iExists _, _. by iFrame. }
+      iPureIntro. move: Eq=> [b Eq]. exists (pinj i b). fun_ext=>/= π.
+      move: (equal_f Eq π)=>/= <-. by rewrite psum_map_pinj.
+  Qed.
 
   Lemma xsum_subtype {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl :
     subtypel E L tyl tyl' fl → subtype E L (Σ! tyl) (Σ! tyl') (psum_map fl).
@@ -284,4 +303,5 @@ End typing.
 Global Instance empty_ty_empty `{!typeG Σ} : Empty (type ∅) := empty_ty.
 
 Global Hint Resolve xsum_leak | 5 : lrust_typing.
-Global Hint Resolve xsum_leak_just xsum_subtype xsum_eqtype : lrust_typing.
+Global Hint Resolve xsum_leak_just xsum_real xsum_subtype xsum_eqtype
+  : lrust_typing.

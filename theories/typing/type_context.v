@@ -158,9 +158,9 @@ Section lemmas.
     leak E L ty Φ → leak_tctx E L T Ψ →
     leak_tctx E L (p ◁ ty +:: T) (λ '(a -:: bl) φ, Φ a → Ψ bl φ).
   Proof.
-    iIntros (Lk Lk' ???[??]?) "#LFT #PROPH #E [L L+] /=[(%&%&_& ⧖ & ty) T]".
+    iIntros (Lk Lk' ???[??]?) "#LFT #PROPH #E [L L₊] /=[(%&%&_& ⧖ & ty) T]".
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
-    iMod (Lk' with "LFT PROPH E L+ T") as (?) "[⧖' ToObs']"; [done|].
+    iMod (Lk' with "LFT PROPH E L₊ T") as (?) "[⧖' ToObs']"; [done|].
     iCombine "⧖ ⧖'" as "⧖". iCombine "ToObs ToObs'" as "ToObs".
     iExists _. iFrame "⧖". iApply (step_fupdN_wand with "ToObs").
     iIntros "!> [>[Obs $] >[Obs' $]] !>". iCombine "Obs Obs'" as "?".

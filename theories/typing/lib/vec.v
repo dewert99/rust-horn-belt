@@ -1,5 +1,6 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import array_util typing.
+Set Default Proof Using "Type".
 
 Open Scope nat.
 Implicit Type 𝔄 𝔅: syn_type.
@@ -21,9 +22,9 @@ Section vec.
     - iIntros "(%& ↦ & big)". case d=>// ?. iDestruct "big" as (????[->->]) "Φ".
       iExists _, _, _, _. iSplit; [done|]. iFrame "Φ".
       rewrite !heap_mapsto_vec_cons shift_loc_assoc. iDestruct "↦" as "($&$&$&_)".
-    - iIntros "big". case d=>// ?. iDestruct "big" as (????->) "(↦ & ↦' & ↦'' & ?)".
+    - iIntros "big". case d=>// ?. iDestruct "big" as (????->) "(↦₀ & ↦₁ & ↦₂ & ?)".
       iExists [_;_;_]. rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil.
-      iFrame "↦ ↦' ↦''". iExists _, _, _, _. by iFrame.
+      iFrame "↦₀ ↦₁ ↦₂". iExists _, _, _, _. by iFrame.
   Qed.
 
   Program Definition vec_ty {𝔄} (ty: type 𝔄) : type (listₛ 𝔄) := {|
@@ -77,20 +78,22 @@ Section vec.
   Next Obligation.
     iIntros (????[|d] tid ?? q ?) "LFT In vec κ //=".
     iDestruct "vec" as (??? aπl[->->]) "(↦tys & ex & †)". iIntros "!>!>!>".
-    iMod (ty_own_proph_big_sepL_mt_v with "LFT In ↦tys κ") as "To↦tys"; [done|].
-    iApply (step_fupdN_wand with "To↦tys"). iIntros "!> >(%&%&%& ξl & To↦tys) !>".
+    rewrite split_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦ tys]".
+    iMod (ty_own_proph_big_sepL_v with "LFT In tys κ") as "Upd"; [done|].
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&%& ξl & Totys) !>".
     iExists _, _. iSplit.
-    { iPureIntro. rewrite lapply_vapply. by apply proph_dep_constr. }
-    iIntros "{$ξl}ξl". iMod ("To↦tys" with "ξl") as "[?$]". iModIntro.
-    iExists _, _, _, _. by iFrame.
+    { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+    iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[tys $]". iModIntro.
+    iExists _, _, _, _. iFrame "ex †". iSplit; [done|]. iNext.
+    rewrite split_big_sepL_mt_ty_own. iExists _. iFrame.
   Qed.
   Next Obligation.
     iIntros (????[|d] κ ? l' κ' q ?) "LFT In In' vec κ' //=".
     iDestruct "vec" as (?? l aπl ->) "[? tys]". iIntros "!>!>!>".
     iMod (ty_shr_proph_big_sepL_v with "LFT In In' tys κ'") as "Totys"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Totys").
-    iIntros ">(%&%&%& ξl & Totys)!>". iExists _, _. iSplit.
-    { iPureIntro. rewrite lapply_vapply. by apply proph_dep_constr. }
+    iIntros ">(%&%&%& ξl & Totys) !>". iExists _, _. iSplit.
+    { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
     iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[?$]". iModIntro.
     iExists _, _, _, _. by iFrame.
   Qed.
@@ -116,37 +119,50 @@ Section vec.
   Proof.
     iIntros (Lk ? q ?[|]???) "#LFT #PROPH #E L vec //=".
     iDestruct "vec" as (?? l aπl[->->]) "[↦tys _]". iIntros "!>!>!>".
-    iInduction aπl as [|] "IH" forall (q l)=>/=.
-    { iApply step_fupdN_full_intro. iFrame. by iApply proph_obs_true. }
-    iDestruct "↦tys" as "[(%&_& ty) ↦tys]". iDestruct "L" as "[L L₊]".
-    iMod (Lk with "LFT PROPH E L ty") as "Upd"; [done|].
-    setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "L₊ ↦tys") as "Upd'".
-    iCombine "Upd Upd'" as "Upd". iApply (step_fupdN_wand with "Upd").
-    iIntros "!>[>[#? $] >[#? $]]". by iApply proph_obs_and.
+    rewrite split_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦ tys]".
+    iMod (leak_big_sepL_ty_own with "LFT PROPH E L tys") as "Upd"; [done..|].
+    iApply (step_fupdN_wand with "Upd"). by iIntros "!> ?".
   Qed.
 
   Lemma vec_leak_just {𝔄} (ty: type 𝔄) E L :
     leak E L ty (const True) → leak E L (vec_ty ty) (const True).
   Proof. move=> ?. apply leak_just. Qed.
 
+  Lemma vec_real {𝔄 𝔅} (ty: type 𝔄) (f: 𝔄 → 𝔅) E L :
+    real E L ty f → real (𝔅 := listₛ 𝔅) E L (vec_ty ty) (map f).
+  Proof.
+    move=> Rl. split; iIntros (???[|]) "*% LFT E L vec //=".
+    - iDestruct "vec" as (????[->->]) "(↦tys & ex & †)". iIntros "!>!>!>".
+      rewrite split_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦ tys]".
+      iMod (real_big_sepL_ty_own with "LFT E L tys") as "Upd"; [done..|].
+      iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%Eq &$&?) !>".
+      iSplit; last first.
+      { iExists _, _, _, _. iFrame "ex †". iSplit; [done|]. iNext.
+        rewrite split_big_sepL_mt_ty_own. iExists _. iFrame. }
+      iPureIntro. move: Eq=> [bl Eq]. exists bl. fun_ext=>/= π.
+      move: (equal_f Eq π)=>/= <-. by rewrite -vec_to_list_apply vec_to_list_map.
+    - iDestruct "vec" as (????->) "[Bor tys]". iIntros "!>!>!>".
+      iMod (real_big_sepL_ty_shr with "LFT E L tys") as "Upd"; [done..|].
+      iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
+      iIntros ">(%Eq &$& tys) !>". iSplit; [|iExists _, _, _, _; by iFrame].
+      iPureIntro. move: Eq=> [bl Eq]. exists bl. fun_ext=>/= π.
+      move: (equal_f Eq π)=>/= <-. by rewrite -vec_to_list_apply vec_to_list_map.
+  Qed.
+
   Lemma vec_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty' E L :
     subtype E L ty ty' f → subtype E L (vec_ty ty) (vec_ty ty') (map f).
   Proof.
     iIntros (Sub ?) "L". iDestruct (Sub with "L") as "#Sub". iIntros "!> E".
-    iDestruct ("Sub" with "E") as "(%EqSz & #? & #InOwn & #InShr)".
+    iDestruct ("Sub" with "E") as "(%EqSz &?&#?&#?)".
     have Eq: ∀(aπl: vec (proph 𝔄) _), map f ∘ lapply aπl = lapply (vmap (f ∘.) aπl).
     { move=> ?. elim; [done|]=> ??? IH. fun_ext=>/= ?. f_equal. apply (equal_f IH). }
     do 2 (iSplit; [done|]). iSplit; iIntros "!>" (?[|]) "* vec //=".
-    - iDestruct "vec" as (?? l aπl [->->]) "(↦tys & ex & †)".
-      iExists _, _, _, _. rewrite Eq EqSz. iSplit; [done|]. iFrame "ex †".
-      iNext. iInduction aπl as [|] "IH" forall (l)=>/=; [done|].
-      iDestruct "↦tys" as "[(%& ↦ & ty) ↦tys]". setoid_rewrite <-shift_loc_assoc_nat.
-      iDestruct ("IH" with "↦tys") as "$". iExists _. iFrame "↦". by iApply "InOwn".
-    - iDestruct "vec" as (?? l' ?->) "(↦ & tys)". iExists _, _, _, _.
-      rewrite Eq EqSz. iSplit; [done|]. iFrame "↦". iNext.
-      iInduction aπl as [|] "IH" forall (l')=>/=; [done|].
-      iDestruct "tys" as "[ty tys]". setoid_rewrite <-shift_loc_assoc_nat.
-      iDestruct ("IH" with "tys") as "$". by iApply "InShr".
+    - iDestruct "vec" as (????[->->]) "(↦tys & ex & †)". iExists _, _, _, _.
+      rewrite !split_big_sepL_mt_ty_own Eq EqSz. iSplit; [done|]. iFrame "ex †".
+      iNext. iDestruct "↦tys" as (?) "[↦ ?]". iExists _. iFrame "↦".
+      by iApply incl_big_sepL_ty_own.
+    - iDestruct "vec" as (????->) "[↦ ?]". iExists _, _, _, _. rewrite Eq.
+      iSplit; [done|]. iFrame "↦". iNext. by iApply incl_big_sepL_ty_shr.
   Qed.
   Lemma vec_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' E L :
     eqtype E L ty ty' f g → eqtype E L (vec_ty ty) (vec_ty ty') (map f) (map g).
@@ -164,7 +180,7 @@ Section vec.
     eapply type_fn; [solve_typing|]=> _ ???. simpl_subst.
     iIntros (???) "_ #TIME _ _ _ Na L C _ Obs".
     wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (r).
-    rewrite !heap_mapsto_vec_cons shift_loc_assoc. iIntros "[† (↦ & ↦' & ↦'' &_)]".
+    rewrite !heap_mapsto_vec_cons shift_loc_assoc. iIntros "[† (↦₀ & ↦₁ & ↦₂ &_)]".
     wp_seq. iMod persistent_time_receipt_0 as "⧖". wp_bind (_ <- _)%E.
     iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|]. wp_write.
     iIntros "⧖". wp_seq. wp_op. wp_write. wp_op. wp_bind (new _).
@@ -175,7 +191,7 @@ Section vec.
     iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full.
     iFrame "†". iNext. iExists [_; _; _].
     rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil.
-    iFrame "↦ ↦' ↦''". iExists 0, 0, l, [#]. iSplit; [done|]. iFrame "†'".
+    iFrame "↦₀ ↦₁ ↦₂". iExists 0, 0, l, [#]. iSplit; [done|]. iFrame "†'".
     iSplit; [by iNext|]. iExists []. by rewrite heap_mapsto_vec_nil.
   Qed.
 
@@ -194,16 +210,17 @@ Section vec.
     case v as [[]|]=>//=. rewrite split_vec_mt.
     case d; [by iDestruct "bvec" as "[>[] _]"|]=> ?.
     iDestruct "bvec" as "[(%&%&%& big) †]".
-    iMod (bi.later_exist_except_0 with "big") as (?) "(>-> & >↦ & >↦' & >↦'' & big)".
-    wp_read. wp_op. wp_read. do 3 wp_op. wp_read. rewrite leak_big_sepL_mt_ty_own.
-    iDestruct "big" as "((%& %Eq & ↦len) & (%& %Eq' & ↦ex) & †')".
-    wp_bind (delete _). iApply (wp_delete _ _ _ (_ ++ _) with "[↦len ↦ex †']").
+    iMod (bi.later_exist_except_0 with "big") as (?) "(>-> & >↦₀ & >↦₁ & >↦₂ & big)".
+    wp_read. wp_op. wp_read. do 3 wp_op. wp_read. rewrite split_big_sepL_mt_ty_own.
+    iDestruct "big" as "((%& ↦old & tys) & (%& %Eq & ↦ex) & †')".
+    iDestruct (big_sepL_ty_own_length with "tys") as %Eq'.
+    wp_bind (delete _). iApply (wp_delete _ _ _ (_ ++ _) with "[↦old ↦ex †']").
     { rewrite app_length -Nat2Z.inj_add -Nat2Z.inj_mul Nat.mul_add_distr_r.
       by do 2 f_equal. }
     { rewrite heap_mapsto_vec_app /freeable_sz' app_length
         -Nat2Z.inj_add -Nat2Z.inj_mul Nat.mul_add_distr_r Eq Eq'. iFrame. }
     iIntros "!>_". wp_seq. wp_bind (delete _).
-    iApply (wp_delete _ _ _ [_;_;_] with "[↦ ↦' ↦'' †]"); [done| |].
+    iApply (wp_delete _ _ _ [_;_;_] with "[↦₀ ↦₁ ↦₂ †]"); [done| |].
     { rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil
         freeable_sz_full. iFrame. }
     iIntros "!>_". wp_seq. iMod persistent_time_receipt_0 as "⧖".
@@ -237,16 +254,16 @@ Section vec.
     iDestruct "vec" as (??? aπl ->) "[Bor tys]".
     iDestruct "i" as "[(%& ↦i & (%&->&->)) †i]"=>/=.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-    iMod (frac_bor_acc with "LFT Bor α") as (?) "[(↦ & ↦' & ↦'') Toα]"; [done|].
+    iMod (frac_bor_acc with "LFT Bor α") as (?) "[(↦₀ & ↦₁ & ↦₂) Toα]"; [done|].
     rewrite !heap_mapsto_vec_singleton.
     wp_let. wp_read. wp_op. wp_read. wp_read. do 2 wp_op. wp_write.
-    iMod ("Toα" with "[$↦ $↦' $↦'']") as "α". iMod ("ToL" with "α L") as "L".
+    iMod ("Toα" with "[$↦₀ $↦₁ $↦₂]") as "α". iMod ("ToL" with "α L") as "L".
     do 2 rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     wp_bind (delete _). iApply (wp_delete with "[$↦v $†v]"); [done|].
     iIntros "!> _". wp_seq. wp_bind (delete _).
     iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!> _". do 3 wp_seq.
     iMod (proph_obs_sat with "PROPH Obs") as %(?& inat &?&->& Lkup &_); [done|].
-    move: Lkup. rewrite lapply_vapply -vlookup_lookup'. move=> [In _].
+    move: Lkup. rewrite -vec_to_list_apply -vlookup_lookup'. move=> [In _].
     set ifin := nat_to_fin In. have iEq: inat = ifin by rewrite fin_to_nat_to_fin.
     rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[aπl !!! ifin] with "Na L [-] []").
@@ -324,7 +341,7 @@ Section vec.
       { iNext. iExists _, _. rewrite split_vec_mt. iFrame "⧖ Pc".
         iExists _, _, _, (vsnoc aπl _). iFrame "↦₀ ↦₁ ↦₂ †". iSplit; [done|].
         iSplitR "↦ex"; last first. { iExists _. rewrite/= plus_comm. by iFrame. }
-        iNext. rewrite vsnoc_list big_sepL_app. iSplitL "↦tys".
+        iNext. rewrite vec_to_list_snoc big_sepL_app. iSplitL "↦tys".
         { iClear "#". iStopProof. do 6 f_equiv. apply ty_own_depth_mono. lia. }
         rewrite/= right_id. iExists _. rewrite vec_to_list_length Nat.add_0_r.
         iFrame "↦". iApply ty_own_depth_mono; [|done]. lia. }
@@ -339,7 +356,7 @@ Section vec.
           (@prval_to_inh' (listₛ 𝔄) vπ)). by iFrame.
       - iApply proph_obs_impl; [|done]=> π.
         move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=. case (vπ π)=>/= ??->-> Imp Eq.
-        apply Imp. move: Eq. by rewrite vsnoc_list lapply_app. }
+        apply Imp. move: Eq. by rewrite vec_to_list_snoc lapply_app. }
     rewrite /push. wp_let. wp_op. wp_case. case ex as [|ex']=>/=; last first.
     { do 2 wp_op. have ->: (S ex' - 1)%Z = ex' by lia. wp_write.
       iApply "push". iExists _, _. iFrame "↦tys ↦₀ ↦₁ ↦₂".
