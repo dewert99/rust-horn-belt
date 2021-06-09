@@ -3,8 +3,7 @@ From lrust.lang Require Import proofmode memcpy.
 From lrust.typing Require Export type lft_contexts type_context cont_context.
 Set Default Proof Using "Type".
 
-Implicit Types 𝔄 𝔅 : syn_type.
-Implicit Types 𝔄l 𝔅l : syn_typel.
+Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Section typing.
   Context `{!typeG Σ}.
@@ -119,7 +118,7 @@ Section typing.
   Proof.
     iIntros "% %Inst e'" (? vπl2 ?). move: (papp_ex vπl2)=> [vπl[vπl'->]].
     iIntros "#LFT #TIME #PROPH #UNIQ #E Na L C [T1 T] Obs". wp_bind e.
-    iApply (wp_wand with "[L T1 Na Obs]").
+    iApply (wp_wand with "[Na L T1 Obs]").
     { iApply (Inst with "LFT TIME PROPH UNIQ E Na L T1").
       iApply proph_obs_eq; [|done]=> ?. by rewrite /trans_upper papply_app papp_sepl. }
     iIntros "% (%& Na & L & T2 &?)". wp_let. iCombine "T2 T" as "T2T".
@@ -138,12 +137,37 @@ Section typing.
     by iApply type_let'.
   Qed.
 
-  Lemma type_val {𝔄 𝔅l ℭ} v (a: of_syn_type 𝔄) ty (T: tctx 𝔅l) E L (C: cctx ℭ) xb e tr :
+  Lemma type_val {𝔄 𝔅l ℭ} v (a: 𝔄) ty (T: tctx 𝔅l) E L (C: cctx ℭ) xb e tr :
     Closed (xb :b: []) e → typed_val v ty a →
     (∀v': val, typed_body E L C (v' ◁ ty +:: T) (subst' xb v' e) tr) -∗
     typed_body E L C T (let: xb := v in e) (λ post bl, tr post (a -:: bl)).
   Proof.
     iIntros (? Val) "?". iApply type_let; [apply Val|solve_typing|done..].
+  Qed.
+
+  Lemma type_val_dep {𝔄 𝔅l B ℭl 𝔇l 𝔈} (a: B → 𝔄) ty (Tx: tctx 𝔅l)
+      E L (C: cctx 𝔈) (T: tctx ℭl) (T': tctx 𝔇l) v xb e trx tr f :
+    Closed (xb :b: []) e → (∀b, typed_val v ty (a b)) →
+    tctx_extract_ctx E L Tx T T' trx → real_tctx E L Tx f →
+    (∀v': val, typed_body E L C (v' ◁ ty +:: Tx h++ T') (subst' xb v' e) tr) -∗
+    typed_body E L C T (let: xb := Skip;; v in e) (trx ∘
+      (λ post bdl, let '(bl, dl) := psep bdl in tr post (a (f bl) -:: bdl))).
+  Proof.
+    iIntros (? Val ? Rl) "e". iApply (typed_body_tctx_incl trx); [done|].
+    iIntros (? bdπl ?) "#LFT #TIME #PROPH #UNIQ #E Na L C".
+    move: (papp_ex bdπl)=> [bπl[dπl->]]. iIntros "[Tx T'] Obs".
+    iMod (Rl with "LFT E L Tx") as (?) "[⧖ Upd]". wp_bind Skip.
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]")=>//.
+    { iApply step_fupdN_with_emp. by rewrite difference_empty_L /=. }
+    wp_seq. iIntros "(%Eq & L & Tx) !>". move: Eq=> [b Eq]. wp_seq.
+    wp_bind (v: expr). iApply (wp_wand with "[Na L Obs]").
+    { iApply (Val b _ _ _ (λ _ '-[a], tr _ (a -:: _)) -[]
+        with "LFT TIME PROPH UNIQ E Na L [//]").
+      iApply proph_obs_impl; [|done]=>/= π.
+      rewrite papply_app papp_sepl -papply_app. by move: (equal_f Eq π)=>/= ->. }
+    iIntros (?). iDestruct 1 as ([?[]]) "(Na & L & [v _] & Obs)"=>/=. wp_let.
+    iApply ("e" $! _ _ (_-::_-++_) with
+      "LFT TIME PROPH UNIQ E Na L C [$v $Tx $T'] Obs").
   Qed.
 
   Lemma type_seq {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: tctx 𝔄l) (T2: tctx 𝔅l)

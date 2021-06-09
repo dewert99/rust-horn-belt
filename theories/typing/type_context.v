@@ -2,7 +2,7 @@ From iris.proofmode Require Import tactics.
 From lrust.typing Require Import type lft_contexts.
 Set Default Proof Using "Type".
 
-Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l ℭl 𝔇l: syn_typel).
+Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l ℭl 𝔇l: syn_typel).
 
 Definition path := expr.
 Bind Scope expr_scope with path.
@@ -182,6 +182,44 @@ Section lemmas.
   Lemma leak_tctx_cons_just_blocked {𝔄 𝔅l} E L p κ (ty: type 𝔄) (T: tctx 𝔅l) Φ :
     leak_tctx E L T Φ → leak_tctx E L (p ◁{κ} ty +:: T) (λ '(_ -:: bl), Φ bl).
   Proof. apply leak_tctx_cons_just. Qed.
+
+  (** Taking Out the Real Part of a Type Context *)
+
+  Definition real_tctx {𝔄l B} (E: elctx) (L: llctx) (T: tctx 𝔄l)
+      (f: plist of_syn_type 𝔄l → B) : Prop :=
+    ∀q tid vπl, lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+      tctx_interp tid T vπl ={⊤}=∗ ∃d, ⧖d ∗ |={⊤}▷=>^d |={⊤}=>
+        ⌜∃vl, f ∘ papply vπl = const vl⌝ ∗ llctx_interp L q ∗ tctx_interp tid T vπl.
+
+  Lemma real_tctx_nil E L : real_tctx E L +[] id.
+  Proof.
+    iIntros (???) "_ _ $ _". iMod persistent_time_receipt_0 as "⧖".
+    iExists 0%nat. iFrame "⧖". iPureIntro. by exists -[].
+  Qed.
+
+  Lemma real_tctx_cons {𝔄 𝔅l ℭ D} E L p ty (f: 𝔄 → ℭ) T (g: plist _ 𝔅l → D) :
+    real E L ty f → real_tctx E L T g →
+    real_tctx E L (p ◁ ty +:: T) (λ '(a -:: bl), f a -:: g bl).
+  Proof.
+    iIntros ([Rl _] Rl' ??[??]) "#LFT #E [L L₊] /=[(%&%&%& ⧖ & ty) T]".
+    iMod (Rl with "LFT E L ty") as "Upd"; [done|].
+    iMod (Rl' with "LFT E L₊ T") as (?) "[⧖' Upd']". iCombine "⧖ ⧖'" as "#⧖".
+    iCombine "Upd Upd'" as "Upd". iExists _. iFrame "⧖".
+    iApply (step_fupdN_wand with "Upd").
+    iIntros "!> [>(%Eq &$& ty) >(%Eq' &$&$)] !>". iSplit; last first.
+    { iExists _, _. iFrame "ty". iSplit; [done|].
+      iApply persistent_time_receipt_mono; [|done]. lia. }
+    iPureIntro. move: Eq=> [b Eq]. move: Eq'=> [bl Eq']. exists (b -:: bl).
+    fun_ext=> π. by move: (equal_f Eq π) (equal_f Eq' π)=>/= <-<-.
+  Qed.
+
+  Lemma real_tctx_cons_blocked {𝔄 𝔅l C} E L p (ty: type 𝔄) T (g: plist _ 𝔅l → C) κ :
+    real_tctx E L T g → real_tctx E L (p ◁{κ} ty +:: T) (λ '(_ -:: bl), g bl).
+  Proof.
+    iIntros (Rl ??[??]) "LFT E L /=[$ T]".
+    iMod (Rl with "LFT E L T") as (?) "[⧖ Upd]". iExists _. iFrame "⧖".
+    iApply (step_fupdN_wand with "Upd"). by iIntros "!> >($&$&$)".
+  Qed.
 
   (** Type Context Inclusion *)
 
@@ -554,6 +592,9 @@ Global Hint Extern 0 (leak_tctx _ _ _ _) =>
   simple apply leak_tctx_cons_just_hasty : lrust_typing.
 Global Hint Extern 0 (leak_tctx _ _ _ _) =>
   simple apply leak_tctx_cons_just_blocked : lrust_typing.
+
+Global Hint Resolve real_tctx_nil real_tctx_cons real_tctx_cons_blocked
+  : lrust_typing.
 
 Global Hint Resolve tctx_extract_elt_here_copy | 1 : lrust_typing.
 Global Hint Resolve tctx_extract_elt_here_exact | 2 : lrust_typing.

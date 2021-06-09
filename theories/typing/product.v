@@ -48,7 +48,8 @@ Section product.
 
   Lemma unit0_real E L : real E L unit0 id.
   Proof.
-    split; iIntros (?? vπ) "*% _ _ $ %"; iApply step_fupdN_full_intro; iPureIntro; [split; [|done]|]; exists -[]; fun_ext=>/= π; by case (vπ π).
+    split; iIntros (?? vπ) "*% _ _ $ %"; iApply step_fupdN_full_intro;
+    iPureIntro; [split; [|done]|]; exists -[]; fun_ext=>/= π; by case (vπ π).
   Qed.
 
   Lemma split_prod_mt {𝔄 𝔅} vπ d vπ' d' tid (ty: type 𝔄) (ty': type 𝔅) q l :
