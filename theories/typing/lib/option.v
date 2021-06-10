@@ -80,8 +80,7 @@ Section option.
       iIntros (k). simpl_subst. set E := fp_E _ _. set L := [ϝ ⊑ₗ []].
       - via_tr_impl.
         { iApply (type_case_uniq (𝔄l:=[_;_]) +[inl _; inl _] _ _ _ _ +[_;_] _ α +[()%T; τ]);
-          [solve_typing|solve_typing| |solve_typing|].
-          { eapply tctx_extract_elt_further, tctx_uniq_mod_ty_out; solve_typing. }
+          [solve_typing|solve_typing|solve_extract|solve_typing|].
           constructor; last constructor; last constructor.
           + iApply (type_sum_unit _ +[(); &uniq{α} τ]%T
               0 _ _ _ _ _ _ _ _ _ _ _ eq_refl); [solve_typing..|].

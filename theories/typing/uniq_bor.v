@@ -315,7 +315,7 @@ Section typing.
     - intros ??? [[??]?]. by apply forall_proper.
   Qed.
 
-  Lemma tctx_uniq_mod_ty_out' {𝔄 𝔅 ℭl} κ f ty (T: tctx ℭl) p E L
+  Lemma tctx_uniq_mod_ty_out {𝔄 𝔅 ℭl} κ f ty (T: tctx ℭl) p E L
     `{!@Inj 𝔄 𝔅 (=) (=) f} : lctx_lft_alive E L κ →
     tctx_incl E L (p ◁ &uniq{κ} (<{f}> ty) +:: T) (p ◁ &uniq{κ} ty +:: T)
       (λ post '((b, b') -:: cl), ∀a a', b = f a → b' = f a' → post ((a, a') -:: cl)).
@@ -352,23 +352,12 @@ Section typing.
       iExists _. iFrame "↦". iExists _. by iFrame.
   Qed.
 
-  Lemma tctx_uniq_mod_ty_out {𝔄 𝔅 ℭl} κ f g ty (T: tctx ℭl) p E L
-    `{!@SemiIso 𝔅 𝔄 f g} : lctx_lft_alive E L κ →
-    tctx_incl E L (p ◁ &uniq{κ} (<{f}> ty) +:: T) (p ◁ &uniq{κ} ty +:: T)
-      (λ post '((b, b') -:: cl), post ((g b, g b') -:: cl)).
-  Proof.
-    move=> ?. eapply tctx_incl_impl.
-    - apply tctx_uniq_mod_ty_out'; by [apply _|].
-    - move=> ?[[??]?]??? /(f_equal g) + /(f_equal g) +. by rewrite !semi_iso'=> <-<-.
-    - by intros ??? [[??]?].
-  Qed.
-
   Lemma tctx_uniq_eqtype {𝔄 𝔅 ℭl} κ (f: 𝔄 → 𝔅) g ty ty' (T: tctx ℭl) p E L :
     eqtype E L ty ty' f g → SemiIso g f → lctx_lft_alive E L κ →
     tctx_incl E L (p ◁ &uniq{κ} ty +:: T) (p ◁ &uniq{κ} ty' +:: T)
       (λ post '((a, a') -:: cl), post ((f a, f a') -:: cl)).
   Proof.
-    intros [Sub Sub'] ? Alv. split; [by intros ??? [[??]?]|].
+    move=> [Sub Sub'] ? Alv. split; [by move=> ???[[??]?]|].
     iIntros (??[vπ ?]?) "LFT #PROPH UNIQ E L /=[p T] Obs".
     iDestruct (Sub with "L") as "#Sub". iDestruct (Sub' with "L") as "#Sub'".
     iDestruct ("Sub" with "E") as "#(_& _ & #InOwn &_)".
@@ -399,6 +388,12 @@ Section typing.
       { iApply "ToξPc". iApply proph_eqz_constr. by iApply proph_ctrl_eqz. }
       iExists _. iFrame "↦". by iApply "InOwn'".
   Qed.
+
+  Lemma tctx_extract_uniq_eqtype {𝔄 𝔅 ℭl} κ (f: 𝔅 → 𝔄) g ty ty' (T: tctx ℭl) p E L :
+    lctx_lft_alive E L κ → eqtype E L ty' ty f g → SemiIso g f →
+    tctx_extract_elt E L (p ◁ &uniq{κ} ty) (p ◁ &uniq{κ} ty' +:: T) T
+      (λ post '((b, b') -:: cl), post ((f b, f b') -:: cl)).
+  Proof. move=> ???. by eapply tctx_uniq_eqtype. Qed.
 End typing.
 
 Global Hint Resolve uniq_leak uniq_real uniq_subtype uniq_eqtype : lrust_typing.
@@ -412,3 +407,4 @@ Global Hint Extern 0 (typed_read _ _ (&uniq{_} _) _ _ _ _) =>
   simple apply read_uniq : lrust_typing.
 
 Global Hint Resolve tctx_extract_hasty_reborrow | 10 : lrust_typing.
+Global Hint Resolve tctx_extract_uniq_eqtype | 5 : lrust_typing.

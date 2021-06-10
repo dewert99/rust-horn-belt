@@ -245,7 +245,8 @@ Section product_split.
     { move=>/= ?. by eapply tctx_incl_ext;
         [apply tctx_incl_leak_head|]=>/= ?[[][]]_[]. }
     move=>/= 𝔄 𝔅l ty tyl IH p. eapply tctx_incl_ext.
-    { eapply tctx_incl_trans; [apply tctx_uniq_mod_ty_out; by [apply _|]|].
+    { eapply tctx_incl_trans.
+      { eapply tctx_uniq_eqtype; first apply mod_ty_outin; solve_typing. }
       eapply tctx_incl_trans; [by apply tctx_split_uniq_prod|]. apply tctx_incl_tail.
       eapply tctx_incl_trans; [by apply IH|]. eapply proj1, get_tctx_equiv=> ? vπl.
       move: (ty_size _)=> off. rewrite -{2}(Nat.add_0_r off). move: off 0%nat. clear.

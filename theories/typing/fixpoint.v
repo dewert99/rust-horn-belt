@@ -134,109 +134,121 @@ End fix_defs.
 Import fix_defs.
 Global Notation fix_ty := fix_ty.
 
-Lemma fix_unfold_eqtype `{!typeG Σ} {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T} E L :
-  eqtype E L (fix_ty T) (T (fix_ty T)) id id.
-Proof.
-  have EqOwn: ∀n vπ d tid vl, (T $ Tn T (3 + n)).(ty_own) vπ d tid vl ≡
-    (T $ Tn' T (3 + n)).(ty_own) vπ d tid vl.
-  { move=> n *. apply equiv_dist=> ?. apply HT=>//; [apply HT|
-      apply (Tn_ty_lft_const T (3 + n) 0)|apply (Tn_ty_E_const T (2 + n) 0)]. }
-  have EqShr: ∀n vπ d κ tid l, (T $ Tn T (2 + n)).(ty_shr) vπ d κ tid l ≡
-    (T $ Tn' T (2 + n)).(ty_shr) vπ d κ tid l.
-  { move=> n *. apply equiv_dist=> n'. apply HT=>//; [apply HT|
-      apply (Tn_ty_lft_const T (2 + n) 0)|apply (Tn_ty_E_const T (1 + n) 0)|
-      by case n'=> [|[|?]]]. }
-  have EqOwn': ∀vπ d tid vl, (fix_ty T).(ty_own) vπ d tid vl ≡
-    (T (fix_ty T)).(ty_own) vπ d tid vl.
-  { move=> *. apply equiv_dist=> n. etrans; [apply dist_S, conv_compl|].
-    rewrite/= (EqOwn n). symmetry. apply HT=>// *; [apply lft_equiv_refl| |].
-    - move: n=> [|n]; [done|].
-      case (fix_ty_Tn'_dist T (S n))=> [_ _ _ Eq _]. apply dist_S, Eq.
-    - case (fix_ty_Tn'_dist T n)=> [_ _ _ _ Eq]. apply Eq. }
-  have EqShr': ∀vπ d κ tid l, (fix_ty T).(ty_shr) vπ d κ tid l ≡
-    (T (fix_ty T)).(ty_shr) vπ d κ tid l.
-  { move=> *. apply equiv_dist=> n. etrans; [apply conv_compl|].
-    rewrite/= (EqShr n). symmetry. apply HT=>// *; [apply lft_equiv_refl| |].
-    - move: n=> [|[|n]]; [done|done|].
-      case (fix_ty_Tn'_dist T (S n))=> [_ _ _ Eq _]. apply dist_S, Eq.
-    - move: n=> [|n]; [done|].
-      case (fix_ty_Tn'_dist T n)=> [_ _ _ _ Eq]. apply Eq. }
-  apply eqtype_id_unfold. iIntros "*_!>_". iSplit; [iPureIntro; by apply HT|].
-  iSplit; [|iSplit; iIntros "!> *"].
-  - case type_contractive_type_lft_morphism=> [α βs E' Hα HE'|α E' Hα HE'].
-    + iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
-      iApply lft_equiv_trans; [iApply Hα|].
-      iApply lft_equiv_trans; [|iApply lft_intersect_equiv_proper;
-        [iApply lft_equiv_refl|iApply lft_equiv_sym; iApply Hα]].
-      rewrite assoc. iApply lft_intersect_equiv_proper; [|iApply lft_equiv_refl].
-      iApply lft_equiv_sym. iApply lft_intersect_equiv_idemp.
-    + iApply lft_equiv_trans; [iApply Hα|iApply lft_equiv_sym; iApply Hα].
-  - rewrite EqOwn'. by iApply bi.equiv_iff.
-  - rewrite EqShr'. by iApply bi.equiv_iff.
-Qed.
-
-Lemma fix_ty_ne `{!typeG Σ} {𝔄} (T T': type 𝔄 → type 𝔄)
-  `{!TypeContractive T, !NonExpansive T, !TypeContractive T'} n :
-  (∀ty, T ty ≡{n}≡ T' ty) → fix_ty T ≡{n}≡ fix_ty T'.
-Proof.
-  move=> Eq.
-  have Eq': compl (own_shr_chain T) ≡{n}≡ compl (own_shr_chain T').
-  { have Eq'': Tn T (3 + n) ≡{n}≡ Tn T' (3 + n).
-    { rewrite /Tn. elim (S (3 + n)); [done|]=> ? IH. by rewrite !Nat_iter_S IH Eq. }
-    etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
-    split; repeat move=> ? /=; apply Eq''. }
-  split=>/=; try apply Eq; try apply Eq'. by rewrite /Tn /= (Eq base) Eq.
-Qed.
-
-Lemma fix_type_ne `{!typeG Σ} {𝔄 𝔅} (T : type 𝔄 → type 𝔅 → type 𝔅)
-  `{!(∀ty, TypeContractive (T ty))} :
-  (∀`{!TypeNonExpansive U}, TypeNonExpansive (λ ty, T ty (U ty))) →
-    TypeNonExpansive (λ ty, fix_ty (T ty)).
-Proof.
-  move=> HT. have Hne: ∀n, TypeNonExpansive (λ ty, Tn (T ty) n).
-  { elim=> [|? IH]; [apply HT, _|apply HT, IH]. }
-  split=>/=.
-  - case (type_ne_type_lft_morphism (T := λ ty, Tn (T ty) 1))=>
-    [α βs E Hα HE|α E Hα HE].
-    + eapply (type_lft_morphism_add _ α βs E), HE=> ?.
-      iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
-      iApply (Tn_ty_lft_const _ 1 0).
-    + eapply (type_lft_morphism_const _ α E), HE=> ?.
-      iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
-      iApply (Tn_ty_lft_const _ 1 0).
-  - apply HT, _.
-  - move=> *. etrans; [apply conv_compl|].
-    etrans; [|symmetry; apply conv_compl]. by apply Hne.
-  - move=> *. etrans; [apply conv_compl|].
-    etrans; [|symmetry; apply conv_compl]. by apply Hne.
-Qed.
-
-Lemma fix_type_contractive `{!typeG Σ} {𝔄 𝔅} (T : type 𝔄 → type 𝔅 → type 𝔅)
-  `{!(∀ty, TypeContractive (T ty))} :
-  (∀`{!TypeContractive U}, TypeContractive (λ ty, T ty (U ty))) →
-    TypeContractive (λ ty, fix_ty (T ty)).
-Proof.
-  move=> HT. have Hne: ∀n, TypeContractive (λ ty, Tn (T ty) n).
-  { elim=> [|? IH]; [apply HT, _|apply HT, IH]. }
-  split=>/=.
-  - case (type_ne_type_lft_morphism (T := λ ty, Tn (T ty) 1))=>
-    [α βs E Hα HE|α E Hα HE].
-    + eapply (type_lft_morphism_add _ α βs E), HE=> ?.
-      iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
-      iApply (Tn_ty_lft_const _ 1 0).
-    + eapply (type_lft_morphism_const _ α E), HE=> ?.
-      iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
-      iApply (Tn_ty_lft_const _ 1 0).
-  - apply HT, _.
-  - move=> *. etrans; [apply conv_compl|].
-    etrans; [|symmetry; apply conv_compl]. by apply Hne.
-  - move=> *. etrans; [apply conv_compl|].
-    etrans; [|symmetry; apply conv_compl]. by apply Hne.
-Qed.
-
 Section lemmas.
   Context `{!typeG Σ}.
-  Context {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T}.
+
+  Lemma fix_unfold_fold {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T} E L :
+    eqtype E L (fix_ty T) (T (fix_ty T)) id id.
+  Proof.
+    have EqOwn: ∀n vπ d tid vl, (T $ Tn T (3 + n)).(ty_own) vπ d tid vl ≡
+      (T $ Tn' T (3 + n)).(ty_own) vπ d tid vl.
+    { move=> n *. apply equiv_dist=> ?. apply HT=>//; [apply HT|
+        apply (Tn_ty_lft_const T (3 + n) 0)|apply (Tn_ty_E_const T (2 + n) 0)]. }
+    have EqShr: ∀n vπ d κ tid l, (T $ Tn T (2 + n)).(ty_shr) vπ d κ tid l ≡
+      (T $ Tn' T (2 + n)).(ty_shr) vπ d κ tid l.
+    { move=> n *. apply equiv_dist=> n'. apply HT=>//; [apply HT|
+        apply (Tn_ty_lft_const T (2 + n) 0)|apply (Tn_ty_E_const T (1 + n) 0)|
+        by case n'=> [|[|?]]]. }
+    have EqOwn': ∀vπ d tid vl, (fix_ty T).(ty_own) vπ d tid vl ≡
+      (T (fix_ty T)).(ty_own) vπ d tid vl.
+    { move=> *. apply equiv_dist=> n. etrans; [apply dist_S, conv_compl|].
+      rewrite/= (EqOwn n). symmetry. apply HT=>// *; [apply lft_equiv_refl| |].
+      - move: n=> [|n]; [done|].
+        case (fix_ty_Tn'_dist T (S n))=> [_ _ _ Eq _]. apply dist_S, Eq.
+      - case (fix_ty_Tn'_dist T n)=> [_ _ _ _ Eq]. apply Eq. }
+    have EqShr': ∀vπ d κ tid l, (fix_ty T).(ty_shr) vπ d κ tid l ≡
+      (T (fix_ty T)).(ty_shr) vπ d κ tid l.
+    { move=> *. apply equiv_dist=> n. etrans; [apply conv_compl|].
+      rewrite/= (EqShr n). symmetry. apply HT=>// *; [apply lft_equiv_refl| |].
+      - move: n=> [|[|n]]; [done|done|].
+        case (fix_ty_Tn'_dist T (S n))=> [_ _ _ Eq _]. apply dist_S, Eq.
+      - move: n=> [|n]; [done|].
+        case (fix_ty_Tn'_dist T n)=> [_ _ _ _ Eq]. apply Eq. }
+    apply eqtype_id_unfold. iIntros "*_!>_". iSplit; [iPureIntro; by apply HT|].
+    iSplit; [|iSplit; iIntros "!> *"].
+    - case type_contractive_type_lft_morphism=> [α βs E' Hα HE'|α E' Hα HE'].
+      + iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
+        iApply lft_equiv_trans; [iApply Hα|].
+        iApply lft_equiv_trans; [|iApply lft_intersect_equiv_proper;
+          [iApply lft_equiv_refl|iApply lft_equiv_sym; iApply Hα]].
+        rewrite assoc. iApply lft_intersect_equiv_proper; [|iApply lft_equiv_refl].
+        iApply lft_equiv_sym. iApply lft_intersect_equiv_idemp.
+      + iApply lft_equiv_trans; [iApply Hα|iApply lft_equiv_sym; iApply Hα].
+    - rewrite EqOwn'. by iApply bi.equiv_iff.
+    - rewrite EqShr'. by iApply bi.equiv_iff.
+  Qed.
+  Lemma fix_fold_unfold {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T} E L :
+    eqtype E L (T (fix_ty T)) (fix_ty T) id id.
+  Proof. apply eqtype_symm, fix_unfold_fold. Qed.
+  Lemma fix_unfold {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T} E L :
+    subtype E L (fix_ty T) (T (fix_ty T)) id.
+  Proof. eapply proj1, fix_unfold_fold. Qed.
+  Lemma fix_fold {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T} E L :
+    subtype E L (T (fix_ty T)) (fix_ty T) id.
+  Proof. eapply proj2, fix_unfold_fold. Qed.
+
+  Lemma fix_ty_ne {𝔄} (T T': type 𝔄 → type 𝔄)
+      `{!TypeContractive T, !NonExpansive T, !TypeContractive T'} n :
+    (∀ty, T ty ≡{n}≡ T' ty) → fix_ty T ≡{n}≡ fix_ty T'.
+  Proof.
+    move=> Eq.
+    have Eq': compl (own_shr_chain T) ≡{n}≡ compl (own_shr_chain T').
+    { have Eq'': Tn T (3 + n) ≡{n}≡ Tn T' (3 + n).
+      { rewrite /Tn. elim (S (3 + n)); [done|]=> ? IH. by rewrite !Nat_iter_S IH Eq. }
+      etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
+      split; repeat move=> ? /=; apply Eq''. }
+    split=>/=; try apply Eq; try apply Eq'. by rewrite /Tn /= (Eq base) Eq.
+  Qed.
+
+  Lemma fix_type_ne {𝔄 𝔅} (T : type 𝔄 → type 𝔅 → type 𝔅)
+      `{!(∀ty, TypeContractive (T ty))} :
+    (∀`{!TypeNonExpansive U}, TypeNonExpansive (λ ty, T ty (U ty))) →
+      TypeNonExpansive (λ ty, fix_ty (T ty)).
+  Proof.
+    move=> HT. have Hne: ∀n, TypeNonExpansive (λ ty, Tn (T ty) n).
+    { elim=> [|? IH]; [apply HT, _|apply HT, IH]. }
+    split=>/=.
+    - case (type_ne_type_lft_morphism (T := λ ty, Tn (T ty) 1))=>
+      [α βs E Hα HE|α E Hα HE].
+      + eapply (type_lft_morphism_add _ α βs E), HE=> ?.
+        iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
+        iApply (Tn_ty_lft_const _ 1 0).
+      + eapply (type_lft_morphism_const _ α E), HE=> ?.
+        iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
+        iApply (Tn_ty_lft_const _ 1 0).
+    - apply HT, _.
+    - move=> *. etrans; [apply conv_compl|].
+      etrans; [|symmetry; apply conv_compl]. by apply Hne.
+    - move=> *. etrans; [apply conv_compl|].
+      etrans; [|symmetry; apply conv_compl]. by apply Hne.
+  Qed.
+
+  Lemma fix_type_contractive {𝔄 𝔅} (T : type 𝔄 → type 𝔅 → type 𝔅)
+      `{!(∀ty, TypeContractive (T ty))} :
+    (∀`{!TypeContractive U}, TypeContractive (λ ty, T ty (U ty))) →
+      TypeContractive (λ ty, fix_ty (T ty)).
+  Proof.
+    move=> HT. have Hne: ∀n, TypeContractive (λ ty, Tn (T ty) n).
+    { elim=> [|? IH]; [apply HT, _|apply HT, IH]. }
+    split=>/=.
+    - case (type_ne_type_lft_morphism (T := λ ty, Tn (T ty) 1))=>
+      [α βs E Hα HE|α E Hα HE].
+      + eapply (type_lft_morphism_add _ α βs E), HE=> ?.
+        iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
+        iApply (Tn_ty_lft_const _ 1 0).
+      + eapply (type_lft_morphism_const _ α E), HE=> ?.
+        iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
+        iApply (Tn_ty_lft_const _ 1 0).
+    - apply HT, _.
+    - move=> *. etrans; [apply conv_compl|].
+      etrans; [|symmetry; apply conv_compl]. by apply Hne.
+    - move=> *. etrans; [apply conv_compl|].
+      etrans; [|symmetry; apply conv_compl]. by apply Hne.
+  Qed.
+End lemmas.
+
+Section lemmas.
+  Context `{!typeG Σ} {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T}.
 
   Global Instance fix_copy :
     (∀`(!Copy ty), Copy (T ty)) → Copy (fix_ty T).
@@ -358,4 +370,28 @@ Section subtyping.
     { move=> ??[??]. split; apply Loop; by split. }
     split; by eapply fix_eqtype_subtype.
   Qed.
+
+  Lemma fix_subtype_l {𝔄 𝔅} (f: 𝔄 → 𝔅) ty T `{!TypeContractive T} E L :
+    subtype E L ty (T (fix_ty T)) f → subtype E L ty (fix_ty T) f.
+  Proof.
+    move=> ?. eapply (subtype_trans _ id); [done|]. apply fix_fold.
+  Qed.
+  Lemma fix_subtype_r {𝔄 𝔅} (f: 𝔄 → 𝔅) ty T `{!TypeContractive T} E L :
+    subtype E L (T (fix_ty T)) ty f → subtype E L (fix_ty T) ty f.
+  Proof.
+    move=> ?. eapply (subtype_trans id); [|done]. apply fix_unfold.
+  Qed.
+  Lemma fix_eqtype_l {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty T `{!TypeContractive T} E L :
+    eqtype E L ty (T (fix_ty T)) f g → eqtype E L ty (fix_ty T) f g.
+  Proof.
+    move=> ?. eapply (eqtype_trans _ _ id id); [done|]. apply fix_fold_unfold.
+  Qed.
+  Lemma fix_eqtype_r {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty T `{!TypeContractive T} E L :
+    eqtype E L (T (fix_ty T)) ty f g → eqtype E L (fix_ty T) ty f g.
+  Proof.
+    move=> ?. eapply (eqtype_trans id id); [|done]. apply fix_unfold_fold.
+  Qed.
 End subtyping.
+
+Global Hint Resolve fix_subtype_l fix_subtype_r fix_eqtype_l fix_eqtype_r | 100
+  : lrust_typing.

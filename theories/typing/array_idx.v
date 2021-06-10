@@ -135,7 +135,8 @@ Section lemmas.
     typed_body E L C T (let: x := p +ₗ q * #ty.(ty_size) in e) (trx ∘
       (λ post '(xl -:: z -:: bl), ∃i: fin n, z = i ∧ tr post (xl !!! i -:: bl)))%type.
   Proof.
-    iIntros (? Extr) "?". iApply type_let; [by apply type_idx_shr_array_instr|solve_typing| |done].
+    iIntros (? Extr) "?".
+    iApply type_let; [by apply type_idx_shr_array_instr|solve_typing| |done].
     destruct Extr as [Htrx _]=>?. apply Htrx. by case=> [?[??]].
   Qed.
 
@@ -159,10 +160,10 @@ Section lemmas.
     { move=> ?. eapply tctx_incl_ext;
        [by apply tctx_incl_leak_head|]=>/= ?[[v v'][]]. inv_vec v. by inv_vec v'. }
     move=>/= n IH p. eapply tctx_incl_ext.
-    { eapply tctx_incl_trans;
-        [eapply tctx_uniq_eqtype; by [apply array_succ_prod|apply _|]|].
-      eapply tctx_incl_trans;
-        [by eapply (tctx_incl_frame_r +[_]), tctx_split_uniq_prod|].
+    { eapply tctx_incl_trans.
+      { eapply tctx_uniq_eqtype; by [apply array_succ_prod|apply _|]. }
+      eapply tctx_incl_trans.
+      { by eapply (tctx_incl_frame_r +[_]), tctx_split_uniq_prod. }
       apply tctx_incl_tail. eapply tctx_incl_trans; [apply IH|].
       eapply proj1, get_tctx_equiv=> ? vπl.
       move: p 0%nat. clear. induction n; [done|]=> p ?. case vπl=>/= ??.
