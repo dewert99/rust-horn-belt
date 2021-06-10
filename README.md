@@ -1,6 +1,6 @@
 # RustHornBelt COQ DEVELOPMENT
 
-This is the Coq development for RustHornBelt (work in progress).
+This is the Coq development for RustHornBelt.
 
 ## References
 
@@ -14,7 +14,7 @@ This version is known to compile with:
 
 - Coq 8.13.0
 - A development version of [Iris](https://gitlab.mpi-sws.org/iris/iris)
-  (the version of 2021-03-06)
+  (the version `dev.2021-03-27.0.f1484b2b`)
 
 ## Building from source
 
@@ -37,8 +37,10 @@ followed by `make build-dep`.
 ## Structure
 
 * The folder [util](theories/util) contains utility for basic concepts.
-* The folder [prophecy](theories/prophecy) contains the formalization of the
-  prophecy library.
+  * [fancy_lists.v](theories/util/fancy_lists.v) contains definitions, notation
+    and lemmas for heterogeneous lists and related data types.
+* The folder [prophecy](theories/prophecy) contains the prophecy library,
+  as well as the library for syntactic types.
 * The folder [lifetime](theories/lifetime) proves the rules of the lifetime
   logic, including derived constructions like (non-)atomic persistent borrows.
   * The subfolder [model](theories/lifetime/model) proves the core rules, which
@@ -47,20 +49,25 @@ followed by `make build-dep`.
 * The folder [lang](theories/lang) contains the formalization of the lambda-Rust
   core language, including the theorem showing that programs with data races get
   stuck.
-* The folder [typing](theories/typing) defines the domain of semantic types,
-  interpretations of all the judgments, as well as proofs of all typing rules.
-  * [type.v](theories/typing/type.v) contains the definition of a semantic type.
-  * ~~[programs.v](theories/typing/programs.v) defines the typing judgements for
-    instructions and function bodies.~~
-  * ~~[soundness.v](theories/typing/soundness.v) contains the main soundness
-    theorem of the type system.~~
-  * ~~The subfolder [examples](theories/typing/examples) shows how the examples
-    from the technical appendix can be type-checked in Coq.~~
-  * ~~The subfolder [lib](theories/typing/lib) contains proofs of safety of some
+* The folder [typing](theories/typing) defines the domain of semantic types and
+  interpretations of all the judgments and also proves all typing rules.
+  * [type.v](theories/typing/type.v) contains the definition of the notion
+    of the semantic type.
+  * [programs.v](theories/typing/programs.v) defines the typing judgments for
+    instructions and function bodies.
+  * [soundness.v](theories/typing/soundness.v) contains the main soundness
+    theorem of the type system.
+  * The subfolder [examples](theories/typing/examples) verifies some examples
+    in Coq to show how functional verification using RustHornBelt's reduction
+    works.
+  * The subfolder [lib](theories/typing/lib) contains proofs of safety of some
     unsafely implement types from the Rust standard library and some user
-    crates: `Cell`, `RefCell`, `Rc`, `Arc`, `Mutex`, `RwLock`, `mem::swap`,
-    `thread::spawn`, `take_mut::take`, `alias::once` as well as converting `&&T`
-    to `&Box<T>`.~~
+    crates. Some libraries are not yet verified, being commented out in
+    `_CoqProject`.
+    * Verified: `Vec`, `Cell`, `MaybeUninit`.
+    * Unverified: `RefCell`, `Rc`, `Arc`, `Mutex`, `RwLock`, `mem::swap`,
+      `thread::spawn`, `take_mut::take`, `alias::once`, converting `&&T` to
+      `&Box<T>`.
 
 ## Where to Find the Proof Rules From the Paper
 
@@ -72,12 +79,12 @@ borrows" in the Coq development.
 
 | Proof Rule            | File            | Lemma                 |
 |-----------------------|-----------------|-----------------------|
-| T-bor-lft (for shr)   | shr_bor.v       | shr_mono              |
-| T-bor-lft (for mut)   | uniq_bor.v      | uniq_mono             |
+| T-bor-lft (for shr)   | shr_bor.v       | shr_subtype           |
+| T-bor-lft (for mut)   | uniq_bor.v      | uniq_subtype          |
 | C-subtype             | type_context.v  | subtype_tctx_incl     |
 | C-copy                | type_context.v  | copy_tctx_incl        |
-| C-split-bor (for shr) | product_split.v | tctx_split_shr_prod2  |
-| C-split-bor (for mut) | product_split.v | tctx_split_uniq_prod2 |
+| C-split-bor (for shr) | product_split.v | tctx_split_shr_prod   |
+| C-split-bor (for mut) | product_split.v | tctx_split_uniq_prod  |
 | C-share               | borrow.v        | tctx_share            |
 | C-borrow              | borrow.v        | tctx_borrow           |
 | C-reborrow            | uniq_bor.v      | tctx_reborrow_uniq    |
@@ -93,7 +100,7 @@ borrows" in the Coq development.
 | S-delete              | own.v           | type_delete_instr     |
 | S-deref               | programs.v      | type_deref_instr      |
 | S-assign              | programs.v      | type_assign_instr     |
-| F-consequence         | programs.v      | typed_body_mono       |
+| F-consequence         | programs.v      | typed_body_impl       |
 | F-let                 | programs.v      | type_let'             |
 | F-letcont             | cont.v          | type_cont             |
 | F-jump                | cont.v          | type_jump             |
@@ -101,7 +108,10 @@ borrows" in the Coq development.
 | F-endlft              | programs.v      | type_endlft           |
 | F-call                | function.v      | type_call             |
 
-Some of these lemmas are called `something'` because the version without the `'` is a derived, more specialized form used together with our eauto-based `solve_typing` tactic.  You can see this tactic in action in the [examples](theories/typing/examples) subfolder.
+Some of these lemmas are called `something'` because the version without the
+`'` is a derived, more specialized form used together with our eauto-based
+`solve_typing` tactic.  You can see this tactic in action in the
+[examples](theories/typing/examples) subfolder.
 
 ### Lifetime Logic Rules
 
@@ -140,5 +150,5 @@ then sealed behind a module signature in
   `opam update iris-dev`.
 * In lambdaRust, change the `opam` file to depend on the new version.
 * Run `make build-dep` (in lambdaRust) to install the new version of Iris.
-  You may have to do `make clean` as Coq will likely complain about .vo file
+  You may have to do `make clean` as Coq will likely complain about `.vo` file
   mismatches.
