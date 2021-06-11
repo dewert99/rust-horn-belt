@@ -346,11 +346,11 @@ Section vec.
         by rewrite Eqξ -vec_to_list_apply vapply_insert -vec_to_list_insert.
     - iNext. iExists _, _. rewrite -Eqi. iFrame "↦ty Pc'".
       iApply persistent_time_receipt_mono; [|done]. lia.
-    - iIntros "!> (%&%& ↦ty & >⧖' & Pc)". iCombine "⧖ ⧖'" as "⧖!".
+    - iIntros "!> (%&%& ↦ty & >⧖' & Pc')". iCombine "⧖ ⧖'" as "⧖!".
       iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖!")
         as "⧖!"; [solve_ndisj|]. iIntros "/=!>!>".
-      iExists _, _. iFrame "⧖!". iDestruct ("ToPc" with "[Pc]") as "$".
-      { iDestruct (proph_ctrl_eqz with "PROPH Pc") as "Eqz".
+      iExists _, _. iFrame "⧖!". iDestruct ("ToPc" with "[Pc']") as "$".
+      { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
         rewrite -vec_to_list_apply. iApply proph_eqz_constr.
         by iApply proph_eqz_vinsert. }
       rewrite split_vec_mt. iExists _, _, _, _. iFrame "↦₀ ↦₁ ↦₂ ex †".

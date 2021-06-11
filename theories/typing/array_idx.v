@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import programs
+From lrust.typing Require Import type_context programs array_util
   array int own shr_bor uniq_bor product product_split.
 Set Default Proof Using "Type".
 
@@ -92,7 +92,7 @@ Section lemmas.
   Lemma tctx_idx_shr_array {𝔄 𝔅l} (ty: type 𝔄) n κ p (i: fin n) (T: tctx 𝔅l) E L :
     tctx_incl E L (p ◁ &shr{κ} [ty;^ n] +:: T)
       (p +ₗ #(i * ty.(ty_size))%nat ◁ &shr{κ} ty +:: T)
-      (λ post '(xl -:: bl), post (xl !!! i -:: bl)).
+      (λ post '(al -:: bl), post (al !!! i -:: bl)).
   Proof.
     split; [by intros ??? [??]|].
     iIntros (??[??]?) "_ _ _ _ $ [p T] Obs !>". iExists (_-::_).
@@ -104,7 +104,7 @@ Section lemmas.
       n κ p (i: fin n) (T: tctx 𝔅l) E L :
     tctx_extract_elt E L (p +ₗ #(i * ty.(ty_size))%nat ◁ &shr{κ} ty)
       (p ◁ &shr{κ} [ty;^ n] +:: T) (p ◁ &shr{κ} [ty;^ n] +:: T)
-      (λ post '(xl -:: bl), post (xl !!! i -:: xl -:: bl)).
+      (λ post '(al -:: bl), post (al !!! i -:: al -:: bl)).
   Proof.
     eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [apply copy_tctx_incl, _|apply tctx_idx_shr_array]. }
@@ -114,9 +114,9 @@ Section lemmas.
   Lemma type_idx_shr_array_instr {𝔄} (ty: type 𝔄) n κ p q E L :
     typed_instr_ty E L +[p ◁ &shr{κ} [ty;^ n]; q ◁ int]
       (p +ₗ q * #ty.(ty_size)) (&shr{κ} ty)
-      (λ post '-[xl; z], ∃i: fin n, z = i ∧ post (xl !!! i)).
+      (λ post '-[al; z], ∃i: fin n, z = i ∧ post (al !!! i)).
   Proof.
-    iIntros (??(vπ&?&[])) "_ _ PROPH _ _ $$ (p & q &_) #Obs".
+    iIntros (??(vπ &?&[])) "_ _ PROPH _ _ $$ (p & q &_) #Obs".
     wp_apply (wp_hasty with "p"). iIntros ([[]|][|]) "_ ⧖ ? //".
     wp_apply (wp_hasty with "q"). iIntros "%% _ _" ((?&->&[=->]))=>/=.
     iMod (proph_obs_sat with "PROPH Obs") as %(?& i &->&_); [done|].
@@ -133,7 +133,7 @@ Section lemmas.
     tctx_extract_ctx E L +[p ◁ &shr{κ} [ty;^ n]; q ◁ int] T T' trx →
     (∀v: val, typed_body E L C (v ◁ &shr{κ} ty +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := p +ₗ q * #ty.(ty_size) in e) (trx ∘
-      (λ post '(xl -:: z -:: bl), ∃i: fin n, z = i ∧ tr post (xl !!! i -:: bl)))%type.
+      (λ post '(al -:: z -:: bl), ∃i: fin n, z = i ∧ tr post (al !!! i -:: bl)))%type.
   Proof.
     iIntros (? Extr) "?".
     iApply type_let; [by apply type_idx_shr_array_instr|solve_typing| |done].
@@ -185,6 +185,85 @@ Section lemmas.
     { eapply (tctx_incl_frame_r +[_] (_ +:: _)).
       eapply tctx_incl_trans; by [apply tctx_split_uniq_array|]. }
     destruct Extr as [Htr _]=>/= ?[[??]?]. apply Htr. by case.
+  Qed.
+
+  Lemma type_idx_uniq_array_instr {𝔄} (ty: type 𝔄) n κ p q E L :
+    lctx_lft_alive E L κ →
+    typed_instr_ty E L +[p ◁ &uniq{κ} [ty;^ n]; q ◁ int]
+      (p +ₗ q * #ty.(ty_size)) (&uniq{κ} ty)
+      (λ post '-[(al, al'); z], ∃i: fin n, z = i ∧
+        ∀a': 𝔄, al' = vinsert i a' al → post (al !!! i, a')).
+  Proof.
+    iIntros (Alv ??(vπ &?&[])) "#LFT TIME #PROPH UNIQ E $ L (p & q &_) #Obs".
+    wp_apply (wp_hasty with "p"). iIntros ([[]|]?) "_ _ [#In uniq] //".
+    wp_apply (wp_hasty with "q"). iIntros "%% _ _" ((?&->&[=->]))=>/=.
+    iDestruct "uniq" as (? ξi [? Eq2]) "[Vo Bor]". set ξ := PrVar _ ξi.
+    iMod (Alv with "E L") as (?) "[(κ & κ₊ & κ₊₊) ToL]"; [done|].
+    iMod (bor_acc_cons with "LFT Bor κ") as "[big ToBor]"; [done|]. wp_op.
+    iDestruct "big" as (??) "(↦tys & #⧖ & Pc)". rewrite split_array_mt.
+    iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
+    set aπl := vfunsep (fst ∘ vπ).
+    have ->: vπ = pair ∘ vapply aπl ⊛ (.$ ξ).
+    { by rewrite [vπ]surjective_pairing_fun /aπl vapply_funsep Eq2. }
+    iMod (proph_obs_sat with "PROPH Obs") as %[?[i[->_]]]; [done|].
+    rewrite -Nat2Z.inj_mul.
+    iDestruct (big_sepL_vtakemiddrop i with "↦tys") as "(↦tys & ↦ty & ↦tys')".
+    iMod (ty_own_proph_big_sepL_mt with "LFT In ↦tys κ₊") as "Upd"; [done|].
+    setoid_rewrite shift_loc_ty_assoc.
+    iMod (ty_own_proph_big_sepL_mt with "LFT In ↦tys' κ₊₊") as "Upd'"; [done|].
+    iCombine "Upd Upd'" as "Upd". rewrite fupd_sep.
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]");
+      [done|done| |].
+    { iApply step_fupdN_with_emp. rewrite difference_empty_L.
+      iApply step_fupdN_nmono; [|done]. lia. }
+    wp_op. iIntros "[(%&%&%& ξl & To↦tys) (%&%&%& ξl' & To↦tys')]".
+    iMod (uniq_intro (aπl !!! i) with "PROPH UNIQ") as (ζi) "[Vo' Pc']"; [done|].
+    set ζ := PrVar _ ζi.
+    iDestruct (uniq_proph_tok with "Vo' Pc'") as "(Vo' & ζ & Pc')".
+    rewrite proph_tok_singleton.
+    iDestruct (proph_tok_combine with "ζ ξl'") as (?) "[ζξl Toζξl]".
+    iDestruct (proph_tok_combine with "ξl ζξl") as (?) "[ξζξl Toξζξl]".
+    iMod (uniq_preresolve ξ _ (vapply (vinsert i (.$ ζ) aπl))
+      with "PROPH Vo Pc ξζξl") as "(Obs' & ξζξl & ToPc)"; [done| |].
+    { apply proph_dep_vinsert=>//. apply proph_dep_one. }
+    iCombine "Obs Obs'" as "#?". iClear "Obs".
+    iDestruct ("Toξζξl" with "ξζξl") as "[ξl ζξl]".
+    iDestruct ("Toζξl" with "ζξl") as "[ζ ξl']". iSpecialize ("Pc'" with "ζ").
+    iMod ("To↦tys" with "ξl") as "(↦tys & α₊)".
+    iMod ("To↦tys'" with "ξl'") as "(↦tys' & α₊₊)".
+    iMod ("ToBor" with "[↦tys ↦tys' ToPc] [↦ty Pc']") as "[Bor α]"; last first.
+    - iMod ("ToL" with "[$α $α₊ $α₊₊]") as "$". iModIntro.
+      iExists -[λ π, ((aπl !!! i) π, π ζ)]. iSplitL.
+      + iSplitL; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖ In".
+        iExists _, _. by iFrame.
+      + iApply proph_obs_impl; [|done]=>/= ?[[?[/Nat2Z.inj/fin_to_nat_inj<-Imp]]Eqξ].
+        rewrite -vapply_lookup. apply Imp. by rewrite Eqξ vapply_insert.
+    - iNext. iExists _, _. by iFrame.
+    - iIntros "!> big !>!>". iDestruct "big" as (??) "(↦ty & ⧖' & Pc')".
+      iCombine "⧖ ⧖'" as "⧖!"=>/=. iExists _, _. iFrame "⧖!".
+      iDestruct ("ToPc" with "[Pc']") as "$".
+      { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
+        by iApply proph_eqz_vinsert. }
+      iClear "#". rewrite split_array_mt semi_iso' vinsert_backmid -big_sepL_vbackmid.
+      iSplitL "↦tys". { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
+      iSplitL "↦ty". { iStopProof. do 3 f_equiv. iApply ty_own_depth_mono. lia. }
+      iStopProof. do 6 f_equiv; [|iApply ty_own_depth_mono; lia].
+      f_equiv. rewrite shift_loc_assoc_nat. f_equal. lia.
+  Qed.
+
+  Lemma type_idx_uniq_array {𝔄 𝔄l 𝔅l ℭ} (ty: type 𝔄) n κ p q
+        (T: tctx 𝔄l) (T': tctx 𝔅l) trx tr x e E L (C: cctx ℭ) :
+    Closed (x :b: []) e →
+    tctx_extract_ctx E L +[p ◁ &uniq{κ} [ty;^ n]; q ◁ int] T T' trx →
+    lctx_lft_alive E L κ →
+    (∀v: val, typed_body E L C (v ◁ &uniq{κ} ty +:: T') (subst' x v e) tr) -∗
+    typed_body E L C T (let: x := p +ₗ q * #ty.(ty_size) in e) (trx ∘
+      (λ post '((al, al') -:: z -:: bl), ∃i: fin n, z = i ∧
+        ∀a': 𝔄, al' = vinsert i a' al → tr post ((al !!! i, a') -:: bl)))%type.
+  Proof.
+    iIntros (? Ex ?) "?".
+    iApply type_let; [by apply type_idx_uniq_array_instr|solve_typing| |done].
+    move: Ex=> [Htrx _]?. apply Htrx. by case=> [?[??]].
   Qed.
 End lemmas.
 
