@@ -258,7 +258,7 @@ Section borrow.
         iFrame. iApply "Heqz".
         iDestruct (proph_ctrl_eqz with "PROPH Hpc") as "Eqz".
         iApply (proph_eqz_constr2 pair with "Eqz []").
-        iApply proph_eqz_eq.
+        iApply proph_eqz_refl.
       - iExists _, _. by iFrame. }
     { iExists _, _. by iFrame. }
     iExists -[λ π, ((vπ π).1.1 , π ζ)]. rewrite right_id.

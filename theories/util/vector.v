@@ -22,6 +22,9 @@ Global Instance vhd_vtl_vcons_iso {A n} :
   Iso (λ v: vec A (S n), (vhd v, vtl v)) (curry (λ x, vcons x)).
 Proof. split; fun_ext; [|by case]=> v. by inv_vec v. Qed.
 
+Global Instance vec_to_list_inj' {A n} : Inj (=) (=) (@vec_to_list A n).
+Proof. move=> ??. apply vec_to_list_inj2. Qed.
+
 (** [vzip] *)
 
 Notation vzip := (vzip_with pair).
@@ -99,25 +102,86 @@ Fixpoint vinit' {A n} (x: A) (yl: vec A n) : vec A n :=
 Definition vinit {A n} (xl: vec A (S n)) : vec A n :=
   let '(x ::: xl') := xl in vinit' x xl'.
 
+(** [vinsert] *)
+
+Lemma vapply_insert {A B n} (fl: vec (B → A) n) i g :
+  vapply (vinsert i g fl) = λ x, vinsert i (g x) (vapply fl x).
+Proof.
+  fun_ext=> ?. move: fl. elim i; [move=> ? fl; by inv_vec fl|]=> ?? IH fl.
+  inv_vec fl=>/= ??. by rewrite IH.
+Qed.
+
+(** [vtake], [vdrop'] and [vbackmid] *)
+
+Fixpoint vdrop' {A n} (i: fin n) : vec A n → vec A (pred (n - i)) :=
+  match i with 0%fin => vtl | FS j => λ xl, vdrop' j (vtl xl) end.
+
+Fixpoint vbackmid {A n} {i: fin n} :
+    vec A i → A → vec A (pred (n - i)) → vec A n :=
+  match i with
+  | 0%fin => λ _ y zl, y ::: zl
+  | FS j => λ xl y zl, vhd xl ::: vbackmid (vtl xl) y zl
+  end.
+
+Global Instance vbackmid_inj {A n i} : Inj3 (=) (=) (=) (=) (@vbackmid A n i).
+Proof.
+  elim i.
+  - move=> ? xl ?? xl' ???. inv_vec xl. by inv_vec xl'=>/= /vcons_inj[->->].
+  - move=> ?? IH xl ?? xl' ???. inv_vec xl=> ??.
+    by inv_vec xl'=>/= ?? /vcons_inj[->/IH[->?]].
+Qed.
+
+Lemma vinsert_backmid {A n} (xl: vec A n) i y :
+  vinsert i y xl = vbackmid (vtake i xl) y (vdrop' i xl).
+Proof.
+  move: xl. elim i; [move=> ? xl; by inv_vec xl|]=> ?? IH xl.
+  inv_vec xl=>/= ??. f_equiv. apply IH.
+Qed.
+
+Lemma vapply_insert_backmid {A B n} (fl: vec (B → A) n) i g :
+  vapply (vinsert i g fl) =
+    vbackmid ∘ vapply (vtake i fl) ⊛ g ⊛ vapply (vdrop' i fl).
+Proof.
+  fun_ext. move: fl. elim i; [move=> ? fl; by inv_vec fl|]=> ?? IH fl.
+  inv_vec fl=>/= ???. by rewrite IH.
+Qed.
+
 (** Iris *)
 
-Lemma big_sepL_vlookup_acc {A n} {PROP: bi}
-      (Φ: nat → A → PROP) (xl: vec A n) (i: fin n) :
+Lemma big_sepL_vlookup_acc {A n} {PROP: bi} (i: fin n) (xl: vec A n)
+      (Φ: _ → _ → PROP) :
   ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊢
   Φ i (xl !!! i) ∗ (Φ i (xl !!! i) -∗ [∗ list] k ↦ x ∈ xl, Φ k x).
 Proof. by apply big_sepL_lookup_acc, vlookup_lookup. Qed.
 
-Lemma big_sepL_vlookup {A n} {PROP: bi} (Φ: nat → A → PROP)
-  (xl: vec A n) (i: fin n) `{!Absorbing (Φ i (xl !!! i))} :
+Lemma big_sepL_vlookup {A n} {PROP: bi} (i: fin n) (xl: vec A n)
+    (Φ: nat → _ → PROP) `{!Absorbing (Φ i (xl !!! i))} :
   ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊢ Φ i (xl !!! i).
 Proof. rewrite big_sepL_vlookup_acc. apply bi.sep_elim_l, _. Qed.
 
-Lemma big_sepL_vinitlast {A n} {PROP: bi} (Φ: nat → A → PROP)
-    (xl: vec A (S n)) :
+Lemma big_sepL_vinitlast {A n} {PROP: bi} (xl: vec A (S n)) (Φ: _ → _ → PROP) :
   ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊣⊢
   ([∗ list] k ↦ x ∈ vinit xl, Φ k x) ∗ Φ n (vlast xl).
 Proof.
   inv_vec xl=>/= x xl. move: Φ x.
   elim xl; [move=> ??; by rewrite comm|]=>/= ??? IH Φ ?.
   by rewrite (IH (λ n, Φ (S n))) assoc.
+Qed.
+
+Lemma big_sepL_vtakemiddrop {A n} {PROP: bi} i (xl: vec A n) (Φ: _ → _ → PROP) :
+  ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊣⊢
+  ([∗ list] k ↦ x ∈ vtake i xl, Φ k x) ∗ Φ i (xl !!! i) ∗
+    ([∗ list] k ↦ x ∈ vdrop' i xl, Φ (S i + k) x).
+Proof.
+  move: xl Φ. elim i. { move=> ? xl ?. inv_vec xl=>/= ??. by rewrite left_id. }
+  move=> ?? IH xl ?. inv_vec xl=>/= ??. by rewrite -assoc IH.
+Qed.
+
+Lemma big_sepL_vbackmid {A n} {PROP: bi} (i: fin n)
+    (xl: vec A i) y (zl: vec A _) (Φ: _ → _ → PROP) :
+  ([∗ list] k ↦ x ∈ xl, Φ k x) ∗ Φ i y ∗ ([∗ list] k ↦ x ∈ zl, Φ (S i + k) x) ⊣⊢
+  ([∗ list] k ↦ x ∈ vbackmid xl y zl, Φ k x)%I.
+Proof.
+  move: xl zl Φ. elim i. { move=> ? xl ??. inv_vec xl=>/=. by rewrite left_id. }
+  move=>/= ?? IH xl ??. inv_vec xl=>/= ??. by rewrite -assoc IH.
 Qed.

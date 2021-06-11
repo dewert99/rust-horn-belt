@@ -12,7 +12,7 @@ Section array.
       [∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2)%I ⊣⊢
     [∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{q}: ty.(ty_own) aπ d tid.
   Proof.
-    rewrite split_big_sepL_mt_ty_own. iSplit.
+    rewrite trans_big_sepL_mt_ty_own. iSplit.
     - iIntros "(%&?&%&->&?)". iExists _. iFrame.
     - iIntros "(%& ↦ &?)". iExists _. iFrame "↦". iExists _. by iFrame.
   Qed.
@@ -40,14 +40,14 @@ Section array.
   Qed.
   Next Obligation.
     iIntros (????????? q ?) "#LFT #In (%&->& tys) κ".
-    iMod (ty_own_proph_big_sepL_v with "LFT In tys κ") as "Upd"; [done|].
+    iMod (ty_own_proph_big_sepL with "LFT In tys κ") as "Upd"; [done|].
     iApply (step_fupdN_wand with "Upd"). rewrite vapply_funsep.
     iIntros "!> >(%&%&%& ξl & Totys) !>". iExists _, _. iSplit; [done|].
     iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[? $]". iExists _. by iFrame.
   Qed.
   Next Obligation.
     iIntros "*% LFT In In' tys κ'". rewrite -{2}[vπ]vapply_funsep.
-    iMod (ty_shr_proph_big_sepL_v with "LFT In In' tys κ'") as "Upd"; [done|].
+    iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Upd"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
     iIntros ">(%&%&%& ξl & Totys) !>". iExists _, _. iSplit; [done|].
     iIntros "{$ξl}ξl". by iMod ("Totys" with "ξl") as "[$$]".

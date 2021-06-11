@@ -12,7 +12,11 @@ Notation "l ↦∗len n" := (∃vl, ⌜length vl = n%nat⌝ ∗ l ↦∗ vl)%I
 Section array_util.
   Context `{!typeG Σ}.
 
-  Lemma split_big_sepL_mt_ty_own {𝔄} (ty: type 𝔄) n (aπl: vec _ n) l d tid q :
+  Lemma shift_loc_ty_assoc {𝔄} (ty: type 𝔄) l m n :
+    l +ₗ[ty] (m + n) = l +ₗ[ty] m +ₗ[ty] n.
+  Proof. by rewrite Nat.mul_add_distr_r shift_loc_assoc_nat. Qed.
+
+  Lemma trans_big_sepL_mt_ty_own {𝔄} (ty: type 𝔄) n (aπl: vec _ n) l d tid q :
     ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{q}: ty.(ty_own) aπ d tid)%I ⊣⊢
     ∃wll: vec (list val) n, l ↦∗{q} concat wll ∗
       [∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2.
@@ -59,7 +63,7 @@ Section array_util.
     by iIntros "!> [>[$$] >[$$]]".
   Qed.
 
-  Lemma ty_own_proph_big_sepL_v {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) wll d tid κ q :
+  Lemma ty_own_proph_big_sepL {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) wll d tid κ q :
     ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty.(ty_lft) -∗
     ([∗ list] i ↦ aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2) -∗ q.[κ]
       ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
@@ -80,7 +84,22 @@ Section array_util.
     iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
   Qed.
 
-  Lemma ty_shr_proph_big_sepL_v {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) d κ tid l κ' q :
+  Lemma ty_own_proph_big_sepL_mt {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) l d tid κ qₘ q :
+    ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty.(ty_lft) -∗
+    ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{qₘ}: ty.(ty_own) aπ d tid) -∗ q.[κ]
+      ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
+        (q':+[ξl] ={E}=∗
+          ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{qₘ}: ty.(ty_own) aπ d tid) ∗ q.[κ]).
+  Proof.
+    rewrite {1}trans_big_sepL_mt_ty_own. iIntros (?) "LFT In (%& ↦ & tys) κ".
+    iMod (ty_own_proph_big_sepL with "LFT In tys κ") as "Upd"; [done|].
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&%& ξl & Totys) !>".
+    iExists _, _. iSplit; [done|]. iIntros "{$ξl}ξl".
+    iMod ("Totys" with "ξl") as "[tys $]". rewrite trans_big_sepL_mt_ty_own.
+    iModIntro. iExists _. iFrame.
+  Qed.
+
+  Lemma ty_shr_proph_big_sepL {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) d κ tid l κ' q :
     ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
     ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i)) -∗ q.[κ']
       ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗

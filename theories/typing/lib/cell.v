@@ -316,7 +316,7 @@ Section cell.
       iExists _. iFrame "↦". iSplit; [done|]. iExists _, _. iSplit; [done|]. iFrame.
     - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame.
     - iIntros "!> (%&%&((%& ↦ & ty)& #⧖' & Pc')) !>!>". iExists _, _.
-      iFrame "⧖'". iSplitR "ToPc"; [|iApply "ToPc"; by iApply proph_eqz_eq].
+      iFrame "⧖'". iSplitR "ToPc"; [|iApply "ToPc"; by iApply proph_eqz_refl].
       iExists _. iFrame "↦". iExists _. iSplit; [done|]. iExists _, _.
       iFrame "⧖' ty". by iApply proph_obs_true.
   Qed.

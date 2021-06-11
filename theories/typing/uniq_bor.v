@@ -277,7 +277,7 @@ Section typing.
         iExists _, _. iFrame "⧖". iSplitL "ζPc"; last first.
         { iFrame "In". iExists _, _. by iFrame. }
         iNext. iDestruct (proph_ctrl_eqz with "PROPH ζPc") as "Eqz".
-        iApply (proph_eqz_pair with "[Eqz]"); [done|iApply proph_eqz_eq]. }
+        iApply (proph_eqz_pair with "[Eqz]"); [done|iApply proph_eqz_refl]. }
     iDestruct "ξBig" as (??) "(↦ty & >#⧖ & ξPc)".
     iDestruct "ζBig" as (??) "(ξVo & _ & ζPc)".
     iMod (uniq_strip_later with "ξVo ξPc") as (<-<-) "[ξVo ξPc]".
@@ -296,7 +296,7 @@ Section typing.
     iExists _, _. iFrame "⧖' In". iSplitL "ζPc".
     - iNext. iDestruct (proph_ctrl_eqz with "PROPH ζPc") as "Eqz".
       iApply (proph_eqz_pair _ (pair ∘ vπ' ⊛ (snd ∘ vπ)) with "[Eqz]");
-      [done|iApply proph_eqz_eq].
+      [done|iApply proph_eqz_refl].
     - iExists _, _. rewrite (proof_irrel (prval_to_inh' _) (prval_to_inh' vπ)).
       by iFrame.
   Qed.

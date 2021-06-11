@@ -28,6 +28,13 @@ Infix "⊛" := s_comb (left associativity, at level 50).
 Global Arguments s_comb {_ _ _} _ _ _ / : assert.
 Typeclasses Transparent s_comb.
 
+Class Inj3 {A B C D} (R1: relation A) (R2: relation B) (R3: relation C)
+    (S: relation D) (f: A → B → C → D) : Prop :=
+  inj3 x1 x2 x3 y1 y2 y3 :
+    S (f x1 x2 x3) (f y1 y2 y3) → R1 x1 y1 ∧ R2 x2 y2 ∧ R3 x3 y3.
+
+Global Arguments inj3 {_ _ _ _ _ _ _ _} _ {_} _ _ _ _ _ _ _ : assert.
+
 (** * Utility for voidness *)
 
 Global Instance Empty_set_empty: Empty Set := Empty_set.

@@ -45,18 +45,18 @@ Local Lemma proph_dep_mono {A} ξl ζl (vπ: proph A) :
   ξl ⊆ ζl → vπ ./ ξl → vπ ./ ζl.
 Proof. move=> In Dep ?? Eqv. apply Dep => ??. by apply Eqv, In. Qed.
 
-Local Lemma subseteq_app_l ξl ζl : ξl ⊆ ξl ++ ζl.
-Proof. move=> ??. rewrite elem_of_app. by left. Qed.
-
-Local Lemma subseteq_app_r ξl ζl : ζl ⊆ ξl ++ ζl.
-Proof. move=> ??. rewrite elem_of_app. by right. Qed.
-
 Lemma proph_dep_constr2 {A B C} (f: A → B → C) vπ wπ ξl ζl :
   vπ ./ ξl → wπ ./ ζl → f ∘ vπ ⊛ wπ ./ ξl ++ ζl.
 Proof.
-  move=> Dep Dep' ?? Eqv. eapply proph_dep_mono in Dep, Dep';
-    [|apply subseteq_app_r|apply subseteq_app_l].
-  move: (Eqv) (Eqv) => /Dep ? /Dep' ?. by apply (f_equal2 f).
+  move=> Dep Dep' ?? Eqv.
+  eapply proph_dep_mono, (.$ Eqv) in Dep, Dep'; [|set_solver..]=>/=. by f_equal.
+Qed.
+
+Lemma proph_dep_constr3 {A B C D} (f: A → B → C → D) uπ vπ wπ ξl₀ ξl₁ ξl₂ :
+  uπ ./ ξl₀ → vπ ./ ξl₁ → wπ ./ ξl₂ → f ∘ uπ ⊛ vπ ⊛ wπ ./ ξl₀ ++ ξl₁ ++ ξl₂.
+Proof.
+  move=> Dep₀ Dep₁ Dep₂ ?? Eqv.
+  eapply proph_dep_mono, (.$ Eqv) in Dep₀, Dep₁, Dep₂; [|set_solver..]=>/=. by f_equal.
 Qed.
 
 Lemma proph_dep_destr {A B} f `{!@Inj A B (=) (=) f} vπ ξl :
@@ -66,7 +66,13 @@ Proof. by move=> Dep ?? /Dep/(inj f) ?. Qed.
 Lemma proph_dep_destr2 {A B C} f `{!@Inj2 A B C (=) (=) (=) f} vπ wπ ξl :
   f ∘ vπ ⊛ wπ ./ ξl → vπ ./ ξl ∧ wπ ./ ξl.
 Proof.
-  move=> Dep. split; move=> ?? /Dep Eq; apply (inj2 f) in Eq; by inversion Eq.
+  move=> Dep. split; move=> ?? /Dep Eq; apply (inj2 f) in Eq; tauto.
+Qed.
+
+Lemma proph_dep_destr3 {A B C D} f `{!@Inj3 A B C D (=) (=) (=) (=) f} uπ vπ wπ ξl :
+  f ∘ uπ ⊛ vπ ⊛ wπ ./ ξl → uπ ./ ξl ∧ vπ ./ ξl ∧ wπ ./ ξl.
+Proof.
+  move=> Dep. split; [|split]; move=> ?? /Dep/= Eq; apply (inj3 f) in Eq; tauto.
 Qed.
 
 Lemma proph_dep_singleton {A} (vπ: proph A) :
@@ -83,6 +89,14 @@ Lemma proph_dep_vcons {A n} ξl ζl (vπ: proph (vec A (S n))) :
   vhd ∘ vπ ./ ξl → vtl ∘ vπ ./ ζl → vπ ./ ξl ++ ζl.
 Proof.
   move=> ??. rewrite (surjective_vcons_fun vπ). by apply proph_dep_constr2.
+Qed.
+
+Lemma proph_dep_vinsert {A n} (vπl: vec (proph A) n) i wπ ξ ζl ζl' :
+  vapply (vtake i vπl) ./ ζl → wπ ./ [ξ] → vapply (vdrop' i vπl) ./ ζl' →
+  vapply (vinsert i wπ vπl) ./ ζl ++ ξ :: ζl'.
+Proof.
+  move=> ???. rewrite vapply_insert_backmid.
+  have ->: ξ :: ζl' = [ξ] ++ ζl' by done. by apply proph_dep_constr3.
 Qed.
 
 (** * Prophecy Log *)
@@ -421,7 +435,7 @@ Qed.
 Lemma proph_eqz_obs {A} (uπ vπ: proph A) : ⟨π, uπ π = vπ π⟩ -∗ uπ :== vπ.
 Proof. iIntros "?" (???[??]) "? !>". iFrame. Qed.
 
-Lemma proph_eqz_eq {A} (vπ: proph A) : ⊢ vπ :== vπ.
+Lemma proph_eqz_refl {A} (vπ: proph A) : ⊢ vπ :== vπ.
 Proof. iApply proph_eqz_obs. by iApply proph_obs_true. Qed.
 
 Lemma proph_eqz_modify {A} (uπ uπ' vπ: proph A) :
@@ -448,10 +462,30 @@ Proof.
   iCombine "Obs Obs'" as "?". by iApply proph_obs_impl; [|done]=>/= ?[->->].
 Qed.
 
+Lemma proph_eqz_constr3 {A B C D} f `{!@Inj3 A B C D (=) (=) (=) (=) f}
+    uπ₀ uπ₁ uπ₂ vπ₀ vπ₁ vπ₂ :
+  uπ₀ :== vπ₀ -∗ uπ₁ :== vπ₁ -∗ uπ₂ :== vπ₂ -∗
+  f ∘ uπ₀ ⊛ uπ₁ ⊛ uπ₂ :== f ∘ vπ₀ ⊛ vπ₁ ⊛ vπ₂.
+Proof.
+  iIntros "Eqz₀ Eqz₁ Eqz₂" (???[? Dep]) "ξl". move: Dep=> /proph_dep_destr3[?[??]].
+  iMod ("Eqz₀" with "[%//] ξl") as "[Obs ξl]".
+  iMod ("Eqz₁" with "[%//] ξl") as "[Obs' ξl]". iCombine "Obs Obs'" as "Obs".
+  iMod ("Eqz₂" with "[%//] ξl") as "[Obs' $]". iCombine "Obs Obs'" as "?".
+  by iApply proph_obs_impl; [|done]=>/= ?[[->->]->].
+Qed.
+
 Lemma proph_eqz_pair {A B} (uπ vπ: proph (A * B)) :
   fst ∘ uπ :== fst ∘ vπ -∗ snd ∘ uπ :== snd ∘ vπ -∗ uπ :== vπ.
 Proof.
   iIntros "Eqz Eqz'". iDestruct (proph_eqz_constr2 with "Eqz Eqz'") as "?".
   by rewrite -!surjective_pairing_fun.
 Qed.
+
+Lemma proph_eqz_vinsert {A n} xπ yπ (zπl: vec (proph A) n) i :
+  xπ :== yπ -∗ vapply (vinsert i xπ zπl) :== vapply (vinsert i yπ zπl).
+Proof.
+  iIntros "Eqz". rewrite !vapply_insert_backmid.
+  iApply (proph_eqz_constr3 with "[] Eqz []"); iApply proph_eqz_refl.
+Qed.
+
 End lemmas.
