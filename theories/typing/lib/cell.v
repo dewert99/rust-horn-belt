@@ -18,7 +18,7 @@ Section cell.
     - iIntros "(%&%&%& ↦ &?)". iExists _. iFrame "↦". iExists _. by iFrame.
   Qed.
 
-  Program Definition cell {𝔄} (ty: type 𝔄) : type (𝔄 → Propₛ) := {|
+  Program Definition cell {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own Φπ _ tid vl := ∃Φ, ⌜Φπ = const Φ⌝ ∗
       ∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ty.(ty_own) vπ d tid vl;
@@ -63,17 +63,6 @@ Section cell.
     - move=> */=. do 13 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
-  (* In order to prove [cell_leak] with a non-trivial postcondition,
-    we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
-  Lemma cell_leak {𝔄} (ty: type 𝔄) E L : leak E L (cell ty) (const True).
-  Proof. apply leak_just. Qed.
-
-  Lemma cell_real {𝔄} (ty: type 𝔄) E L : real E L (cell ty) id.
-  Proof.
-    split; iIntros "*% _ _ $ (%&->& big)"; iApply step_fupdN_full_intro;
-    iIntros "!>!>"; [|iIntros "!>!>"]; (iSplit; iExists _; by [|iSplit]).
-  Qed.
-
   Global Instance cell_copy {𝔄} (ty: type 𝔄) : Copy ty → Copy (cell ty).
   Proof.
     move=> ?. split; [apply _|]=>/= *. iIntros "#LFT (%&%& Bor) Na κ".
@@ -102,6 +91,17 @@ Section cell.
 
   Global Instance cell_send {𝔄} (ty: type 𝔄) : Send ty → Send (cell ty).
   Proof. move=> ?>/=. by do 9 f_equiv. Qed.
+
+  (* In order to prove [cell_leak] with a non-trivial postcondition,
+    we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
+  Lemma cell_leak {𝔄} (ty: type 𝔄) E L : leak E L (cell ty) (const True).
+  Proof. apply leak_just. Qed.
+
+  Lemma cell_real {𝔄} (ty: type 𝔄) E L : real E L (cell ty) id.
+  Proof.
+    split; iIntros "*% _ _ $ (%&->& big)"; iApply step_fupdN_full_intro;
+    iIntros "!>!>"; [|iIntros "!>!>"]; (iSplit; iExists _; by [|iSplit]).
+  Qed.
 
   Lemma cell_subtype {𝔄 𝔅} E L ty ty' f g `{!@Iso 𝔄 𝔅 f g} :
     eqtype E L ty ty' f g → subtype E L (cell ty) (cell ty') (.∘ g).
@@ -407,7 +407,7 @@ Section cell.
     eapply type_fn; [solve_typing|]=>/= α ϝ k[c[x[]]]. simpl_subst. via_tr_impl.
     { iApply type_deref; [solve_extract|solve_typing|done|]. intro_subst_as c'.
       iApply type_new; [lia|]. intro_subst_as r. rewrite Nat2Z.id.
-      iApply (type_with_tr [_;predₛ _;_;_]
+      iApply (type_with_tr [_;predₛ _;_;_] _
         (λ post '-[_; Φ; _; a], Φ a ∧ ∀a': 𝔄, Φ a' → post a')%type).
       (* Drop to Iris level. *)
       iIntros (?(?&?&?&?&[])?)

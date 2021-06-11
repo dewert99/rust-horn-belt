@@ -82,7 +82,7 @@ Section typing.
   Global Arguments typed_val {_} _%V _%T _%type.
 
   (* This lemma is helpful for specifying the predicate transformer. *)
-  Lemma type_with_tr 𝔄l {𝔅} tr E L (C: cctx 𝔅) (T: tctx 𝔄l) e :
+  Lemma type_with_tr 𝔄l 𝔅 tr E L (C: cctx 𝔅) (T: tctx 𝔄l) e :
     typed_body E L C T e tr -∗ typed_body E L C T e tr.
   Proof. done. Qed.
 
@@ -109,8 +109,8 @@ Section typing.
     iApply ("e" with "LFT TIME PROPH UNIQ [$E $In $In'] Na L C T").
   Qed.
 
-  Lemma type_let' {𝔄l 𝔅l ℭl 𝔇} E L (T1: tctx 𝔄l) (T2: val → tctx 𝔅l) (T: tctx ℭl)
-    (C: cctx 𝔇) xb e e' tr tr' :
+  Lemma type_let' {𝔄l 𝔅l ℭl 𝔇} (T1: tctx 𝔄l) (T2: val → tctx 𝔅l) tr tr'
+      (T: tctx ℭl) (C: cctx 𝔇) xb e e' E L :
     Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr →
     (∀v: val, typed_body E L C (T2 v h++ T) (subst' xb v e') tr') -∗
     typed_body E L C (T1 h++ T) (let: xb := e in e') (λ post acl,
@@ -126,8 +126,8 @@ Section typing.
     iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app papp_sepr.
   Qed.
 
-  Lemma type_let {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: tctx 𝔄l) (T2: val → tctx 𝔅l)
-    (T: tctx ℭl) (T': tctx 𝔇l) E L (C: cctx 𝔈) xb e e' tr tr' trx tr_res :
+  Lemma type_let {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: tctx 𝔄l) (T2: val → tctx 𝔅l) tr tr' trx
+    (T: tctx ℭl) (T': tctx 𝔇l) E L (C: cctx 𝔈) xb e e' tr_res :
     Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr →
     tctx_extract_ctx E L T1 T T' trx → tr_res ≡ trx ∘ (trans_upper tr ∘ tr') →
     (∀v: val, typed_body E L C (T2 v h++ T') (subst' xb v e') tr') -∗

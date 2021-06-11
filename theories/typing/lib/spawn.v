@@ -4,85 +4,96 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
+Implicit Type 𝔄 𝔅: syn_type.
+
 Definition spawnN := lrustN .@ "spawn".
-
-Section join_handle.
-  Context `{!typeG Σ, !spawnG Σ}.
-
-  Definition join_inv (ty : type) (v : val) :=
-    (∀ tid, tctx_elt_interp tid (v ◁ box ty))%I.
-
-  Program Definition join_handle (ty : type) :=
-    {| ty_size := 1; ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
-       ty_own _ _ vl :=
-         match vl return _ with
-         | [ #(LitLoc l) ] => lang.lib.spawn.join_handle spawnN l (join_inv ty)
-         | _ => False
-         end%I;
-       ty_shr κ _ l := True%I |}.
-  Next Obligation. by iIntros (ty depth tid [|[[]|][]]) "H". Qed.
-  Next Obligation. done. Qed.
-  Next Obligation.
-    iIntros "* _ _ _ _ ? !>". iApply step_fupdN_intro; [done|by iFrame].
-  Qed.
-  Next Obligation. iIntros (?) "**"; auto. Qed.
-
-  Lemma join_handle_subtype ty1 ty2 :
-    type_incl ty1 ty2 -∗ type_incl (join_handle ty1) (join_handle ty2).
-  Proof.
-    iIntros "#Hincl". iSplit; first done. iSplit; [|iSplit; iModIntro].
-    - iDestruct "Hincl" as "[_ [Hout _]]". by iApply "Hout".
-    - iIntros "* Hvl". destruct vl as [|[[|vl|]|] [|]]; try done.
-      simpl. iApply (join_handle_impl with "[] Hvl"). clear tid.
-      iIntros "!> * Hown" (tid). iSpecialize ("Hown" $! tid).
-      rewrite /tctx_elt_interp /=. iDestruct "Hown" as (??) "(?&?&?)".
-      iExists _, _. iFrame.
-      iDestruct (box_type_incl with "Hincl") as "{Hincl} (_ & _ & Hincl & _)".
-      iApply "Hincl". done.
-    - iIntros "* _". auto.
-  Qed.
-
-  Global Instance join_handle_mono E L :
-    Proper (subtype E L ==> subtype E L) join_handle.
-  Proof.
-    iIntros (ty1 ty2 Hsub ?) "HL". iDestruct (Hsub with "HL") as "#Hsub".
-    iIntros "!> #HE". iApply join_handle_subtype. iApply "Hsub"; done.
-  Qed.
-  Global Instance join_handle_proper E L :
-    Proper (eqtype E L ==> eqtype E L) join_handle.
-  Proof. intros ??[]. by split; apply join_handle_mono. Qed.
-
-  Global Instance join_handle_type_contractive : TypeContractive join_handle.
-  Proof.
-    split=>//.
-    - apply (type_lft_morphism_add _ static [] [])=>?.
-      + rewrite left_id. iApply lft_equiv_refl.
-      + by rewrite /elctx_interp /= left_id right_id.
-    - move=> ??? Hsz ?? Ho ??? [|[[|l|]|] []] //=.
-      rewrite /join_inv /tctx_elt_interp /box /own_ptr
-              ![X in X {| ty_own := _ |}]/ty_own Hsz.
-      repeat (apply Ho || f_contractive || f_equiv).
-  Qed.
-
-  Global Instance join_handle_ne : NonExpansive join_handle.
-  Proof.
-    intros n ty1 ty2 Hty12. constructor; [done|apply Hty12..| |done].
-    intros depth tid vs.
-    rewrite /join_handle /join_inv /tctx_elt_interp /box /own_ptr
-            ![X in X {| ty_own := _ |}]/ty_own.
-    repeat (apply Hty12 || f_equiv).
-  Qed.
-
-  Global Instance join_handle_send ty :
-    Send (join_handle ty).
-  Proof. iIntros (????) "$ //". Qed.
-  Global Instance join_handle_sync ty : Sync (join_handle ty).
-  Proof. iIntros (????) "_ //". Qed.
-End join_handle.
 
 Section spawn.
   Context `{!typeG Σ, !spawnG Σ}.
 
+  Definition join_future {𝔄} (ty: type 𝔄) (Φ: pred' 𝔄) (v: val) : iProp Σ :=
+    ∀tid, ∃vπ d, ⧖d ∗ (box ty).(ty_own) vπ d tid [v] ∗ ⟨π, Φ (vπ π)⟩.
+
+  Program Definition join_handle {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
+    ty_size := 1;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_own Φπ _ _ vl := [loc[l] := vl] ∃Φ, ⌜Φπ = const Φ⌝ ∗
+      join_handle spawnN l (join_future ty Φ);
+    ty_shr Φπ _ _ _ _ := ∃Φ, ⌜Φπ = const Φ⌝;
+  |}%I.
+  Next Obligation. iIntros (?????[|[[]|][]]) "* ? //". Qed.
+  Next Obligation. done. Qed.
+  Next Obligation. done. Qed.
+  Next Obligation. by iIntros. Qed.
+  Next Obligation.
+    iIntros "*% LFT _ Bor κ !>". iApply step_fupdN_full_intro.
+    setoid_rewrite by_just_loc_ex.
+    iMod (bor_acc with "LFT Bor κ") as "[(%& ↦ &%&>->&%&>->& join) ToBor]"; [done|].
+    iMod ("ToBor" with "[↦ join]") as "[_ $]"; [|by iExists _]. iNext.
+    iExists _. iFrame "↦". iExists _. iSplitR; [done|]. iExists _. by iFrame.
+  Qed.
+  Next Obligation.
+    iIntros (??????[|[[]|][]]) "*% _ _ join //". iIntros "$".
+    iDestruct "join" as (?->) "join". iApply step_fupdN_full_intro.
+    iIntros "!>!>". iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
+    iExists _. by iFrame.
+  Qed.
+  Next Obligation.
+    iIntros "* _ _ _ _ (%&->) $ !>!>!>". iApply step_fupdN_full_intro.
+    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros. by iExists _.
+  Qed.
+
+  Global Instance join_handle_ne {𝔄} : NonExpansive (@join_handle 𝔄).
+  Proof. rewrite /join_handle /join_future. solve_ne_type. Qed.
+
+  Global Instance join_handle_type_contractive {𝔄} : TypeContractive (@join_handle 𝔄).
+  Proof.
+    split; [by apply type_lft_morphism_id_like|done| |done]=>/= *.
+    rewrite /join_future. Opaque box. do 15 f_equiv. by apply box_type_contractive.
+  Qed.
+
+  Global Instance join_handle_send {𝔄} (ty: type 𝔄) : Send (join_handle ty).
+  Proof. done. Qed.
+  Global Instance join_handle_sync {𝔄} (ty: type 𝔄) : Sync (join_handle ty).
+  Proof. done. Qed.
+
+  Lemma join_handle_leak {𝔄} (ty: type 𝔄) E L : leak E L (join_handle ty) (const True).
+  Proof. apply leak_just. Qed.
+
+  Lemma join_handle_real {𝔄} (ty: type 𝔄) E L : real E L (join_handle ty) id.
+  Proof.
+    split.
+    - iIntros (?????[|[[]|][]]) "_ _ _ L join //". iFrame "L".
+      iDestruct "join" as (?->) "join". iApply step_fupdN_full_intro.
+      iIntros "!>!>". iSplitR; [by iExists _|]. iExists _. by iFrame.
+    - iIntros "*% _ _ $ % !>!>!>". by iApply step_fupdN_full_intro.
+  Qed.
+
+  Definition forward_pred {A B} (f: A → B) (Φ: pred' A) (b: B) : Prop :=
+    ∃a, b = f a ∧ Φ a.
+
+  Lemma join_handle_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty' E L :
+    subtype E L ty ty' f →
+    subtype E L (join_handle ty) (join_handle ty') (forward_pred f).
+  Proof.
+    iIntros (Sub ?) "L". iDestruct (Sub with "L") as "#Sub". iIntros "!> E".
+    iDestruct ("Sub" with "E") as "#Incl". iPoseProof "Incl" as "#(%&?&_)".
+    do 2 (iSplit; [done|]). iSplit; iModIntro; last first.
+    { iIntros "* (%&->)". iExists _. iPureIntro. by fun_ext=>/=. }
+    iIntros (?? tid' [|[[]|][]]) "join //". iDestruct "join" as (?->) "join".
+    iExists _. iSplit. { iPureIntro. by fun_ext=>/=. }
+    iApply (join_handle_impl with "[] join"). iIntros "!>% fut %tid".
+    iDestruct ("fut" $! tid) as (??) "(⧖ & box & #Obs)". iExists _, _.
+    iFrame "⧖". iSplitL.
+    { iDestruct (box_type_incl with "Incl") as "(_&_& InO &_)". by iApply "InO". }
+    iApply proph_obs_impl; [|done]=>/= ??. by eexists _.
+  Qed.
+
+  Lemma join_handle_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' E L :
+    eqtype E L ty ty' f g →
+    eqtype E L (join_handle ty) (join_handle ty') (forward_pred f) (forward_pred g).
+  Proof. move=> [??]. split; by apply join_handle_subtype. Qed.
+
+(*
   Definition spawn (call_once : val) : val :=
     fn: ["f"] :=
       let: "call_once" := call_once in
@@ -148,4 +159,8 @@ Section spawn.
     iIntros (r); simpl_subst. iApply type_delete; [solve_typing..|].
     iApply type_jump; solve_typing.
   Qed.
+*)
 End spawn.
+
+Global Hint Resolve join_handle_leak join_handle_real
+  join_handle_subtype join_handle_eqtype : lrust_typing.

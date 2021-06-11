@@ -79,7 +79,7 @@ theories/typing/lib/vec/vec_index.v
 theories/typing/lib/vec/vec_pushpop.v
 # theories/typing/lib/fake_shared.v
 theories/typing/lib/cell.v
-# theories/typing/lib/spawn.v
+theories/typing/lib/spawn.v
 # theories/typing/lib/join.v
 # theories/typing/lib/take_mut.v
 # theories/typing/lib/rc/rc.v
