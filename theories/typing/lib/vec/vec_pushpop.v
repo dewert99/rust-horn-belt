@@ -1,5 +1,6 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import array_util typing lib.vec.
+From lrust.typing Require Import array_util typing.
+From lrust.typing.lib.vec Require Import vec.
 Set Default Proof Using "Type".
 
 Open Scope nat.
