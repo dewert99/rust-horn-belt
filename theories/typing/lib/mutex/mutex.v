@@ -134,124 +134,118 @@ Section mutex.
     eqtype E L ty ty' f g → eqtype E L (mutex ty) (mutex ty') (.∘ g) (.∘ f).
   Proof. move=> [??]. split; by (eapply mutex_subtype; [split; apply _|]). Qed.
 
-(*
-  Definition mutex_new ty : val :=
+  Definition mutex_new {𝔄} (ty: type 𝔄) : val :=
     fn: ["x"] :=
-      let: "m" := new [ #(mutex ty).(ty_size) ] in
+      let: "m" := new [ #(mutex ty).(ty_size)] in
       "m" +ₗ #1 <-{ty.(ty_size)} !"x";;
       mklock_unlocked ["m" +ₗ #0];;
       delete [ #ty.(ty_size); "x"];; return: ["m"].
 
-  Lemma mutex_new_type ty :
-    typed_val (mutex_new ty) (fn(∅; ty) → mutex ty).
+  Lemma mutex_new_type {𝔄} Φ (ty: type 𝔄) :
+    typed_val (mutex_new ty) (fn(∅; ty) → mutex ty)
+      (λ post '-[a], Φ a ∧ post Φ).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (_ ϝ ret arg). inv_vec arg=>x. simpl_subst.
-    (* FIXME: It should be possible to infer the `S ty.(ty_size)` here.
-       This should be done in the @eq external hints added in lft_contexts.v. *)
-    iApply (type_new (S ty.(ty_size))); [solve_typing..|]; iIntros (m); simpl_subst.
-    (* FIXME: The following should work.  We could then go into Iris later.
-    iApply (type_memcpy ty); [solve_typing..|]. *)
-    (* Switch to Iris. *)
-    iIntros (tid) "#LFT #HE Hna HL Hk [Hm [Hx _]]".
-    rewrite !tctx_hasty_val /=.
-    iDestruct (ownptr_uninit_own with "Hm") as (lm vlm) "(% & Hm & Hm†)".
-    subst m. inv_vec vlm=>m vlm. simpl. iDestruct (heap_mapsto_vec_cons with "Hm") as "[Hm0 Hm]".
-    destruct x as [[|lx|]|]; try done. iDestruct "Hx" as "[Hx Hx†]".
-    iDestruct (heap_mapsto_ty_own with "Hx") as (vl) "[>Hx Hxown]".
-    (* All right, we are done preparing our context. Let's get going. *)
-    wp_op. wp_apply (wp_memcpy with "[$Hm $Hx]"); [by rewrite vec_to_list_length..|].
-    iIntros "[Hm Hx]". wp_seq. wp_op. rewrite shift_loc_0. wp_lam.
-    wp_write.
-    (* Switch back to typing mode. *)
-    iApply (type_type _ _ _ [ #lx ◁ box (uninit ty.(ty_size)); #lm ◁ box (mutex ty)]
-        with "[] LFT HE Hna HL Hk"); last first.
-    (* TODO: It would be nice to say [{#}] as the last spec pattern to clear the context in there. *)
-    { rewrite tctx_interp_cons tctx_interp_singleton tctx_hasty_val' // tctx_hasty_val' //.
-      iFrame. iSplitL "Hx".
-      - iExists _. iFrame. by rewrite uninit_own vec_to_list_length.
-      - iExists (#false :: vl). rewrite heap_mapsto_vec_cons. iFrame; eauto. }
-    iApply type_delete; [solve_typing..|].
-    iApply type_jump; solve_typing.
+    eapply type_fn; [solve_typing|]=> _ ??[x[]]. simpl_subst.
+    iIntros (?[?[]]?) "_ _ _ _ _ Na L C /=[x _] #Obs".
+    rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[#⧖ box]"=>//.
+    case x as [[|x|]|]=>//=. iDestruct "box" as "[(%& >↦x & ty) †x]".
+    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!> % [†m ↦m]".
+    iDestruct (ty_size_eq with "ty") as %Szvl.
+    rewrite Nat2Z.id /= heap_mapsto_vec_cons. iDestruct "↦m" as "[↦b ↦m]".
+    wp_let. wp_op. wp_bind (_ <-{_} !_)%E.
+    iApply (wp_memcpy with "[$↦m $↦x]"); [by rewrite repeat_length|lia|].
+    iIntros "!> [↦m ↦x]". wp_seq. wp_op. rewrite shift_loc_0. wp_rec. wp_write.
+    wp_bind (delete _). iApply (wp_delete with "[$↦x †x]"); [lia| |].
+    { by rewrite freeable_sz_full Szvl. }
+    iIntros "!>_". do 3 wp_seq. rewrite cctx_interp_singleton.
+    iApply ("C" $! [# #_] -[const Φ] with "Na L [-] []"); last first.
+    { by iApply proph_obs_impl; [|done]=>/= ?[_ ?]. }
+    rewrite/= right_id (tctx_hasty_val #_). iExists _. iFrame "⧖".
+    rewrite/= freeable_sz_full. iFrame "†m". iNext. iExists (_::_).
+    rewrite heap_mapsto_vec_cons. iFrame "↦b ↦m". iExists Φ, _, _, _, _.
+    iFrame "⧖ ty". iSplit; [done|]. by iApply proph_obs_impl; [|done]=>/= ?[? _].
   Qed.
 
-  Definition mutex_into_inner ty : val :=
+  Definition mutex_into_inner {𝔄} (ty: type 𝔄) : val :=
     fn: ["m"] :=
-      let: "x" := new [ #ty.(ty_size) ] in
+      let: "x" := new [ #ty.(ty_size)] in
       "x" <-{ty.(ty_size)} !("m" +ₗ #1);;
       delete [ #(mutex ty).(ty_size); "m"];; return: ["x"].
 
-  Lemma mutex_into_inner_type ty :
-    typed_val (mutex_into_inner ty) (fn(∅; mutex ty) → ty).
+  Lemma mutex_into_inner_type {𝔄} (ty: type 𝔄) :
+    typed_val (mutex_into_inner ty) (fn(∅; mutex ty) → ty)
+      (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (_ ϝ ret arg). inv_vec arg=>m. simpl_subst.
-    iApply (type_new ty.(ty_size)); [solve_typing..|]; iIntros (x); simpl_subst.
-    (* Switch to Iris. *)
-    iIntros (tid) "#LFT #HE Hna HL Hk [Hx [Hm _]]".
-    rewrite !tctx_hasty_val /=.
-    iDestruct (ownptr_uninit_own with "Hx") as (lx vlx) "(% & Hx & Hx†)".
-    subst x. simpl.
-    destruct m as [[|lm|]|]; try done. iDestruct "Hm" as "[Hm Hm†]".
-    iDestruct (heap_mapsto_ty_own with "Hm") as (vlm) "[>Hm Hvlm]".
-    inv_vec vlm=>m vlm. destruct m as [[|m|]|]; try by iDestruct "Hvlm" as ">[]".
-    simpl. iDestruct (heap_mapsto_vec_cons with "Hm") as "[Hm0 Hm]".
-    iDestruct "Hvlm" as "[_ Hvlm]".
-    (* All right, we are done preparing our context. Let's get going. *)
-    wp_op. wp_apply (wp_memcpy with "[$Hx $Hm]"); [by rewrite vec_to_list_length..|].
-    (* FIXME: Swapping the order of $Hx and $Hm breaks. *)
-    iIntros "[Hx Hm]". wp_seq.
-    (* Switch back to typing mode. *)
-    iApply (type_type _ _ _ [ #lx ◁ box ty; #lm ◁ box (uninit (mutex ty).(ty_size))]
-        with "[] LFT HE Hna HL Hk"); last first.
-    (* TODO: It would be nice to say [{#}] as the last spec pattern to clear the context in there. *)
-    { rewrite tctx_interp_cons tctx_interp_singleton tctx_hasty_val' // tctx_hasty_val' //.
-      iFrame. iSplitR "Hm0 Hm".
-      - iExists _. iFrame.
-      - iExists (_ :: _). rewrite heap_mapsto_vec_cons. iFrame.
-        rewrite uninit_own. rewrite /= vec_to_list_length. eauto. }
-    iApply type_delete; [solve_typing..|].
-    iApply type_jump; solve_typing.
+    eapply type_fn; [solve_typing|]=>/= _ ??[m[]]. simpl_subst.
+    iIntros (?[?[]]?) "_ _ _ _ _ Na L C /=[m _] Obs". rewrite tctx_hasty_val.
+    iDestruct "m" as ([|]) "[_ box]"=>//. case m as [[|m|]|]=>//.
+    iDestruct "box" as "[(%& ↦m & mtx) †m]". wp_bind (new _).
+    iApply wp_new; [lia|done|]. rewrite Nat2Z.id. iIntros "!>% [†x ↦x]". wp_let.
+    iDestruct "mtx" as (?????[->->]) "(Obs' & ⧖ & ty)".
+    iCombine "Obs Obs'" as "#?". iDestruct (ty_size_eq with "ty") as %Szvl.
+    rewrite heap_mapsto_vec_cons. iDestruct "↦m" as "[↦b ↦m]". wp_op.
+    wp_bind (_ <-{_} !_)%E.
+    iApply (wp_memcpy with "[$↦x $↦m]"); [|lia|]. { by rewrite repeat_length. }
+    iIntros "!> [↦x ↦m]". wp_seq. wp_bind (delete _).
+    iApply (wp_delete _ _ _ (_::_) with "[↦b ↦m †m]"); swap 1 2.
+    { rewrite heap_mapsto_vec_cons freeable_sz_full -Szvl. iFrame. } { simpl. lia. }
+    iIntros "!>_". do 3 wp_seq. rewrite cctx_interp_singleton.
+    iApply ("C" $! [# #_] -[_] with "Na L [-]"); last first.
+    { iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp. }
+    rewrite/= right_id (tctx_hasty_val #_). iExists _. iFrame "⧖".
+    rewrite/= freeable_sz_full. iFrame "†x". iNext. iExists _. iFrame.
   Qed.
 
-  Definition mutex_get_mut : val :=
+  Definition mutex_get_mut: val :=
     fn: ["m"] :=
       let: "m'" := !"m" in
       "m" <- ("m'" +ₗ #1);;
       return: ["m"].
 
-  Lemma mutex_get_mut_type ty :
-    typed_val mutex_get_mut (fn(∀ α, ∅; &uniq{α}(mutex ty)) → &uniq{α} ty).
+  (* The final invariant of [&uniq{α} (mutex ty)] should be trivial,
+    because [&uniq{α} ty] does not restrict the target value *)
+  Lemma mutex_get_mut_type {𝔄} (ty: type 𝔄) :
+    typed_val mutex_get_mut (fn<α>(∅; &uniq{α} (mutex ty)) → &uniq{α} ty)
+      (λ post '-[(Φ, Φ')], ∀a a': 𝔄, Φ a → Φ' = const True → post (a, a')).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (α ϝ ret arg); inv_vec arg=>m; simpl_subst.
-    iApply type_deref; [solve_typing..|]; iIntros (m'); simpl_subst.
-    (* Go to Iris *)
-    iIntros (tid) "#LFT #HE Hna HL Hk [Hm [Hm' _]]".
-    rewrite !tctx_hasty_val [[m]]lock.
-    iDestruct "Hm'" as "[#? Hm']".
-    destruct m' as [[|lm'|]|]=>//=.
-    iMod (lctx_lft_alive_tok α with "HE HL") as (qα) "(Hα & HL & Hclose1)";
-      [solve_typing..|].
-    iMod (bor_acc_cons with "LFT Hm' Hα") as "[Hm' Hclose2]"; first done.
-    wp_op. iDestruct "Hm'" as (vl) "[H↦ Hm']".
-    destruct vl as [|[[|m'|]|] vl]; try done. simpl.
-    iDestruct (heap_mapsto_vec_cons with "H↦") as "[H↦1 H↦2]".
-    iDestruct "Hm'" as "[% Hvl]".
-    iMod ("Hclose2" $! ((lm' +ₗ 1) ↦∗: ty_own ty tid)%I with "[H↦1] [H↦2 Hvl]") as "[Hbor Hα]".
-    { iIntros "!> Hlm' !>". iNext. clear vl. iDestruct "Hlm'" as (vl) "[H↦ Hlm']".
-      iExists (_ :: _). rewrite heap_mapsto_vec_cons. do 2 iFrame. done. }
-    { iExists vl. iFrame. }
-    iMod ("Hclose1" with "Hα HL") as "HL".
-    (* Switch back to typing mode. *)
-    iApply (type_type _ _ _ [ m ◁ own_ptr _ _; #(lm' +ₗ 1) ◁ &uniq{α} ty]
-        with "[] LFT HE Hna HL Hk"); last first.
-    { rewrite tctx_interp_cons tctx_interp_singleton tctx_hasty_val tctx_hasty_val' //.
-      unlock. by iFrame. }
-    iApply type_assign; [solve_typing..|].
-    iApply type_jump; solve_typing.
+    eapply type_fn; [solve_typing|]=>/= α ??[m[]]. simpl_subst.
+    iIntros (?[vπ[]]?) "LFT TIME #PROPH UNIQ E Na L C /=[m _] Obs".
+    rewrite tctx_hasty_val. iDestruct "m" as ([|]) "[_ box]"=>//.
+    case m as [[|m|]|]=>//. iDestruct "box" as "[(%vl & >↦m & #In & uniq) †m]".
+    case vl as [|[[]|][]]; try by iDestruct "uniq" as ">[]".
+    rewrite heap_mapsto_vec_singleton. wp_read.
+    iDestruct "uniq" as (? i [? Eq1]) "[Vo Bor]".
+    move: Eq. set ξ := PrVar _ i=> Eq.
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (bor_acc_cons with "LFT Bor α") as "[big ToBor]"; [done|]. wp_let.
+    iDestruct "big" as (??) "(_& Pc &%& ↦x &%&%&%& %aπ & %d &[->->]& Obs' & #⧖ & ty)".
+    iDestruct (uniq_agree with "Vo Pc") as %[Eq2 _].
+    iCombine "Obs Obs'" as "Obs". rewrite heap_mapsto_vec_cons.
+    iDestruct "↦x" as "[↦b ↦x]". wp_op. wp_bind (_ <- _)%E.
+    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
+    wp_write. iIntros "#⧖S". do 3 wp_seq.
+    iMod (uniq_preresolve ξ [] (const (const True)) 1%Qp with "PROPH Vo Pc []")
+      as "(Obs' &_& ToPc)"; [done..|]. iCombine "Obs' Obs" as "#Obs"=>/=.
+    iMod (uniq_intro aπ with "PROPH UNIQ") as (j) "[Vo' Pc']"; [done|].
+    set ζ := PrVar _ j.
+    iMod ("ToBor" with "[↦b ToPc] [↦x ty Pc']") as "[Bor α]"; last first.
+    - rewrite cctx_interp_singleton. iMod ("ToL" with "α L") as "L".
+      iApply ("C" $! [# #_] -[λ π, (aπ π, π ζ)] with "Na L [-] []"); last first.
+      { iApply proph_obs_impl; [|done]=>/= π.
+        move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=.
+        case (vπ π)=>/= ??->->[->[Imp ?]]. by apply Imp. }
+      rewrite/= right_id (tctx_hasty_val #_). iExists _. iFrame "⧖S".
+      rewrite/= freeable_sz_full. iFrame "†m". iNext. iExists [_].
+      rewrite heap_mapsto_vec_singleton. iFrame "↦m In". iExists d, _.
+      by iFrame "Vo' Bor".
+    - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame.
+    - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc &%& ↦m & ty)".
+      iExists _, _. iFrame "⧖".
+      iSplitL "ToPc". { iApply "ToPc". iApply proph_eqz_refl. }
+      iExists (_::_). rewrite heap_mapsto_vec_cons. iFrame "↦b ↦m".
+      iExists _, _, _, _, _. iFrame "⧖' ty". iSplit; [done|].
+      by iApply proph_obs_true.
   Qed.
-*)
 End mutex.
 
 Global Hint Resolve mutex_leak mutex_real mutex_subtype mutex_eqtype
