@@ -40,6 +40,6 @@ Section odd_sum.
         move=>/= ??. exact id. }
     move=>/= ?[?[z[]]][-> Post]. case Le: (bool_decide (z ≤ 0)); move: Post;
     move: Le; [rewrite bool_decide_eq_true|rewrite bool_decide_eq_false]=> ??;
-    (eapply eq_rec_r; [done|]); [lia|]. have ->: 0 `max` (z - 1) = z - 1; lia.
+    (eapply eq_ind; [done|]); [lia|]. have ->: 0 `max` (z - 1) = z - 1; lia.
   Qed.
 End odd_sum.

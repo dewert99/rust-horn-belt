@@ -111,6 +111,7 @@ Section lemmas.
     done.
   Qed.
 
+  (* The precondition requires that the index is within bounds *)
   Lemma type_idx_shr_array_instr {𝔄} (ty: type 𝔄) n κ p q E L :
     typed_instr_ty E L +[p ◁ &shr{κ} [ty;^ n]; q ◁ int]
       (p +ₗ q * #ty.(ty_size)) (&shr{κ} ty)
@@ -200,7 +201,7 @@ Section lemmas.
     iDestruct "uniq" as (? ξi [? Eq2]) "[Vo Bor]". set ξ := PrVar _ ξi.
     iMod (Alv with "E L") as (?) "[(κ & κ₊ & κ₊₊) ToL]"; [done|].
     iMod (bor_acc_cons with "LFT Bor κ") as "[big ToBor]"; [done|]. wp_op.
-    iDestruct "big" as (??) "(↦tys & #⧖ & Pc)". rewrite split_array_mt.
+    iDestruct "big" as (??) "(#⧖ & Pc & ↦tys)". rewrite split_array_mt.
     iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     set aπl := vfunsep (fst ∘ vπ).
     have ->: vπ = pair ∘ vapply aπl ⊛ (.$ ξ).
@@ -239,7 +240,7 @@ Section lemmas.
       + iApply proph_obs_impl; [|done]=>/= ?[[?[/Nat2Z.inj/fin_to_nat_inj<-Imp]]Eqξ].
         rewrite -vapply_lookup. apply Imp. by rewrite Eqξ vapply_insert.
     - iNext. iExists _, _. by iFrame.
-    - iIntros "!> big !>!>". iDestruct "big" as (??) "(↦ty & ⧖' & Pc')".
+    - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' & ↦ty)".
       iCombine "⧖ ⧖'" as "⧖!"=>/=. iExists _, _. iFrame "⧖!".
       iDestruct ("ToPc" with "[Pc']") as "$".
       { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
@@ -251,6 +252,7 @@ Section lemmas.
       f_equiv. rewrite shift_loc_assoc_nat. f_equal. lia.
   Qed.
 
+  (* The precondition requires that the index is within bounds *)
   Lemma type_idx_uniq_array {𝔄 𝔄l 𝔅l ℭ} (ty: type 𝔄) n κ p q
         (T: tctx 𝔄l) (T': tctx 𝔅l) trx tr x e E L (C: cctx ℭ) :
     Closed (x :b: []) e →

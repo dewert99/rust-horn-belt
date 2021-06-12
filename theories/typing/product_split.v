@@ -189,7 +189,7 @@ Section product_split.
     iDestruct "p" as ([[]|]? Ev) "[_ [#In uniq]]"=>//.
     iDestruct "uniq" as (? ξi [? Eq]) "[ξVo ξBor]".
     move: Eq. (set ξ := PrVar _ ξi)=> Eq.
-    iMod (bor_acc_cons with "LFT ξBor κ") as "[(%&%& ↦ty & >#⧖ & ξPc) ToBor]"; [done|].
+    iMod (bor_acc_cons with "LFT ξBor κ") as "[(%&% & >#⧖ & ξPc & ↦ty) ToBor]"; [done|].
     iMod (uniq_strip_later with "ξVo ξPc") as (<-<-) "[ξVo ξPc]".
     iMod (uniq_intro aπ with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].
     iMod (uniq_intro bπ with "PROPH UNIQ") as (ζ'i) "[ζ'Vo ζ'Pc]"; [done|].
@@ -212,13 +212,13 @@ Section product_split.
       (iSplit; [by rewrite/= Ev|]); [rewrite shift_loc_0|];
       (iSplit; [|iExists _, _; by iFrame]); iApply lft_incl_trans;
       [|iApply lft_intersect_incl_l| |iApply lft_intersect_incl_r]; done.
-    - iNext. iDestruct "↦ty" as (?) "[↦ (%&%&->& ty & ty')]".
+    - iNext. iDestruct "↦ty" as (?) "(↦ &%&%&->& ty & ty')".
       rewrite heap_mapsto_vec_app. iDestruct "↦" as "[↦ ↦']".
       iDestruct (ty_size_eq with "ty") as %->. iSplitL "↦ ty ζPc"; iExists _, _;
       iFrame "⧖"; [iFrame "ζPc"|iFrame "ζ'Pc"]; iExists _; iFrame.
-    - iClear "⧖". iIntros "!> [(%&%& ↦ty & ⧖ & ζPc) (%&%& ↦ty' & ⧖' & ζ'Pc)] !>!>".
+    - iClear "⧖". iIntros "!> [(%&% & ⧖ & ζPc & ↦ty) (%&% & ⧖' & ζ'Pc & ↦ty')] !>!>".
       iCombine "⧖ ⧖'" as "⧖"=>/=. iExists (pair ∘ _ ⊛ _), _. iFrame "⧖".
-      iSplitL "↦ty ↦ty'"; last first.
+      iSplitR "↦ty ↦ty'".
       { iApply "ToξPc". iApply (proph_eqz_constr2 with "[ζPc] [ζ'Pc]");
         [iApply (proph_ctrl_eqz with "PROPH ζPc")|
          iApply (proph_ctrl_eqz with "PROPH ζ'Pc")]. }

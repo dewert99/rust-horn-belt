@@ -45,7 +45,7 @@ Section vec_pushpop.
     iDestruct "uniq" as (du i [? Eq2]) "[Vo Bor]".
     move: Eq2. set ξ := PrVar _ i=> Eq2.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-    iMod (bor_acc with "LFT Bor α") as "[(%&%& ↦vec & ⧖u & Pc) ToBor]"; [done|].
+    iMod (bor_acc with "LFT Bor α") as "[(%&%& ⧖u & Pc & ↦vec) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_vec_mt. case du as [|du]=>//.
     iDestruct "↦vec" as (len ex ? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".
@@ -145,7 +145,7 @@ Section vec_pushpop.
     iApply (wp_delete with "[$↦ $†]"); [done|]. iIntros "!>_".
     iDestruct "uniq" as (d i [? Eq2]) "[Vo Bor]". move: Eq2. set ξ := PrVar _ i=> Eq2.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-    iMod (bor_acc with "LFT Bor α") as "[(%&%& ↦vec & #⧖ & Pc) ToBor]"; [done|].
+    iMod (bor_acc with "LFT Bor α") as "[(%&%& #⧖ & Pc & ↦vec) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_vec_mt. case d=>// ?.
     iDestruct "↦vec" as (? ex ? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".

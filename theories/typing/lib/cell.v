@@ -9,19 +9,10 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section cell.
   Context `{!typeG Σ}.
 
-  Lemma split_cell_mt {A} l q (Φπ: proph A) (Ψ: A → _) :
-    (l ↦∗{q}: λ vl, ∃Φ, ⌜Φπ = const Φ⌝ ∗ Ψ Φ vl)%I ⊣⊢
-    ∃Φ, ⌜Φπ = const Φ⌝ ∗ l ↦∗{q}: Ψ Φ.
-  Proof.
-    iSplit.
-    - iIntros "(%&?&%&%&?)". iExists _. iSplit; [done|]. iExists _. iFrame.
-    - iIntros "(%&%&%& ↦ &?)". iExists _. iFrame "↦". iExists _. by iFrame.
-  Qed.
-
   Program Definition cell {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
-    ty_own Φπ _ tid vl := ∃Φ, ⌜Φπ = const Φ⌝ ∗
-      ∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ty.(ty_own) vπ d tid vl;
+    ty_own Φπ _ tid vl := ∃Φ (vπ: proph 𝔄) d, ⌜Φπ = const Φ⌝ ∗
+      ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ty.(ty_own) vπ d tid vl;
     ty_shr Φπ _ κ tid l := ∃Φ, ⌜Φπ = const Φ⌝ ∗
       &na{κ, tid, shrN.@l}
         (∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ l ↦∗: ty.(ty_own) vπ d tid)
@@ -34,18 +25,19 @@ Section cell.
     by iApply (na_bor_shorten with "In").
   Qed.
   Next Obligation.
-    iIntros "* % #LFT In Bor κ !>". iApply step_fupdN_full_intro.
-    rewrite split_cell_mt. iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
-    iMod (bor_sep_persistent with "LFT Bor κ") as "(>% & Bor & $)"; [done|].
-    iExists _. iSplitR; [done|]. iApply bor_na; [done|].
-    iApply (bor_iff with "[] Bor"). iIntros "!>!>". iSplit.
-    - iIntros "(%&?&%&%&?&?&?)". iExists _, _. iFrame. iExists _. iFrame.
-    - iIntros "(%&%&?&?&%&?&?)". iExists _. iFrame. iExists _, _. iFrame.
+    iIntros "* % LFT In Bor κ !>". iApply step_fupdN_full_intro.
+    iMod (bor_acc_cons with "LFT Bor κ") as "[(%& >↦ &%& big) ToBor]"; [done|].
+    iMod (bi.later_exist_except_0 with "big") as (??) "(>-> & Obs & ⧖ & ty)".
+    iMod ("ToBor" with "[] [Obs ⧖ ↦ ty]") as "[Bor $]"; last first.
+    { iExists _. iSplitR; [done|]. by iApply bor_na. }
+    { iNext. iExists _, _. iFrame "Obs ⧖". iExists _. iFrame. }
+    iIntros "!> big !>!>". iDestruct "big" as (??) "(Obs & ⧖ &%& ↦ & ty)".
+    iExists _. iFrame "↦". iExists _, _, _. by iFrame.
   Qed.
   Next Obligation.
-    iIntros "* _ _ _ (%&->&?) $ !>". iApply step_fupdN_full_intro.
+    iIntros "* _ _ _ (%&%&%&->&?) $ !>". iApply step_fupdN_full_intro.
     iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
-    iExists _. by iSplit.
+    iExists _, _, _. by iSplit.
   Qed.
   Next Obligation.
     iIntros "* _ _ _ _ (%&->&?) $ !>!>!>". iApply step_fupdN_full_intro.
@@ -65,25 +57,23 @@ Section cell.
 
   Global Instance cell_copy {𝔄} (ty: type 𝔄) : Copy ty → Copy (cell ty).
   Proof.
-    move=> ?. split; [apply _|]=>/= *. iIntros "#LFT (%&%& Bor) Na κ".
+    move=> ?. split; [apply _|]=>/= *. iIntros "#LFT (%&->& Bor) Na κ".
     iExists 1%Qp.
     (* Size 0 needs a special case as we can't keep the thread-local invariant open. *)
     case (ty_size ty) as [|?] eqn:EqSz; simpl in *.
-    { iMod (na_bor_acc with "LFT Bor κ Na") as "(Big & Na & ToNa)"; [solve_ndisj..|].
-      iMod (bi.later_exist_except_0 with "Big") as (??) "(>#?&>#?& %vl & >↦ & #ty)".
+    { iMod (na_bor_acc with "LFT Bor κ Na") as "(big & Na & ToNa)"; [solve_ndisj..|].
+      iMod (bi.later_exist_except_0 with "big") as (??) "(#Obs & #⧖ & %vl & ↦ & #ty)".
       iDestruct (ty_size_eq with "ty") as "#>%EqLen". move: EqLen.
       rewrite EqSz. case vl; [|done]=> _. rewrite difference_empty_L.
       iMod ("ToNa" with "[↦] Na") as "[$$]".
       { iNext. iExists _, _. do 2 (iSplit; [done|]). iExists _. by iFrame. }
       iModIntro. iExists []. rewrite heap_mapsto_vec_nil. iSplit; [done|].
-      iSplit; [|by iIntros]. iNext. iExists _. iSplit; [done|]. iExists _, _.
-      by iSplit; [|iSplit]. }
+      iSplit; [|by iIntros]. iNext. iExists _, _, _. by iFrame "Obs ⧖ ty". }
     (* Now we are in the non-0 case. *)
-    iMod (na_bor_acc with "LFT Bor κ Na") as "(Big & Na & ToNa)"; [solve_ndisj..|].
-    iMod (bi.later_exist_except_0 with "Big") as (??) "(>#?&>#?&%& >↦ & #ty)".
+    iMod (na_bor_acc with "LFT Bor κ Na") as "(big & Na & ToNa)"; [solve_ndisj..|].
+    iMod (bi.later_exist_except_0 with "big") as (??) "(>#Obs & >#⧖ &%& >↦ & #ty)".
     iExists _. iDestruct (na_own_acc with "Na") as "[$ ToNa']"; [set_solver+|].
-    iIntros "!>{$↦}". iSplitR.
-    { iNext. iExists _. iSplit; [done|]. iExists _, _. by iSplit; [|iSplit]. }
+    iIntros "!>{$↦}". iSplitR. { iNext. iExists _, _, _. by iFrame "Obs ⧖ ty". }
     iIntros "Na ↦". iDestruct ("ToNa'" with "Na") as "Na".
     iMod ("ToNa" with "[↦] Na") as "[$$]"; [|done]. iNext. iExists _, _.
     do 2 (iSplit; [done|]). iExists _. by iFrame.
@@ -99,8 +89,11 @@ Section cell.
 
   Lemma cell_real {𝔄} (ty: type 𝔄) E L : real E L (cell ty) id.
   Proof.
-    split; iIntros "*% _ _ $ (%&->& big)"; iApply step_fupdN_full_intro;
-    iIntros "!>!>"; [|iIntros "!>!>"]; (iSplit; iExists _; by [|iSplit]).
+    split.
+    - iIntros "*% _ _ $ (%&%&%&->& big) !>". iApply step_fupdN_full_intro.
+      iSplitR; [by iExists _|]. iExists _, _, _. by iFrame.
+    - iIntros "*% _ _ $ (%&->& big) !>!>!>". iApply step_fupdN_full_intro.
+      iSplitR; [by iExists _|]. iExists _. by iFrame.
   Qed.
 
   Lemma cell_subtype {𝔄 𝔅} E L ty ty' f g `{!@Iso 𝔄 𝔅 f g} :
@@ -110,8 +103,8 @@ Section cell.
     iDestruct (Eq with "L") as "#Eq". iIntros "!> #E".
     iDestruct ("Eq" with "E") as "(%&[_?]& #EqOwn & #EqShr)".
     do 2 (iSplit; [done|]). iSplit; iModIntro.
-    - iIntros "* (%&->& %vπ &%&?&?& ty)". iExists _. iSplit; [done|].
-      iExists (f ∘ vπ), _=>/=. iSplit.
+    - iIntros "* (%& %vπ' &%&->&?&?& ty)". iExists _, (f ∘ _), _.
+      iSplit; [done|]. iSplit.
       { iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'. }
       iSplit; [done|]. by iApply "EqOwn".
     - iIntros "* (%&->& Bor)". iExists _. iSplit; [done|]=>/=.
@@ -141,7 +134,7 @@ Section cell.
     iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[_?]].
     iDestruct "p" as ([[]|][|]?) "[? own]"=>//. iExists _, _.
     do 2 (iSplit; [done|]). iDestruct "own" as "[(%& ↦ & ty) $]". iNext.
-    iExists _. iFrame "↦". iExists _. iSplit; [done|]. iExists _, _.
+    iExists _. iFrame "↦". iExists _, _, _. iSplit; [done|].
     iSplit; [by iApply proph_obs_impl; [|done]=> ?[? _]|]. iFrame.
   Qed.
 
@@ -165,9 +158,9 @@ Section cell.
   Proof.
     split. { move=>/= ?? Eq [??]/=. by do 2 (apply forall_proper=> ?). }
     iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs".
-    iDestruct "p" as ([[]|][|]?) "[? own]"=>//.
-    iDestruct "own" as "[(%& ↦ & (%&>->& Big)) †]".
-    iMod (bi.later_exist_except_0 with "Big") as (vπ ?) "(>Obs' &>?& ?)".
+    iDestruct "p" as ([[]|][|]?) "[_ own]"=>//.
+    iDestruct "own" as "[(%& ↦ &%& big) †]".
+    iMod (bi.later_exist_except_0 with "big") as (vπ ?) "(>->& >Obs' &>?&?)".
     iCombine "Obs Obs'" as "Obs". iModIntro. iExists (vπ -:: _). iFrame "T".
     iSplit; last first. { iApply proph_obs_impl; [|done]=>/= ? [Imp ?]. by apply Imp. }
     iExists _, _. do 2 (iSplit; [done|]). iFrame "†". iNext. iExists _. iFrame.
@@ -199,7 +192,7 @@ Section cell.
     iExists _, _. do 2 (iSplit; [done|]). iDestruct "obox" as "[(%vl & ↦ & box) $]".
     iNext. iExists _. iFrame "↦". case d as [|]=>//. case vl as [|[[]|][]]=>//.
     iDestruct "box" as "[(%& ↦ & ty) $]". iNext. iExists _. iFrame "↦".
-    iExists _. iSplit; [done|]. iExists _, _.
+    iExists _, _, _. iSplit; [done|].
     iSplit; [by iApply proph_obs_impl; [|done]=> ?[? _]|]. iFrame "ty".
     iApply persistent_time_receipt_mono; [|done]. lia.
   Qed.
@@ -229,8 +222,8 @@ Section cell.
     case x as [[|l|]|]=>//. iDestruct "bbox" as "[(%vl & ↦ & box) †]".
     wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
     wp_seq. iIntros "⧗". wp_seq. case d=>// ?. case vl as [|[[]|][]]=>//=.
-    iDestruct "box" as "[(%& >↦' &%&>->& Big) †']".
-    iMod (bi.later_exist_except_0 with "Big") as (??) "(>Obs' & >⧖ & ty)".
+    iDestruct "box" as "[(%& >↦' &%& big) †']".
+    iMod (bi.later_exist_except_0 with "big") as (??) "(>->& >Obs' & >⧖ & ty)".
     iCombine "Obs Obs'" as "#?".
     iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖") as "#⧖"; [done|].
     iApply (type_type +[#l ◁ box (box ty)] -[_] with
@@ -261,7 +254,7 @@ Section cell.
     iDestruct "uniq" as (? i [? _]) "[Vo Bor]". set ξ := PrVar _ i.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as
-      "[(%&%&(%& >↦' & ty)& >#⧖' & Pc) ToBor]"; [done|].
+      "[(%&%& >#⧖' & Pc &%& >↦' & ty) ToBor]"; [done|].
     iMod (uniq_strip_later with "Vo Pc") as (<-<-) "[Vo Pc]".
     iMod (uniq_intro (const (Φ: predₛ 𝔄)) with "PROPH UNIQ") as
       (j) "[Vo' Pc']"; [done|]. set ζ := PrVar _ j.
@@ -272,10 +265,10 @@ Section cell.
       iSplit; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖ †".
       iNext. iExists _. iFrame "↦". iSplit; [done|]. iExists _, _. by iFrame.
     - iNext. iExists _, _. iFrame "⧖' Pc'". iExists _. iFrame "↦'".
-      iExists _. iSplit; [done|]. iExists _, _. iFrame "ty ⧖'".
+      iExists _, _, _. iSplit; [done|]. iFrame "ty ⧖'".
       iApply proph_obs_impl; [|done]=>/= π. by case (vπ π)=>/= ??[? _].
-    - iIntros "!> (%&%&(%&?&(%&>->&%&%&_& ⧖'' &?))&_&_)". iExists _, _.
-      iFrame "⧖''". iSplitR "Vo Pc"; [iExists _; by iFrame|].
+    - iIntros "!> (%&%&_&_&%&?&%&%&%&>->&_& ⧖'' &?)". iExists _, _.
+      iFrame "⧖''". iSplitL "Vo Pc"; last first. { iExists _. by iFrame. }
       iMod (uniq_update with "UNIQ Vo Pc") as "[_ $]"; [solve_ndisj|done].
   Qed.
 
@@ -296,8 +289,8 @@ Section cell.
     iDestruct "uniq" as (??[? Eq]) "[Vo Bor]". set ξ := PrVar _ i.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as
-      "[(%&%&(%& >↦' &%&>->& Big)&_& Pc) ToBor]"; [done|].
-    iMod (bi.later_exist_except_0 with "Big") as (aπ ?) "(>Obs' & >#⧖ & ty)".
+      "[(%&%&_& Pc &%& >↦' &%& big) ToBor]"; [done|].
+    iMod (bi.later_exist_except_0 with "big") as (aπ ?) "(>->& >Obs' & >#⧖ & ty)".
     iCombine "Obs Obs'" as "Obs".
     iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖") as "#⧖S"; [done|].
     iMod (uniq_strip_later with "Vo Pc") as (Eq' <-) "[Vo Pc]".
@@ -313,9 +306,9 @@ Section cell.
       iSplit; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖S †". iNext.
       iExists _. iFrame "↦". iSplit; [done|]. iExists _, _. iSplit; [done|]. iFrame.
     - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame.
-    - iIntros "!> (%&%&((%& ↦ & ty)& #⧖' & Pc')) !>!>". iExists _, _.
-      iFrame "⧖'". iSplitR "ToPc"; [|iApply "ToPc"; by iApply proph_eqz_refl].
-      iExists _. iFrame "↦". iExists _. iSplit; [done|]. iExists _, _.
+    - iIntros "!> (%&%&(#⧖' & Pc' &%& ↦ & ty)) !>!>". iExists _, _.
+      iFrame "⧖'". iSplitL "ToPc". { iApply "ToPc". by iApply proph_eqz_refl. }
+      iExists _. iFrame "↦". iExists _, _, _. iSplit; [done|].
       iFrame "⧖' ty". by iApply proph_obs_true.
   Qed.
 
@@ -346,17 +339,17 @@ Section cell.
     wp_seq. case vl as [|[[]|][]]=>//.
     iDestruct "uniq" as (? i [? Eq']) "[Vo Bor]". set ξ := PrVar _ i.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-    iMod (bor_acc with "LFT Bor α") as "[Big Toα]"; [done|]. wp_bind (delete _).
+    iMod (bor_acc with "LFT Bor α") as "[big Toα]"; [done|]. wp_bind (delete _).
     rewrite freeable_sz_full. iApply (wp_delete with "[$↦x $†x]"); [done|].
     iIntros "!> _". do 3 wp_seq.
-    iDestruct "Big" as (??) "((%& ↦ &(%&->&(%&%&(Obs' & #⧖ & ty))))&_& Pc)".
+    iDestruct "big" as (??) "(_& Pc &%& ↦ &%&%&%&->& Obs' & #⧖ & ty)".
     iDestruct (uniq_agree with "Vo Pc") as %[Eq <-].
     iMod (uniq_update ξ (const Φ) with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     iMod (uniq_resolve _ [] 1%Qp with "PROPH Vo Pc []") as "(Obs'' & Pc &_)"; [done..|].
     iCombine "Obs Obs'" as "Obs". iCombine "Obs'' Obs" as "#?".
     iMod ("Toα" with "[↦ ty Pc]") as "[_ α]".
-    { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame "↦". iExists _.
-      iSplit; [done|]. iExists _, _. iFrame "⧖ ty". iApply proph_obs_impl; [|done]=>/= π.
+    { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame "↦". iExists _, _, _.
+      iSplit; [done|]. iFrame "⧖ ty". iApply proph_obs_impl; [|done]=>/= π.
       move: (equal_f Eq π)=>/=. case (vπ π)=>/= ??->[_[[Imp _]?]]. by apply Imp. }
     iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[_] with "Na L [↦r †r] []").
@@ -419,8 +412,8 @@ Section cell.
       iDestruct "r" as ([|]) "[_ own]"; case r as [[|r|]|]=>//.
       iDestruct "own" as "[(%& >↦r & >%) †r]".
       iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-      iMod (na_bor_acc with "LFT Bor α Na") as "(Big & Na & Toα)"; [solve_ndisj..|].
-      iMod (bi.later_exist_except_0 with "Big") as (??) "(>Obs' & >#⧖' &(%& >↦c & ty'))".
+      iMod (na_bor_acc with "LFT Bor α Na") as "(big & Na & Toα)"; [solve_ndisj..|].
+      iMod (bi.later_exist_except_0 with "big") as (??) "(>Obs' & >#⧖' &%& >↦c & ty')".
       iCombine "Obs Obs'" as "#Obs". iDestruct (ty_size_eq with "ty'") as "#>%".
       wp_bind (_ <-{_} !_)%E. wp_apply (wp_memcpy with "[$↦r $↦c]"); [lia..|].
       iIntros "[↦r ↦c]". wp_seq. wp_apply (wp_memcpy with "[$↦c $↦x]"); [by f_equal..|].

@@ -11,7 +11,8 @@ Section case.
 
   Notation hnthb := (hnth (base (𝔄:=@empty _ Empty_setₛ_empty))).
 
-  Lemma type_case_own' {ℭ 𝔄l 𝔅l} prel E L (C : cctx ℭ) (T : tctx 𝔅l) p n (tyl : typel 𝔄l) el el' :
+  Lemma type_case_own' {ℭ 𝔄l 𝔅l} prel E L (C : cctx ℭ) (T : tctx 𝔅l)
+      p n (tyl : typel 𝔄l) el el' :
     list_to_hlist el = Some el' →
     HForallThree (λ _ ty e prei,
       match prei with
@@ -27,7 +28,8 @@ Section case.
           | inr outer => (∃ v', v = pinj (D := Empty_setₛ) i v') →  outer post (v -:: w)
         end)%type.
   Proof.
-    iIntros (elEl Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
+    iIntros (elEl Hel tid [vπ vπl] postπ)
+      "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
     wp_bind p. iApply (wp_hasty with "Hp").
     iIntros ([[]|] [|depth1]) "%Hv #Hdepth Hp /= //".
     iDestruct "Hp" as "[H↦ Hf]". iDestruct "H↦" as (vl) "[H↦ Hown]".
@@ -42,7 +44,8 @@ Section case.
     { case (decide (i < length 𝔄l)) => [//| ?].
       rewrite hnth_default; [ apply lnth_default; lia | | lia].
       move => eq. destruct eq; by pose proof (wπ inhabitant). }
-    eapply (HForallThree_nth_len _ (base (𝔄:=empty)) _ (inr (λ _ _, False)) _ _ _ i) in Hel as Hety; last lia.
+    eapply (HForallThree_nth_len _
+      (base (𝔄:=empty)) _ (inr (λ _ _, False)) _ _ _ i) in Hel as Hety; last lia.
     wp_read. wp_case.
     { split; [lia|]. destruct (list_to_hlist_length el el'); [done|].
       edestruct (nth_lookup_or_length el i ltac:(done)); [|lia].
@@ -103,18 +106,19 @@ Section case.
           | inr outer => (∃ w, v.1 = pinj (D := Empty_setₛ) i w) →  outer post (v -:: tl)
           end)%type.
   Proof.
-    iIntros (el2el' Halive Hel tid [vπ vπl] postπ) "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
+    iIntros (el2el' Halive Hel tid [vπ vπl] postπ)
+      "#LFT #TIME #PROPH #UNIQ #HE Hna HL HC /= [Hp HT] Hproph".
     wp_bind p. iApply (wp_hasty with "Hp").
     iIntros ([[]|] [|depth1]) "%Hv #Hdepth /= [#? Hp] //".
     { iDestruct "Hp" as (??) "(% & ?)". lia. }
     iDestruct "Hp" as (depth2 ξid) "([% %B] & ξvo & Hp)"; set ξ := PrVar _ ξid.
     iMod (Halive with "HE HL") as (q) "[Htok Hclose]"; [done|].
     iMod (bor_acc_cons with "LFT Hp Htok") as "[H Hclose']"; [done|].
-    iMod (bi.later_exist_except_0 with "H") as (vπ' depth2') "(H↦ & #Hdepth2' & ξpc)".
+    iMod (bi.later_exist_except_0 with "H") as (vπ' depth2') "(#Hdepth2' & ξpc & H↦)".
     iDestruct "H↦" as (vl) "[> H↦ Hown]".
     iMod (bi.later_exist_except_0 with "Hown") as (i) "Hown".
-    iMod (bi.later_exist_except_0 with "Hown") as (wπ vl' vl'') "(>(-> & -> & EQlen) & Hown)".
-    iMod (uniq_strip_later with "ξvo ξpc") as "(%A & <- & ξvo & ξpc)".
+    iMod (bi.later_exist_except_0 with "Hown") as (wπ vl' vl'') "(>(->&->& EQlen) & Hown)".
+    iMod (uniq_strip_later with "ξvo ξpc") as (A <-) "[ξvo ξpc]".
     iDestruct "EQlen" as %[=EQlen].
     rewrite heap_mapsto_vec_cons heap_mapsto_vec_app.
     iDestruct "H↦" as "(H↦i & H↦vl' & H↦vl'')".
@@ -129,16 +133,19 @@ Section case.
       rewrite Nat2Z.id e. erewrite <-list_to_hlist_hnth_nth; [done|apply el2el']. }
     iDestruct (_.(ty_size_eq) with "Hown") as %EQlenvl'.
     destruct (hnth _ prel i) eqn:EQty.
-    - iMod (uniq_intro wπ depth2 with "PROPH UNIQ") as (ζid) "[ζvo ζpc]"; [done|]; set ζ := PrVar _ ζid.
-      iDestruct (uniq_proph_tok with "ζvo ζpc") as "(ζvo & ζ & Toζpc)"; rewrite proph_tok_singleton.
+    - iMod (uniq_intro wπ depth2 with "PROPH UNIQ") as (ζid) "[ζvo ζpc]"; [done|].
+      set ζ := PrVar _ ζid.
+      iDestruct (uniq_proph_tok with "ζvo ζpc") as "(ζvo & ζ & Toζpc)".
+      rewrite proph_tok_singleton.
       iMod (uniq_preresolve ξ _ (λ π, pinj i (π ζ)) with "PROPH ξvo ξpc ζ")
         as "(#Hproph' & ζ & ξeqz)"; first done.
       { apply proph_dep_constr, proph_dep_one. }
       iDestruct ("Toζpc" with "ζ") as "ζpc".
-      iMod ("Hclose'" $! (∃ vπ' d', (l +ₗ 1) ↦∗: (hnthb tyl i).(ty_own) vπ' d' tid ∗ ⧖(S d') ∗ .PC[ζ] vπ' d')%I
+      iMod ("Hclose'" $! (∃ vπ' d', ⧖(S d') ∗ .PC[ζ] vπ' d' ∗
+          (l +ₗ 1) ↦∗: (hnthb tyl i).(ty_own) vπ' d' tid)%I
         with "[ξeqz H↦i H↦vl''] [ ζpc H↦vl' Hown]") as "[Hb Htok]".
       { iIntros "!>Hown".
-        iMod (bi.later_exist_except_0 with "Hown") as (??) "(Hown & #>Hdepth2'' & ζpc)".
+        iMod (bi.later_exist_except_0 with "Hown") as (??) "(#>Hdepth2'' & ζpc & Hown)".
         iDestruct "Hown" as (vl'2) "[H↦ Hown]". iExists _, _. iModIntro; iNext.
         iDestruct (proph_ctrl_eqz with "PROPH ζpc") as "ζeqz".
         iDestruct (proph_eqz_constr (pinj i) with "ζeqz") as "ζeqz".
@@ -150,7 +157,8 @@ Section case.
         rewrite /= -EQlen !app_length EQlenvl' EQlenvl'2 //. }
       { iNext. iExists _, _. iFrame "#∗". iExists _. iFrame. }
       iMod ("Hclose" with "Htok") as "HL".
-      iApply (Hety $! _ ((λ π, (wπ π, π ζ)) -:: _) with "LFT TIME PROPH UNIQ HE Hna HL HC [-Hproph]").
+      iApply (Hety $! _ ((λ π, (wπ π, π ζ)) -:: _) with
+        "LFT TIME PROPH UNIQ HE Hna HL HC [-Hproph]").
       + iFrame. rewrite tctx_hasty_val' /= -?Hv //.
         iExists (S depth1). iFrame "#". iSplitR.
         { iApply lft_incl_trans; [done|]. iApply ty_lfts_nth_incl. }
@@ -305,8 +313,8 @@ Section case.
     done.
   Qed.
 
-  Lemma type_sum_unit_instr {E L 𝔄 𝔄' 𝔅 𝔄l} (i: nat) (ty' : type 𝔅) (tyl: typel 𝔄l) (ty1: type 𝔄)
-                            (ty2: type 𝔄') p gt st eq:
+  Lemma type_sum_unit_instr {E L 𝔄 𝔄' 𝔅 𝔄l} (i: nat) (ty' : type 𝔅) (tyl: typel 𝔄l)
+                            (ty1: type 𝔄) (ty2: type 𝔄') p gt st eq:
     hnthb tyl i = eq_rect _ _ unit_ty _ eq →
     typed_write E L ty1 ty' ty2 (xsum_ty tyl) gt st →
     typed_instr E L +[p ◁ ty1] (p <-{Σ i} ())
@@ -362,22 +370,23 @@ Section case.
     rewrite !(ty_own_depth_mono _ _ (depth1 `max` depth2)); [|lia..].
     iMod (Hw with "LFT UNIQ HE HL1 Hty1") as (l1 ->) "(H & Hw)".
     iDestruct "H" as (?) "(>H↦ & Leaked)".
-    (* iMod (bi.later_exist_except_0 with "H") as (i') "H";
-    iMod (bi.later_exist_except_0 with "H") as (?) "H";
-    iDestruct "H" as (??) "(>(% & % & H) & Leaked)". *)
     iAssert (▷ (ty_own ty' (gt ∘ vπ) (depth1 `max` depth2) tid vl ∗
       ⌜length vl = ty_size ty'⌝))%I with "[Leaked]" as "[Leaked >%Hlen]".
     { iNext. iDestruct (ty_size_eq with "Leaked") as %<-. by iFrame. }
     destruct vl as [|? vl]; rewrite -Hlen //= in Eq.
     rewrite heap_mapsto_vec_cons -wp_fupd. iDestruct "H↦" as "[H↦0 H↦vl1]". wp_write.
-    wp_bind p1. iApply (wp_wand with "[]"); first by iApply (wp_eval_path). iIntros (? ->).
-    wp_op. wp_bind p2. iApply (wp_wand with "[]"); first by iApply (wp_eval_path). iIntros (? ->).
+    wp_bind p1. iApply (wp_wand with "[]"); first by iApply (wp_eval_path).
+    iIntros (? ->). wp_op. wp_bind p2.
+    iApply (wp_wand with "[]"); first by iApply (wp_eval_path). iIntros (? ->).
     iMod (Hr with "LFT HE Htl HL2 Hty2") as (l2 vl2 q) "(% & H↦2 & Hty & Hr)" => //=.
-    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH HE HL3 Leaked") as "ToObs"; first set_solver.
-    iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN) with "TIME Hdepth [ToObs]")=>//.
+    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH HE HL3 Leaked")
+      as "ToObs"; first set_solver.
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
+      with "TIME Hdepth [ToObs]")=>//.
     { by iApply step_fupdN_with_emp. }
     clear Hr. subst. assert (ty.(ty_size) ≤ length vl).
-    { move: Eq => [= ->]. clear. generalize dependent i. elim tyl => //= > + [|i] => [_|/(_ i)]; lia. }
+    { move: Eq => [= ->]. clear. generalize dependent i.
+      elim tyl => //= > + [|i] => [_|/(_ i)]; lia. }
     rewrite -(take_drop ty.(ty_size) vl) heap_mapsto_vec_app.
     iDestruct "H↦vl1" as "[H↦vl1 H↦pad]".
     iDestruct (ty_size_eq with "Hty") as "#>%Hvl2Len".
@@ -401,8 +410,8 @@ Section case.
 
   Lemma type_sum_memcpy {E L 𝔄l 𝔄 𝔄' 𝔅 𝔅' ℭ 𝔇 𝔅l ℭl} (ty' : type ℭ) (tyl : typel 𝔄l) i
                         (ty1 : type 𝔄) (ty2 : type 𝔅) n (ty1' : type 𝔄')
-                        (ty2' : type 𝔅') (C : cctx 𝔇) (T : tctx 𝔅l) (T' : tctx ℭl) p1 p2 e
-                        fr tr gt st rd wt Φ:
+                        (ty2' : type 𝔅') (C : cctx 𝔇) (T : tctx 𝔅l) (T' : tctx ℭl) p1 p2
+                        e fr tr gt st rd wt Φ:
     let ty := hnthb tyl i in
     leak' E L ty' Φ → Closed [] e → (0 ≤ i)%nat →
     tctx_extract_ctx E L +[p1 ◁ ty1; p2 ◁ ty2] T T' fr →
@@ -411,7 +420,8 @@ Section case.
     Z.of_nat ty.(ty_size) = n →
     typed_body E L C ((p1 ◁ ty1') +:: (p2 ◁ ty2') +:: T') e tr -∗
     typed_body E L C T (p1 <-{n,Σ i} !p2 ;; e)
-      (fr ∘ (λ post '(a -:: b -:: f), Φ (gt a) (tr post (st a (pinj i (rd b)) -:: wt b -:: f)))).
+      (fr ∘ (λ post '(a -:: b -:: f),
+        Φ (gt a) (tr post (st a (pinj i (rd b)) -:: wt b -:: f)))).
   Proof.
     iIntros (??????? <-) "* **". iApply typed_body_tctx_incl; [done|].
     iApply type_seq; [by eapply type_sum_memcpy_instr|solve_extract| |done]. done.

@@ -28,15 +28,15 @@ Section mutex.
 
   Program Definition mutex {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
       ty_size := 1 + ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
-      ty_own Φπ _ tid vl := ∃vπ d (b: bool) vl' Φ,
+      ty_own Φπ _ tid vl := ∃Φ (b: bool) vl' (vπ: proph 𝔄) d,
         ⌜vl = #b :: vl' ∧ Φπ = const Φ⌝ ∗
-        ⧖(S d) ∗ ty.(ty_own) vπ d tid vl' ∗ ⟨π, Φ (vπ π)⟩;
+        ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ty.(ty_own) vπ d tid vl';
       ty_shr Φπ _ κ tid l := ∃Φ κ', ⌜Φπ = const Φ⌝ ∗ κ ⊑ κ' ∗ κ' ⊑ ty.(ty_lft) ∗
         &at{κ, mutexN} $ lock_proto l $
-          &{κ'} (∃vπ d, (l +ₗ 1) ↦∗: ty.(ty_own) vπ d tid ∗ ⧖(S d) ∗ ⟨π, Φ (vπ π)⟩);
+          &{κ'} (∃vπ d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ (l +ₗ 1) ↦∗: ty.(ty_own) vπ d tid);
     |}%I.
   Next Obligation.
-    iIntros "* (%&%&%&%&%&[->_]&_& ty &_) /=". rewrite ty_size_eq.
+    iIntros "* (%&%&%&%&%&[->_]&_&_& ty) /=". rewrite ty_size_eq.
     by iDestruct "ty" as %->.
   Qed.
   Next Obligation. done. Qed.
@@ -47,16 +47,16 @@ Section mutex.
   Qed.
   Next Obligation.
     iIntros "*% #LFT #In Bor κ !>". iApply step_fupdN_full_intro.
-    iMod (bor_acc_cons with "LFT Bor κ") as "[(%& >↦ & big) ToBor]"; [done|].
-    iMod (bi.later_exist_except_0 with "big") as (?????) "(>[->->] & >⧖ & ty & Obs)".
+    iMod (bor_acc_cons with "LFT Bor κ") as "[(%& >↦ & (%&%&%& big)) ToBor]"; [done|].
+    iMod (bi.later_exist_except_0 with "big") as (??) "(>[->->] & >Obs & >⧖ & ty)".
     rewrite heap_mapsto_vec_cons. iDestruct "↦" as "[↦b ↦]".
     iMod ("ToBor" $! ((∃b: bool, l ↦ #b) ∗
-        ∃vπ d, (l +ₗ 1) ↦∗: ty.(ty_own) vπ d tid ∗ ⧖(S d) ∗ ⟨π, Φ (vπ π)⟩)%I
-      with "[] [↦b ↦ ty ⧖ Obs]") as "[Bor κ]".
-    { iIntros "!> big !>!>". iDestruct "big" as "[[% ↦b] (%&%&(%& ↦ &?)&?&?)]".
+        ∃vπ d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ (l +ₗ 1) ↦∗: ty.(ty_own) vπ d tid)%I
+      with "[] [↦b Obs ⧖ ↦ ty]") as "[Bor κ]".
+    { iIntros "!> big !>!>". iDestruct "big" as "[[% ↦b] (%&%&?&?&%& ↦ &?)]".
       iExists (_::_). rewrite heap_mapsto_vec_cons. iFrame "↦b ↦".
       iExists _, _, _, _, _. by iFrame. }
-    { iNext. iSplitL "↦b"; [by iExists _|]. iExists _, _. iFrame "⧖ Obs".
+    { iNext. iSplitL "↦b"; [by iExists _|]. iExists _, _. iFrame "Obs ⧖".
       iExists _. iFrame. }
     iMod (bor_sep with "LFT Bor") as "[Borb Borty]"; [done|]. clear b.
     iMod (bor_acc_cons with "LFT Borb κ") as "[>(%b & ↦b) ToBorb]"; [done|].
@@ -69,12 +69,12 @@ Section mutex.
     iFrame "In". iSplitR; [done|]. iApply lft_incl_refl.
   Qed.
   Next Obligation.
-    iIntros "*% _ _ (%&%&%&%&%&[->->]& big) $ !>". iApply step_fupdN_full_intro.
+    iIntros "*% _ _ (%&%&%&%&%&[->->]&?) $ !>". iApply step_fupdN_full_intro.
     iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
     iExists _, _, _, _, _. by iFrame.
   Qed.
   Next Obligation.
-    iIntros "*% _ _ _ (%&%&->& big) $ !>!>!>". iApply step_fupdN_full_intro.
+    iIntros "*% _ _ _ (%&%&->&?) $ !>!>!>". iApply step_fupdN_full_intro.
     iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
     iExists _, _. by iFrame.
   Qed.
@@ -87,14 +87,14 @@ Section mutex.
     split; [by apply type_lft_morphism_id_like|by move=>/= ??->|..].
     - move=>/= *. by do 13 f_equiv.
     - move=>/= *. do 7 f_equiv. { by apply equiv_dist, lft_incl_equiv_proper_r. }
-      do 11 (f_contractive || f_equiv). simpl in *. by apply dist_S.
+      do 12 (f_contractive || f_equiv). simpl in *. by apply dist_S.
   Qed.
 
   Global Instance mutex_send {𝔄} (ty: type 𝔄) : Send ty → Send (mutex ty).
   Proof. move=> ?>/=. by do 13 f_equiv. Qed.
 
   Global Instance mutex_sync {𝔄} (ty: type 𝔄) : Send ty → Sync (mutex ty).
-  Proof. move=> ?>/=. by do 18 f_equiv. Qed.
+  Proof. move=> ?>/=. by do 19 f_equiv. Qed.
 
   (* In order to prove [mutex_leak] with a non-trivial postcondition,
     we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
@@ -116,17 +116,17 @@ Section mutex.
     move=> /eqtype_unfold Eq ?. iIntros "L". iDestruct (Eq with "L") as "#Eq".
     iIntros "!> E". iDestruct ("Eq" with "E") as "(%EqSz & [#? #?] & #EqOwn &_)".
     iSplit; [by rewrite/= EqSz|]. iSplit; [done|]. iSplit; iIntros "!> *".
-    - iDestruct 1 as (?????[->->]) "(⧖ & ty &?)". iExists (f ∘ _), _, _, _, _.
-      iSplit; [done|]. iFrame "⧖". iSplitL "ty"; [by iApply "EqOwn"|].
+    - iDestruct 1 as (?????[->->]) "(?& ⧖ & ty)". iExists _, _, _, (f ∘ _), _.
+      iSplit; [done|]. iFrame "⧖". iSplitR "ty"; [|by iApply "EqOwn"].
       iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'.
     - iDestruct 1 as (??->) "(In & #In' & At)". iExists _, _. iSplit; [done|].
       iFrame "In". iSplit; [by iApply lft_incl_trans|].
       iApply (at_bor_iff with "[] At"). iNext. iApply lock_proto_iff_proper.
       iApply bor_iff_proper. iIntros "!>!>".
-      iSplit; iIntros "(%&%& (%& ↦ & ty) & ⧖ & Obs)".
-      + iExists (f ∘ _), _. iFrame "⧖".
-        iSplitR "Obs". { iExists _. iFrame "↦". by iApply "EqOwn". }
-        iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'.
+      iSplit; iIntros "(%&% & Obs & ⧖ &%& ↦ & ty)".
+      + iExists (f ∘ _), _. iFrame "⧖". iSplitL "Obs".
+        { iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'. }
+        iExists _. iFrame "↦". by iApply "EqOwn".
       + iExists (g ∘ _), _. iFrame "⧖ Obs". iExists _. iFrame "↦".
         iApply "EqOwn". by rewrite compose_assoc semi_iso.
   Qed.

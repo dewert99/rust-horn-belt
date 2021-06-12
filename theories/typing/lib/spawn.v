@@ -12,7 +12,7 @@ Section spawn.
   Context `{!typeG Σ, !spawnG Σ}.
 
   Definition join_future {𝔄} (ty: type 𝔄) (Φ: pred' 𝔄) (v: val) : iProp Σ :=
-    ∀tid, ∃vπ d, ⧖d ∗ (box ty).(ty_own) vπ d tid [v] ∗ ⟨π, Φ (vπ π)⟩.
+    ∀tid, ∃vπ d, ⟨π, Φ (vπ π)⟩ ∗ ⧖d ∗ (box ty).(ty_own) vπ d tid [v].
 
   Program Definition join_handle {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
     ty_size := 1;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
@@ -82,10 +82,10 @@ Section spawn.
     iIntros (?? tid' [|[[]|][]]) "join //". iDestruct "join" as (?->) "join".
     iExists _. iSplit. { iPureIntro. by fun_ext=>/=. }
     iApply (join_handle_impl with "[] join"). iIntros "!>% fut %tid".
-    iDestruct ("fut" $! tid) as (??) "(⧖ & box & #Obs)". iExists _, _.
-    iFrame "⧖". iSplitL.
-    { iDestruct (box_type_incl with "Incl") as "(_&_& InO &_)". by iApply "InO". }
-    iApply proph_obs_impl; [|done]=>/= ??. by eexists _.
+    iDestruct ("fut" $! tid) as (??) "(Obs & ⧖ & box)". iExists _, _.
+    iFrame "⧖". iSplitL "Obs".
+    { iApply proph_obs_impl; [|done]=>/= ??. by eexists _. }
+    iDestruct (box_type_incl with "Incl") as "(_&_& InO &_)". by iApply "InO".
   Qed.
 
   Lemma join_handle_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' E L :
@@ -153,7 +153,7 @@ Section spawn.
       { iIntros (??[?[]]) "_ _ _ _ _ $$ /=[j _] Obs". rewrite tctx_hasty_val.
         iDestruct "j" as (?) "[_ join]". case j as [[|j|]|]=>//.
         iDestruct "join" as (?->) "join". iApply (join_spec with "join"). iNext.
-        iIntros (?) "fut". iDestruct ("fut" $! _) as (??) "(?&? & Obs')".
+        iIntros (?) "fut". iDestruct ("fut" $! _) as (??) "(Obs' &?&?)".
         iCombine "Obs Obs'" as "?". iExists -[_].
         rewrite right_id tctx_hasty_val. iSplit; [iExists _; by iFrame|].
         iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp. }

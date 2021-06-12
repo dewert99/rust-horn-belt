@@ -70,7 +70,7 @@ Section vec_index.
     iDestruct "uniq" as (d' ξi [Le Eq2]) "[Vo Bor]". set ξ := PrVar _ ξi.
     iMod (lctx_lft_alive_tok α with "E L") as
       (?) "((α & α₊ & α₊₊) & L & ToL)"; [solve_typing..|].
-    iMod (bor_acc_cons with "LFT Bor α") as "[(%&%& ↦vec &_& Pc) ToBor]"; [done|].
+    iMod (bor_acc_cons with "LFT Bor α") as "[(%&%&_& Pc & ↦vec) ToBor]"; [done|].
     wp_let. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_vec_mt. case d' as [|d']; [done|].
     iDestruct "↦vec" as (??? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & ex & †)".
@@ -111,7 +111,7 @@ Section vec_index.
     iDestruct ("Toζξl" with "ζξl") as "[ζ ξl']". iSpecialize ("Pc'" with "ζ").
     iMod ("To↦tys" with "ξl") as "(↦tys & α₊)".
     iMod ("To↦tys'" with "ξl'") as "(↦tys' & α₊₊)".
-    iMod ("ToBor" with "[⧗ ↦₀ ↦₁ ↦₂ ex † ↦tys ↦tys' ToPc] [↦ty Pc']")
+    iMod ("ToBor" with "[⧗ ↦₀ ↦₁ ↦₂ ex † ↦tys ↦tys' ToPc] [Pc' ↦ty]")
       as "[Bor α]"; last first.
     - rewrite cctx_interp_singleton.
       iMod ("ToL" with "[$α $α₊ $α₊₊] L") as "L".
@@ -123,9 +123,9 @@ Section vec_index.
       + iApply proph_obs_impl; [|done]=>/= ?[[?[?[/Nat2Z.inj <-[++]]]]Eqξ].
         rewrite Eqi -vlookup_lookup=> <- Imp. rewrite -vapply_lookup. apply Imp.
         by rewrite Eqξ -vec_to_list_apply vapply_insert -vec_to_list_insert.
-    - iNext. iExists _, _. rewrite -Eqi. iFrame "↦ty Pc'".
+    - iNext. iExists _, _. rewrite -Eqi. iFrame "Pc' ↦ty".
       iApply persistent_time_receipt_mono; [|done]. lia.
-    - iIntros "!> (%&%& ↦ty & >⧖' & Pc')". iCombine "⧖ ⧖'" as "⧖!".
+    - iIntros "!> (%&%& >⧖' & Pc' & ↦ty)". iCombine "⧖ ⧖'" as "⧖!".
       iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖!")
         as "⧖!"; [solve_ndisj|]. iIntros "/=!>!>".
       iExists _, _. iFrame "⧖!". iDestruct ("ToPc" with "[Pc']") as "$".
