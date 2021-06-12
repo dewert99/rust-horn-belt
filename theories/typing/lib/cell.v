@@ -125,9 +125,7 @@ Section cell.
   Qed.
   Lemma cell_eqtype {𝔄 𝔅} E L ty ty' f g `{!@Iso 𝔄 𝔅 f g} :
     eqtype E L ty ty' f g → eqtype E L (cell ty) (cell ty') (.∘ g) (.∘ f).
-  Proof.
-    move=> [??]. split; (eapply cell_subtype; [|by split]; split; apply _).
-  Qed.
+  Proof. move=> [??]. split; by (eapply cell_subtype; [split; apply _|]). Qed.
 
   (** The next couple functions essentially show owned-type equalities, as they
       are all different types for the identity function. *)

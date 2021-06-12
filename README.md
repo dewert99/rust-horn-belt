@@ -64,10 +64,10 @@ followed by `make build-dep`.
     unsafely implement types from the Rust standard library and some user
     crates. Some libraries are not yet verified, being commented out in
     `_CoqProject`.
-    * Verified: `Vec`, `Cell`, `MaybeUninit`.
-    * Unverified: `RefCell`, `Rc`, `Arc`, `Mutex`, `RwLock`, `mem::swap`,
-      `thread::spawn`, `take_mut::take`, `alias::once`, converting `&&T` to
-      `&Box<T>`.
+    * Verified: `MaybeUninit`, `Vec`, `Cell`, `thread::spawn`.
+    * Work in Process: `Mutex`.
+    * Unverified: `RefCell`, `Rc`, `Arc`, `RwLock`, `mem::swap`,
+      `take_mut::take`, `alias::once`, converting `&&T` to `&Box<T>`.
 
 ## Where to Find the Proof Rules From the Paper
 

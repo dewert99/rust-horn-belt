@@ -3,8 +3,10 @@ From iris.algebra Require Import auth csum frac agree.
 From lrust.lang.lib Require Import memcpy lock.
 From lrust.lifetime Require Import na_borrow.
 From lrust.typing Require Export type.
-From lrust.typing Require Import typing option.
+From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
+
+Implicit Type 𝔄 𝔅: syn_type.
 
 Definition mutexN := lrustN .@ "mutex".
 
@@ -24,115 +26,115 @@ Section mutex.
     }
   *)
 
-  Program Definition mutex (ty : type) :=
-    {| ty_size := 1 + ty.(ty_size); ty_lfts := ty.(ty_lfts); ty_E := ty.(ty_E);
-       ty_own tid vl :=
-         match vl return _ with
-         | #(LitInt z) :: vl' =>
-           ⌜∃ b, z = Z_of_bool b⌝ ∗ ty.(ty_own) tid vl'
-         | _ => False end;
-       ty_shr κ tid l := ∃ κ', κ ⊑ κ' ∗ κ' ⊑ ty.(ty_lft) ∗
-           &at{κ, mutexN} (lock_proto l (&{κ'}((l +ₗ 1) ↦∗: ty.(ty_own) tid)))
+  Program Definition mutex {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
+      ty_size := 1 + ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+      ty_own Φπ _ tid vl := ∃vπ d (b: bool) vl' Φ,
+        ⌜vl = #b :: vl' ∧ Φπ = const Φ⌝ ∗
+        ⧖(S d) ∗ ty.(ty_own) vπ d tid vl' ∗ ⟨π, Φ (vπ π)⟩;
+      ty_shr Φπ _ κ tid l := ∃Φ κ', ⌜Φπ = const Φ⌝ ∗ κ ⊑ κ' ∗ κ' ⊑ ty.(ty_lft) ∗
+        &at{κ, mutexN} $ lock_proto l $
+          &{κ'} (∃vπ d, (l +ₗ 1) ↦∗: ty.(ty_own) vπ d tid ∗ ⧖(S d) ∗ ⟨π, Φ (vπ π)⟩);
     |}%I.
   Next Obligation.
-    iIntros (??[|[[]|]]); try iIntros "[]". rewrite ty_size_eq.
-    iIntros "[_ %] !% /=". congruence.
+    iIntros "* (%&%&%&%&%&[->_]&_& ty &_) /=". rewrite ty_size_eq.
+    by iDestruct "ty" as %->.
+  Qed.
+  Next Obligation. done. Qed.
+  Next Obligation. done. Qed.
+  Next Obligation.
+    iIntros "* #? (%&%&%&#?&?&?)". iExists _, _. iSplit; [done|].
+    iSplit; [|iSplit; [done|]]; by [iApply lft_incl_trans|iApply at_bor_shorten].
   Qed.
   Next Obligation.
-    iIntros (ty E κ l tid q ?) "#LFT #? Hbor Htok".
-    iMod (bor_acc_cons with "LFT Hbor Htok") as "[H Hclose]"; first done.
-    iDestruct "H" as ([|[[| |n]|]vl]) "[H↦ H]"; try iDestruct "H" as ">[]".
-    rewrite heap_mapsto_vec_cons. iDestruct "H↦" as ">[Hl H↦]".
-    iDestruct "H" as "[>EQ Hown]". iDestruct "EQ" as %[b ->].
-    (* We need to turn the ohne borrow into two, so we close it -- and then
-       we open one of them again. *)
-    iMod ("Hclose" $! ((∃ b, l ↦ #(Z_of_bool b)) ∗ ((l +ₗ 1) ↦∗: ty_own ty tid))%I
-          with "[] [Hl H↦ Hown]") as "[Hbor Htok]".
-    { clear. iNext. iIntros "[Hl Hown] !>". iNext. iDestruct "Hl" as (b) "Hl".
-      iDestruct "Hown" as (vl) "[H↦ Hown]". iExists (#(Z_of_bool b) :: vl).
-      rewrite heap_mapsto_vec_cons. iFrame. iPureIntro. eauto. }
-    { iNext. iSplitL "Hl"; first by eauto.
-      iExists vl. iFrame. }
-    clear b vl. iMod (bor_sep with "LFT Hbor") as "[Hl Hbor]"; first done.
-    iMod (bor_acc_cons with "LFT Hl Htok") as "[>Hl Hclose]"; first done.
-    iDestruct "Hl" as (b) "Hl".
-    iMod (lock_proto_create with "Hl [Hbor]") as "Hproto".
-    { destruct b; last by iExact "Hbor". done. }
-    iMod ("Hclose" with "[] Hproto") as "[Hl Htok]".
-    { clear b. iIntros "!> Hproto !>".
-      iDestruct (lock_proto_destroy with "Hproto") as (b) "[Hl _]".
-      eauto 10 with iFrame. }
-    iFrame "Htok". iExists κ. iFrame "#".
-    iMod (bor_share with "Hl") as "$"; [solve_ndisj..|].
-    iApply lft_incl_refl.
+    iIntros "*% #LFT #In Bor κ !>". iApply step_fupdN_full_intro.
+    iMod (bor_acc_cons with "LFT Bor κ") as "[(%& >↦ & big) ToBor]"; [done|].
+    iMod (bi.later_exist_except_0 with "big") as (?????) "(>[->->] & >⧖ & ty & Obs)".
+    rewrite heap_mapsto_vec_cons. iDestruct "↦" as "[↦b ↦]".
+    iMod ("ToBor" $! ((∃b: bool, l ↦ #b) ∗
+        ∃vπ d, (l +ₗ 1) ↦∗: ty.(ty_own) vπ d tid ∗ ⧖(S d) ∗ ⟨π, Φ (vπ π)⟩)%I
+      with "[] [↦b ↦ ty ⧖ Obs]") as "[Bor κ]".
+    { iIntros "!> big !>!>". iDestruct "big" as "[[% ↦b] (%&%&(%& ↦ &?)&?&?)]".
+      iExists (_::_). rewrite heap_mapsto_vec_cons. iFrame "↦b ↦".
+      iExists _, _, _, _, _. by iFrame. }
+    { iNext. iSplitL "↦b"; [by iExists _|]. iExists _, _. iFrame "⧖ Obs".
+      iExists _. iFrame. }
+    iMod (bor_sep with "LFT Bor") as "[Borb Borty]"; [done|]. clear b.
+    iMod (bor_acc_cons with "LFT Borb κ") as "[>(%b & ↦b) ToBorb]"; [done|].
+    iMod (lock_proto_create with "↦b [Borty]") as "Proto".
+    { case b; [done|]. by iExact "Borty". }
+    iMod ("ToBorb" with "[] Proto") as "[Bor $]".
+    { iIntros "!> Proto !>!>".
+      iDestruct (lock_proto_destroy with "Proto") as (?) "[? _]". by iExists _. }
+    iExists _, _. iMod (bor_share with "Bor") as "$"; [solve_ndisj|].
+    iFrame "In". iSplitR; [done|]. iApply lft_incl_refl.
   Qed.
   Next Obligation.
-    iIntros (ty κ κ' tid l) "#Hincl H".
-    iDestruct "H" as (κ'') "(#Hlft & #? & #Hlck)".
-    iExists _. iSplit; [|iSplit].
-    - by iApply lft_incl_trans.
-    - done.
-    - by iApply at_bor_shorten.
+    iIntros "*% _ _ (%&%&%&%&%&[->->]& big) $ !>". iApply step_fupdN_full_intro.
+    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
+    iExists _, _, _, _, _. by iFrame.
+  Qed.
+  Next Obligation.
+    iIntros "*% _ _ _ (%&%&->& big) $ !>!>!>". iApply step_fupdN_full_intro.
+    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
+    iExists _, _. by iFrame.
   Qed.
 
-  Global Instance mutex_type_ne : TypeNonExpansive mutex.
-  Proof.
-    split.
-    - apply (type_lft_morphism_add _ static [] []) => ?.
-      + rewrite left_id. iApply lft_equiv_refl.
-      + by rewrite /elctx_interp /= left_id right_id.
-    - by move=>/= ?? ->.
-    - intros n ty1 ty2 Hsz Hl HE Ho Hs tid [|[[| |]|]vl]=>//=. by rewrite Ho.
-    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. simpl.
-      repeat (apply dist_S, Ho || apply equiv_dist, lft_incl_equiv_proper_r, Hl ||
-              f_contractive || f_equiv).
-  Qed.
-
-  Global Instance mutex_ne : NonExpansive mutex.
+  Global Instance mutex_ne {𝔄} : NonExpansive (@mutex 𝔄).
   Proof. solve_ne_type. Qed.
 
-  Global Instance mutex_mono E L : Proper (eqtype E L ==> subtype E L) mutex.
+  Global Instance mutex_type_ne {𝔄} : TypeNonExpansive (@mutex 𝔄).
   Proof.
-    move=>ty1 ty2 /eqtype_unfold EQ. iIntros (?) "HL".
-    iDestruct (EQ with "HL") as "#EQ". iIntros "!> #HE". clear EQ.
-    iDestruct ("EQ" with "HE") as "(% & [#? #?] & #Howni & _) {EQ}".
-    iSplit; [by simpl; auto|iSplit; [done|iSplit]].
-    - iIntros "!> * Hvl". destruct vl as [|[[| |n]|]vl]=>//=.
-      iDestruct "Hvl" as "[$ Hvl]". by iApply "Howni".
-    - iIntros "!> * Hshr". iDestruct "Hshr" as (κ') "(#Hincl & #Hincl' & #Hshr)".
-      iExists _. iFrame "Hincl". iSplit.
-      + by iApply lft_incl_trans.
-      + iApply (at_bor_iff with "[] Hshr"). iNext.
-        iApply lock_proto_iff_proper. iApply bor_iff_proper. iNext.
-        iApply heap_mapsto_pred_iff_proper.
-        iModIntro; iIntros; iSplit; iIntros; by iApply "Howni".
+    split; [by apply type_lft_morphism_id_like|by move=>/= ??->|..].
+    - move=>/= *. by do 13 f_equiv.
+    - move=>/= *. do 7 f_equiv. { by apply equiv_dist, lft_incl_equiv_proper_r. }
+      do 11 (f_contractive || f_equiv). simpl in *. by apply dist_S.
   Qed.
 
-  Global Instance mutex_proper E L :
-    Proper (eqtype E L ==> eqtype E L) mutex.
-  Proof. by split; apply mutex_mono. Qed.
+  Global Instance mutex_send {𝔄} (ty: type 𝔄) : Send ty → Send (mutex ty).
+  Proof. move=> ?>/=. by do 13 f_equiv. Qed.
 
-  Global Instance mutex_send ty :
-    Send ty → Send (mutex ty).
+  Global Instance mutex_sync {𝔄} (ty: type 𝔄) : Send ty → Sync (mutex ty).
+  Proof. move=> ?>/=. by do 18 f_equiv. Qed.
+
+  (* In order to prove [mutex_leak] with a non-trivial postcondition,
+    we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
+  Lemma mutex_leak {𝔄} (ty: type 𝔄) E L : leak E L (mutex ty) (const True).
+  Proof. apply leak_just. Qed.
+
+  Lemma mutex_real {𝔄} (ty: type 𝔄) E L : real E L (mutex ty) id.
   Proof.
-    iIntros (??? [|[[| |n]|]vl]); try done. iIntros "[$ Hvl]".
-    by iApply send_change_tid.
+    split.
+    - iIntros "*% _ _ $ (%&%&%&%&%&[->->]&?)". iApply step_fupdN_full_intro.
+      iSplitR; [by iExists _|]. iExists _, _, _, _, _. by iFrame.
+    - iIntros "*% _ _ $ (%&%&->&?)!>!>!>". iApply step_fupdN_full_intro.
+      iSplitR; [by iExists _|]. iExists _, _. by iFrame.
   Qed.
 
-  Global Instance mutex_sync ty :
-    Send ty → Sync (mutex ty).
+  Lemma mutex_subtype {𝔄 𝔅} f g `{!@Iso 𝔄 𝔅 f g} ty ty' E L :
+    eqtype E L ty ty' f g → subtype E L (mutex ty) (mutex ty') (.∘ g).
   Proof.
-    iIntros (???? l) "Hshr". iDestruct "Hshr" as (κ') "(#? & #? & Hshr)".
-    iExists _. iFrame "#". iApply (at_bor_iff with "[] Hshr"). iNext.
-    iApply lock_proto_iff_proper. iApply bor_iff_proper. iNext.
-    iApply heap_mapsto_pred_iff_proper.
-    iModIntro; iIntros; iSplit; iIntros; by iApply send_change_tid.
+    move=> /eqtype_unfold Eq ?. iIntros "L". iDestruct (Eq with "L") as "#Eq".
+    iIntros "!> E". iDestruct ("Eq" with "E") as "(%EqSz & [#? #?] & #EqOwn &_)".
+    iSplit; [by rewrite/= EqSz|]. iSplit; [done|]. iSplit; iIntros "!> *".
+    - iDestruct 1 as (?????[->->]) "(⧖ & ty &?)". iExists (f ∘ _), _, _, _, _.
+      iSplit; [done|]. iFrame "⧖". iSplitL "ty"; [by iApply "EqOwn"|].
+      iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'.
+    - iDestruct 1 as (??->) "(In & #In' & At)". iExists _, _. iSplit; [done|].
+      iFrame "In". iSplit; [by iApply lft_incl_trans|].
+      iApply (at_bor_iff with "[] At"). iNext. iApply lock_proto_iff_proper.
+      iApply bor_iff_proper. iIntros "!>!>".
+      iSplit; iIntros "(%&%& (%& ↦ & ty) & ⧖ & Obs)".
+      + iExists (f ∘ _), _. iFrame "⧖".
+        iSplitR "Obs". { iExists _. iFrame "↦". by iApply "EqOwn". }
+        iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'.
+      + iExists (g ∘ _), _. iFrame "⧖ Obs". iExists _. iFrame "↦".
+        iApply "EqOwn". by rewrite compose_assoc semi_iso.
   Qed.
-End mutex.
+  Lemma mutex_eqtype {𝔄 𝔅} f g `{!@Iso 𝔄 𝔅 f g} ty ty' E L :
+    eqtype E L ty ty' f g → eqtype E L (mutex ty) (mutex ty') (.∘ g) (.∘ f).
+  Proof. move=> [??]. split; by (eapply mutex_subtype; [split; apply _|]). Qed.
 
-Section code.
-  Context `{!typeG Σ}.
-
+(*
   Definition mutex_new ty : val :=
     fn: ["x"] :=
       let: "m" := new [ #(mutex ty).(ty_size) ] in
@@ -249,4 +251,8 @@ Section code.
     iApply type_assign; [solve_typing..|].
     iApply type_jump; solve_typing.
   Qed.
-End code.
+*)
+End mutex.
+
+Global Hint Resolve mutex_leak mutex_real mutex_subtype mutex_eqtype
+  : lrust_typing.
