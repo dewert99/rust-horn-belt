@@ -27,7 +27,7 @@ Section specs.
     - wp_if. wp_alloc l as "H↦" "H†". lia. iApply "HΦ". subst sz. iFrame.
   Qed.
 
-  Lemma wp_delete E (n:Z) l vl :
+  Lemma wp_delete vl (n: Z) l E :
     n = length vl →
     {{{ l ↦∗ vl ∗ (†l…(length vl) ∨ ⌜n = 0⌝) }}}
       delete [ #n; #l] @ E

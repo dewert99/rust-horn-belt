@@ -187,7 +187,7 @@ Section mutex.
     wp_bind (_ <-{_} !_)%E.
     iApply (wp_memcpy with "[$↦x $↦m]"); [|lia|]. { by rewrite repeat_length. }
     iIntros "!> [↦x ↦m]". wp_seq. wp_bind (delete _).
-    iApply (wp_delete _ _ _ (_::_) with "[↦b ↦m †m]"); swap 1 2.
+    iApply (wp_delete (_::_) with "[↦b ↦m †m]"); swap 1 2.
     { rewrite heap_mapsto_vec_cons freeable_sz_full -Szvl. iFrame. } { simpl. lia. }
     iIntros "!>_". do 3 wp_seq. rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[_] with "Na L [-]"); last first.

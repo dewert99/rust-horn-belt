@@ -122,13 +122,13 @@ Section vec_basic.
     wp_read. wp_op. wp_read. do 3 wp_op. wp_read. rewrite trans_big_sepL_mt_ty_own.
     iDestruct "big" as "((%& ↦old & tys) & (%& %Eq & ↦ex) & †')".
     iDestruct (big_sepL_ty_own_length with "tys") as %Eq'.
-    wp_bind (delete _). iApply (wp_delete _ _ _ (_ ++ _) with "[↦old ↦ex †']").
+    wp_bind (delete _). iApply (wp_delete (_++_) with "[↦old ↦ex †']").
     { rewrite app_length -Nat2Z.inj_add -Nat2Z.inj_mul Nat.mul_add_distr_r.
       by do 2 f_equal. }
     { rewrite heap_mapsto_vec_app /freeable_sz' app_length
         -Nat2Z.inj_add -Nat2Z.inj_mul Nat.mul_add_distr_r Eq Eq'. iFrame. }
     iIntros "!>_". wp_seq. wp_bind (delete _).
-    iApply (wp_delete _ _ _ [_;_;_] with "[↦₀ ↦₁ ↦₂ †]"); [done| |].
+    iApply (wp_delete [_;_;_] with "[↦₀ ↦₁ ↦₂ †]"); [done| |].
     { rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil
         freeable_sz_full. iFrame. }
     iIntros "!>_". wp_seq. iMod persistent_time_receipt_0 as "⧖".
