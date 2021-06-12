@@ -56,13 +56,12 @@ Section fn.
       pt_size := 1;
       pt_own (tr: predl_trans'ₛ _ _) tid vl := tc_opaque
         (∃fb kb (bl: plistc _ _) e H, ⌜vl = [@RecV fb (kb :: bl) e H]⌝ ∗
-        ▷ □ ∀x ϝ k (wl: plistc _ _),
-          typed_body (fp_E (fp x) ϝ)
-                     [ϝ ⊑ₗ []]
-                     [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } tr_ret]
-                     (hzip_with (λ _ ty (w: val), w ◁ box ty) (fp x).(fp_ityl) wl)
-                     (subst' fb (RecV fb (kb :: bl) e) $ subst' kb k $ subst_plv bl wl e)
-                     tr)
+          ▷ □ ∀x ϝ k (wl: plistc _ _),
+            typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
+              [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } tr_ret]
+              (hzip_with (λ _ ty (w: val), w ◁ box ty) (fp x).(fp_ityl) wl)
+              (subst' fb (RecV fb (kb :: bl) e) $ subst' kb k $ subst_plv bl wl e)
+              tr)
     |}%I.
   Next Obligation. rewrite /tc_opaque. apply _. Qed.
   Next Obligation. move=> *. by iDestruct 1 as (?????->) "?". Qed.
@@ -243,8 +242,64 @@ Section typing.
     by rewrite eval_path_of_val.
   Qed.
 
-  Lemma type_call {A 𝔄l 𝔅 ℭl 𝔇l 𝔈l 𝔉} x (fp: A → fn_params 𝔄l 𝔅) p ql ql' k trx trk tri
-    E L (C: cctx 𝔉) (T: tctx ℭl) (T': tctx 𝔇l) (Tk: vec val 1 → tctx 𝔈l) :
+  Lemma type_call_iris' {A 𝔄l 𝔅} qL L κl x (fp: A → fn_params 𝔄l 𝔅)
+      p ql ql' (k: expr) E qκl vπl trπ tid postπ :
+    AsVal k → IntoPlistc ql ql' →
+    (∀ϝ, elctx_sat (map (λ κ, ϝ ⊑ₑ κ) κl ++ E) L (fp_E (fp x) ϝ)) →
+    lft_ctx -∗ time_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗
+    na_own tid ⊤ -∗ llctx_interp L qL -∗ qκl.[lft_intersect_list κl] -∗
+    tctx_elt_interp tid (p ◁ fn fp) trπ -∗
+    tctx_interp tid (hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') vπl -∗
+    ⟨π, trπ π (postπ π) (vπl -$ π)⟩ -∗
+    (∀(ret: val) wπ, na_own tid ⊤ -∗ llctx_interp L qL -∗ qκl.[lft_intersect_list κl] -∗
+      tctx_elt_interp tid (ret ◁ box (fp x).(fp_oty)) wπ -∗ ⟨π, postπ π (wπ π)⟩ -∗
+      WP k [of_val ret] {{ _, cont_postcondition }}) -∗
+    WP (call: p ql → k) {{ _, cont_postcondition }}.
+  Proof.
+    move=> [k' <-]-> ToEfp. iIntros "#LFT TIME PROPH UNIQ E Na L κl p ql Obs k".
+    iMod (lft_create with "LFT") as (ϝ) "[ϝ #To†ϝ]"; [done|].
+    iMod (bor_create _ ϝ with "LFT κl") as "[Borκl Toκl]"; [done|].
+    iDestruct (frac_bor_lft_incl with "LFT [>Borκl]") as "#?".
+    { iApply (bor_fracture with "LFT"); [done|]. by rewrite Qp_mul_1_r. }
+    iDestruct (ToEfp ϝ with "L [$E]") as "#Efp".
+    { clear ToEfp. iInduction κl as [|κ κl] "IH"; [done|]=>/=.
+      iSplit. { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
+      iApply "IH". iModIntro. iApply lft_incl_trans; [done|].
+      iApply lft_intersect_incl_r. }
+    wp_apply (wp_hasty with "p"). iIntros "*% _". iDestruct 1 as (tr ->?????[=->]) "e".
+    have ->: (λ: ["_r"], Skip;; k' ["_r"])%E = (λ: ["_r"], Skip;; k' ["_r"])%V by unlock.
+    iApply (wp_app_hasty_box [] with "ql")=>/=. iIntros (?) "ityl". wp_rec.
+    iApply ("e" with "LFT TIME PROPH UNIQ Efp Na [ϝ] [Toκl L k] ityl Obs"); first 2 last.
+    { iSplitL; [|done]. iExists _. iSplit; [by rewrite/= left_id|]. by iFrame "ϝ". }
+    rewrite cctx_interp_singleton. iIntros (v[??]). inv_vec v=> v.
+    iIntros "Na [(%& %Eq & ϝ &_) _] [oty ?] Obs". rewrite/= left_id in Eq.
+    rewrite -Eq. wp_rec. wp_bind Skip. iSpecialize ("To†ϝ" with "ϝ").
+    iApply (wp_mask_mono _ (↑lftN ∪ ↑lft_userN)); [done|].
+    iApply (wp_step_fupd with "To†ϝ"); [set_solver|]. wp_seq. iIntros "†ϝ !>".
+    wp_seq. iMod ("Toκl" with "†ϝ") as "> κl". iApply ("k" with "Na L κl oty Obs").
+  Qed.
+
+  Lemma type_call_iris {A 𝔄l 𝔅} x vπl κl qκl postπ (fp: A → fn_params 𝔄l 𝔅)
+      p ql ql' (k: expr) E trπ tid :
+    AsVal k → IntoPlistc ql ql' →
+    (∀ϝ, elctx_sat (map (λ κ, ϝ ⊑ₑ κ) κl ++ E) [] (fp_E (fp x) ϝ)) →
+    lft_ctx -∗ time_ctx -∗ proph_ctx -∗ uniq_ctx -∗ elctx_interp E -∗ na_own tid ⊤ -∗
+    qκl.[lft_intersect_list κl] -∗ tctx_elt_interp tid (p ◁ fn fp) trπ -∗
+    tctx_interp tid (hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') vπl -∗
+    ⟨π, trπ π (postπ π) (vπl -$ π)⟩ -∗
+    (∀(ret: val) wπ, na_own tid ⊤ -∗ qκl.[lft_intersect_list κl] -∗
+      tctx_elt_interp tid (ret ◁ box (fp x).(fp_oty)) wπ -∗ ⟨π, postπ π (wπ π)⟩ -∗
+      WP k [of_val ret] {{ _, cont_postcondition }}) -∗
+    WP (call: p ql → k) {{ _, cont_postcondition }}.
+  Proof.
+    iIntros (???) "LFT TIME PROPH UNIQ E Na κl p ql Obs k".
+    iApply (type_call_iris' 1%Qp with "LFT TIME PROPH UNIQ E Na [] κl p ql Obs");
+      [done|by rewrite /llctx_interp|].
+    iIntros (??) "Na _ κl ret Obs". iApply ("k" with "Na κl ret Obs").
+  Qed.
+
+  Lemma type_call {A 𝔄l 𝔅 ℭl 𝔇l 𝔈l 𝔉} x (fp: A → fn_params 𝔄l 𝔅) p ql ql' k trx
+      trk tri E L (C: cctx 𝔉) (T: tctx ℭl) (T': tctx 𝔇l) (Tk: vec val 1 → tctx 𝔈l) :
     IntoPlistc ql ql' → Forall (lctx_lft_alive E L) L.*1 →
     tctx_extract_ctx E L (p ◁ fn fp +::
       hzip_with (λ _ ty q, q ◁ box ty) (fp x).(fp_ityl) ql') T T' trx →
@@ -254,36 +309,17 @@ Section typing.
     ⊢ typed_body E L C T (call: p ql → k) (trx ∘ (λ post '(trp -:: adl),
       let '(al, dl) := psep adl in trp (λ b: 𝔅, tri (trk post) (b -:: dl)) al)).
   Proof.
-    move=> -> Alv ? ToEfp ? InTk. iApply typed_body_tctx_incl; [done|].
-    iIntros (?[? adπl]?). move: (papp_ex adπl)=> [aπl[dπl->]].
-    iIntros "/= #LFT #TIME #PROPH #UNIQ #E Na L C [p[ql T']] Obs".
+    move=> ? Alv ??? InTk. iApply typed_body_tctx_incl; [done|].
+    iIntros (?[? adπl]postπ). move: (papp_ex adπl)=> [aπl[dπl->]].
+    iIntros "#LFT TIME #PROPH #UNIQ #E Na L C /=(p & ql & T') Obs".
     iMod (lctx_lft_alive_tok_list with "E L") as (?) "(κL & L & ToL)"; [done|done|].
-    iMod (lft_create with "LFT") as (ϝ) "[ϝ #To†ϝ]"; [done|].
-    iMod (bor_create _ ϝ with "LFT κL") as "[BorκL ToκL]"; [done|].
-    iDestruct (frac_bor_lft_incl with "LFT [>BorκL]") as "#?".
-    { iApply (bor_fracture with "LFT"); [done|]. by rewrite Qp_mul_1_r. }
-    iDestruct (ToEfp ϝ with "L [$E]") as "#Efp".
-    { move: L.*1=> κl. iInduction κl as [|κ κl] "IH"; [done|]=>/=.
-      iSplit. { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
-      iApply "IH". iModIntro. iApply lft_incl_trans; [done|].
-      iApply lft_intersect_incl_r. }
-    wp_apply (wp_hasty with "p"). iIntros (???) "_".
-    iDestruct 1 as (trp->?????[=->]) "Body".
-    have ->: (λ: ["_r"], Skip;; k ["_r"])%E = (λ: ["_r"], Skip;; k ["_r"])%V by unlock.
-    iApply (wp_app_hasty_box [] with "ql")=>/=. iIntros (?) "ityl". wp_rec.
-    iApply ("Body" $! _ _ _ _ _ _ (λ π b, tri (trk $ postπ π) (b -:: (dπl -$ π))) with
-      "LFT TIME PROPH UNIQ Efp Na [ϝ] [C T' ToκL L ToL] ityl [Obs]"); first 2 last.
+    iApply (type_call_iris' with "LFT TIME PROPH UNIQ E Na L κL p ql [Obs]"); [done|..].
     { iApply proph_obs_eq; [|done]=>/= ?. by rewrite papply_app papp_sepl papp_sepr. }
-    { iSplitL; [|done]. iExists _. iSplit; [by rewrite/= left_id|]. by iFrame "ϝ". }
-    rewrite cctx_interp_singleton. iIntros (v[??]). inv_vec v=> v.
-    iIntros "Na [(%& %Eq & ϝ &_) _] [oty ?] Obs". rewrite/= left_id in Eq.
-    rewrite -Eq. wp_rec. wp_bind Skip. iSpecialize ("To†ϝ" with "ϝ").
-    iApply (wp_mask_mono _ (↑lftN ∪ ↑lft_userN)); [done|].
-    iApply (wp_step_fupd with "To†ϝ"); [set_solver|]. wp_seq. iIntros "†ϝ !>".
-    wp_seq. iMod ("ToκL" with "†ϝ") as "> κL". iMod ("ToL" with "κL L") as "L".
-    iSpecialize ("C" with "[//]"). have ->: [v: expr] = map of_val ([#v]) by done.
-    iMod (proj2 (InTk _) _ _ (_-::_) with "LFT PROPH UNIQ E L [$oty $T'] Obs")
-    as (?) "(L & Tk & Obs)". iApply ("C" with "Na L Tk Obs").
+    iIntros (ret ?) "Na L κL ret Obs". iMod ("ToL" with "κL L") as "L".
+    iMod (proj2 (InTk _) _ _ (_-::_) with "LFT PROPH UNIQ E L [$ret $T'] Obs")
+      as (?) "(L & Tk & Obs)".
+    have ->: [ret: expr] = map of_val ([#ret]) by done.
+    iApply ("C" with "[%//] Na L Tk Obs").
   Qed.
 
   Lemma type_letcall {A 𝔄l 𝔅 ℭl 𝔇l 𝔈} x (fp: A → fn_params 𝔄l 𝔅) p ql ql'
