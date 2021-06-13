@@ -109,6 +109,45 @@ Section typing.
     iApply ("e" with "LFT TIME PROPH UNIQ [$E $In $In'] Na L C T").
   Qed.
 
+  (* [type_dep_cond] lets typing deduction depend on dynamic values,
+    requiring some precondition on them *)
+  Lemma type_dep_cond {𝔄l A 𝔅l ℭl 𝔇} (Φ: pred' A) (Tx: tctx 𝔄l) (f: _ → A)
+      E L (T: tctx 𝔅l) (T': tctx ℭl) (C: cctx 𝔇) e trx tr :
+    Closed [] e → tctx_extract_ctx E L Tx T T' trx → real_tctx E L Tx f →
+    (∀a: A, ⌜Φ a⌝ -∗ typed_body E L C (Tx h++ T') e (tr a)) -∗
+    typed_body E L C T (Skip;; e) (trx ∘ (λ post acl,
+      let a := f (psepl acl) in Φ a ∧ tr a post acl))%type.
+  Proof.
+    iIntros (?? Rl) "e". iApply (typed_body_tctx_incl trx); [done|].
+    iIntros (? acπl ?) "#LFT #TIME #PROPH UNIQ #E Na L C".
+    move: (papp_ex acπl)=> [aπl[cπl->]]. iIntros "[Tx T'] #Obs".
+    iMod (Rl with "LFT E L Tx") as (?) "[⧖ Upd]". wp_bind Skip.
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]")=>//.
+    { iApply step_fupdN_with_emp. by rewrite difference_empty_L /=. }
+    wp_seq. iIntros "(%Eq & L & Tx) !>". move: Eq=> [a Eq]. wp_seq.
+    iMod (proph_obs_sat with "PROPH Obs") as %[π₀ Obs]; [done|].
+    move: (equal_f Eq π₀) Obs=>/= + [+_]. rewrite papply_app papp_sepl=>/= -> Φa.
+    iApply ("e" $! a Φa _ (_-++_)  with "LFT TIME PROPH UNIQ E Na L C [$Tx $T'] []").
+    iApply proph_obs_impl; [|done]=>/= π[_ +]. move: (equal_f Eq π)=>/= <-.
+    by rewrite papply_app papp_sepl.
+  Qed.
+
+  (* [type_dep] lets typing deduction depend on dynamic values;
+    it is derived from [type_dep_cond] *)
+  Lemma type_dep {𝔄l A 𝔅l ℭl 𝔇} (Tx: tctx 𝔄l) (f: _ → A)
+      E L (T: tctx 𝔅l) (T': tctx ℭl) (C: cctx 𝔇) e trx tr :
+    Closed [] e → tctx_extract_ctx E L Tx T T' trx → real_tctx E L Tx f →
+    (∀a: A, typed_body E L C (Tx h++ T') e (tr a)) -∗
+    typed_body E L C T (Skip;; e) (trx ∘ (λ post acl,
+      let a := f (psepl acl) in tr a post acl))%type.
+  Proof.
+    iIntros (???) "e". iApply (typed_body_tctx_incl trx); [done|].
+    iApply typed_body_impl; last first.
+    { iApply (type_dep_cond (const True)); [apply tctx_incl_refl|done|].
+      iIntros (a ?). iApply ("e" $! a). }
+    move=>/= ???. by split.
+  Qed.
+
   Lemma type_let' {𝔄l 𝔅l ℭl 𝔇} (T1: tctx 𝔄l) (T2: val → tctx 𝔅l) tr tr'
       (T: tctx ℭl) (C: cctx 𝔇) xb e e' E L :
     Closed (xb :b: []) e' → typed_instr E L T1 e T2 tr →
@@ -145,29 +184,23 @@ Section typing.
     iIntros (? Val) "?". iApply type_let; [apply Val|solve_typing|done..].
   Qed.
 
+  (* [type_val_dep] lets the obtained value depend on dynamic values;
+    it is derived from [type_dep] and [type_val] *)
   Lemma type_val_dep {𝔄 𝔅l B ℭl 𝔇l 𝔈} (a: B → 𝔄) ty (Tx: tctx 𝔅l)
       E L (C: cctx 𝔈) (T: tctx ℭl) (T': tctx 𝔇l) v xb e trx tr f :
     Closed (xb :b: []) e → (∀b, typed_val v ty (a b)) →
     tctx_extract_ctx E L Tx T T' trx → real_tctx E L Tx f →
     (∀v': val, typed_body E L C (v' ◁ ty +:: Tx h++ T') (subst' xb v' e) tr) -∗
-    typed_body E L C T (let: xb := Skip;; v in e) (trx ∘
+    typed_body E L C T (Skip;; let: xb := v in e) (trx ∘
       (λ post bdl, let '(bl, dl) := psep bdl in tr post (a (f bl) -:: bdl))).
   Proof.
-    iIntros (? Val ? Rl) "e". iApply (typed_body_tctx_incl trx); [done|].
-    iIntros (? bdπl ?) "#LFT #TIME #PROPH #UNIQ #E Na L C".
-    move: (papp_ex bdπl)=> [bπl[dπl->]]. iIntros "[Tx T'] Obs".
-    iMod (Rl with "LFT E L Tx") as (?) "[⧖ Upd]". wp_bind Skip.
-    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]")=>//.
-    { iApply step_fupdN_with_emp. by rewrite difference_empty_L /=. }
-    wp_seq. iIntros "(%Eq & L & Tx) !>". move: Eq=> [b Eq]. wp_seq.
-    wp_bind (v: expr). iApply (wp_wand with "[Na L Obs]").
-    { iApply (Val b _ _ _ (λ _ '-[a], tr _ (a -:: _)) -[]
-        with "LFT TIME PROPH UNIQ E Na L [//]").
-      iApply proph_obs_eq; [|done]=>/= π.
-      rewrite papply_app papp_sepl -papply_app. by move: (equal_f Eq π)=>/= ->. }
-    iIntros (?). iDestruct 1 as ([?[]]) "(Na & L & [v _] & Obs)"=>/=. wp_let.
-    iApply ("e" $! _ _ (_-::_-++_) with
-      "LFT TIME PROPH UNIQ E Na L C [$v $Tx $T'] Obs").
+    iIntros (? Val ??) "e". iApply typed_body_impl; last first.
+    { iApply type_dep; [ |done|done|].
+      (* TODO: make [solve_closed] work here *)
+      { rewrite /Closed /= !andb_True. split; [done|]. split; [|done].
+        apply is_closed_of_val. }
+      iIntros (b). iApply type_val; by [exact (Val b)|]. }
+    by move=>/= ??.
   Qed.
 
   Lemma type_seq {𝔄l 𝔅l ℭl 𝔇l 𝔈} (T1: tctx 𝔄l) (T2: tctx 𝔅l)
