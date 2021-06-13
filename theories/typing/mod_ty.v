@@ -7,7 +7,7 @@ Implicit Type 𝔄 𝔅 ℭ: syn_type.
 Section mod_ty.
   Context `{!typeG Σ}.
 
-  Local Lemma mod_ty_mt {𝔄 𝔅} (f: 𝔄 → 𝔅) ty vπ' d tid l q :
+  Lemma split_mod_ty_mt {𝔄 𝔅} (f: 𝔄 → 𝔅) ty vπ' d tid l q :
     (l ↦∗{q}: λ vl, ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ ty.(ty_own) vπ d tid vl)%I ⊣⊢
     ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ l ↦∗{q}: ty.(ty_own) vπ d tid.
   Proof.
@@ -36,7 +36,7 @@ Section mod_ty.
     by iApply ty_shr_lft_mono.
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT In Bor κ". rewrite mod_ty_mt.
+    move=> */=. iIntros "#LFT In Bor κ". rewrite split_mod_ty_mt.
     iMod (bor_exists_tok with "LFT Bor κ") as (vπ) "[Bor κ]"; [done|].
     iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].
     iMod (ty_share with "LFT In Bor κ") as "Upd"; [done|].
@@ -101,10 +101,10 @@ Section typing.
   Qed.
 
   Global Instance mod_ty_send {𝔄 𝔅} (f: 𝔄 → 𝔅) ty : Send ty → Send (<{f}> ty).
-  Proof. move=> ??*/=. by do 3 f_equiv. Qed.
+  Proof. move=> ?>/=. by do 3 f_equiv. Qed.
 
   Global Instance mod_ty_sync {𝔄 𝔅} (f: 𝔄 → 𝔅) ty : Sync ty → Sync (<{f}> ty).
-  Proof. move=> ??*/=. by do 3 f_equiv. Qed.
+  Proof. move=> ?>/=. by do 3 f_equiv. Qed.
 
   Lemma mod_ty_leak' {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty Φ :
     leak E L ty Φ → leak E L (<{f}> ty) (λ b, ∃a, b = f a ∧ Φ a).
@@ -170,15 +170,16 @@ Section typing.
     eqtype E L (<{f}> ty) ty g f.
   Proof. by apply eqtype_symm, mod_ty_inout. Qed.
 
-  Lemma mod_ty_subtype {𝔄 𝔅 𝔄' 𝔅'} E L h f (f': 𝔄' → 𝔅') g `{!@SemiIso 𝔄 𝔅 f g}
-    ty ty' : subtype E L ty ty' h → subtype E L (<{f}> ty) (<{f'}> ty') (f' ∘ h ∘ g).
+  Lemma mod_ty_subtype {𝔄 𝔅 𝔄' 𝔅'} E L h
+      f (f': 𝔄' → 𝔅') g `{!@SemiIso 𝔄 𝔅 f g} ty ty' :
+    subtype E L ty ty' h → subtype E L (<{f}> ty) (<{f'}> ty') (f' ∘ h ∘ g).
   Proof.
     move=> ??. eapply subtype_trans; [by apply mod_ty_out|].
     eapply subtype_trans; by [|apply mod_ty_in].
   Qed.
 
   Lemma mod_ty_eqtype {𝔄 𝔅 𝔄' 𝔅'} E L h h' f f' g g'
-    `{!@SemiIso 𝔄 𝔅 f g} `{!@SemiIso 𝔄' 𝔅' f' g'} ty ty' :
+      `{!@SemiIso 𝔄 𝔅 f g} `{!@SemiIso 𝔄' 𝔅' f' g'} ty ty' :
     eqtype E L ty ty' h h' →
     eqtype E L (<{f}> ty) (<{f'}> ty') (f' ∘ h ∘ g) (f ∘ h' ∘ g').
   Proof. move=> [??]. split; by apply mod_ty_subtype. Qed.
