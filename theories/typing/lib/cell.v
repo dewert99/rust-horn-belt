@@ -279,7 +279,7 @@ Section cell.
       (λ post '-[(Φ, Φ')], ∀a a': 𝔄, Φ a → Φ' = Ψ → Ψ a ∧ post (a, a')).
   Proof.
     eapply type_fn; [solve_typing|]=> α ??[x[]]. simpl_subst.
-    iIntros (?[vπ[]]?) "LFT #TIME #PROPH #UNIQ E Na L C /=[x _] Obs".
+    iIntros (?[vπ[]]?) "LFT #TIME #PROPH UNIQ E Na L C /=[x _] Obs".
     rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[_ box]"=>//. case x as [[|x|]|]=>//.
     iDestruct "box" as "[(%vl & ↦ & [#? uniq]) †]". wp_bind Skip.
     iApply (wp_cumulative_time_receipt with "TIME"); [done|]. wp_seq.
@@ -309,7 +309,7 @@ Section cell.
       apply Imp=>//. apply (aπ π).
     - iIntros "!> (%&%&(#⧖' & Pc' &%& ↦ & Obs' & ty)) !>!>". iExists _, _.
       iFrame "⧖'". iSplitL "ToPc". { iApply "ToPc". by iApply proph_eqz_refl. }
-      iExists _. iFrame "↦". iExists _, _, _. iFrame. by iSplit.
+      iExists _. iFrame "↦". iExists _, _, _. iSplit; [done|]. by iFrame.
   Qed.
 
   (** Updating the Invariant *)
