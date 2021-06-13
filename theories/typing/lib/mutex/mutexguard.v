@@ -173,58 +173,46 @@ Implicit Type P Q R: PROP.
     move=> [??][??]. split; by (eapply mutexguard_subtype; [split; apply _|..]).
   Qed.
 
-(*
-  Lemma mutex_acc E l ty tid q α κ :
-    ↑lftN ⊆ E → ↑mutexN ⊆ E →
-    let R := (&{κ}((l +ₗ 1) ↦∗: ty_own ty tid))%I in
-    lft_ctx -∗ &at{α,mutexN}(lock_proto l R) -∗ α ⊑ κ -∗
-    □ ((q).[α] ={E,∅}=∗ ▷ lock_proto l R ∗ (▷ lock_proto l R ={∅,E}=∗ (q).[α])).
+  Lemma mutex_acc E l q κ (R: iProp Σ) :
+    ↑lftN ∪ ↑mutexN ⊆ E → lft_ctx -∗ &at{κ, mutexN} (lock_proto l R) -∗
+    □ (q.[κ] ={E,∅}=∗ ▷ lock_proto l R ∗ (▷ lock_proto l R ={∅,E}=∗ q.[κ])).
   Proof.
-    (* FIXME: This should work: iIntros (?? R). *) intros ?? R.
-    iIntros "#LFT #Hshr #Hlincl !> Htok".
-    iMod (at_bor_acc_tok with "LFT Hshr Htok") as "[Hproto Hclose1]"; [done..|].
-    iMod (fupd_intro_mask') as "Hclose2"; last iModIntro; first solve_ndisj.
-    iFrame. iIntros "Hproto". iMod "Hclose2" as "_".
-    iMod ("Hclose1" with "Hproto") as "$". done.
+    iIntros (?) "#LFT #At !> κ".
+    iMod (at_bor_acc_tok with "LFT At κ") as "[Prt Toκ]"; [solve_ndisj..|].
+    iApply fupd_mask_intro; [set_solver|]. iIntros "End". iFrame "Prt". by iMod "End".
   Qed.
 
   Definition mutex_lock : val :=
-    fn: ["mutex"] :=
-      let: "m" := !"mutex" in
-      let: "guard" := new [ #1 ] in
-      acquire ["m"];;
-      "guard" +ₗ #0 <- "m";;
-      delete [ #1; "mutex" ];; return: ["guard"].
+    fn: ["bm"] :=
+      let: "m" := !"bm" in acquire ["m"];;
+      letalloc: "g" <- "m" in
+      delete [ #1; "bm"];; return: ["g"].
 
-  Lemma mutex_lock_type ty :
-    typed_val mutex_lock (fn(∀ α, ∅; &shr{α}(mutex ty)) → mutexguard α ty).
+  Lemma mutex_lock_type {𝔄} (ty: type 𝔄) :
+    typed_val mutex_lock (fn<α>(∅; &shr{α} (mutex ty)) → mutexguard α ty)
+      (λ post '-[Φ], post Φ).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>".
-      iIntros (α ϝ ret arg). inv_vec arg=>x. simpl_subst.
-    iApply type_deref; [solve_typing..|]; iIntros (m); simpl_subst.
-    iApply (type_new 1); [solve_typing..|]; iIntros (g); simpl_subst.
-    (* Switch to Iris. *)
-    iIntros (tid) "#LFT #HE Hna HL Hk [Hg [Hx [Hm _]]]".
-    rewrite !tctx_hasty_val [[x]]lock /=.
-    destruct m as [[|lm|]|]; try done. iDestruct "Hm" as (κ') "(#Hακ' & #? & #Hshr)".
-    iDestruct (ownptr_uninit_own with "Hg") as (lg vlg) "(% & Hg & Hg†)".
-    subst g. inv_vec vlg=>g. rewrite heap_mapsto_vec_singleton.
-    (* All right, we are done preparing our context. Let's get going. *)
-    iMod (lctx_lft_alive_tok α with "HE HL") as (q) "(Hα & HL & Hclose1)"; [solve_typing..|].
-    wp_apply (acquire_spec with "[] Hα"); first by iApply (mutex_acc with "LFT Hshr Hακ'").
-    iIntros "[Hcont Htok]". wp_seq. wp_op. rewrite shift_loc_0. wp_write.
-    iMod ("Hclose1" with "Htok HL") as "HL".
-    (* Switch back to typing mode. *)
-    iApply (type_type _ _ _ [ x ◁ own_ptr _ _; #lg ◁ box (mutexguard α ty)]
-        with "[] LFT HE Hna HL Hk"); last first.
-    (* TODO: It would be nice to say [{#}] as the last spec pattern to clear the context in there. *)
-    { rewrite tctx_interp_cons tctx_interp_singleton tctx_hasty_val tctx_hasty_val' //.
-      unlock. iFrame. iExists [_]. rewrite heap_mapsto_vec_singleton. iFrame "Hg".
-      iExists _. iFrame "#∗". }
-    iApply type_delete; [solve_typing..|].
-    iApply type_jump; solve_typing.
+    eapply type_fn; [solve_typing|]=>/= α ??[bm[]]. simpl_subst.
+    iIntros (?[?[]]?) "#LFT TIME _ _ E Na L C /=[bm _] #Obs". rewrite tctx_hasty_val.
+    iDestruct "bm" as ([|d]) "[⧖ box]"=>//. case bm as [[|bm|]|]=>//.
+    iDestruct "box" as "[(%vl & >↦m & shr) †m]".
+    case d as [|]; try by iDestruct "shr" as ">[]".
+    case vl as [|[[|l|]|][]]; try by iDestruct "shr" as ">[]".
+    rewrite heap_mapsto_vec_singleton. wp_read. wp_let.
+    iDestruct "shr" as (??->) "(#? & #? & #At)".
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    wp_apply (acquire_spec with "[] α"). { by iApply (mutex_acc with "LFT At"). }
+    iIntros "[Bor α]". wp_seq. wp_bind (new _). iApply wp_new; [done..|].
+    iIntros "!>% [†g ↦g]". wp_let. rewrite heap_mapsto_vec_singleton. wp_write.
+    wp_bind (delete _). rewrite -heap_mapsto_vec_singleton freeable_sz_full.
+    iApply (wp_delete with "[$↦m $†m]"); [done|]. iIntros "!>_". do 3 wp_seq.
+    iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
+    iApply ("C" $! [# #_] -[_] with "Na L [-] Obs").
+    rewrite/= right_id (tctx_hasty_val #_). iExists _. iSplit; [done|].
+    rewrite -freeable_sz_full. iFrame "†g". iNext. iExists [_].
+    rewrite heap_mapsto_vec_singleton. iFrame "↦g". iSplit; [done|].
+    iExists _, _. by do 4 (iSplit; [done|]).
   Qed.
-*)
 
   Definition mutexguard_deref: val :=
     fn: ["g"] :=
