@@ -88,7 +88,7 @@ theories/typing/lib/spawn.v
 # theories/typing/lib/swap.v
 # theories/typing/lib/diverging_static.v
 theories/typing/lib/mutex/mutex.v
-# theories/typing/lib/mutex/mutexguard.v
+theories/typing/lib/mutex/mutexguard.v
 # theories/typing/lib/refcell/refcell.v
 # theories/typing/lib/refcell/ref.v
 # theories/typing/lib/refcell/refmut.v

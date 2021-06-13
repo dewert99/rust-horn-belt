@@ -26,14 +26,30 @@ Section mutex.
     }
   *)
 
+  Definition mutex_body {𝔄} (ty: type 𝔄) (Φ: pred' 𝔄) (κ: lft)
+      (l: loc) (tid: thread_id) : iProp Σ :=
+    &{κ} (∃vπ d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ (l +ₗ 1) ↦∗: ty.(ty_own) vπ d tid).
+
+  Lemma mutex_body_iff {𝔄 𝔅} f g `{!@Iso 𝔄 𝔅 f g} ty ty' Φ κ l tid :
+    □ (∀vπ d tid vl, ty_own ty vπ d tid vl ↔ ty_own ty' (f ∘ vπ) d tid vl) -∗
+    □ (mutex_body ty Φ κ l tid ↔ mutex_body ty' (Φ ∘ g) κ l tid).
+  Proof.
+    iIntros "#EqOwn". iApply bor_iff_proper. iIntros "!>!>".
+    iSplit; iIntros "(%&% & Obs & ⧖ &%& ↦ & ty)".
+    - iExists (f ∘ _), _. iFrame "⧖". iSplitL "Obs".
+      { iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'. }
+      iExists _. iFrame "↦". by iApply "EqOwn".
+    - iExists (g ∘ _), _. iFrame "⧖ Obs". iExists _. iFrame "↦".
+      iApply "EqOwn". by rewrite compose_assoc semi_iso.
+  Qed.
+
   Program Definition mutex {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
       ty_size := 1 + ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
       ty_own Φπ _ tid vl := ∃Φ (b: bool) vl' (vπ: proph 𝔄) d,
         ⌜vl = #b :: vl' ∧ Φπ = const Φ⌝ ∗
         ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ty.(ty_own) vπ d tid vl';
       ty_shr Φπ _ κ tid l := ∃Φ κ', ⌜Φπ = const Φ⌝ ∗ κ ⊑ κ' ∗ κ' ⊑ ty.(ty_lft) ∗
-        &at{κ, mutexN} $ lock_proto l $
-          &{κ'} (∃vπ d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ (l +ₗ 1) ↦∗: ty.(ty_own) vπ d tid);
+        &at{κ, mutexN} (lock_proto l (mutex_body ty Φ κ' l tid));
     |}%I.
   Next Obligation.
     iIntros "* (%&%&%&%&%&[->_]&_&_& ty) /=". rewrite ty_size_eq.
@@ -80,21 +96,21 @@ Section mutex.
   Qed.
 
   Global Instance mutex_ne {𝔄} : NonExpansive (@mutex 𝔄).
-  Proof. solve_ne_type. Qed.
+  Proof. rewrite /mutex /mutex_body. solve_ne_type. Qed.
 
   Global Instance mutex_type_ne {𝔄} : TypeNonExpansive (@mutex 𝔄).
   Proof.
     split; [by apply type_lft_morphism_id_like|by move=>/= ??->|..].
     - move=>/= *. by do 13 f_equiv.
     - move=>/= *. do 7 f_equiv. { by apply equiv_dist, lft_incl_equiv_proper_r. }
-      do 12 (f_contractive || f_equiv). simpl in *. by apply dist_S.
+      rewrite /mutex_body. do 12 (f_contractive || f_equiv). simpl in *. by apply dist_S.
   Qed.
 
   Global Instance mutex_send {𝔄} (ty: type 𝔄) : Send ty → Send (mutex ty).
   Proof. move=> ?>/=. by do 13 f_equiv. Qed.
 
   Global Instance mutex_sync {𝔄} (ty: type 𝔄) : Send ty → Sync (mutex ty).
-  Proof. move=> ?>/=. by do 19 f_equiv. Qed.
+  Proof. move=> ?>/=. rewrite /mutex_body. by do 19 f_equiv. Qed.
 
   (* In order to prove [mutex_leak] with a non-trivial postcondition,
     we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
@@ -122,13 +138,7 @@ Section mutex.
     - iDestruct 1 as (??->) "(In & #In' & At)". iExists _, _. iSplit; [done|].
       iFrame "In". iSplit; [by iApply lft_incl_trans|].
       iApply (at_bor_iff with "[] At"). iNext. iApply lock_proto_iff_proper.
-      iApply bor_iff_proper. iIntros "!>!>".
-      iSplit; iIntros "(%&% & Obs & ⧖ &%& ↦ & ty)".
-      + iExists (f ∘ _), _. iFrame "⧖". iSplitL "Obs".
-        { iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'. }
-        iExists _. iFrame "↦". by iApply "EqOwn".
-      + iExists (g ∘ _), _. iFrame "⧖ Obs". iExists _. iFrame "↦".
-        iApply "EqOwn". by rewrite compose_assoc semi_iso.
+      by iApply mutex_body_iff.
   Qed.
   Lemma mutex_eqtype {𝔄 𝔅} f g `{!@Iso 𝔄 𝔅 f g} ty ty' E L :
     eqtype E L ty ty' f g → eqtype E L (mutex ty) (mutex ty') (.∘ g) (.∘ f).

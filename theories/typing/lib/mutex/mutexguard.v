@@ -6,6 +6,8 @@ From lrust.typing Require Export type.
 From lrust.typing Require Import typing option mutex.
 Set Default Proof Using "Type".
 
+Implicit Type 𝔄 𝔅: syn_type.
+
 (* This type is an experiment in defining a Rust type on top of a non-typesysten-specific
    interface, like the one provided by lang.lib.lock.
    It turns out that we need an accessor-based spec for this purpose, so that
@@ -15,7 +17,7 @@ Set Default Proof Using "Type".
    a borrow.
 *)
 
-Section mguard.
+Section mutexguard.
   Context `{!typeG Σ}.
 
   (*
@@ -27,133 +29,152 @@ Section mguard.
     }
   *)
 
-  Program Definition mutexguard (α : lft) (ty : type) :=
-    {| ty_size := 1;
-       ty_lfts := α :: ty.(ty_lfts); ty_E := ty.(ty_E) ++ ty_outlives_E ty α;
-       ty_own tid vl :=
-         match vl return _ with
-         | [ #(LitLoc l) ] =>
-           ∃ β, α ⊑ β ∗ β ⊑ ty.(ty_lft) ∗
-             &at{α, mutexN} (lock_proto l (&{β} ((l +ₗ 1) ↦∗: ty.(ty_own) tid))) ∗
-             &{β} ((l +ₗ 1) ↦∗: ty.(ty_own) tid)
-         | _ => False end;
-       ty_shr κ tid l :=
-         ∃ (l':loc), &frac{κ}(λ q', l ↦{q'} #l') ∗
-            □ ∀ F q, ⌜↑shrN ∪ ↑lftN ⊆ F⌝ -∗ q.[α⊓κ]
-                ={F}[F∖↑shrN]▷=∗ ty.(ty_shr) (α⊓κ) tid (l' +ₗ 1) ∗ q.[α⊓κ]
-    |}%I.
-  Next Obligation. by iIntros (? ty tid [|[[]|][]]) "H". Qed.
-  (* This is to a large extend copy-pasted from RWLock's write guard. *)
+  Program Definition mutexguard {𝔄} (κ: lft) (ty: type 𝔄) : type (predₛ 𝔄) := {|
+    ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    ty_own Φπ d tid vl := ⌜d > 0⌝ ∗ [loc[l] := vl] ∃Φ κ',
+      ⌜Φπ = const Φ⌝ ∗ κ ⊑ κ' ∗ κ' ⊑ ty.(ty_lft) ∗
+      &at{κ, mutexN} (lock_proto l (mutex_body ty Φ κ' l tid)) ∗
+      mutex_body ty Φ κ' l tid;
+    ty_shr Φπ _ κ' tid l := ∃Φ (l': loc) κᵢ,
+      ⌜Φπ = const Φ⌝ ∗ κ ⊓ κ' ⊑ κᵢ ∗ κᵢ ⊑ ty.(ty_lft) ∗
+      &frac{κ'}(λ q', l ↦{q'} #l') ∗
+      □ ∀E q, ⌜↑lftN ∪ ↑shrN ⊆ E⌝ -∗ q.[κᵢ] ={E,E∖↑shrN}=∗▷|={E∖↑shrN}=>
+        ∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗
+          |={E∖↑shrN}=>|={E∖↑shrN}▷=>^d |={E∖↑shrN,E}=>
+            ty.(ty_shr) vπ d κᵢ tid (l' +ₗ 1) ∗ q.[κᵢ];
+  |}%I.
+  Next Obligation. iIntros (??????[|[[]|][]]) "[%?] //". Qed.
+  Next Obligation. iIntros "*% [%$] !%". lia. Qed.
+  Next Obligation. done. Qed.
   Next Obligation.
-    iIntros (α ty E κ l tid q HE) "#LFT #? Hb Htok".
-    iMod (bor_exists with "LFT Hb") as (vl) "Hb"; first done.
-    iMod (bor_sep with "LFT Hb") as "[H↦ Hb]"; first done.
-    iMod (bor_fracture (λ q, l ↦∗{q} vl)%I with "LFT H↦") as "#H↦"; first done.
-    destruct vl as [|[[|l'|]|][]];
-      try by iMod (bor_persistent with "LFT Hb Htok") as "[>[] _]".
+    iIntros "* #Inκ' (%&%&%&->& ⊑κᵢ & κᵢ⊑ & Bor & inv)". iExists _, _, _.
+    iFrame "κᵢ⊑ inv". iSplit; [done|]. iSplit; [|by iApply frac_bor_shorten].
+    iApply lft_incl_trans; [|done]. iApply lft_intersect_mono; by [iApply lft_incl_refl|].
+  Qed.
+  Next Obligation.
+    iIntros (????? d κ') "*% #LFT #In Bor κ' //".
+    iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
+    iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor κ'") as "(>% & Bor & κ')"; [done|].
+    case d as [|]; [done|]. case vl as [|[[|l'|]|][]];
+      try by iMod (bor_persistent with "LFT Bor κ'") as "[>[] _]".
     setoid_rewrite heap_mapsto_vec_singleton.
-    iMod (bor_exists with "LFT Hb") as (β) "Hb"; first done.
-    iMod (bor_sep with "LFT Hb") as "[Hαβ H]"; first done.
-    iMod (bor_sep with "LFT H") as "[Hβty H]"; first done.
-    iMod (bor_sep with "LFT H") as "[_ H]"; first done.
-    iMod (bor_persistent with "LFT Hβty Htok") as "[#Hβty Htok]"; [done|].
-    iMod (bor_persistent with "LFT Hαβ Htok") as "[#Hαβ $]"; first done.
-    iExists _. iFrame "H↦". iApply delay_sharing_nested; try done.
-    { iNext. iApply lft_incl_trans; [|done]. iApply lft_intersect_incl_l. }
-    iApply (bor_shorten with "[] H"). iApply lft_intersect_incl_r.
+    iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT Bor↦") as "#Bor↦"; [done|].
+    iMod (bor_exists with "LFT Bor") as (Φ) "Bor"; [done|].
+    iMod (bor_exists with "LFT Bor") as (κ'') "Bor"; [done|].
+    iMod (bor_sep_persistent with "LFT Bor κ'") as "(>-> & Bor & κ')"; [done|].
+    do 2 (iMod (bor_sep_persistent with "LFT Bor κ'") as "(#? & Bor & κ')"; [done|]).
+    iMod (bor_sep with "LFT Bor") as "[_ Bor]"; [done|].
+    iMod (bor_unnest with "LFT Bor") as "Bor"; [done|]. iIntros "/=!>!>!>!>".
+    iApply step_fupdN_full_intro. iMod "Bor". set κᵢ := κ'' ⊓ κ'.
+    iMod (inv_alloc shrN _ (_ ∨ ∃(vπ: proph 𝔄) d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗
+      ty.(ty_shr) vπ d κᵢ tid (l' +ₗ 1))%I with "[Bor]") as "#inv".
+    { iLeft. iNext. iExact "Bor". }
+    iModIntro. iFrame "κ'". iExists _, _, κᵢ. iSplit; [done|]. iFrame "Bor↦".
+    iSplit. { iApply lft_intersect_mono; [done|iApply lft_incl_refl]. }
+    iAssert (κᵢ ⊑ ty.(ty_lft))%I as "#?".
+    { iApply lft_incl_trans; [iApply lft_intersect_incl_l|done]. }
+    iSplit; [done|]. iIntros "!>" (???) "κᵢ".
+    iInv shrN as "[Bor|big]" "Close"; iIntros "!>!>"; last first.
+    { iDestruct "big" as (??) "(#Obs & #⧖ & #ty)". iModIntro. iExists _, _.
+      iFrame "κᵢ Obs ⧖". iApply step_fupdN_full_intro. iModIntro.
+      iMod ("Close" with "[]"); [|done]. iNext. iRight. iExists _, _.
+      iFrame "Obs ⧖ ty". }
+    do 2 (iMod (bor_exists_tok with "LFT Bor κᵢ") as (?) "[Bor κᵢ]"; [solve_ndisj|]).
+    iMod (bor_sep_persistent with "LFT Bor κᵢ") as "(>#Obs & Bor & κᵢ)"; [solve_ndisj|].
+    iMod (bor_sep_persistent with "LFT Bor κᵢ") as "(>#⧖ & Bor & κᵢ)"; [solve_ndisj|].
+    iModIntro. iExists _, _. iFrame "Obs ⧖".
+    iMod (ty_share with "LFT [] Bor κᵢ") as "Upd"; [solve_ndisj|done|].
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >[#ty $]".
+    iMod ("Close" with "[]"); [|done]. iNext. iRight. iExists _, _. iFrame "Obs ⧖ ty".
   Qed.
   Next Obligation.
-    iIntros (??????) "#? H". iDestruct "H" as (l') "[#Hf #H]".
-    iExists _. iSplit.
-    - by iApply frac_bor_shorten.
-    - iIntros "!> * % Htok".
-      iMod (lft_incl_acc with "[] Htok") as (q') "[Htok Hclose]"; first solve_ndisj.
-      { iApply lft_intersect_mono. iApply lft_incl_refl. done. }
-      iMod ("H" with "[] Htok") as "Hshr". done. iModIntro. iNext.
-      iMod "Hshr" as "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
-      iApply ty_shr_mono; try done. iApply lft_intersect_mono. iApply lft_incl_refl. done.
+    iIntros (???????[|[[]|][]]) "*% _ _ [% big] //". iDestruct "big" as (??->) "?".
+    iIntros "$ !>". iApply step_fupdN_full_intro. iModIntro. iExists [], 1%Qp.
+    do 2 (iSplit; [done|]). iIntros "_!>". iSplit; [done|]. iExists _, _. by iFrame.
+  Qed.
+  Next Obligation.
+    iIntros "*% _ _ _ (%&%&%&->& big) $ !>!>!>". iApply step_fupdN_full_intro.
+    iModIntro. iExists [], 1%Qp. do 2 (iSplit; [done|]). iIntros "_!>".
+    iExists _, _, _. by iFrame.
   Qed.
 
-  Global Instance mutexguard_type_contractive α : TypeContractive (mutexguard α).
+  Global Instance mutexguard_ne {𝔄} κ : NonExpansive (mutexguard (𝔄:=𝔄) κ).
+  Proof. rewrite /mutexguard /mutex_body. solve_ne_type. Qed.
+
+  Global Instance mutexguard_type_contractive {𝔄} κ :
+    TypeContractive (mutexguard (𝔄:=𝔄) κ).
   Proof.
-    split.
-    - apply (type_lft_morphism_add _ α [α] []) => ?.
-      + iApply lft_equiv_refl.
-      + by rewrite elctx_interp_app elctx_interp_ty_outlives_E /elctx_interp /=
-                   left_id right_id.
-    - done.
-    - intros n ty1 ty2 Hsz Hl HE Ho Hs tid [|[[]|][]]=>//=.
-      repeat (apply equiv_dist, lft_incl_equiv_proper_r, Hl ||
-              apply Ho || apply dist_S, Ho || f_contractive || f_equiv).
-    - intros n ty1 ty2 Hsz Hl HE Ho Hs κ tid l. simpl.
-      repeat (apply Hs || f_contractive || f_equiv).
+    split; [by eapply type_lft_morphism_add_one|done| |].
+    - move=>/= *. do 10 f_equiv. { by apply equiv_dist, lft_incl_equiv_proper_r. }
+      rewrite /mutex_body.
+      f_equiv; [do 2 f_equiv|]; f_contractive; do 9 f_equiv; by simpl in *.
+    - move=>/= *. do 9 f_equiv. { by apply equiv_dist, lft_incl_equiv_proper_r. }
+      do 21 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
-  Global Instance mutexguard_ne α : NonExpansive (mutexguard α).
-  Proof. solve_ne_type. Qed.
-
-  Global Instance mutexguard_mono E L :
-    Proper (flip (lctx_lft_incl E L) ==> eqtype E L ==> subtype E L) mutexguard.
-  Proof.
-    intros α1 α2 Hα ty1 ty2 Hty. generalize Hty. rewrite eqtype_unfold.
-    iIntros (Hty' q) "HL". iDestruct (Hty' with "HL") as "#Hty".
-    clear Hty'. iDestruct (Hα with "HL") as "#Hα".
-    iIntros "!> #HE". iDestruct ("Hα" with "HE") as "{Hα} Hα".
-    iDestruct ("Hty" with "HE") as "(%&[Hl1 Hl2]&#Ho&#Hs) {HE Hty}".
-    iSplit; [done|iSplit; [|iSplit; iModIntro]].
-    - by iApply lft_intersect_mono.
-    - iIntros (tid [|[[]|][]]) "H //=".
-      iDestruct "H" as (β) "(#H⊑ & #Hl & #Hinv & Hown)".
-      iExists β. iSplit; [|iSplit; [|iSplit]].
-      + by iApply lft_incl_trans.
-      + by iApply lft_incl_trans.
-      + iApply (at_bor_shorten with "Hα").
-        iApply (at_bor_iff with "[] Hinv"). iNext.
-        iApply lock_proto_iff_proper. iApply bor_iff_proper. iNext.
-        iApply heap_mapsto_pred_iff_proper.
-        iModIntro; iIntros; iSplit; iIntros; by iApply "Ho".
-      + iApply bor_iff; last done. iNext.
-        iApply heap_mapsto_pred_iff_proper.
-        iModIntro; iIntros; iSplit; iIntros; by iApply "Ho".
-    - iIntros (κ tid l) "H". iDestruct "H" as (l') "H". iExists l'.
-      iDestruct "H" as "[$ #H]". iIntros "!> * % Htok".
-      iMod (lft_incl_acc with "[] Htok") as (q') "[Htok Hclose]"; first solve_ndisj.
-      { iApply lft_intersect_mono. done. iApply lft_incl_refl. }
-      iMod ("H" with "[] Htok") as "Hshr". done. iModIntro. iNext.
-      iMod "Hshr" as "[Hshr Htok]". iMod ("Hclose" with "Htok") as "$".
-      iApply ty_shr_mono; try done. iApply lft_intersect_mono. done. iApply lft_incl_refl.
-      by iApply "Hs".
-  Qed.
-
-  Global Instance mutexguard_proper E L :
-    Proper (lctx_lft_eq E L ==> eqtype E L ==> eqtype E  L) mutexguard.
-  Proof. intros ??[]???. split; by apply mutexguard_mono. Qed.
-
-  Global Instance mutexguard_sync α ty :
-    Sync ty → Sync (mutexguard α ty).
-  Proof.
-    move=>?????/=. apply bi.exist_mono=>?. do 7 f_equiv.
-    by rewrite sync_change_tid.
-  Qed.
+  Global Instance mutexguard_sync {𝔄} κ (ty: type 𝔄) :
+    Sync ty → Sync (mutexguard κ ty).
+  Proof. move=> ?>/=. by do 30 f_equiv. Qed.
 
   (* POSIX requires the unlock to occur from the thread that acquired
      the lock, so Rust does not implement Send for MutexGuard. We can
      prove this for our spinlock implementation, however. *)
-  Global Instance mutexguard_send α ty :
-    Send ty → Send (mutexguard α ty).
+  Global Instance mutexguard_send {𝔄} κ (ty: type 𝔄) :
+    Send ty → Send (mutexguard κ ty).
   Proof.
-    iIntros (??? [|[[]|][]]) "H"; try done. simpl. iRevert "H".
-    iApply bi.exist_mono. iIntros (κ); simpl. apply bi.equiv_spec.
-    repeat match goal with
-           | |- (ty_own _ _ _) ≡ (ty_own _ _ _) => by apply send_change_tid'
-           | |- _ => f_equiv
-           end.
+    move=> ?>/=. rewrite /mutex_body. do 21 f_equiv; [|done]. by do 2 f_equiv.
   Qed.
-End mguard.
 
-Section code.
-  Context `{!typeG Σ}.
+  (* In order to prove [mutexguard_leak] with a non-trivial postcondition,
+    we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
+  Lemma mutexguard_leak {𝔄} κ (ty: type 𝔄) E L :
+    leak E L (mutexguard κ ty) (const True).
+  Proof. apply leak_just. Qed.
 
+  Lemma mutexguard_real {𝔄} κ (ty: type 𝔄) E L : real E L (mutexguard κ ty) id.
+  Proof.
+    split.
+    - iIntros (????? vl) "*% _ _ $ (%& big) !>". case vl as [|[[]|][]]=>//.
+      iDestruct "big" as (??->) "?". iApply step_fupdN_full_intro. iModIntro.
+      iSplit; [by iExists _|]. iSplit; [done|]. iExists _, _. by iFrame.
+    - iIntros "*% _ _ $ (%&%&%&->&?) !>!>!>". iApply step_fupdN_full_intro.
+      iModIntro. iSplit; [by iExists _|]. iExists _, _, _. by iFrame.
+  Qed.
+
+  Lemma mutexguard_subtype {𝔄 𝔅} κ κ' f g `{!@Iso 𝔄 𝔅 f g} ty ty' E L :
+    lctx_lft_incl E L κ' κ → eqtype E L ty ty' f g →
+    subtype E L (mutexguard κ ty) (mutexguard κ' ty') (.∘ g).
+  Proof.
+    move=> Lft /eqtype_unfold Eq ?. iIntros "L".
+    iDestruct (Lft with "L") as "#Toκ'⊑κ". iDestruct (Eq with "L") as "#ToEq".
+    iIntros "!> E". iDestruct ("Toκ'⊑κ" with "E") as "#κ'⊑κ".
+    iDestruct ("ToEq" with "E") as "(%&[#?#?]& #InOwn & #InShr)". iSplit; [done|].
+    iSplit; [by iApply lft_intersect_mono|]. iSplit; iModIntro.
+    - iIntros (???[|[[]|][]]) "[% big] //".
+      iDestruct "big" as (? κ''->) "(#?&#?& At & Mut)". iSplit; [done|]. iExists _, κ''.
+      iSplit; [done|]. do 2 (iSplit; [by iApply lft_incl_trans|]).
+      iDestruct (mutex_body_iff with "InOwn") as "Iff". iSplit; [|by iApply "Iff"].
+      iApply at_bor_shorten; [done|]. iApply (at_bor_iff with "[] At"). iNext.
+      by iApply lock_proto_iff_proper.
+    - iIntros "* (%&%& %κᵢ &->&#?&#?&#?& #big)". iExists _, _, κᵢ.
+      iSplit; [done|]. iSplit.
+      { iApply lft_incl_trans; [|done].
+        iApply lft_intersect_mono; [done|iApply lft_incl_refl]. }
+      iSplit. { by iApply lft_incl_trans. } iSplit; [done|]. iIntros "!>%%% κᵢ".
+      iMod ("big" with "[//] κᵢ") as "big'". iIntros "!>!>".
+      iMod "big'" as (??) "(Obs & ⧖ & Upd)". iModIntro. iExists (f ∘ _), _.
+      iFrame "⧖". iSplit. { iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'. }
+      iApply (step_fupdN_wand with "Upd"). iIntros ">[ty $] !>". by iApply "InShr".
+  Qed.
+  Lemma mutexguard_eqtype {𝔄 𝔅} κ κ' f g `{!@Iso 𝔄 𝔅 f g} ty ty' E L :
+    lctx_lft_eq E L κ' κ → eqtype E L ty ty' f g →
+    eqtype E L (mutexguard κ ty) (mutexguard κ' ty') (.∘ g) (.∘ f).
+  Proof.
+    move=> [??][??]. split; by (eapply mutexguard_subtype; [split; apply _|..]).
+  Qed.
+
+(*
   Lemma mutex_acc E l ty tid q α κ :
     ↑lftN ⊆ E → ↑mutexN ⊆ E →
     let R := (&{κ}((l +ₗ 1) ↦∗: ty_own ty tid))%I in
@@ -328,4 +349,8 @@ Section code.
   Qed.
 
   (* TODO: Should we do try_lock? *)
-End code.
+*)
+End mutexguard.
+
+Global Hint Resolve mutexguard_leak mutexguard_real
+  mutexguard_subtype mutexguard_eqtype : lrust_typing.
