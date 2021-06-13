@@ -62,13 +62,14 @@ Proof.
   rewrite /FromSep. iIntros "[P Q]". iApply (step_fupdN_sep_max with "P Q").
 Qed.
 
-Lemma step_fupdN_with_emp n P E :
-  (|={E}=> |={E}▷=>^n |={E}=> P) -∗ (|={E, ∅}=> |={∅}▷=>^n |={∅, E}=> P).
+Lemma step_fupdN_with_emp n P E F :
+  (|={E, F}=> |={F}▷=>^n |={F, E}=> P) -∗ (|={E, ∅}=> |={∅}▷=>^n |={∅, E}=> P).
 Proof.
-  elim: n=> /=[|n IH].
-  - iIntros ">>Upd". iApply fupd_mask_intro_subseteq; [set_solver|done].
-  - iIntros ">>Upd". iApply fupd_mask_intro; [set_solver|].
-    iIntros "ToE !>!>". iDestruct (IH with "Upd") as "?". by iMod "ToE".
+  iIntros ">Upd". iInduction n as [|] "IH"=>/=.
+  - iApply fupd_mask_intro; [set_solver|]. by iIntros ">?".
+  - iApply fupd_mask_intro; [set_solver|]. iIntros ">_". iMod "Upd".
+    iApply fupd_mask_intro; [set_solver|]. iIntros "Get !>". iMod "Get".
+    iMod ("IH" with "Upd") as "$".
 Qed.
 
 Lemma step_fupdN_add E n m P :
@@ -77,23 +78,20 @@ Proof.
   induction n as [|n IH]; [done| rewrite /= IH //].
 Qed.
 
-Lemma step_fupdN_fupd_mask_mono E₁ E₂ n P:
+Lemma step_fupdN_fupd_mask_mono E₁ E₂ n P :
   E₁ ⊆ E₂ → (|={E₁}▷=>^n |={E₁}=> P) -∗ (|={E₂}▷=>^n |={E₂}=> P).
-  iIntros (Hsub).
-  induction n as [|n IH].
+Proof.
+  move=> Hsub. induction n as [|n IH].
   - by iApply fupd_mask_mono.
-  - iIntros "H /=".
-    iApply fupd_mask_mono; [done|]. iApply IH.
-    iMod "H". iModIntro.
-    by iApply fupd_mask_mono; [done|].
+  - iIntros "H /=". iApply fupd_mask_mono; [done|]. iApply IH.
+    iMod "H". iModIntro. by iApply fupd_mask_mono; [done|].
 Qed.
 
-Lemma fupd_step_fupdN_fupd_mask_mono E₁ E₂ n P:
+Lemma fupd_step_fupdN_fupd_mask_mono E₁ E₂ n P :
   E₁ ⊆ E₂ →
   (|={E₁}=> |={E₁}▷=>^n |={E₁}=> P) -∗ (|={E₂}=> |={E₂}▷=>^n |={E₂}=> P).
 Proof.
-  iIntros (Hsub) "Hstep".
-  iApply fupd_mask_mono; [done|].
+  iIntros (Hsub) "Hstep". iApply fupd_mask_mono; [done|].
   by iApply step_fupdN_fupd_mask_mono; [done|].
 Qed.
 End lemmas.
