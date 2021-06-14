@@ -185,6 +185,86 @@ Section typing.
     - iIntros "[[->?]|(%&->&[[->?]|(%vπ'' &->&?)])]"; [iLeft; by iFrame..|].
       iRight. iExists vπ''. by iFrame.
   Qed.
+
+  Lemma tctx_unwrap_maybe_uninit {𝔄 𝔅l} (ty: type 𝔄) E L (T: tctx 𝔅l) p :
+    tctx_incl E L (p ◁ ? ty +:: T) (p ◁ ty +:: T)
+      (λ post '(o -:: bl), match o with
+        Some a => post (a -:: bl) | None => False end).
+  Proof.
+    split. { by move=> ???[[?|]?]. }
+    iIntros (??[oπ ?]?) "_ PROPH _ _ $ /=[p T] #Obs".
+    iMod (proph_obs_sat with "PROPH Obs") as %[??]; [done|].
+    iDestruct "p" as (???) "[? [[->_]|(%&->&?)]]"=>//. iModIntro.
+    iExists (_-::_). iFrame "T Obs". iExists _, _. by iFrame.
+  Qed.
+
+  Lemma tctx_unwrap_own_maybe_uninit {𝔄 𝔅l} (ty: type 𝔄) n E L (T: tctx 𝔅l) p :
+    tctx_incl E L (p ◁ own_ptr n (? ty) +:: T) (p ◁ own_ptr n ty +:: T)
+      (λ post '(o -:: bl), match o with
+        Some a => post (a -:: bl) | None => False end).
+  Proof.
+    split. { by move=> ???[[?|]?]. }
+    iIntros (??[oπ ?]?) "_ PROPH _ _ $ /=[p T] #Obs".
+    iMod (proph_obs_sat with "PROPH Obs") as %[??]; [done|].
+    iDestruct "p" as ([[]|][|]?) "[⧖ own]"=>//.
+    iDestruct "own" as "[(%& ↦ & [[>->_]|big]) †]"=>//.
+    iMod (bi.later_exist_except_0 with "big") as (?) "[>-> ty]". iModIntro.
+    iExists (_-::_). iFrame "T Obs". iExists _, _. iSplit; [done|].
+    iFrame "⧖ †". iNext. iExists _. iFrame.
+  Qed.
+
+  Lemma tctx_unwrap_shr_maybe_uninit {𝔄 𝔅l} (ty: type 𝔄) κ E L (T: tctx 𝔅l) p :
+    tctx_incl E L (p ◁ &shr{κ} (? ty) +:: T) (p ◁ &shr{κ} ty +:: T)
+      (λ post '(o -:: bl), match o with
+        Some a => post (a -:: bl) | None => False end).
+  Proof.
+    split. { by move=> ???[[?|]?]. }
+    iIntros (??[oπ ?]?) "_ PROPH _ _ $ /=[p T] #Obs".
+    iMod (proph_obs_sat with "PROPH Obs") as %[??]; [done|]. iModIntro.
+    iDestruct "p" as ([[]|][|]?) "[⧖ ty]"=>//.
+    iDestruct "ty" as "[[-> _]|(%&->&?)]"=>//. iExists (_-::_). iFrame "T Obs".
+    iExists _, _. iSplit; [done|]. by iFrame "⧖".
+  Qed.
+
+  Lemma tctx_unwrap_uniq_maybe_uninit {𝔄 𝔅l} (ty: type 𝔄) κ E L (T: tctx 𝔅l) p :
+    lctx_lft_alive E L κ →
+    tctx_incl E L (p ◁ &uniq{κ} (? ty) +:: T) (p ◁ &uniq{κ} ty +:: T)
+      (λ post '((o, o') -:: bl), match o with
+        | Some a => ∀a': 𝔄, o' = Some a' → post ((a, a') -:: bl)
+        | None => False
+        end).
+  Proof.
+    move=> Alv. split.
+    { move=> ???[[[?|]?]?]; [|done]. by do 2 (apply forall_proper=> ?). }
+    iIntros (??[vπ ?]?) "LFT #PROPH UNIQ E L /=[p T] #Obs".
+    iDestruct "p" as ([[]|]??) "(_ &#?& uniq)"=>//.
+    iDestruct "uniq" as (? i [? Eq]) "[Vo Bor]". set ξ := PrVar _ i.
+    iMod (lctx_lft_alive_tok with "E L") as (?) "(κ & L & ToL)"; [done..|].
+    iMod (bor_acc_cons with "LFT Bor κ") as "[big ToBor]"; [done|].
+    iMod (bi.later_exist_except_0 with "big") as (oπ ?) "(>#⧖ & Pc &%& >↦ & uty)".
+    iMod (uniq_strip_later with "Vo Pc") as (Eq' <-) "[Vo Pc]".
+    have ->: vπ = λ π, (oπ π, π ξ). { by rewrite [vπ]surjective_pairing_fun Eq Eq'. }
+    iMod (proph_obs_sat with "PROPH Obs") as %[??]; [done|].
+    iDestruct "uty" as "[[>-> _]|big]"=>//.
+    iMod (bi.later_exist_except_0 with "big") as (aπ) "[>-> ty]"=>/=.
+    iMod (uniq_intro aπ with "PROPH UNIQ") as (j) "[Vo' Pc']" ; [done|].
+    set ζ := PrVar _ j. iDestruct (uniq_proph_tok with "Vo' Pc'") as "(Vo' & ζ & Pc')".
+    iMod (uniq_preresolve ξ [ζ] (Some ∘ (.$ ζ)) with "PROPH Vo Pc [$ζ //]")
+      as "(Obs' & [ζ _] & ToPc)"; [done|apply proph_dep_constr, proph_dep_one|].
+    iSpecialize ("Pc'" with "ζ"). iCombine "Obs' Obs" as "#?". iClear "Obs".
+    iMod ("ToBor" with "[ToPc] [↦ ty Pc']") as "[Bor κ]"; last first.
+    - iMod ("ToL" with "κ L") as "$". iModIntro.
+      iExists ((λ π, (aπ π, π ζ)) -:: _). iFrame "T". iSplit; last first.
+      { iApply proph_obs_impl; [|done]=>/= ?[-> Imp]. by apply Imp. }
+      iExists _, _. iSplit; [done|]. iFrame "⧖". iSplit; [done|]. iExists _, _.
+      by iFrame.
+    - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame.
+    - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' &%& ↦ & ty)".
+      iExists _, _. iFrame "⧖'".
+      iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
+      iSplitL "Eqz ToPc". { iApply "ToPc". by iApply proph_eqz_constr. }
+      iExists _. iFrame "↦". iRight. iExists _. by iFrame.
+  Qed.
 End typing.
 
 Global Hint Resolve maybe_uninit_leak | 5 : lrust_typing.

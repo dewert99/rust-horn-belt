@@ -1,6 +1,6 @@
 From lrust.util Require Import basic.
 From lrust.typing Require Export type.
-From lrust.typing Require Import programs.
+From lrust.typing Require Import type_context own shr_bor.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅 ℭ: syn_type.
@@ -88,17 +88,6 @@ Section typing.
     iSplit; iIntros "!>* [_$]".
   Qed.
 
-  Lemma tctx_refined_out {𝔄 𝔅l} (Φ: 𝔄 → _) ty E L (T: tctx 𝔅l) p :
-    tctx_incl E L (p ◁ !{Φ} ty +:: T) (p ◁ ty +:: T)
-      (λ post '(a -:: bl), Φ a → post (a -:: bl)).
-  Proof.
-    split. { move=>/= ???[??]. by apply forall_proper=> ?. }
-    iIntros (??[??]?) "_ _ _ _ $ /=[(%&%&%&?& Obs &?) T] Obs' !>".
-    iCombine "Obs Obs'" as "Obs". iExists (_-::_). iFrame "T".
-    iSplit. { iExists _, _. by iFrame. }
-    iApply proph_obs_impl; [|done]=>/= ?[? Imp]. by apply Imp.
-  Qed.
-
   Lemma tctx_refined_in {𝔄 𝔅l} (Φ: 𝔄 → _) ty E L (T: tctx 𝔅l) p :
     tctx_incl E L (p ◁ ty +:: T) (p ◁ !{Φ} ty +:: T)
       (λ post '(a -:: bl), Φ a ∧ post (a -:: bl)).
@@ -111,19 +100,67 @@ Section typing.
     by iApply proph_obs_impl; [|done]=>/= ?[? _].
   Qed.
 
-  Lemma tctx_extract_refined_out {𝔄 𝔅l} (Φ: 𝔄 → _) ty E L (T: tctx 𝔅l) p :
-    tctx_extract_elt E L (p ◁ ty) (p ◁ !{Φ} ty +:: T) T
+  Lemma tctx_refined_out {𝔄 𝔅l} (Φ: 𝔄 → _) ty E L (T: tctx 𝔅l) p :
+    tctx_incl E L (p ◁ !{Φ} ty +:: T) (p ◁ ty +:: T)
       (λ post '(a -:: bl), Φ a → post (a -:: bl)).
-  Proof. apply tctx_refined_out. Qed.
+  Proof.
+    split. { move=>/= ???[??]. by apply forall_proper=> ?. }
+    iIntros (??[??]?) "_ _ _ _ $ /=[(%&%&%&?& Obs &?) T] Obs' !>".
+    iCombine "Obs Obs'" as "Obs". iExists (_-::_). iFrame "T".
+    iSplit. { iExists _, _. by iFrame. }
+    iApply proph_obs_impl; [|done]=>/= ?[? Imp]. by apply Imp.
+  Qed.
 
-  Lemma tctx_extract_refined_in {𝔄 𝔅l} (Φ: 𝔄 → _) ty E L (T: tctx 𝔅l) p :
-    tctx_extract_elt E L (p ◁ !{Φ} ty) (p ◁ ty +:: T) T
+  Lemma tctx_own_refined_in {𝔄 𝔅l} (Φ: 𝔄 → _) ty n E L (T: tctx 𝔅l) p :
+    tctx_incl E L (p ◁ own_ptr n ty +:: T) (p ◁ own_ptr n (!{Φ} ty) +:: T)
       (λ post '(a -:: bl), Φ a ∧ post (a -:: bl)).
-  Proof. apply tctx_refined_in. Qed.
+  Proof.
+    split. { move=>/= ???[??]. by f_equiv. }
+    iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs".
+    iDestruct "p" as ([[]|][|]?) "[⧖ own]"=>//. iDestruct "own" as "[(%& >↦ & ty) †]".
+    iModIntro. iExists (_-::_). iFrame "T". iSplit; last first.
+    { by iApply proph_obs_impl; [|done]=>/= ?[_ ?]. }
+    iExists _, _. iSplit; [done|]. iFrame "⧖ †". iNext. iExists _.
+    iFrame "↦ ty". by iApply proph_obs_impl; [|done]=>/= ?[? _].
+  Qed.
+
+  Lemma tctx_own_refined_out {𝔄 𝔅l} (Φ: 𝔄 → _) ty n E L (T: tctx 𝔅l) p :
+    tctx_incl E L (p ◁ own_ptr n (!{Φ} ty) +:: T) (p ◁ own_ptr n ty +:: T)
+      (λ post '(a -:: bl), Φ a → post (a -:: bl)).
+  Proof.
+    split. { move=>/= ???[??]. by apply forall_proper=> ?. }
+    iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs'".
+    iDestruct "p" as ([[]|][|]?) "[⧖ own]"=>//.
+    iDestruct "own" as "[(%& >↦ & >Obs & ty) †]". iCombine "Obs Obs'" as "Obs".
+    iModIntro. iExists (_-::_). iFrame "T". iSplit; last first.
+    { iApply proph_obs_impl; [|done]=>/= ?[? Imp]. by apply Imp. }
+    iExists _, _. iSplit; [done|]. iFrame "⧖ †". iNext. iExists _. iFrame.
+  Qed.
+
+  Lemma tctx_shr_refined_in {𝔄 𝔅l} (Φ: 𝔄 → _) ty κ E L (T: tctx 𝔅l) p :
+    tctx_incl E L (p ◁ &shr{κ} ty +:: T) (p ◁ &shr{κ} (!{Φ} ty) +:: T)
+      (λ post '(a -:: bl), Φ a ∧ post (a -:: bl)).
+  Proof.
+    split. { move=>/= ???[??]. by f_equiv. }
+    iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs".
+    iDestruct "p" as ([[]|][|]?) "[⧖ ty]"=>//. iModIntro. iExists (_-::_).
+    iFrame "T". iSplit; last first. { by iApply proph_obs_impl; [|done]=>/= ?[_ ?]. }
+    iExists _, _. iSplit; [done|]. iFrame "⧖ ty".
+    by iApply proph_obs_impl; [|done]=>/= ?[? _].
+  Qed.
+
+  Lemma tctx_shr_refined_out {𝔄 𝔅l} (Φ: 𝔄 → _) ty κ E L (T: tctx 𝔅l) p :
+    tctx_incl E L (p ◁ &shr{κ} (!{Φ} ty) +:: T) (p ◁ &shr{κ} ty +:: T)
+      (λ post '(a -:: bl), Φ a → post (a -:: bl)).
+  Proof.
+    split. { move=>/= ???[??]. by apply forall_proper=> ?. }
+    iIntros (??[??]?) "_ _ _ _ $ /=[p T] Obs'".
+    iDestruct "p" as ([[]|][|]?) "[⧖ shr]"=>//. iDestruct "shr" as "[Obs ty]".
+    iCombine "Obs Obs'" as "Obs". iModIntro. iExists (_-::_). iFrame "T".
+    iSplit. { iExists _, _. iSplit; [done|]. by iFrame. }
+    iApply proph_obs_impl; [|done]=>/= ?[? Imp]. by apply Imp.
+  Qed.
 End typing.
 
-Global Hint Resolve refined_forget | 20 : lrust_typing.
-Global Hint Resolve tctx_extract_refined_out tctx_extract_refined_in | 20
-  : lrust_typing.
 Global Hint Resolve refined_leak refined_real refined_subtype refined_eqtype
   : lrust_typing.
