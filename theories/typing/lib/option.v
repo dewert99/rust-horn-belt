@@ -73,7 +73,7 @@ Section option.
         | _ => False
       end).
   Proof.
-    eapply type_fn; [solve_typing|]. iIntros (α ϝ ret [o []]). simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]. iIntros (α ϝ ret [o []]). simpl_subst. via_tr_impl.
     { iApply type_deref; [solve_extract|solve_typing..|]. iIntros (o'). simpl_subst.
       iApply type_new; [solve_typing..|]. iIntros (r). simpl_subst.
       iApply (type_cont [] (λ _, +[o ◁ _ ; r ◁ _ ]) [ϝ ⊑ₗ []]).
@@ -110,7 +110,7 @@ Section option.
     typed_val (option_unwrap_or τ) (fn(∅; option_ty τ, τ) → τ)
       (λ post '-[opt; def], match opt with Some v => post v | None => post def end).
   Proof.
-    eapply type_fn; [solve_typing|]. iIntros (α ϝ ret [o []]). simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]. iIntros (α ϝ ret [o []]). simpl_subst. via_tr_impl.
     { iApply (type_case_own +[inr _; inl _]); [solve_typing..|].
       constructor; last constructor; last constructor.
       + iApply type_delete; [solve_typing..|].
@@ -139,7 +139,7 @@ Section option.
     typed_val (option_unwrap τ) (fn(∅; option_ty τ) → τ)
       (λ post '-[o], match o with Some v => post v | None => False end).
   Proof.
-    eapply type_fn; [solve_typing|]. iIntros (α ϝ ret [o []]). simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]. iIntros (α ϝ ret [o []]). simpl_subst. via_tr_impl.
     { iApply (type_case_own +[inr _; inl _]); [solve_typing..|].
       constructor; last constructor; last constructor.
       + iApply type_val; [eapply panic_type|].

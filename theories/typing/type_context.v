@@ -583,8 +583,8 @@ Ltac solve_leak_unblock :=
   rewrite /trans_tail /=; by exact id.
 
 Global Hint Resolve leak_tctx_nil : lrust_typing.
-(* Mysteriously, registering [leak_tctx_cons_*]
-  to [Global Hint Resolve] does not help automation in some situations,
+(* Mysteriously, registering [leak_tctx_cons_*] with [Global Hint Resolve]
+  does not help automation in some situations,
   but the following hints let automation work *)
 Global Hint Extern 10 (leak_tctx _ _ _ _) =>
   simple apply leak_tctx_cons_hasty : lrust_typing.

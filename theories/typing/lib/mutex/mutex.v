@@ -155,7 +155,7 @@ Section mutex.
     typed_val (mutex_new ty) (fn(∅; ty) → mutex ty)
       (λ post '-[a], Φ a ∧ post Φ).
   Proof.
-    eapply type_fn; [solve_typing|]=> _ ??[x[]]. simpl_subst.
+    eapply type_fn; [apply _|]=> _ ??[x[]]. simpl_subst.
     iIntros (?[?[]]?) "_ _ _ _ _ Na L C /=[x _] #Obs".
     rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[#⧖ box]"=>//.
     case x as [[|x|]|]=>//=. iDestruct "box" as "[(%& >↦x & ty) †x]".
@@ -186,7 +186,7 @@ Section mutex.
     typed_val (mutex_into_inner ty) (fn(∅; mutex ty) → ty)
       (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= _ ??[m[]]. simpl_subst.
+    eapply type_fn; [apply _|]=>/= _ ??[m[]]. simpl_subst.
     iIntros (?[?[]]?) "_ _ _ _ _ Na L C /=[m _] Obs". rewrite tctx_hasty_val.
     iDestruct "m" as ([|]) "[_ box]"=>//. case m as [[|m|]|]=>//.
     iDestruct "box" as "[(%& ↦m & mtx) †m]". wp_bind (new _).
@@ -218,7 +218,7 @@ Section mutex.
     typed_val mutex_get_mut (fn<α>(∅; &uniq{α} (mutex ty)) → &uniq{α} ty)
       (λ post '-[(Φ, Φ')], ∀a a': 𝔄, Φ a → Φ' = const True → post (a, a')).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= α ??[m[]]. simpl_subst.
+    eapply type_fn; [apply _|]=>/= α ??[m[]]. simpl_subst.
     iIntros (?[vπ[]]?) "LFT TIME #PROPH UNIQ E Na L C /=[m _] Obs".
     rewrite tctx_hasty_val. iDestruct "m" as ([|]) "[_ box]"=>//.
     case m as [[|m|]|]=>//. iDestruct "box" as "[(%vl & >↦m & #In & uniq) †m]".

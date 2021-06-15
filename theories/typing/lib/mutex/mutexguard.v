@@ -192,7 +192,7 @@ Implicit Type P Q R: PROP.
     typed_val mutex_lock (fn<α>(∅; &shr{α} (mutex ty)) → mutexguard α ty)
       (λ post '-[Φ], post Φ).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= α ??[bm[]]. simpl_subst.
+    eapply type_fn; [apply _|]=>/= α ??[bm[]]. simpl_subst.
     iIntros (?[?[]]?) "#LFT TIME _ _ E Na L C /=[bm _] #Obs". rewrite tctx_hasty_val.
     iDestruct "bm" as ([|d]) "[⧖ box]"=>//. case bm as [[|bm|]|]=>//.
     iDestruct "box" as "[(%vl & >↦m & shr) †m]".
@@ -225,7 +225,7 @@ Implicit Type P Q R: PROP.
       (fn<(α, β)>(∅; &uniq{α} (mutexguard β ty)) → &uniq{α} (!{Ψ} ty))
       (λ post '-[(Φ, Φ')], Φ ≡ Ψ ∧ ∀a a': 𝔄, Φ a → Φ' = Φ → post (a, a')).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= αβ ??[g[]]. case αβ=> α β. simpl_subst.
+    eapply type_fn; [apply _|]=>/= αβ ??[g[]]. case αβ=> α β. simpl_subst.
     iIntros (?[vπ[]]?) "#LFT TIME #PROPH #UNIQ E Na L C /=[g _] Obs".
     rewrite tctx_hasty_val. iDestruct "g" as ([|d]) "[_ box]"=>//.
     case g as [[|g|]|]=>//. iDestruct "box" as "[(%vl & >↦g & #α⊑βty & uniq) †g]".
@@ -293,7 +293,7 @@ Implicit Type P Q R: PROP.
       (fn<(α, β)>(∅; &shr{α} (mutexguard β ty)) → &shr{α} ty)
       (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= αβ ??[g[]]. case αβ=> α β. simpl_subst.
+    eapply type_fn; [apply _|]=>/= αβ ??[g[]]. case αβ=> α β. simpl_subst.
     iIntros (?[?[]]?) "LFT #TIME _ _ #E Na L C /=[g _] Obs". rewrite tctx_hasty_val.
     iDestruct "g" as ([|d]) "[_ box]"=>//. case g as [[|g|]|]=>//.
     iDestruct "box" as "[(%vl & >↦g & guard) †g]".
@@ -335,7 +335,7 @@ Implicit Type P Q R: PROP.
     typed_val mutexguard_drop (fn<α>(∅; mutexguard α ty) → ())
       (λ post '-[_], post ()).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= α ??[g[]]. simpl_subst.
+    eapply type_fn; [apply _|]=>/= α ??[g[]]. simpl_subst.
     iIntros (?[?[]]?) "#LFT _ _ _ E Na L C /=[g _] #Obs". rewrite tctx_hasty_val.
     iDestruct "g" as ([|d]) "[⧖ box]"=>//. case g as [[|g|]|]=>//.
     iDestruct "box" as "[(%vl & >↦g & [>% guard]) †g]".

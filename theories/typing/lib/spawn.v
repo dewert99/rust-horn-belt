@@ -121,7 +121,7 @@ Section spawn.
           rewrite tctx_hasty_val. iExists _. iFrame "⧖". iExists _. by iFrame. }
         iIntros (?) "/= fin". do 2 wp_let. iMod na_alloc as (tid') "Na".
         iApply (type_call_iris (𝔄l:=[_]) () -[_] [] 1%Qp (const _) with
-          "LFT TIME PROPH UNIQ E Na [] c [f] [Obs]"); [solve_typing|solve_typing|..].
+          "LFT TIME PROPH UNIQ E Na [] c [f] [Obs]"); [solve_typing|..].
         { iApply lft_tok_static. }
         { rewrite/= right_id !tctx_hasty_val. iDestruct "f" as (?) "[??]".
           rewrite send_change_tid. iExists _. iFrame. }

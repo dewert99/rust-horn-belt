@@ -20,7 +20,7 @@ Section vec_index.
     typed_val (vec_index ty) (fn<α>(∅; &shr{α} (vec_ty ty), int) → &shr{α} ty)
       (λ post '-[al; z], ∃(i: nat) (a: 𝔄), z = i ∧ al !! i = Some a ∧ post a).
   Proof.
-    eapply type_fn; [solve_typing|]=> α ??[v[i[]]]. simpl_subst.
+    eapply type_fn; [apply _|]=> α ??[v[i[]]]. simpl_subst.
     iIntros (?(?&?&[])?) "LFT TIME PROPH _ E Na L C (v & i & _) #Obs".
     rewrite !tctx_hasty_val.
     iDestruct "v" as ([|d]) "[⧖ v]"=>//. case v as [[|v|]|]=>//=.
@@ -59,7 +59,7 @@ Section vec_index.
       (λ post '-[(al, al'); z], ∃(i: nat) (a: 𝔄), z = i ∧
         al !! i = Some a ∧ ∀a': 𝔄, al' = <[i := a']> al → post (a, a')).
   Proof.
-    eapply type_fn; [solve_typing|]=> α ??[v[i[]]]. simpl_subst.
+    eapply type_fn; [apply _|]=> α ??[v[i[]]]. simpl_subst.
     iIntros (?(vπ &?&[])?) "#LFT #TIME #PROPH UNIQ E Na L C (v & i & _) #Obs".
     rewrite !tctx_hasty_val.
     iDestruct "v" as ([|d]) "[#⧖ v]"=>//. case v as [[|v|]|]=>//=.

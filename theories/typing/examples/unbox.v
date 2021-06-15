@@ -15,7 +15,7 @@ Section unbox.
     typed_val unbox (fn<α>(∅; &uniq{α} (box (int * int))) → &uniq{α} int)
       (λ post '-[((z, w), (z', w'))], w' = w → post (z, z')).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= ???[?[]]. simpl_fp_E. simpl_subst.
+    eapply type_fn; [apply _|]=>/= ???[?[]]. simpl_fp_E. simpl_subst.
     via_tr_impl.
     { iApply type_deref; [solve_extract|solve_typing|done|]. intro_subst.
       iApply type_deref_uniq_own; [solve_extract|solve_typing|]. intro_subst.

@@ -20,7 +20,7 @@ Section rebor.
     typed_val rebor (fn(∅; int * int, int * int) → int)
       (λ post '-[(z, _); _], post z).
   Proof.
-    eapply type_fn; [solve_typing|]=> _??[?[?[]]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=> _??[?[?[]]]. simpl_subst. via_tr_impl.
     { iApply (type_newlft []). iIntros (α).
       iApply (type_letalloc_1 (&uniq{α} (int * int))); [solve_extract|done|].
       intro_subst. iApply type_deref; [solve_extract|solve_typing|done|].

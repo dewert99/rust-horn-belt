@@ -22,7 +22,7 @@ Section odd_sum.
     typed_val odd_sum (fn(∅; int) → int)
       (λ post '-[z], let z' := 0 `max` z in post (z' * z')).
   Proof.
-    eapply type_fnrec; [solve_typing|]=>/= _ ???[?[]]. simpl_subst. via_tr_impl.
+    eapply type_fnrec; [apply _|]=>/= _ ???[?[]]. simpl_subst. via_tr_impl.
     { iApply type_deref; [solve_extract|solve_typing..|]. intro_subst.
       iApply type_int. intro_subst. iApply type_le; [solve_extract|].
       intro_subst. iApply type_if; [solve_extract| |].

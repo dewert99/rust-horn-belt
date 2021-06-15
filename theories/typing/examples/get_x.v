@@ -15,7 +15,7 @@ Section get_x.
     typed_val get_x (fn<α>(∅; &uniq{α} (int * int)) → &shr{α} int)
       (λ post '-[(zz, zz')], zz' = zz → post zz.1).
   Proof.
-    move=> ??. eapply type_fn; [solve_typing|]=>/= α ??[p[]]. simpl_subst.
+    move=> ??. eapply type_fn; [apply _|]=>/= α ??[p[]]. simpl_subst.
     via_tr_impl.
     { iApply type_deref; [solve_extract|solve_typing|solve_typing|]. intro_subst.
       iApply type_share; [solve_extract|solve_typing|].

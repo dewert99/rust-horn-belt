@@ -16,7 +16,7 @@ Section init_prod.
     typed_val init_prod (fn(∅; int, int) → int * int)
       (λ post '-[z; z'], post (z, z')).
   Proof.
-    eapply type_fn; [solve_typing|]=> _ ??[?[?[]]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=> _ ??[?[?[]]]. simpl_subst. via_tr_impl.
     { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
       iApply (type_new_subtype (↯ 1 * ↯ 1)); [done|solve_typing|].
       intro_subst. have ->: Z.to_nat 2 = 2%nat by done.

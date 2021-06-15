@@ -1161,9 +1161,8 @@ Global Hint Resolve leak'_post | 5 : lrust_typing.
 Global Hint Resolve leakl_nil leak'_just plain_type_real reall_nil
   subtype_refl eqtype_refl subtypel_nil eqtypel_nil : lrust_typing.
 (* We use [Hint Extern] instead of [Hint Resolve] here, because
-  [into_plistc_cons], [leakl_cons], [reall_cons], [subtypel_cons] and [eqtypel_cons]
+  [leakl_cons], [reall_cons], [subtypel_cons] and [eqtypel_cons]
   work with [apply] but not with [simple apply] *)
-Global Hint Extern 0 (IntoPlistc _ _) => apply into_plistc_cons : lrust_typing.
 Global Hint Extern 0 (leakl _ _ _ _) => apply leakl_cons : lrust_typing.
 Global Hint Extern 0 (reall _ _ _ _) => apply reall_cons : lrust_typing.
 Global Hint Extern 0 (subtypel _ _ _ _ _) => apply subtypel_cons : lrust_typing.

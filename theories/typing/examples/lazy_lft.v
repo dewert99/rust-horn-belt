@@ -20,7 +20,7 @@ Section lazy_lft.
 
   Lemma lazy_lft_type : typed_val lazy_lft (fn(∅) → ()) (λ post _, post ()).
   Proof.
-    eapply type_fn; [solve_typing|]=> _??[]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=> _??[]. simpl_subst. via_tr_impl.
     { iApply (type_newlft []). iIntros (α).
       iApply (type_new_subtype (↯ 1 * ↯ 1)); [done|solve_typing|]. intro_subst.
       iApply type_new; [done|]. intro_subst_as f. iApply type_new; [done|].

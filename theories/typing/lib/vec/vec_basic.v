@@ -85,7 +85,7 @@ Section vec_basic.
   Lemma vec_new_type {𝔄} (ty: type 𝔄) :
     typed_val vec_new (fn(∅) → vec_ty ty) (λ post _, post []).
   Proof.
-    eapply type_fn; [solve_typing|]=> _ ???. simpl_subst.
+    eapply type_fn; [apply _|]=> _ ???. simpl_subst.
     iIntros (???) "_ #TIME _ _ _ Na L C _ Obs".
     wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (r).
     rewrite !heap_mapsto_vec_cons shift_loc_assoc. iIntros "[† (↦₀ & ↦₁ & ↦₂ &_)]".
@@ -112,7 +112,7 @@ Section vec_basic.
   Lemma vec_delete_type {𝔄} (ty: type 𝔄) :
     typed_val (vec_delete ty) (fn(∅; vec_ty ty) → ()) (λ post _, post ()).
   Proof.
-    eapply type_fn; [solve_typing|]=> _ ??[v[]]. simpl_subst.
+    eapply type_fn; [apply _|]=> _ ??[v[]]. simpl_subst.
     iIntros (?[?[]]?) "_ TIME _ _ _ Na L C [v _] Obs".
     rewrite tctx_hasty_val. iDestruct "v" as ([|d]) "[_ bvec]"=>//.
     case v as [[]|]=>//=. rewrite split_vec_mt.

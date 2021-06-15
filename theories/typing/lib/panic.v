@@ -20,7 +20,7 @@ Section panic.
 
   Lemma panic_type: typed_val panic (fn(∅) → ∅) (λ _ _, False).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= *.
+    eapply type_fn; [apply _|]=>/= *.
     iIntros (???) "_ _ PROPH _ _ _ _ _ _ Obs".
     iMod (proph_obs_false with "PROPH Obs") as "[]"; [done|move=> ?[]].
   Qed.
@@ -42,7 +42,7 @@ Section panic.
     typed_body E L C T (assert: p ;; e)
       (trx ∘ (λ post '(b -:: al), if b then tr post al else False))%type.
   Proof.
-    iIntros (? Extr) "?". 
+    iIntros (? Extr) "?".
     iApply type_seq; [by apply type_assert_instr|solve_typing| |done].
     destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case.
   Qed.

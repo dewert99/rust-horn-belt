@@ -20,7 +20,7 @@ Section inc_max.
       (λ (post: pred' (_*_)) '-[(a, a'); (b, b')], if bool_decide (b ≤ a)
         then b' = b → post (a, a') else a' = a → post (b, b')).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= ???[?[?[]]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=>/= ???[?[?[]]]. simpl_subst. via_tr_impl.
     { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
       do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
       iApply type_le; [solve_extract|]. intro_subst. via_tr_impl.
@@ -47,7 +47,7 @@ Section inc_max.
     typed_val inc_max (fn(∅; int, int) → int)
       (λ (post: pred' _) _, ∀n, n ≠ 0 → post n).
   Proof.
-    eapply type_fn; [solve_typing|]=>/= _ ??[?[?[]]]. simpl_fp_E. simpl_subst.
+    eapply type_fn; [apply _|]=>/= _ ??[?[?[]]]. simpl_fp_E. simpl_subst.
     via_tr_impl.
     { iApply (type_newlft []). iIntros (α).
       do 2 (iApply (type_letalloc_1 (&uniq{α} _)); [solve_extract|done|]; intro_subst).

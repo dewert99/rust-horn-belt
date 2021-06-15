@@ -349,6 +349,10 @@ Global Instance into_plistc_cons {A B X Xl} x xl yl :
   IntoPlistc xl yl → @IntoPlistc A (X :: Xl) B (x :: xl) (x -:: yl).
 Proof. by move=> ->. Qed.
 
+(* We need the following hint because usually [into_plistc_cons] works
+  with [apply] but not with [simple apply] *)
+Global Hint Extern 0 (IntoPlistc _ _) => apply into_plistc_cons : typeclass_instances.
+
 (** * Sum *)
 
 Section psum.

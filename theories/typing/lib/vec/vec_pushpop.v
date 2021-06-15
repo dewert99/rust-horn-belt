@@ -32,7 +32,7 @@ Section vec_pushpop.
     typed_val (vec_push ty) (fn<α>(∅; &uniq{α} (vec_ty ty), ty) → ())
       (λ post '-[(al, al'); a], al' = al ++ [a] → post ()).
   Proof.
-    eapply type_fn; [solve_typing|]=> α ??[v[x[]]]. simpl_subst.
+    eapply type_fn; [apply _|]=> α ??[v[x[]]]. simpl_subst.
     iIntros (tid(vπ & aπ &[])?) "#LFT #TIME #PROPH #UNIQ #E Na L C /=(v & x &_) #Obs".
     rewrite !tctx_hasty_val. iDestruct "v" as ([|dv]) "[_ v]"=>//.
     case v as [[|v|]|]=>//. iDestruct "v" as "[(%vl & >↦ & [#LftIn uniq]) †]".
@@ -135,7 +135,7 @@ Section vec_pushpop.
       (λ post '-[(al, al')],
         ∃alᵢ (a: 𝔄), al = alᵢ ++ [a] ∧ (al' = alᵢ → post a)).
   Proof.
-    eapply type_fn; [solve_typing|]=> α ??[v[]]. simpl_subst.
+    eapply type_fn; [apply _|]=> α ??[v[]]. simpl_subst.
     iIntros (?[vπ[]]?) "#LFT TIME #PROPH #UNIQ #E Na L C /=[v _] #Obs".
     rewrite tctx_hasty_val. iDestruct "v" as ([|]) "[_ v]"=>//.
     case v as [[|v|]|]=>//. iDestruct "v" as "[(%vl & >↦ & [#LftIn uniq]) †]".

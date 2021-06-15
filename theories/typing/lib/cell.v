@@ -143,7 +143,7 @@ Section cell.
   Lemma cell_new_type {𝔄} Φ (ty: type 𝔄) :
     typed_val cell_new (fn(∅; ty) → cell ty) (λ post '-[a], Φ a ∧ post Φ).
   Proof.
-    eapply type_fn; [solve_typing|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
     { iApply type_jump; [solve_typing| |].
       { eapply tctx_extract_ctx_elt; [apply tctx_cell_new|solve_typing]. }
       solve_typing. }
@@ -172,7 +172,7 @@ Section cell.
     typed_val cell_into_inner (fn(∅; cell ty) → ty)
       (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
   Proof.
-    eapply type_fn; [solve_typing|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
     { iApply type_jump; [solve_typing| |].
       { eapply tctx_extract_ctx_elt; [apply tctx_cell_into_inner|solve_typing]. }
       solve_typing. }
@@ -203,7 +203,7 @@ Section cell.
     typed_val cell_from_box (fn(∅; box ty) → box (cell ty))
       (λ post '-[a], Φ a ∧ post Φ).
   Proof.
-    eapply type_fn; [solve_typing|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
     { iApply type_jump; [solve_typing| |].
       { eapply tctx_extract_ctx_elt; [apply tctx_cell_from_box|solve_typing]. }
       solve_typing. }
@@ -216,7 +216,7 @@ Section cell.
     typed_val cell_into_box (fn(∅; box (cell ty)) → box ty)
       (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
   Proof.
-    eapply type_fn; [solve_typing|]=> _ ??[x[]]. simpl_subst.
+    eapply type_fn; [apply _|]=> _ ??[x[]]. simpl_subst.
     iIntros (?[?[]]?) "LFT #TIME PROPH UNIQ E Na L C /=[p _] Obs".
     rewrite tctx_hasty_val.  iDestruct "p" as ([|d]) "[_ bbox]"=>//.
     case x as [[|l|]|]=>//. iDestruct "bbox" as "[(%vl & ↦ & box) †]".
@@ -245,7 +245,7 @@ Section cell.
     typed_val cell_from_uniq (fn<α>(∅; &uniq{α} ty) → &uniq{α} (cell ty))
       (λ post '-[(a, _)], Φ a ∧ ∀Φ': pred' 𝔄, post (Φ, Φ')).
   Proof.
-    eapply type_fn; [solve_typing|]=> α ??[x[]]. simpl_subst.
+    eapply type_fn; [apply _|]=> α ??[x[]]. simpl_subst.
     iIntros (?[vπ[]]?) "#LFT _ #PROPH #UNIQ E Na L C /=[x _] #?".
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
     rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[#⧖ box]"=>//.
@@ -278,7 +278,7 @@ Section cell.
     typed_val cell_get_uniq (fn<α>(∅; &uniq{α} (cell ty)) → &uniq{α} (!{Ψ} ty))
       (λ post '-[(Φ, Φ')], ∀a a': 𝔄, Φ a → Φ' = Ψ → Ψ a ∧ post (a, a')).
   Proof.
-    eapply type_fn; [solve_typing|]=> α ??[x[]]. simpl_subst.
+    eapply type_fn; [apply _|]=> α ??[x[]]. simpl_subst.
     iIntros (?[vπ[]]?) "LFT #TIME #PROPH UNIQ E Na L C /=[x _] Obs".
     rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[_ box]"=>//. case x as [[|x|]|]=>//.
     iDestruct "box" as "[(%vl & ↦ & [#? uniq]) †]". wp_bind Skip.
@@ -331,7 +331,7 @@ Section cell.
     typed_val cell_set_inv (fn<α>(∅; &uniq{α} (cell ty)) → ())
       (λ post '-[(Φ', Φ'')], (∀a: 𝔄, Φ' a → Φ a) ∧ (Φ'' = Φ → post ())).
   Proof.
-    eapply type_fn; [solve_typing|]=> α ??[x[]]. simpl_subst.
+    eapply type_fn; [apply _|]=> α ??[x[]]. simpl_subst.
     iIntros (?[vπ[]]?) "LFT _ PROPH UNIQ E Na L C /=[x _] Obs".
     rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[_ box]"=>//.
     case x as [[|x|]|]=>//. iDestruct "box" as "[(%& ↦x & [_ uniq]) †x]".
@@ -373,7 +373,7 @@ Section cell.
     typed_val (cell_get ty) (fn<α>(∅; &shr{α} (cell ty)) → ty)
       (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
   Proof.
-    eapply type_fn; [solve_typing|]=> ???[?[]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=> ???[?[]]. simpl_subst. via_tr_impl.
     { iApply type_deref; [solve_extract|solve_typing|done|]. intro_subst.
       iApply (type_letalloc_n (cell ty)); [solve_extract|solve_typing|].
       intro_subst. iApply typed_body_tctx_incl; [apply tctx_cell_into_inner|].
@@ -395,7 +395,7 @@ Section cell.
     typed_val (cell_replace ty) (fn<α>(∅; &shr{α} (cell ty), ty) → ty)
       (λ post '-[Φ; a], Φ a ∧ ∀a': 𝔄, Φ a' → post a').
   Proof.
-    eapply type_fn; [solve_typing|]=>/= α ϝ k[c[x[]]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=>/= α ϝ k[c[x[]]]. simpl_subst. via_tr_impl.
     { iApply type_deref; [solve_extract|solve_typing|done|]. intro_subst_as c'.
       iApply type_new; [lia|]. intro_subst_as r. rewrite Nat2Z.id.
       iApply (type_with_tr [_;predₛ _;_;_] _
@@ -451,7 +451,7 @@ Section cell.
     typed_val fake_shared_cell (fn<α>(∅; &uniq{α} ty) → &shr{α} (cell ty))
       (λ post '-[(a, _)], Φ a ∧ post Φ).
   Proof.
-    eapply type_fn; [solve_typing|]=> ???[?[]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=> ???[?[]]. simpl_subst. via_tr_impl.
     { iApply type_let; [apply (cell_from_uniq_type Φ)|solve_extract|done|].
       intro_subst. iApply type_letcall; [solve_typing|solve_extract|solve_typing|].
       intro_subst. iApply type_deref; [solve_extract|solve_typing|done|].
