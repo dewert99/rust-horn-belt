@@ -105,9 +105,9 @@ Section int.
     iIntros (??(?&?&[])) "_ _ _ _ _ $$ (p1 & p2 &_) Obs".
     wp_apply (wp_hasty with "p1"). iIntros "% %d _ ⧖" ((z &->&[=->])).
     wp_apply (wp_hasty with "p2"). iIntros "%% _ _" ((z' &->&[=->])).
-    wp_op. iExists -[const (bool_decide (z <= z'))]. iFrame "Obs".
+    wp_op. iExists -[const (bool_decide (z ≤ z'))]. iFrame "Obs".
     rewrite right_id tctx_hasty_val'; [|done]. iExists d.
-    iFrame "⧖". by iExists (bool_decide (z <= z')).
+    iFrame "⧖". by iExists (bool_decide (z ≤ z')).
   Qed.
 
   Lemma type_le {𝔄l 𝔅l ℭ} p1 p2 x e trx tr E L (C: cctx ℭ) (T: tctx 𝔄l) (T': tctx 𝔅l) :

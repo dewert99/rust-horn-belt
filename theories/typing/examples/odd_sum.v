@@ -8,8 +8,8 @@ Section odd_sum.
 
   Definition odd_sum: val :=
     fnrec: "odd_sum" ["ba"] :=
-      let: "a" := !"ba" in let: "0" := #0 in let: "a<=0" := "a" ≤ "0" in
-      if: "a<=0" then
+      let: "a" := !"ba" in let: "0" := #0 in let: "a≤0" := "a" ≤ "0" in
+      if: "a≤0" then
         "ba" <- "0";; return: ["ba"]
       else
         let: "1" := #1 in let: "a-1" := "a" - "1" in "ba" <- "a-1";;

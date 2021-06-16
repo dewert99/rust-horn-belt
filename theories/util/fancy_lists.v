@@ -42,12 +42,11 @@ Fixpoint hcmap {Y} (f: ∀X, F X → Y) {Xl} (xl: hlist F Xl)
   : list Y :=
   match xl with +[] => [] | x +:: xl' => f _ x :: hcmap f xl' end.
 
-Fixpoint hnth {Xl D} (d: F D) (xl: hlist F Xl)
-  : ∀i, F (lnth D Xl i) :=
-  match xl with
-  | +[] => λ _, d
-  | x +:: xl' =>
-    λ i, match i with 0 => x | S j => hnth d xl' j end
+Fixpoint hlookup {Xl} : ∀(xl: hlist F Xl) i, F (Xl !!ₗ i) :=
+  match Xl with
+  | [] => λ _, fin_0_inv _
+  | X :: Xl' => hlist_cons_inv _
+      (λ x xl', fin_S_inv _ x (hlookup xl'))
   end.
 
 Fixpoint hrepeat {X} (x: F X) n : hlist F (repeat X n) :=
@@ -56,25 +55,17 @@ Fixpoint hrepeat {X} (x: F X) n : hlist F (repeat X n) :=
 Fixpoint max_hlist_with {Xl} (f: ∀X, F X → nat) (xl: hlist F Xl) : nat :=
   match xl with +[] => 0 | x +:: xl' => f _ x `max` max_hlist_with f xl' end.
 
+Lemma max_hlist_with_ge {Xl} (f: ∀X, F X → _) (xl: hlist F Xl) i :
+  f _ (hlookup xl i) ≤ max_hlist_with f xl.
+Proof.
+  induction xl; inv_fin i=>/=. { rewrite /llookup /=. lia. }
+  move=> i. etrans; [by apply IHxl|lia].
+Qed.
+
 Fixpoint happly {Y Xl} (fl: hlist (λ X, Y → F X) Xl) (x: Y)
   : hlist F Xl :=
   match fl with +[] => +[] | f +:: fl' => f x +:: happly fl' x end.
-
-Lemma hnth_default `{EqDecision A} {D Xl} (d : F D) (l : hlist F Xl) i :
-  ∀ (H : D = lnth D Xl i),
-    length Xl <= i →
-    hnth d l i = eq_rect D _ d _ H.
-Proof.
-  generalize dependent i. induction l.
-  - move => /= ? H. by rewrite (proof_irrel H eq_refl).
-  - move => /= [|?] *; auto with lia.
-Qed.
 End hlist.
-
-Lemma hnth_apply {A} {F: A → Type} {Xl Y D} (g: Y → F D)
-  (fl: hlist (λ X, Y → F X) Xl) (x: Y) i :
-  hnth (g x) (happly fl x) i = hnth g fl i x.
-Proof. move: i. elim fl; [done|]=> > ?. by case. Qed.
 
 Ltac inv_hlist xl := let A := type of xl in
   match eval hnf in A with hlist _ ?Xl =>
@@ -91,8 +82,14 @@ Ltac inv_hlist xl := let A := type of xl in
 Infix "h++" := happ (at level 60, right associativity).
 Infix "+<$>" := hmap (at level 61, left associativity).
 Infix "+c<$>" := hcmap (at level 61, left associativity).
+Infix "+!!" := hlookup (at level 20, right associativity).
 Infix "+$" := happly (at level 61, left associativity).
 Notation "( fl +$.)" := (happly fl) (only parsing).
+
+Lemma hlookup_apply {A} {F: A → Type} {Xl Y}
+    (fl: hlist (λ X, Y → F X) Xl) (x: Y) i :
+  (fl +$ x) +!! i = (fl +!! i) x.
+Proof. induction Xl; inv_fin i; inv_hlist fl; [done|]=>/= *. apply IHXl. Qed.
 
 (** * Passive Heterogeneous List *)
 
@@ -108,13 +105,19 @@ Notation "(-::)" := cons_pair (only parsing).
 Notation "-[ x ; .. ; z ]" := (x -:: .. (z -:: -[]) ..)
   (at level 1, format "-[ x ;  .. ;  z ]").
 
+
+Notation "*[ ]" := nil_unit (at level 1, format "*[ ]") : type_scope.
+Infix "*::" := cons_prod (at level 60, right associativity) : type_scope.
+Notation "*[ A ; .. ; Z ]" := (A *:: .. (Z *:: *[]) ..)
+  (at level 1, format "*[ A ;  .. ;  Z ]") : type_scope.
+
 Global Instance nil_unit_iso : Iso (const -[]) (const ()).
 Proof. split; fun_ext; by case. Qed.
 Global Instance nil_unit_iso' : Iso (const ()) (const -[]) | 10.
 Proof. split; apply _. Qed.
 
-Definition to_cons_prod {A B} : A * B → cons_prod A  B := λ '(a, al), a -:: al.
-Definition of_cons_prod {A B} : cons_prod A B → A * B := λ '(a -:: al), (a, al).
+Definition to_cons_prod {A B} : A * B → A *:: B := λ '(a, al), a -:: al.
+Definition of_cons_prod {A B} : A *:: B → A * B := λ '(a -:: al), (a, al).
 Global Instance cons_prod_iso {A B} : Iso (@to_cons_prod A B) of_cons_prod.
 Proof. split; fun_ext; by case. Qed.
 
@@ -122,7 +125,7 @@ Section plist.
 Context {A: Type} {F: A → Type}.
 
 Fixpoint plist (Xl: list A) : Type :=
-  match Xl with [] => nil_unit | X :: Xl' => cons_prod (F X) (plist Xl') end.
+  match Xl with [] => *[] | X :: Xl' => F X *:: plist Xl' end.
 
 Fixpoint papp {Xl Yl} (xl: plist Xl) (yl: plist Yl) :
   plist (Xl ++ Yl) :=
@@ -144,10 +147,10 @@ Lemma papp_ex {Xl Yl} (xl: plist (Xl ++ Yl)) :
   ∃(yl: plist Xl) (zl: plist Yl), xl = papp yl zl.
 Proof. exists (psepl xl), (psepr xl). by rewrite psep_app. Qed.
 
-Fixpoint pnth {Xl D} (d: F D) (xl: plist Xl) : ∀i, F (lnth D Xl i) :=
+Fixpoint plookup {Xl} (xl: plist Xl) : ∀i, F (Xl !!ₗ i) :=
   match Xl, xl with
-  | [], _ => λ _, d
-  | _::_, x -:: xl' => λ i, match i with 0 => x | S j => pnth d xl' j end
+  | [], _ => fin_0_inv _
+  | _::_, x -:: xl' => fin_S_inv _ x (plookup xl')
   end.
 
 Global Instance papp_psep_iso {Xl Yl}
@@ -180,17 +183,18 @@ Arguments plist {_} _ _.
 
 Infix "-++" := papp (at level 60, right associativity).
 Notation psep := (λ xl, (psepl xl, psepr xl)).
+Infix "-!!" := plookup (at level 20, right associativity).
 
-Fixpoint pmap {A} {F G : A → Type} (f: ∀X, F X → G X) {Xl} : plist F Xl → plist G Xl :=
+Fixpoint pmap {A} {F G: A → Type} (f: ∀X, F X → G X) {Xl} : plist F Xl → plist G Xl :=
   match Xl with [] => id | _::_ => λ '(x -:: xl'), f _ x -:: pmap f xl' end.
 Infix "-<$>" := pmap (at level 61, left associativity).
 
-Lemma pmap_app {A} {F G : A → Type} {Xl Yl} (f: ∀X, F X → G X)
+Lemma pmap_app {A} {F G: A → Type} {Xl Yl} (f: ∀X, F X → G X)
       (xl: plist F Xl) (yl: plist F Yl) :
   f -<$> (xl -++ yl) = (f -<$> xl) -++ (f -<$> yl).
 Proof. move: xl. elim Xl; [done|]=>/= ?? IH [??]. by rewrite IH. Qed.
 
-Fixpoint papply {A} {F : A → Type} {B Xl}
+Fixpoint papply {A} {F: A → Type} {B Xl}
          (fl: plist (λ X, B → F X) Xl) (x: B) : plist F Xl :=
   match Xl, fl with
   | [], _ => -[]
@@ -226,35 +230,24 @@ Fixpoint ptrans {A B} {F: A → B} {G Xl} (xl: plist (λ X, G (F X)) Xl)
     : plist G (map F Xl) :=
   match Xl, xl with [], _ => -[] | _::_, x -:: xl' => x -:: ptrans xl' end.
 
-Fixpoint hlist_to_list {T A Xl} (xl: @hlist T (const A) Xl) : list A :=
-  match xl with +[] => [] | x +:: xl' => x :: hlist_to_list xl' end.
-
-Fixpoint list_to_hlist {T A Xl} (xl: list A) : option (hlist (λ _: T,  A) Xl) :=
-  match xl, Xl with
-  | [], [] => mret +[]
-  | x :: xl',  X :: Xl' => list_to_hlist xl' ≫= λ tl, mret (x +:: tl)
-  | _, _ => None
+Fixpoint pbyidx {A} {F: A → Type} {Xl} : (∀i, F (Xl !!ₗ i)) → plist F Xl :=
+  match Xl with
+  | [] => λ _, -[]
+  | _::_ => λ f, f 0%fin -:: pbyidx (λ j, f (FS j))
   end.
 
-Lemma list_to_hlist_length {A T Xl} (l : list A) (l' : hlist (λ _: T, A) Xl) :
-  list_to_hlist l = Some l' →
-  length l = length Xl.
+Global Instance pbyidx_plookup_iso {A} {F: A → Type} {Xl} :
+  Iso (pbyidx (F:=F) (Xl:=Xl)) plookup.
 Proof.
-  revert l'. generalize dependent Xl.
-  induction l => - [|? ?] //= ?.
-  destruct (list_to_hlist (Xl := _) _) eqn: X; rewrite ?(IHl _ h) //.
+  split; fun_ext.
+  - move=>/= f. fun_ext_dep=> i. induction Xl; inv_fin i; [done|]=>/= ?.
+    by rewrite IHXl.
+  - move=>/= xl. induction Xl; case xl; [done|]=>/= ??. by rewrite IHXl.
 Qed.
 
-Lemma list_to_hlist_hnth_nth {A T Xl} (t: T) (d : A) i
-    (l : list A) (l' : hlist (λ _: T, A) Xl) :
-  list_to_hlist l = Some l' →
-  hnth (D := t) d l' i = nth i l d.
-Proof.
-  generalize dependent Xl. revert i.
-  induction l => i [| ? Xl] ? //=.
-  - case: i => [|?] [= <-] //=.
-  - destruct (list_to_hlist (Xl := _) _) eqn:X, i => //= [= <-] //=. auto.
-Qed.
+Lemma pbyidx_plookup {A} {F: A → Type} {Xl} (f: ∀i, F (Xl !!ₗ i)) i :
+  pbyidx f -!! i = f i.
+Proof. by rewrite semi_iso'. Qed.
 
 (** * Passive Heterogeneous List over Two Lists *)
 
@@ -263,18 +256,9 @@ Context {A: Type} {F: A → A → Type}.
 
 Fixpoint plist2 Xl Yl : Type :=
   match Xl, Yl with
-  | [], [] => nil_unit
-  | X :: Xl', Y :: Yl' => cons_prod (F X Y) (plist2 Xl' Yl')
+  | [], [] => *[]
+  | X :: Xl', Y :: Yl' => (F X Y) *:: (plist2 Xl' Yl')
   | _, _ => ∅
-  end.
-
-Fixpoint p2nth {Xl Yl D D'} (d: F D D')
-  : plist2 Xl Yl → ∀i, F (lnth D Xl i) (lnth D' Yl i) :=
-  match Xl, Yl with
-  | [], [] => λ _ _, d
-  | _::_, _::_ =>
-    λ '(x -:: xl') i, match i with 0 => x | S j => p2nth d xl' j end
-  | _, _ => absurd
   end.
 
 Fixpoint plist2_eq_nat_len {Xl Yl} :
@@ -287,9 +271,23 @@ Fixpoint plist2_eq_nat_len {Xl Yl} :
 
 Lemma plist2_eq_len {Xl Yl} : plist2 Xl Yl → length Xl = length Yl.
 Proof. by move=> /plist2_eq_nat_len/eq_nat_is_eq ?. Qed.
+
+Definition fin_renew_by_plist2 {Xl Yl} (xl: plist2 Xl Yl) (i: fin (length Xl))
+    : fin (length Yl) :=
+  fin_renew (plist2_eq_nat_len xl) i.
+
+Fixpoint p2lookup {Xl Yl} : ∀(xl: plist2 Xl Yl) i,
+    F (Xl !!ₗ i) (Yl !!ₗ fin_renew_by_plist2 xl i) :=
+  match Xl, Yl with
+  | [], [] => λ _, fin_0_inv _
+  | _::_, _::_ => λ '(x -:: xl'), fin_S_inv _ x (p2lookup xl')
+  | _, _ => λ xl, absurd xl
+  end.
 End plist2.
 
 Arguments plist2 {_} _ _ _.
+
+Infix "-2!!" := p2lookup (at level 20, right associativity).
 
 Fixpoint p2map {A} {F G: A → A → Type} (f: ∀X Y, F X Y → G X Y) {Xl Yl}
   : plist2 F Xl Yl → plist2 G Xl Yl :=
@@ -324,6 +322,10 @@ Fixpoint plistc_to_vec {A B} {Xl: list A} (xl: plistc B Xl) : vec B (length Xl) 
   match Xl, xl with [], _ => [#] | _::_, x -:: xl' => x ::: plistc_to_vec xl' end.
 Coercion plistc_to_vec: plistc >-> vec.
 
+Lemma plistc_to_vec_lookup {A B} {Xl: list A} (xl: plistc B Xl) i :
+  plistc_to_vec xl !!! i = xl -!! i.
+Proof. induction Xl; inv_fin i; case xl; [done|]=>/= _. apply IHXl. Qed.
+
 Fixpoint plistc_renew {A} {Xl: list A} {A'} {Yl: list A'} {B}
   : eq_nat (length Xl) (length Yl) → plistc B Xl → plistc B Yl :=
   match Xl, Yl with
@@ -332,8 +334,8 @@ Fixpoint plistc_renew {A} {Xl: list A} {A'} {Yl: list A'} {B}
   | _, _ => absurd
   end.
 
-Lemma plistc_renew_eq {A} {Xl: list A} {A'} {Yl: list A'} {B} (xl: plistc B Xl)
-      (e: eq_nat (length Xl) (length Yl)) :
+Lemma vec_to_list_plistc_renew {A} {Xl: list A} {A'} {Yl: list A'} {B}
+    (xl: plistc B Xl) (e: eq_nat (length Xl) (length Yl)) :
   vec_to_list (plistc_renew e xl) = vec_to_list xl.
 Proof.
   move: Xl Yl e xl. fix FIX 1. case=> [|??]; case=>//= ???[??]/=. by rewrite FIX.
@@ -361,41 +363,40 @@ Context {A} {F: A → Type}.
 Fixpoint psum (Xl: list A) : Type :=
   match Xl with [] => ∅ | X :: Xl' => F X + psum Xl' end.
 
-Fixpoint pinj {Xl} `{!Void (F D)} i : F (lnth D Xl i) → psum Xl :=
+Fixpoint pinj {Xl: list A} : ∀i, F (Xl !!ₗ i) → psum Xl :=
   match Xl with
-  | [] => absurd
-  | X :: Xl' => match i with 0 => inl | S j => λ x, inr (pinj j x) end
+  | [] => fin_0_inv _
+  | X :: Xl' => fin_S_inv (λ i, F ((X :: Xl') !!ₗ i) → F X + psum Xl')
+      inl (λ j x, inr (@pinj Xl' j x))
   end.
 
-Lemma pinj_inj {Xl} `{!Void (F D)} i j (x: F (lnth D Xl i)) y :
+Lemma pinj_inj {Xl} i j (x: F (Xl !!ₗ i)) y :
   pinj i x = pinj j y → i = j ∧ x ~= y.
 Proof.
-  move: Xl i j x y. elim. { move=>/= ???. by apply absurd. }
-  move=>/= ?? IH. case=> [|?]; case=>//; [by move=> ??[=->]|]=> ???[=Eq].
-  apply IH in Eq. move: Eq=> [??]. split; by [f_equal|].
+  move: Xl i j x y. elim; [move=> i; by inv_fin i|]=>/= ?? IH i j.
+  inv_fin i; inv_fin j=>//=. { by move=> ??[=->]. }
+  move=> ????[=/IH[??]]. split; [|done]. by f_equal.
 Qed.
 
-Global Instance pinj_Inj {Xl D} `{!Void (F D)} i : Inj eq eq (@pinj Xl D _ i).
+Global Instance pinj_Inj {Xl} i : Inj eq eq (@pinj Xl i).
 Proof.
-  revert i. elim Xl.
-  - move => i /= ?? _. by apply absurd.
-  - move => a l IH /= [|i] x y; case => //. by apply IH.
+  move: i. elim Xl; [move=> i; by inv_fin i|]=>/= ?? IH i.
+  inv_fin i. { by move=>/= ??[=?]. } by move=>/= ???[=/IH ?].
 Qed.
 
 Fixpoint psum_map {Xl Yl} :
-  plist2 (λ X Y, F X → F Y) Xl Yl → psum Xl → psum Yl :=
+    plist2 (λ X Y, F X → F Y) Xl Yl → psum Xl → psum Yl :=
   match Xl, Yl with
   | [], [] => λ _, absurd
   | _::_, _::_ => λ '(f -:: fl'), sum_map f (psum_map fl')
   | _, _ => absurd
   end.
 
-Lemma psum_map_pinj {Xl Yl} `{!Void (F D)}
-  (fl: plist2 (λ X Y, F X → F Y) Xl Yl) i (x: F (lnth D _ _)) :
-  psum_map fl (pinj i x) = pinj i (p2nth id fl i x).
+Lemma psum_map_pinj {Xl Yl} (fl: plist2 (λ X Y, F X → F Y) Xl Yl) i x :
+  psum_map fl (pinj i x) = pinj (fin_renew_by_plist2 fl i) ((fl -2!! i) x).
 Proof.
-  move: Xl Yl fl i x. fix FIX 1. move=> [|??][|??]//=; [move=> *; by apply absurd|].
-  case=> ??. case; [done|]=>/= *. by rewrite FIX.
+  move: Xl Yl fl i x. fix FIX 1. move=> [|??][|??]//=; [move=> ? i; by inv_fin i|].
+  move=>/= [??]i. inv_fin i; [done|]=>/= ??. by rewrite FIX.
 Qed.
 
 Definition to_psum_2 {X Y} (s: F X + F Y) : psum [X; Y] :=
@@ -409,38 +410,45 @@ End psum.
 Arguments psum {_} _ _.
 
 Section xsum.
-Context {A} (D : A) {F: A → Type}.
+Context {A} {F: A → Type}.
 
-Inductive xsum (Xl: list A) := xinj i : F (lnth D Xl i) → xsum Xl.
+Inductive xsum (Xl: list A) := xinj i : F (Xl !!ₗ i) → xsum Xl.
 Arguments xinj {_} _ _.
 
 Fixpoint to_xsum {Xl} : psum F Xl → xsum Xl :=
   match Xl with
   | [] => absurd
-  | _::_ => λ s,
-    match s with
-    | inl a => @xinj (_::_) 0 a
-    | inr s' => let 'xinj j b := to_xsum s' in @xinj (_::_) (S j) b
+  | _::_ => λ s, match s with
+    | inl a => @xinj (_::_) 0%fin a
+    | inr s' => let 'xinj j b := to_xsum s' in @xinj (_::_) (FS j) b
     end
   end.
 
-Lemma pinj_to_xsum `{!Void (F D)} {Xl} i (x: F (lnth D Xl i)) :
+Lemma to_xsum_pinj {Xl} i (x: F (Xl !!ₗ i)) :
   to_xsum (pinj i x) = xinj i x.
 Proof.
-  move: Xl i x. elim. { move=>/= ??. by apply absurd. }
-  move=>/= ?? IH. case; [done|]=> ??. by rewrite IH.
+  move: Xl i x. elim; [move=> i; by inv_fin i|]=>/= ?? IH i.
+  inv_fin i; [done|]=>/= ??. by rewrite IH.
+Qed.
+
+Definition of_xsum {Xl} (s: xsum Xl) : psum F Xl :=
+  let 'xinj i a := s in pinj i a.
+
+Global Instance xsum_iso {Xl} : Iso (@to_xsum Xl) of_xsum.
+Proof.
+  split; fun_ext=>/=; [|case=>/= ??; by apply to_xsum_pinj].
+  elim Xl; [by case|]=>/= ?? IH [|]; [done|]=>/= s. move: (IH s).
+  by case: (to_xsum s)=>/= ??->.
 Qed.
 End xsum.
 
-Arguments xinj {_ _ _ _} _ _.
-Arguments xsum {_} _ _ _.
-Notation xsume := (xsum ∅).
-Notation to_xsume := (to_xsum ∅).
+Arguments xinj {_ _ _} _ _.
+Arguments xsum {_} _ _.
 
 (** * Forall *)
 
-Section fa.
-Context {A} {F: A → Type}.
+Section Forall.
+Context {A} {F G: A → Type}.
 
 Inductive HForall (Φ: ∀X, F X → Prop) : ∀{Xl}, hlist F Xl → Prop :=
 | HForall_nil: HForall Φ +[]
@@ -457,16 +465,6 @@ Inductive TCHForall (Φ: ∀X, F X → Prop) : ∀{Xl}, hlist F Xl → Prop :=
 Existing Class TCHForall.
 Global Existing Instance TCHForall_nil.
 Global Existing Instance TCHForall_cons.
-
-Lemma TCHForall_impl {Xl} (Φ Ψ: ∀X, F X → Prop) (xl: hlist F Xl) :
-  (∀X x, Φ X x → Ψ _ x) → TCHForall Φ xl → TCHForall Ψ xl.
-Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
-
-Lemma TCHForall_nth {Xl D} (Φ: ∀X, F X → Prop) (d: F D) (xl: hlist F Xl) i :
-  Φ _ d → TCHForall Φ xl → Φ _ (hnth d xl i).
-Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
-
-Context {G: A → Type}.
 
 Inductive HForall_1 (Φ: ∀X, F X → G X → Prop)
   : ∀{Xl}, hlist F Xl → plist G Xl → Prop :=
@@ -499,30 +497,30 @@ Inductive HForallTwo (Φ: ∀X, F X → G X → Prop) : ∀{Xl}, hlist F Xl → 
 | HForallTwo_cons {X Xl} (x: _ X) y (xl: _ Xl) yl :
     Φ _ x y → HForallTwo Φ xl yl → HForallTwo Φ (x +:: xl) (y +:: yl).
 
-Inductive HForallThree {H} (Φ: ∀X, F X → G X → H X → Prop) :
-    ∀{Xl}, hlist F Xl → hlist G Xl → hlist H Xl → Prop :=
-| HForallThree_nil: HForallThree Φ +[] +[] +[]
-| HForallThree_cons {X Xl} (x: _ X) y z (xl: _ Xl) yl zl :
-  Φ _ x y z → HForallThree Φ xl yl zl → HForallThree Φ (x +:: xl) (y +:: yl) (z +:: zl).
+Lemma TCHForall_impl {Xl} (Φ Ψ: ∀X, F X → Prop) (xl: hlist F Xl) :
+  (∀X x, Φ X x → Ψ _ x) → TCHForall Φ xl → TCHForall Ψ xl.
+Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
 
-Lemma HForallTwo_impl {Xl} (Φ Ψ: ∀X, F X → G X → Prop) (xl: hlist F Xl) (yl: hlist G Xl) :
+Lemma HForallTwo_impl {Xl} (Φ Ψ: ∀X, F X → G X → Prop) (xl: hlist F Xl) yl :
   (∀X x y, Φ X x y → Ψ X x y) → HForallTwo Φ xl yl → HForallTwo Ψ xl yl.
 Proof. move=> Imp. elim; constructor; by [apply Imp|]. Qed.
 
-Lemma HForall_1_nth {Xl D} (Φ: ∀X, F X → G X → Prop)
-  (d: _ D) d' (xl: _ Xl) yl i :
-  Φ _ d d' → HForall_1 Φ xl yl → Φ _ (hnth d xl i) (pnth d' yl i).
-Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
+Lemma TCHForall_lookup {Xl} i (Φ: ∀X, F X → Prop) (xl: hlist F Xl) :
+  TCHForall Φ xl → Φ _ (xl +!! i).
+Proof. move=> All. induction All; inv_fin i; [done|]. apply IHAll. Qed.
 
-Lemma HForall_1'_nth {H: A → A → Type} {Xl Yl D D'} (Φ: ∀X Y, F X → H X Y → Prop)
-  (d: _ D) (d': _ D') xl (yl: plist2 _ Xl Yl) i :
-  Φ _ _ d d' → HForall_1' Φ xl yl → Φ _ _ (hnth d xl i) (p2nth d' yl i).
-Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
+Lemma HForall_1_lookup {Xl} i (Φ: ∀X, F X → G X → Prop) (xl: _ Xl) yl :
+  HForall_1 Φ xl yl → Φ _ (xl +!! i) (yl -!! i).
+Proof. move=> All. induction All; inv_fin i; [done|]. apply IHAll. Qed.
 
-Lemma HForallTwo_nth {Xl D}
-  (Φ: ∀X, F X → G X → Prop) (d: _ D) d' (xl: _ Xl) yl i :
-  Φ _ d d' → HForallTwo Φ xl yl → Φ _ (hnth d xl i) (hnth d' yl i).
-Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
+Lemma HForall_1'_lookup {H: A → A → Type} {Xl Yl} i
+    (Φ: ∀X Y, F X → H X Y → Prop) xl (yl: plist2 _ Xl Yl) :
+  HForall_1' Φ xl yl → Φ _ _ (xl +!! i) (yl -2!! i).
+Proof. move=> All. induction All; inv_fin i; [done|]. apply IHAll. Qed.
+
+Lemma HForallTwo_lookup {Xl} i (Φ: ∀X, F X → G X → Prop) (xl: _ Xl) yl :
+  HForallTwo Φ xl yl → Φ _ (xl +!! i) (yl +!! i).
+Proof. move=> All. induction All; inv_fin i; [done|]. apply IHAll. Qed.
 
 Lemma HForallTwo_forall `{!Inhabited Y} {Xl}
   (Φ: ∀X, Y → F X → G X → Prop) (xl yl: _ Xl) :
@@ -535,21 +533,7 @@ Proof.
   { move=> z. move/(.$ z) in All. by dependent destruction All. }
   auto.
 Qed.
-
-Lemma HForallThree_nth {H} {Xl D} (Φ: ∀X, F X → G X → H X → Prop)
-    (d: _ D) d' d'' (xl: _ Xl) yl zl i :
-  Φ _ d d' d'' → HForallThree Φ xl yl zl →
-  Φ _ (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
-Proof. move=> ? All. move: i. elim All; [done|]=> > ???. by case. Qed.
-
-Lemma HForallThree_nth_len {H} {Xl D} (Φ: ∀X, F X → G X → H X → Prop)
-    (d: _ D) d' d'' (xl: _ Xl) yl zl i :
-  (i < length Xl)%nat → HForallThree Φ xl yl zl →
-  Φ _ (hnth d xl i) (hnth d' yl i) (hnth d'' zl i).
-Proof.
-  move=> L All. move: i L. elim All; [simpl; lia|] => > ??? [|?] //=. auto with lia.
-Qed.
-End fa.
+End Forall.
 
 Section HForallTwo.
 Context {A} {F: A → Type} {Xl: list A} (R: ∀X, F X → F X → Prop).
@@ -575,7 +559,7 @@ End HForallTwo.
 (** * Ofe *)
 
 Section hlist_ofe.
-Context {A} {F: A → ofe} {Xl : list A}.
+Context {A} {F: A → ofe} {Xl: list A}.
 
 Instance hlist_equiv : Equiv (hlist F Xl) := HForallTwo (λ _, (≡)).
 Instance hlist_dist : Dist (hlist F Xl) := λ n, HForallTwo (λ _, dist n).
@@ -601,38 +585,45 @@ Global Hint Extern 0 (Equiv _) => refine (ofe_equiv _); shelve : typeclass_insta
 Global Hint Extern 0 (Dist _) => refine (ofe_dist _); shelve : typeclass_instances.
 
 Section hlist_ofe_lemmas.
-Context {A} {F: A → ofe} {Xl : list A}.
+Context {A} {F: A → ofe} {Xl: list A}.
 
 Global Instance hcons_ne {X} : NonExpansive2 (@hcons _ F X Xl).
 Proof. by constructor. Qed.
 Global Instance hcons_proper {X} : Proper ((≡) ==> (≡) ==> (≡)) (@hcons _ F X Xl).
 Proof. by constructor. Qed.
 
-Global Instance hnth_ne {D} n :
-  Proper ((=) ==> (dist n) ==> forall_relation (λ i, dist n)) (@hnth _ F Xl D).
-Proof. move=> ??->????. by apply (HForallTwo_nth (λ X, ofe_dist (F X) n)). Qed.
-Global Instance hnth_proper {D} :
-  Proper ((=) ==> (≡) ==> forall_relation (λ _, (≡))) (@hnth _ F Xl D).
-Proof. move=> ??->?? /equiv_dist ??. apply equiv_dist=> ?. by apply hnth_ne. Qed.
+Global Instance hlookup_ne n :
+  Proper (dist n ==> forall_relation (λ i, dist n)) (@hlookup _ F Xl).
+Proof. move=> ????. by apply (HForallTwo_lookup _ (λ X, ofe_dist (F X) n)). Qed.
+Global Instance hlookup_proper :
+  Proper ((≡) ==> forall_relation (λ _, (≡))) (@hlookup _ F Xl).
+Proof. move=> ?? /equiv_dist ??. apply equiv_dist=> ?. by apply hlookup_ne. Qed.
 End hlist_ofe_lemmas.
 
 (** * big_sep *)
 
 Section big_sep.
-Context {PROP: bi} {A : Type}.
+Context {PROP: bi} {A: Type}.
 
 Fixpoint big_sepHL {F: A → Type} {Xl} (Φ: ∀X, F X → PROP) (xl: hlist F Xl) : PROP :=
   match xl with +[] => True | x +:: xl' => Φ _ x ∗ big_sepHL Φ xl' end%I.
 
 Fixpoint big_sepHL_1 {F G: A → Type} {Xl} (Φ: ∀X, F X → G X → PROP)
-  (xl: hlist F Xl) (yl: plist G Xl) : PROP :=
+    (xl: hlist F Xl) (yl: plist G Xl) : PROP :=
   match xl, yl with
   | +[], _ => True
   | x +:: xl', y -:: yl' => Φ _ x y ∗ big_sepHL_1 Φ xl' yl'
   end%I.
 
-Fixpoint big_sepHL2_1 {F: A → _} {G H Xl Yl} (Φ: ∀X Y, F X → G Y → H X Y → PROP)
-  (xl: hlist F Xl) (yl: hlist G Yl) (zl: plist2 H Xl Yl) : PROP :=
+Fixpoint big_sepHL_2 {F G H: A → Type} {Xl} (Φ: ∀X, F X → G X → H X → PROP)
+    (xl: hlist F Xl) (yl: plist G Xl) (zl: plist H Xl) : PROP :=
+  match xl, yl, zl with
+  | +[], _, _ => True
+  | x +:: xl', y -:: yl', z -:: zl' => Φ _ x y z ∗ big_sepHL_2 Φ xl' yl' zl'
+  end%I.
+
+Fixpoint big_sepHL2_1 {F: A → Type} {G H Xl Yl} (Φ: ∀X Y, F X → G Y → H X Y → PROP)
+    (xl: hlist F Xl) (yl: hlist G Yl) (zl: plist2 H Xl Yl) : PROP :=
   match xl, yl, zl with
   | +[], +[], _ => True
   | x +:: xl', y +:: yl', z -:: zl' => Φ _ _ x y z ∗ big_sepHL2_1 Φ xl' yl' zl'
@@ -648,57 +639,80 @@ Notation "[∗ hlist] x ;- y ∈ xl ;- yl , P" := (big_sepHL_1 (λ _ x y, P%I) x
   (at level 200, xl, yl at level 10, x, y at level 1, right associativity,
     format "[∗  hlist]  x ;-  y  ∈  xl ;-  yl ,  P") : bi_scope.
 
+Notation "[∗ hlist] x ;- y ; z ∈ xl ;- yl ; zl , P" :=
+  (big_sepHL_2 (λ _ x y z, P%I) xl yl zl)
+  (at level 200, xl, yl, zl at level 10, x, y, z at level 1, right associativity,
+    format "[∗  hlist]  x ;-  y ;  z  ∈  xl ;-  yl ;  zl ,  P") : bi_scope.
+
 Notation "[∗ hlist] x ; y ;- z ∈ xl ; yl ;- zl , P" :=
   (big_sepHL2_1 (λ _ _ x y z, P%I) xl yl zl)
   (at level 200, xl, yl, zl at level 10, x, y, z at level 1, right associativity,
     format "[∗  hlist]  x ;  y ;-  z  ∈  xl ;  yl ;-  zl ,  P") : bi_scope.
 
 Section lemmas.
-Context `{!BiAffine PROP}.
+Context `{!BiAffine PROP} {A: Type}.
 
-Lemma big_sepHL_app `{F: A → Type} {Xl Yl}
+Lemma big_sepHL_app {F: A → Type} {Xl Yl}
       (xl: hlist F Xl) (xl': hlist F Yl) (Φ: ∀C, F C → PROP) :
   big_sepHL Φ (xl h++ xl') ⊣⊢ big_sepHL Φ xl ∗ big_sepHL Φ xl'.
 Proof. elim xl; [by rewrite/= left_id|]=>/= > ->. by rewrite assoc. Qed.
 
-Lemma big_sepHL_1_app `{F: A → Type} {G Xl Yl}
+Lemma big_sepHL_1_app {F: A → Type} {G Xl Yl}
       (xl: hlist F Xl) (xl': hlist F Yl)
       (yl: plist G Xl) (yl': plist G Yl) (Φ: ∀C, F C → G C → PROP) :
   big_sepHL_1 Φ (xl h++ xl') (yl -++ yl') ⊣⊢ big_sepHL_1 Φ xl yl ∗ big_sepHL_1 Φ xl' yl'.
 Proof. induction xl, yl; by [rewrite/= left_id|rewrite/= IHxl assoc]. Qed.
 
-Global Instance into_sep_big_sepHL_app `{F: A → Type} {Xl Yl}
-  (xl: hlist F Xl) (xl': hlist F Yl) (Φ: ∀C, F C → PROP) :
+Global Instance into_sep_big_sepHL_app {F: A → Type} {Xl Yl}
+    (xl: hlist F Xl) (xl': hlist F Yl) (Φ: ∀C, F C → PROP) :
   IntoSep (big_sepHL Φ (xl h++ xl')) (big_sepHL Φ xl) (big_sepHL Φ xl').
 Proof. by rewrite /IntoSep big_sepHL_app. Qed.
-Global Instance from_sep_big_sepHL_app `{F: A → Type} {Xl Yl}
+Global Instance from_sep_big_sepHL_app {F: A → Type} {Xl Yl}
   (xl: hlist F Xl) (xl': hlist F Yl) (Φ: ∀C, F C → PROP) :
   FromSep (big_sepHL Φ (xl h++ xl')) (big_sepHL Φ xl) (big_sepHL Φ xl').
 Proof. by rewrite /FromSep big_sepHL_app. Qed.
 
-Global Instance into_sep_big_sepHL_1_app `{F: A → Type} {G Xl Yl}
-  (xl: hlist F Xl) (xl': hlist F Yl) (yl: plist G Xl) (yl': plist G Yl)
-  (Φ: ∀C, F C → G C → PROP) :
+Global Instance into_sep_big_sepHL_1_app {F: A → Type} {G Xl Yl}
+    (xl: hlist F Xl) (xl': hlist F Yl) (yl: plist G Xl) (yl': plist G Yl)
+    (Φ: ∀C, F C → G C → PROP) :
   IntoSep (big_sepHL_1 Φ (xl h++ xl') (yl -++ yl'))
     (big_sepHL_1 Φ xl yl) (big_sepHL_1 Φ xl' yl').
 Proof. by rewrite /IntoSep big_sepHL_1_app. Qed.
-Global Instance from_sep_big_sepHL_1_app `{F: A → Type} {G Xl Yl}
-  (xl: hlist F Xl) (xl': hlist F Yl) (yl: plist G Xl) (yl': plist G Yl)
-  (Φ: ∀C, F C → G C → PROP) :
+Global Instance from_sep_big_sepHL_1_app {F: A → Type} {G Xl Yl}
+    (xl: hlist F Xl) (xl': hlist F Yl) (yl: plist G Xl) (yl': plist G Yl)
+    (Φ: ∀C, F C → G C → PROP) :
   FromSep (big_sepHL_1 Φ (xl h++ xl') (yl -++ yl'))
     (big_sepHL_1 Φ xl yl) (big_sepHL_1 Φ xl' yl').
 Proof. by rewrite /FromSep big_sepHL_1_app. Qed.
 
-Global Instance frame_big_sepHL_app `{F: A → Type} {Xl Yl}
-  p R Q (xl: hlist F Xl) (xl': hlist F Yl) (Φ: ∀C, F C → PROP) :
+Global Instance frame_big_sepHL_app {F G: A → Type} {Xl Yl}
+    p R Q (xl: hlist F Xl) (xl': hlist F Yl) (Φ: ∀C, F C → PROP) :
   Frame p R (big_sepHL Φ xl ∗ big_sepHL Φ xl') Q →
   Frame p R (big_sepHL Φ (xl h++ xl')) Q.
 Proof. by rewrite /Frame big_sepHL_app. Qed.
 
-Global Instance frame_big_sepHL_1_app `{F: A → Type} {G Xl Yl}
-  p R Q (xl: hlist F Xl) (xl': hlist F Yl) (yl: plist G Xl) (yl': plist G Yl)
-  (Φ: ∀C, F C → G C → PROP) :
+Global Instance frame_big_sepHL_1_app {F G: A → Type} {Xl Yl}
+    p R Q (xl: hlist F Xl) (xl': hlist F Yl) (yl: plist G Xl) (yl': plist G Yl)
+    (Φ: ∀C, F C → G C → PROP) :
   Frame p R (big_sepHL_1 Φ xl yl ∗ big_sepHL_1 Φ xl' yl') Q →
   Frame p R (big_sepHL_1 Φ (xl h++ xl') (yl -++ yl')) Q.
 Proof. by rewrite /Frame big_sepHL_1_app. Qed.
+
+Lemma big_sepHL_2_big_sepN {F G H: A → Type} {Xl}
+    (Φ: ∀X, F X → G X → H X → PROP) (xl: hlist F Xl) yl zl :
+  big_sepHL_2 Φ xl yl zl ⊣⊢
+  [∗ nat] i < length Xl, Φ _ (xl +!! i) (yl -!! i) (zl -!! i).
+Proof.
+  move: Φ. induction Xl; inv_hlist xl; case yl; case zl; [done|]=>/= *.
+  f_equiv. apply IHXl.
+Qed.
+
+Lemma big_sepHL_2_lookup {F G H: A → Type} {Xl}
+    i (Φ: ∀X, F X → G X → H X → PROP) (xl: hlist F Xl) yl zl :
+  big_sepHL_2 Φ xl yl zl -∗ Φ _ (xl +!! i) (yl -!! i) (zl -!! i).
+Proof.
+  iIntros "All". iInduction xl as [|] "IH" forall (i); [by inv_fin i|].
+  move: yl zl=> [??][??]/=. iDestruct "All" as "[Φ All]".
+  inv_fin i; [done|]=> ?. by iApply "IH".
+Qed.
 End lemmas.

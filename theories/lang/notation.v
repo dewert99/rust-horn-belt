@@ -101,10 +101,7 @@ Notation "letcall: x := f args 'in' e" :=
     call: f%E args%E → (Var "_k"))%E
   (at level 102, x, f, args at level 1, e at level 150) : expr_scope.
 
-(* These notations unfortunately do not print.  Also, I don't think
-   we would even want them to print in general.
-   TODO: Introduce a Definition. *)
-Notation "e1 <-{Σ i } ()" := (e1 <- #i)%E
-  (only parsing, at level 80) : expr_scope.
-Notation "e1 <-{Σ i } e2" := (e1 <-{Σ i} () ;; e1+ₗ#1 <- e2)%E
-  (at level 80, format "e1 <-{Σ  i }  e2") : expr_scope.
+Notation "e <-{Σ i } ()" := (e <- #(LitInt i);; Skip)%E
+  (at level 80) : expr_scope.
+Notation "e1 <-{Σ i } e2" := (e1%E <- #(LitInt i);; e1 +ₗ #(LitInt 1) <- e2)%E
+  (at level 80) : expr_scope.

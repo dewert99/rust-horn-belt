@@ -66,7 +66,8 @@ Section type_context.
   Lemma eval_path_of_val (v: val) : eval_path v = Some v.
   Proof. case v; [done|]=>/= *. by rewrite (decide_left _). Qed.
 
-  Lemma wp_eval_path E p v : eval_path p = Some v → ⊢ WP p @ E {{ v', ⌜v' = v⌝ }}.
+  Lemma wp_eval_path E p v :
+    eval_path p = Some v → ⊢ WP p @ E {{ v', ⌜v' = v⌝ }}.
   Proof.
     move: v. elim: p=>//.
     - move=> > [=?]. by iApply wp_value.
@@ -128,8 +129,8 @@ Section lemmas.
     (∀v d, ⌜Some v = eval_path p⌝ -∗ ⧖d -∗ ty.(ty_own) vπ d tid [v] -∗ Φ v) -∗
     WP p @ E {{ Φ }}.
   Proof.
-    iIntros "(%&%&%&#?&?) ToΦ". iApply (wp_wand with "[]");
-    [by iApply wp_eval_path|]. iIntros (?->). by iApply "ToΦ".
+    iIntros "(%&%&%&#?&?) ToΦ". iApply (wp_wand with "[]"); [by iApply wp_eval_path|].
+    iIntros (?->). by iApply "ToΦ".
   Qed.
 
   Lemma closed_hasty {𝔄} tid p (ty: type 𝔄) vπ :

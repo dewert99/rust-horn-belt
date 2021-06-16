@@ -5,6 +5,7 @@ From iris.proofmode Require Import tactics.
 (** * Utility for Point-Free Style *)
 
 Ltac fun_ext := apply functional_extensionality.
+Ltac fun_ext_dep := apply functional_extensionality_dep.
 
 Class SemiIso {A B} (f: A → B) (g: B → A) := semi_iso: g ∘ f = id.
 
@@ -103,20 +104,9 @@ Proof.
   rewrite take_length drop_length take_drop. split; [done|lia].
 Qed.
 
-(** List.nth with better pattern matching *)
-Fixpoint lnth {A} (d: A) (xl: list A) (i: nat) : A :=
-  match xl with
-  | [] => d
-  | x :: xl' => match i with 0 => x | S j => lnth d xl' j end
-  end.
-Notation lnthe := (lnth ∅).
-
-Lemma lnth_default {A} D (xl : list A) i :
-  length xl <= i → D = lnth D xl i.
-Proof.
-  generalize dependent xl.
-  induction i; destruct xl; simpl; intros; auto with lia.
-Qed.
+Definition llookup {A} (xl: list A) (i: fin (length xl)) : A :=
+  list_to_vec xl !!! i.
+Infix "!!ₗ" := llookup (at level 20, right associativity).
 
 Definition lapply {A B} (fl: list (B → A)) (x: B) : list A := (.$ x) <$> fl.
 
@@ -143,3 +133,45 @@ Definition option_to_list {A} (o: option (A * list A)) : list A :=
   match o with None => [] | Some (x, xl') => x :: xl' end.
 Global Instance list_option_iso {A} : Iso (@option_to_list A) list_to_option.
 Proof. split; fun_ext; case=>//; by case. Qed.
+
+(** * Utility for [fin] *)
+
+Class IntoFin {n} (k: nat) (i: fin n) := into_fin: k = i.
+
+Global Instance into_fin_0 {n} : @IntoFin (S n) 0 0%fin.
+Proof. done. Qed.
+
+Global Instance into_fin_S {n} k i : IntoFin k i → @IntoFin (S n) (S k) (FS i).
+Proof. by move=> ->. Qed.
+
+Fixpoint fin_renew {m n} : eq_nat m n → fin m → fin n :=
+  match m, n with
+  | 0, _ => λ _, fin_0_inv _
+  | S _, 0 => absurd
+  | S m', S n' => λ eq, fin_S_inv _ 0%fin (FS ∘ @fin_renew m' n' eq)
+  end.
+
+Lemma fin_to_nat_fin_renew {m n} (eq: eq_nat m n) i :
+  fin_to_nat (fin_renew eq i) = i.
+Proof.
+  move: m n eq i. fix FIX 1. case=> [|?]; case=> [|?] ? i //=; inv_fin i=>//= ?.
+  f_equal. apply FIX.
+Qed.
+
+Fixpoint big_sepN {PROP: bi} (n: nat) : (fin n → PROP) → PROP :=
+  match n with
+  | 0 => λ _, True
+  | S m => λ Φ, Φ 0%fin ∗ big_sepN m (λ j, Φ (FS j))
+  end%I.
+
+Notation "[∗ nat] i < n , P" := (big_sepN n (λ i, P%I))
+  (at level 200, n at level 10, i at level 1, right associativity,
+    format "[∗  nat]  i  <  n ,  P") : bi_scope.
+
+Lemma big_sepN_impl `{!BiAffine PROP} n (Φ Ψ: _ → PROP) :
+  ([∗ nat] i < n, Φ i) -∗ □ (∀i, Φ i -∗ Ψ i) -∗ [∗ nat] i < n, Ψ i.
+Proof.
+  iIntros "All #In". iInduction n as [|] "IH"; [done|]=>/=.
+  iDestruct "All" as "[Φ All]". iSplitL "Φ"; [by iApply "In"|].
+  iApply "IH"; [|done]. iIntros "!>%". iApply "In".
+Qed.

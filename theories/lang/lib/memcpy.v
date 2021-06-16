@@ -13,9 +13,8 @@ Notation "e1 <-{ n } ! e2" :=
   (at level 80, n at next level, format "e1  <-{ n }  ! e2") : expr_scope.
 
 Notation "e1 <-{ n ',Σ' i } ! e2" :=
-  (e1%E <-{Σ i} ();; e1 +ₗ #(LitInt 1) <-{n} !e2)%E
-  (at level 80, n, i at next level,
-   format "e1  <-{ n ,Σ  i }  ! e2") : expr_scope.
+  (e1%E%E <- #(LitInt i);; e1 +ₗ #(LitInt 1) <-{n} !e2)%E
+  (at level 80, n, i at next level, format "e1  <-{ n ,Σ  i }  ! e2") : expr_scope.
 
 Lemma wp_memcpy `{!lrustG Σ} E l1 l2 vl1 vl2 q (n : Z):
   Z.of_nat (length vl1) = n → Z.of_nat (length vl2) = n →

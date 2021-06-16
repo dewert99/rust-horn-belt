@@ -40,6 +40,10 @@ Section own.
       by rewrite -Qp_div_add_distr pos_to_Qp_add -Nat2Pos.inj_add.
   Qed.
 
+  Lemma freeable_sz_eq n sz sz' l :
+    sz = sz' → freeable_sz n sz l -∗ freeable_sz n sz' l.
+  Proof. iIntros (->) "$". Qed.
+
   (* Make sure 'simpl' doesn't unfold. *)
   Global Opaque freeable_sz.
 

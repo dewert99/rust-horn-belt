@@ -467,7 +467,8 @@ Proof.
   + by rewrite EqE elctx_interp_app elctx_interp_ty_outlives_E /= left_id right_id.
 Qed.
 
-Global Instance type_lft_morphism_compose {𝔄 𝔅 ℭ} (T: type 𝔅 → type ℭ) (U: type 𝔄 → type 𝔅) :
+Global Instance type_lft_morphism_compose {𝔄 𝔅 ℭ}
+    (T: type 𝔅 → type ℭ) (U: type 𝔄 → type 𝔅) :
   TypeLftMorphism T → TypeLftMorphism U → TypeLftMorphism (T ∘ U).
 Proof.
   case=> [αT βst ET HTα HTE|αT ET HTα HTE]; case=> [αU βsU EU HUα HUE|αU EU HUα HUE].
@@ -736,9 +737,9 @@ End traits.
 (** * Leak *)
 
 Definition leak `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄) (Φ: 𝔄 → Prop) : Prop :=
-  ∀F q vπ d tid vl, ↑lftN ∪ ↑prophN ⊆ F →
-    lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
-    ty.(ty_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, Φ (vπ π)⟩ ∗ llctx_interp L q.
+  ∀F qL vπ d tid vl, ↑lftN ∪ ↑prophN ⊆ F →
+    lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
+    ty.(ty_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, Φ (vπ π)⟩ ∗ llctx_interp L qL.
 Instance: Params (@leak) 3 := {}.
 
 Definition leakl `{!typeG Σ} {𝔄l} (E: elctx) (L: llctx) (tyl: typel 𝔄l)
@@ -786,12 +787,12 @@ End leak.
 (** It is for taking the prophecy-independent part of a value *)
 
 Definition real `{!typeG Σ} {𝔄 𝔅} (E: elctx) (L: llctx) (ty: type 𝔄) (f: 𝔄 → 𝔅) : Prop :=
-  (∀F q vπ d tid vl, ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+  (∀F qL vπ d tid vl, ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
     ty.(ty_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=>
-      ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L q ∗ ty.(ty_own) vπ d tid vl) ∧
-  (∀F q vπ d κ tid l, ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+      ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L qL ∗ ty.(ty_own) vπ d tid vl) ∧
+  (∀F qL vπ d κ tid l, ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
     ty.(ty_shr) vπ d κ tid l ={F}▷=∗ |={F}▷=>^d |={F}=>
-      ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L q ∗ ty.(ty_shr) vπ d κ tid l).
+      ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L qL ∗ ty.(ty_shr) vπ d κ tid l).
 
 Definition reall `{!typeG Σ} {𝔄l 𝔅l} E L (tyl: typel 𝔄l)
     (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) : Prop :=
@@ -801,9 +802,9 @@ Section real.
   Context `{!typeG Σ}.
 
   Lemma simple_type_real {𝔄 𝔅} (st: simple_type 𝔄) (f: _ → 𝔅) E L :
-    (∀F q vπ d tid vl, ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
+    (∀F qL vπ d tid vl, ↑lftN ⊆ F → lft_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
       st.(st_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=>
-        ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L q ∗ st.(st_own) vπ d tid vl) →
+        ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L qL ∗ st.(st_own) vπ d tid vl) →
     real E L st f.
   Proof.
     move=> H. split; iIntros "*%"; [by iApply H|].
@@ -1025,16 +1026,15 @@ Section subtyping.
     elim; [split; by constructor|]=>/= > [??] _ [??]; split; by constructor.
   Qed.
 
-  Lemma subtypel_llctx_nth {ℭ 𝔄l 𝔅l} (ty: type ℭ) (tyl: typel 𝔄l) (tyl': typel 𝔅l)
-        fl q E L :
+  Lemma subtypel_llctx_lookup {𝔄l 𝔅l} (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl qL E L :
     subtypel E L tyl tyl' fl →
-    llctx_interp L q -∗ □ (elctx_interp E -∗ ∀i,
-      type_incl (hnth ty tyl i) (hnth ty tyl' i) (p2nth id fl i)).
+    llctx_interp L qL -∗ □ (elctx_interp E -∗ ∀i,
+      type_incl (tyl +!! i) (tyl' +!! fin_renew_by_plist2 fl i) (fl -2!! i)).
   Proof.
-    elim=> [|>Sub _ IH]. { iIntros "_!>_/=" (?). iApply type_incl_refl. }
+    elim=> [|>Sub _ IH]. { iIntros "_!>_" (i). inv_fin i. }
     iIntros "L". iDestruct (Sub with "L") as "#Sub".
     iDestruct (IH with "L") as "#IH". iIntros "!> #E" (i).
-    iSpecialize ("Sub" with "E"). iSpecialize ("IH" with "E"). by case i.
+    iSpecialize ("Sub" with "E"). iSpecialize ("IH" with "E"). by inv_fin i.
   Qed.
 
   (** Simple Type *)

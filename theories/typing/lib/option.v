@@ -56,7 +56,7 @@ Section option.
   Definition option_as_mut : val :=
     fn: ["o"] :=
       let: "o'" := !"o" in
-      let: "r" := new [ #2 ] in
+      let: "r" := new [ #2] in
     withcont: "k":
       case: !"o'" of
         [ "r" <-{Σ none} ();; jump: "k" [];
@@ -64,92 +64,83 @@ Section option.
     cont: "k" [] :=
       delete [ #1; "o"];; return: ["r"].
 
-  Lemma option_as_mut_type {𝔄} (τ: type 𝔄) :
-    typed_val
-      option_as_mut (fn<α>(∅; &uniq{α} (option_ty τ)) → option_ty (&uniq{α} τ))
+  Lemma option_as_mut_type {𝔄} (ty: type 𝔄) :
+    typed_val option_as_mut
+      (fn<α>(∅; &uniq{α} (option_ty ty)) → option_ty (&uniq{α} ty))
       (λ (post: pred' (optionₛ (_*_))) '-[a], match a with
         | (Some a, Some a') => post (Some (a, a'))
         | (None, None) => post None
         | _ => False
-      end).
+        end).
   Proof.
-    eapply type_fn; [apply _|]. iIntros (α ϝ ret [o []]). simpl_subst. via_tr_impl.
-    { iApply type_deref; [solve_extract|solve_typing..|]. iIntros (o'). simpl_subst.
-      iApply type_new; [solve_typing..|]. iIntros (r). simpl_subst.
-      iApply (type_cont [] (λ _, +[o ◁ _ ; r ◁ _ ]) [ϝ ⊑ₗ []]).
-      iIntros (k). simpl_subst. set E := fp_E _ _. set L := [ϝ ⊑ₗ []].
-      - via_tr_impl.
-        { iApply (type_case_uniq (𝔄l:=[_;_]) +[inl _; inl _] _ _ _ _ +[_;_] _ α +[()%T; τ]);
-          [solve_typing|solve_typing|solve_extract|solve_typing|].
-          constructor; last constructor; last constructor.
-          + iApply (type_sum_unit _ +[(); &uniq{α} τ]%T
-              0 _ _ _ _ _ _ _ _ _ _ _ eq_refl); [solve_typing..|].
+    eapply type_fn; [apply _|]=>/= ???[o[]]. simpl_subst. via_tr_impl.
+    { iApply type_deref; [solve_extract|solve_typing..|]. intro_subst.
+      iApply type_new; [solve_typing..|]. intro_subst_as (r).
+      iApply (type_cont_norec [] (λ _, +[o ◁ box _; r ◁ box _])).
+      { intro_subst. via_tr_impl.
+        { iApply (type_case_uniq_inner +[_;_] -[_;_]); [solve_extract|solve_typing|].
+          rewrite/= right_id. iSplitL.
+          - iApply (type_sum_unit +[(); &uniq{_} _]%T 0%fin);
+              [done|solve_extract|solve_typing..|].
             iApply type_jump; [solve_typing|solve_extract|solve_typing].
-          + iApply (type_sum_assign _ +[() ; &uniq{α} τ]%T 1); [solve_typing..|].
+          - iApply (type_sum_assign +[(); &uniq{_} _]%T 1%fin);
+              [done|solve_extract|solve_typing..|].
             iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
-        move=>/= ??. exact id.
-      - iIntros "/= !>". iIntros (k args). inv_vec args. simpl_subst.
-        iApply type_delete; [solve_extract|solve_typing..|].
-        iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
-    move=>/= ?[[[?|][?|]][]]?//.
-    - case=>//=. case; [|move=> ?[[]?]]. by move=> ??[=<-<-].
-    - case=>//=. case; [|move=> ?[[]?]]. move=>/= ?? Eq. inversion Eq.
+        move=>/= ??. exact id. }
+      iIntros (? vl). inv_vec vl. simpl_subst.
+      iApply type_delete; [solve_extract|solve_typing..|].
+      iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+    move=>/= ?[[[?|][?|]][]]//=. by move=> ??[=<-].
   Qed.
 
-  Definition option_unwrap_or {𝔄} (τ : type 𝔄) : val :=
+  Definition option_unwrap_or {𝔄} (ty: type 𝔄) : val :=
     fn: ["o"; "def"] :=
       case: !"o" of
-      [ delete [ #(S τ.(ty_size)); "o"];;
-        return: ["def"];
-
-        letalloc: "r" <-{τ.(ty_size)} !("o" +ₗ #1) in
-        delete [ #(S τ.(ty_size)); "o"];; delete [ #τ.(ty_size); "def"];;
+      [ delete [ #(S ty.(ty_size)); "o"];; return: ["def"]
+      ; letalloc: "r" <-{ty.(ty_size)} !("o" +ₗ #1) in
+        delete [ #(S ty.(ty_size)); "o"];; delete [ #ty.(ty_size); "def"];;
         return: ["r"]].
 
-  Lemma option_unwrap_or_type {𝔄} (τ : type 𝔄) :
-    typed_val (option_unwrap_or τ) (fn(∅; option_ty τ, τ) → τ)
-      (λ post '-[opt; def], match opt with Some v => post v | None => post def end).
+  Lemma option_unwrap_or_type {𝔄} (ty: type 𝔄) :
+    typed_val (option_unwrap_or ty) (fn(∅; option_ty ty, ty) → ty)
+      (λ post '-[o; d], match o with Some a => post a | None => post d end).
   Proof.
-    eapply type_fn; [apply _|]. iIntros (α ϝ ret [o []]). simpl_subst. via_tr_impl.
-    { iApply (type_case_own +[inr _; inl _]); [solve_typing..|].
-      constructor; last constructor; last constructor.
-      + iApply type_delete; [solve_typing..|].
-        iApply type_jump; solve_typing.
-      + iApply type_letalloc_n; [solve_typing..|]. iIntros (r). simpl_subst.
-        iApply (type_delete (Π! +[↯ _;↯ _;↯ _]%T)); [solve_typing..|].
-        iApply type_delete; [solve_typing..|].
-        iApply type_jump; solve_typing. }
-    move=> ? [[opt|] [def []]].
-    - move=> ?[|[|?]]//==> [[??]|?[=<-]|[??]] //=.
-    - move=> ?[|[|?]]//==> [[][]].
+    eapply type_fn; [apply _|]=>/= ???[?[?[]]]. simpl_subst. via_tr_impl.
+    { iApply (type_case_own +[_;_] -[inl _; inr _]); [solve_extract|].
+      rewrite/= right_id. iSplitL.
+      - iApply type_delete; [solve_extract|simpl; lia..|].
+        iApply type_jump; [solve_typing|solve_extract|solve_typing].
+      - iApply type_letalloc_n; [solve_extract|solve_typing|]. intro_subst.
+        iApply (type_delete (Π! +[int;↯ _;_]%T)); [solve_extract|simpl; lia..|].
+        iApply type_delete; [solve_extract|done..|].
+        iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+    move=>/= ?[[?|][?[]]]//=.
   Qed.
 
-  Definition option_unwrap {𝔄} (τ : type 𝔄) : val :=
+  Definition option_unwrap {𝔄} (ty: type 𝔄) : val :=
     fn: ["o"] :=
       case: !"o" of
       [ let: "panic" := panic in
         letcall: "emp" := "panic" [] in
-        case: !"emp" of [];
-
-        letalloc: "r" <-{τ.(ty_size)} !("o" +ₗ #1) in
-        delete [ #(S τ.(ty_size)); "o"];;
+        case: !"emp" of []
+      ; letalloc: "r" <-{ty.(ty_size)} !("o" +ₗ #1) in
+        delete [ #(S ty.(ty_size)); "o"];;
         return: ["r"]].
 
   Lemma option_unwrap_type {𝔄} (τ : type 𝔄) :
     typed_val (option_unwrap τ) (fn(∅; option_ty τ) → τ)
       (λ post '-[o], match o with Some v => post v | None => False end).
   Proof.
-    eapply type_fn; [apply _|]. iIntros (α ϝ ret [o []]). simpl_subst. via_tr_impl.
-    { iApply (type_case_own +[inr _; inl _]); [solve_typing..|].
-      constructor; last constructor; last constructor.
-      + iApply type_val; [eapply panic_type|].
-        iIntros (panic). simpl_subst.
-        iApply (type_letcall ()); [solve_typing..|]. iIntros (r). simpl_subst.
-        iApply (type_case_own +[]); [solve_typing..|]. constructor.
-      + iApply type_letalloc_n; [solve_typing..|]. iIntros (r). simpl_subst.
-        iApply (type_delete (Π! +[↯ _;↯ _;↯ _]%T)); [solve_typing..|].
-        iApply type_jump; solve_typing. }
-    move=> ?[[?|][]]?[|[|i]]//= => [[??]|?[=<-]|[??]]//.
+    eapply type_fn; [apply _|]=>/= ???[?[]]. simpl_subst. via_tr_impl.
+    { iApply (type_case_own +[_;_] -[inl _; inr _]); [solve_extract|].
+      rewrite/= right_id. iSplitL.
+      - iApply type_val; [by apply panic_type|]. intro_subst.
+        iApply (type_letcall ()); [solve_typing|solve_extract|solve_typing|].
+        intro_subst. iApply (type_case_own +[] -[]); [solve_extract|done].
+      - iApply type_letalloc_n; [solve_extract|solve_typing|]. intro_subst.
+        iApply (type_delete (Π! +[int;↯ _;_]%T)); [solve_extract|simpl; lia..|].
+        iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+    move=>/= ?[[?|][]]//=.
   Qed.
 End option.
 

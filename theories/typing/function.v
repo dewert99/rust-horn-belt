@@ -189,7 +189,7 @@ Section typing.
     iIntros "!> #E". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iIntros (tr _ vl). iDestruct 1 as (fb kb bl e H ->) "#fn".
     set eq := plist2_eq_nat_len fl. set bl' := plistc_renew (symmetry eq) bl.
-    have Eq: (bl: list _) = bl' by rewrite plistc_renew_eq.
+    have Eq: (bl: list _) = bl' by rewrite vec_to_list_plistc_renew.
     iExists fb, kb, bl', e, (rew [λ bl₀, _ (_:b:_:b: bl₀ +b+_) _] Eq in H).
     simpl_eq. iSplit; [done|]. iNext. rewrite /typed_body.
     iIntros (x ϝ ? wl' ? aπl' postπ') "!> LFT TIME PROPH UNIQ #Efp' Na L C T Obs".
