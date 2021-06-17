@@ -39,6 +39,7 @@ Notation "e1 ≤ e2" := (BinOp LeOp e1%E e2%E)
   (at level 70) : expr_scope.
 Notation "e1 = e2" := (BinOp EqOp e1%E e2%E)
   (at level 70) : expr_scope.
+Notation NdBool := (#(LitInt 0) ≤ NdInt)%E.
 (* The unicode ← is already part of the notation "_ ← _; _" for bind. *)
 Notation "e1 <-ˢᶜ e2" := (Write ScOrd e1%E e2%E)
   (at level 80) : expr_scope.

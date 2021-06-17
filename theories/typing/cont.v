@@ -17,8 +17,8 @@ Section typing.
 
   (** Jumping to and defining a continuation. *)
 
-  Lemma type_jump {𝔄l 𝔅l ℭl 𝔇 n} k el (vl: vec val n)
-    (T': vec val n → tctx 𝔅l) tr trx Φ E L (T: tctx 𝔄l) (Tx: tctx ℭl) (C: cctx 𝔇) :
+  Lemma type_jump {𝔄l 𝔅l ℭl 𝔇 n} (T': vec val n → tctx 𝔅l) k el
+      (vl: vec val n) tr trx Φ E L (T: tctx 𝔄l) (Tx: tctx ℭl) (C: cctx 𝔇) :
     IntoVecVal el vl → k ◁cont{L, T'} tr ∈ C →
     tctx_extract_ctx E L (T' vl) T Tx trx → leak_tctx E L Tx Φ →
     ⊢ typed_body E L C T (jump: k el)
@@ -34,8 +34,8 @@ Section typing.
     rewrite papply_app papp_sepl papp_sepr. case=> ? Imp. by apply Imp.
   Qed.
 
-  Lemma type_cont {𝔄l 𝔅l ℭ} bl (T': vec val (length bl) → tctx 𝔅l) L'
-        (T: tctx 𝔄l) kb ec e trk tr E L (C: cctx ℭ) :
+  Lemma type_cont {𝔄l 𝔅l ℭ} bl (T': vec val (length bl) → tctx 𝔅l) trk L'
+        (T: tctx 𝔄l) kb ec e tr E L (C: cctx ℭ) :
     Closed (kb :b: bl +b+ []) ec → Closed (kb :b: []) e →
     (∀k: val, typed_body E L (k ◁cont{L', T'} trk :: C) T (subst' kb k e) tr) -∗
     □(∀(k: val) (vl: vec val (length bl)), typed_body E L'
@@ -50,8 +50,8 @@ Section typing.
     iApply ("ec" with "LFT TIME PROPH UNIQ E Na L' [C] T' Obs"). by iApply "IH".
   Qed.
 
-  Lemma type_cont_norec {𝔄l 𝔅l ℭ} bl (T': vec val (length bl) → tctx 𝔅l)
-        L' (T: tctx 𝔄l) kb ec e trk tr E L (C: cctx ℭ) :
+  Lemma type_cont_norec {𝔄l 𝔅l ℭ} bl (T': vec val (length bl) → tctx 𝔅l) trk
+        L' (T: tctx 𝔄l) kb ec e tr E L (C: cctx ℭ) :
     Closed (kb :b: bl +b+ []) ec → Closed (kb :b: []) e →
     (∀k: val, typed_body E L (k ◁cont{L', T'} trk :: C) T (subst' kb k e) tr) -∗
     (∀(k: val) (vl: vec val (length bl)),

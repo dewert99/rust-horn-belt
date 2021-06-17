@@ -172,7 +172,7 @@ Section borrow.
   Lemma type_deref_shr_own {𝔄 𝔅l ℭl 𝔇} κ x p e n (ty: type 𝔄)
     (T: tctx 𝔅l) (T': tctx ℭl) trx tr E L (C: cctx 𝔇) :
     Closed (x :b: []) e →
-    tctx_extract_elt E L (p ◁ &shr{κ} (own_ptr n ty)) T T' trx →
+    tctx_extract_ctx E L +[p ◁ &shr{κ} (own_ptr n ty)] T T' trx →
     lctx_lft_alive E L κ →
     (∀v: val, typed_body E L C (v ◁ &shr{κ} ty +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := !p in e) (trx ∘ tr).
@@ -268,44 +268,46 @@ Section borrow.
   Lemma type_deref_uniq_uniq {𝔄 𝔅l ℭl 𝔇} κ κ' x p e (ty: type 𝔄)
     (T: tctx 𝔅l) (T': tctx ℭl) trx tr E L (C: cctx 𝔇) :
     Closed (x :b: []) e →
-    tctx_extract_elt E L (p ◁ &uniq{κ} (&uniq{κ'} ty)) T T' trx →
+    tctx_extract_ctx E L +[p ◁ &uniq{κ} (&uniq{κ'} ty)] T T' trx →
     lctx_lft_alive E L κ → lctx_lft_incl E L κ κ' →
     (∀v: val, typed_body E L C (v ◁ &uniq{κ} ty +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := !p in e) (trx ∘
       (λ post '(((v, w), (v', w')) -:: cl), w' = w → tr post ((v, v') -:: cl)))%type.
   Proof.
-    iIntros.
+    iIntros. iApply typed_body_tctx_incl; [done|].
     by iApply type_let; [by eapply type_deref_uniq_uniq_instr|solve_typing| |done].
   Qed.
 
   Lemma type_deref_shr_uniq_instr {𝔄} {E L} κ κ' p (ty : type 𝔄) :
     lctx_lft_alive E L κ →
-    typed_instr_ty E L +[p ◁ &shr{κ}(&uniq{κ'}ty)] (!p) (&shr{κ}ty) (λ post '-[v], post v.1).
+    typed_instr_ty E L +[p ◁ &shr{κ} (&uniq{κ'} ty)] (!p) (&shr{κ} ty)
+      (λ post '-[(a, _)], post a).
   Proof.
     iIntros (Hκ tid ? [vπ []]) "#LFT #TIME #PROPH #UNIQ HE $ HL [Hp _] Hproph".
     iMod (Hκ with "HE HL") as (q) "[Htok Hclose]"; [done|].
     wp_apply (wp_hasty with "Hp"). iIntros ([[]|] [|[|depth]]) "% #Hdepth Hshr //".
     iDestruct "Hshr" as (l' ξ) "(% & H↦ & Hdep & Hshr)".
-    iMod (frac_bor_acc with "LFT H↦ Htok") as (q'') "[>H↦ Hclose']". done.
+    iMod (frac_bor_acc with "LFT H↦ Htok") as (q'') "[>H↦ Hclose']"; [done|].
     iApply wp_fupd. wp_read.
     iMod ("Hclose'" with "[H↦]") as "Htok"; [done|].
-    iMod ("Hclose" with "Htok") as "$".
-    iExists -[_]. rewrite right_id tctx_hasty_val' //.
-    iFrame. iExists (S depth). iFrame.
+    iMod ("Hclose" with "Htok") as "$". iModIntro.
+    rewrite [vπ]surjective_pairing_fun=>/=. iExists -[_]. iFrame "Hproph".
+    rewrite right_id tctx_hasty_val' //. iExists (S depth). iFrame "Hshr".
     iApply (persistent_time_receipt_mono with "Hdepth"). lia.
   Qed.
 
   Lemma type_deref_shr_uniq {𝔄 𝔅l ℭl 𝔇} κ κ' x p e (ty: type 𝔄)
     (T: tctx 𝔅l) (T': tctx ℭl) trx tr E L (C: cctx 𝔇) :
     Closed (x :b: []) e →
-    tctx_extract_elt E L (p ◁ &shr{κ} (&uniq{κ'} ty)) T T' trx →
+    tctx_extract_ctx E L +[p ◁ &shr{κ} (&uniq{κ'} ty)] T T' trx →
     lctx_lft_alive E L κ → lctx_lft_incl E L κ κ' →
     (∀v: val, typed_body E L C (v ◁ &shr{κ} ty +:: T') (subst' x v e) tr) -∗
     typed_body E L C T (let: x := !p in e)
-      (trx ∘ (λ post '(v -:: bl), tr post (v.1 -:: bl))).
+      (trx ∘ (λ post '((a, _) -:: bl), tr post (a -:: bl))).
   Proof.
-    iIntros.
-    by iApply type_let; [by eapply type_deref_shr_uniq_instr|solve_typing| |done].
+    iIntros. iApply typed_body_tctx_incl; [done|].
+    iApply type_let; [by eapply type_deref_shr_uniq_instr|apply tctx_incl_refl| |done].
+    by move=>/= ?[[??]?].
   Qed.
 End borrow.
 

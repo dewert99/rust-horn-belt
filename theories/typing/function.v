@@ -361,13 +361,13 @@ Section typing.
   Qed.
 
   Lemma type_fnrec {A 𝔄l 𝔅} tr (fp: A → fn_params 𝔄l 𝔅) fb e bl bl'
-    `{Into: !IntoPlistc bl bl', Cl: !Closed (fb :b: ("return" :: bl)%binder +b+ []) e} :
+      `{Into: !IntoPlistc bl bl', Cl: !Closed (fb :b: ("return" :: bl)%binder +b+ []) e} :
     (∀x ϝ (f: val) k (wl: plistc _ 𝔄l),
         ⊢ typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
-                     [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } tr_ret]
-                     (f ◁ fn fp +:: hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl)
-                     (subst' fb f $ subst "return" k $ subst_plv bl' wl e)
-                     (λ post '(tr' -:: al), tr' = tr ∧ tr post al)%type) →
+            [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } tr_ret]
+            (f ◁ fn fp +:: hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl)
+            (subst' fb f $ subst "return" k $ subst_plv bl' wl e)
+            (λ post '(tr' -:: al), tr' = tr ∧ tr post al)%type) →
     typed_val (fnrec: fb bl := e)%V (fn fp) tr.
   Proof.
     move: Cl. rewrite Into. iIntros (? Body ?????) "_ _ _ _ _ $$ _ Obs".
@@ -382,12 +382,12 @@ Section typing.
   Qed.
 
   Lemma type_fn {A 𝔄l 𝔅} tr (fp: A → fn_params 𝔄l 𝔅) e bl bl'
-    `{!IntoPlistc bl bl', !Closed ("return" :: bl +b+ []) e} :
+      `{!IntoPlistc bl bl', !Closed ("return" :: bl +b+ []) e} :
     (∀x ϝ k (wl: plistc _ 𝔄l),
         ⊢ typed_body (fp_E (fp x) ϝ) [ϝ ⊑ₗ []]
-                     [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } tr_ret]
-                     (hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl)
-                     (subst "return" k $ subst_plv bl' wl e) tr) →
+            [k ◁cont{[ϝ ⊑ₗ []], λ v: vec _ 1, +[vhd v ◁ box (fp x).(fp_oty)] } tr_ret]
+            (hzip_with (λ _ ty (v: val), v ◁ box ty) (fp x).(fp_ityl) wl)
+            (subst "return" k $ subst_plv bl' wl e) tr) →
     typed_val (fn: bl := e)%V (fn fp) tr.
   Proof.
     move=> Body. eapply type_fnrec; [apply _|]=> *.

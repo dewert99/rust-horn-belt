@@ -374,22 +374,22 @@ Section subtyping.
   Lemma fix_subtype_l {𝔄 𝔅} (f: 𝔄 → 𝔅) ty T `{!TypeContractive T} E L :
     subtype E L ty (T (fix_ty T)) f → subtype E L ty (fix_ty T) f.
   Proof.
-    move=> ?. eapply (subtype_trans _ id); [done|]. apply fix_fold.
+    move=> ?. eapply (subtype_trans _ _ _ _ id); [done|]. apply fix_fold.
   Qed.
   Lemma fix_subtype_r {𝔄 𝔅} (f: 𝔄 → 𝔅) ty T `{!TypeContractive T} E L :
     subtype E L (T (fix_ty T)) ty f → subtype E L (fix_ty T) ty f.
   Proof.
-    move=> ?. eapply (subtype_trans id); [|done]. apply fix_unfold.
+    move=> ?. eapply (subtype_trans _ _ _ id); [|done]. apply fix_unfold.
   Qed.
   Lemma fix_eqtype_l {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty T `{!TypeContractive T} E L :
     eqtype E L ty (T (fix_ty T)) f g → eqtype E L ty (fix_ty T) f g.
   Proof.
-    move=> ?. eapply (eqtype_trans _ _ id id); [done|]. apply fix_fold_unfold.
+    move=> ?. eapply (eqtype_trans _ _ _ _ _ id id); [done|]. apply fix_fold_unfold.
   Qed.
   Lemma fix_eqtype_r {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty T `{!TypeContractive T} E L :
     eqtype E L (T (fix_ty T)) ty f g → eqtype E L (fix_ty T) ty f g.
   Proof.
-    move=> ?. eapply (eqtype_trans id id); [|done]. apply fix_unfold_fold.
+    move=> ?. eapply (eqtype_trans _ _ _ id id); [|done]. apply fix_unfold_fold.
   Qed.
 End subtyping.
 

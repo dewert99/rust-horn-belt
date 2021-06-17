@@ -1,15 +1,24 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import typing lib.option.
+From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
-Implicit Type 𝔄 𝔅: syn_type.
+Implicit Type 𝔄 𝔅 ℭ: syn_type.
+
+Definition list_to_psum {A} (xl: list A) : () + (A * list A + ∅) :=
+  match xl with [] => inl () | x :: xl' => (inr (inl (x, xl'))) end.
+Definition psum_to_list {A} (s: () + (A * list A + ∅)) : list A :=
+  match s with inl _ => [] | inr (inl (x, xl')) => x :: xl'
+    | inr (inr a) => absurd a end.
+Global Instance list_psum_iso {A} : Iso (@psum_to_list A) list_to_psum.
+Proof. split; fun_ext; repeat case=>//. Qed.
 
 Section list.
   Context `{!typeG Σ}.
 
-  Definition list_ty {𝔄} (ty: type 𝔄) : type (listₛ 𝔄) :=
-    fix_ty (λ ty', <{option_to_list: optionₛ (𝔄 * listₛ 𝔄) → listₛ 𝔄}>
-      (option_ty (ty * box ty')))%T.
+  Definition list_map {𝔄} (ty: type 𝔄) (ty': type (listₛ 𝔄)) : type (listₛ 𝔄) :=
+    <{psum_to_list: (Σ! [(); (𝔄 * listₛ 𝔄)])%ST → listₛ 𝔄}> (Σ! +[(); ty * box ty'])%T.
+
+  Definition list_ty {𝔄} (ty: type 𝔄) : type (listₛ 𝔄) := fix_ty (list_map ty).
 
   Lemma list_leak {𝔄} E L (ty: type 𝔄) Φ :
     leak E L ty Φ → leak E L (list_ty ty) (lforall Φ).
@@ -26,7 +35,7 @@ Section list.
   Proof.
     move=> ?. apply fix_real=> ??. eapply real_eq.
     { apply mod_ty_real; [apply _|].
-      apply (real_compose (𝔅:=optionₛ(_*listₛ _)) (ℭ:=listₛ _) option_to_list).
+      apply (real_compose (𝔅:=Σ! [();(_*listₛ _)]%ST) (ℭ:=listₛ _) psum_to_list).
       solve_typing. }
     fun_ext. by case.
   Qed.

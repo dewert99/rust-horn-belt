@@ -384,8 +384,11 @@ Global Hint Opaque tctx_extract_elt : lrust_typing_merge.
 (* We make sure that splitting is tried before borrowing, so that not
    the entire product is borrowed when only a part is needed. *)
 Global Hint Resolve tctx_extract_split_own_prod tctx_extract_split_own_xprod
-  tctx_extract_split_shr_prod tctx_extract_split_shr_xprod
   tctx_extract_split_uniq_prod tctx_extract_split_uniq_xprod | 5 : lrust_typing.
+(* For shared references we set the cost high,
+   because a shared reference to a whole product remains after split. *)
+Global Hint Resolve tctx_extract_split_shr_prod tctx_extract_split_shr_xprod
+  | 100 : lrust_typing.
 
 (* Merging is also tried after everything, except
    [tctx_extract_elt_further]. Moreover, it is placed in a

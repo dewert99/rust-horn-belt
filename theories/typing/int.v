@@ -124,8 +124,8 @@ Section int.
     typed_instr_ty E L +[] NdInt int (λ post '-[], ∀z, post z).
   Proof.
     iIntros (???) "_ _ _ _ _ $$ _ #?". iMod persistent_time_receipt_0 as "⧖".
-    wp_nd_int z. iExists -[const z]. rewrite right_id tctx_hasty_val'; [|done].
-    iSplit. { iExists 0%nat. iFrame "⧖". by iExists _. }
+    wp_nd_int z. iExists -[const _]. rewrite right_id tctx_hasty_val'; [|done].
+    iSplit. { iExists _. iFrame "⧖". by iExists _. }
     by iApply proph_obs_impl; [|done]=>/= ??.
   Qed.
 
@@ -135,7 +135,7 @@ Section int.
     typed_body E L C T (let: x := NdInt in e)
       (λ post bl, ∀z, tr post (z -:: bl))%type.
   Proof.
-    iIntros (?) "?". by iApply type_let; [apply type_nd_int_instr|solve_typing| |done].
+    iIntros. by iApply type_let; [apply type_nd_int_instr|solve_typing| |done].
   Qed.
 End int.
 

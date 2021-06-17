@@ -14,6 +14,7 @@ Inductive expr :=
 | Lit (l : base_lit)
 | Rec (f : binder) (xl : list binder) (e : expr)
 | BinOp (op : bin_op) (e1 e2 : expr)
+| NdInt
 | App (e : expr) (el : list expr)
 | Read (o : order) (e : expr)
 | Write (o : order) (e1 e2: expr)
@@ -31,6 +32,7 @@ Fixpoint to_expr (e : expr) : lang.expr :=
   | Lit l => lang.Lit l
   | Rec f xl e => lang.Rec f xl (to_expr e)
   | BinOp op e1 e2 => lang.BinOp op (to_expr e1) (to_expr e2)
+  | NdInt => lang.NdInt
   | App e el => lang.App (to_expr e) (map to_expr el)
   | Read o e => lang.Read o (to_expr e)
   | Write o e1 e2 => lang.Write o (to_expr e1) (to_expr e2)
@@ -48,6 +50,7 @@ Ltac of_expr e :=
   | lang.Rec ?f ?xl ?e => let e := of_expr e in constr:(Rec f xl e)
   | lang.BinOp ?op ?e1 ?e2 =>
     let e1 := of_expr e1 in let e2 := of_expr e2 in constr:(BinOp op e1 e2)
+  | lang.NdInt => constr:(NdInt)
   | lang.App ?e ?el =>
     let e := of_expr e in let el := of_expr el in constr:(App e el)
   | lang.Read ?o ?e => let e := of_expr e in constr:(Read o e)
@@ -77,7 +80,7 @@ Fixpoint is_closed (X : list string) (e : expr) : bool :=
   match e with
   | Val _ _ _ | ClosedExpr _ => true
   | Var x => bool_decide (x ∈ X)
-  | Lit _ => true
+  | Lit _ | NdInt => true
   | Rec f xl e => is_closed (f :b: xl +b+ X) e
   | BinOp _ e1 e2 | Write _ e1 e2 | Free e1 e2 =>
     is_closed X e1 && is_closed X e2
@@ -127,6 +130,7 @@ Fixpoint subst (x : string) (es : expr) (e : expr)  : expr :=
   | Rec f xl e =>
     Rec f xl $ if bool_decide (BNamed x ≠ f ∧ BNamed x ∉ xl) then subst x es e else e
   | BinOp op e1 e2 => BinOp op (subst x es e1) (subst x es e2)
+  | NdInt => NdInt
   | App e el => App (subst x es e) (map (subst x es) el)
   | Read o e => Read o (subst x es e)
   | Write o e1 e2 => Write o (subst x es e1) (subst x es e2)

@@ -1,25 +1,22 @@
-From iris.proofmode Require Import environments.
 From lrust.typing Require Export type.
 From lrust.typing Require Import typing lib.panic.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
 
+Definition option_to_psum {A} (o: option A) : () + (A + ∅) :=
+  match o with None => inl () | Some x => (inr (inl x)) end.
+Definition psum_to_option {A} (s: () + (A + ∅)) : option A :=
+  match s with inl _ => None | inr (inl x) => Some x
+    | inr (inr a) => absurd a end.
+Global Instance option_psum_iso {A} : Iso (@psum_to_option A) option_to_psum.
+Proof. split; fun_ext; case=>//; by case. Qed.
+
 Section option.
   Context `{!typeG Σ}.
 
-  Definition sum' A B : Type := A + (B + ∅).
-
-  Definition option_to_sum' {A} (o: option A) : sum' () A :=
-    match o with None => inl () | Some x => (inr (inl x)) end.
-  Definition sum'_to_option {A} (s: sum' () A) : option A :=
-    match s with inl _ => None | inr (inl x) => Some x
-      | inr (inr a) => absurd a end.
-  Global Instance option_sum'_iso {A} : Iso (@sum'_to_option A) option_to_sum'.
-  Proof. split; fun_ext; case=>//; by case. Qed.
-
   Definition option_ty {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
-    <{sum'_to_option: (Σ! [(); 𝔄])%ST → optionₛ 𝔄}> (Σ! +[(); ty])%T.
+    <{psum_to_option: (Σ! [(); 𝔄])%ST → optionₛ 𝔄}> (Σ! +[(); ty])%T.
 
   Lemma option_leak {𝔄} E L (ty: type 𝔄) Φ :
     leak E L ty Φ →
@@ -35,7 +32,7 @@ Section option.
   Proof.
     move=> ?. eapply real_eq.
     { apply mod_ty_real; [apply _|].
-      apply (real_compose (𝔅:=Σ! [()%ST;_]) (ℭ:=optionₛ _) sum'_to_option).
+      apply (real_compose (𝔅:=Σ! [()%ST;_]) (ℭ:=optionₛ _) psum_to_option).
       solve_typing. }
     fun_ext. by case.
   Qed.
@@ -55,12 +52,11 @@ Section option.
 
   Definition option_as_mut : val :=
     fn: ["o"] :=
-      let: "o'" := !"o" in
-      let: "r" := new [ #2] in
+      let: "o'" := !"o" in let: "r" := new [ #2] in
     withcont: "k":
       case: !"o'" of
-        [ "r" <-{Σ none} ();; jump: "k" [];
-          "r" <-{Σ some} "o'" +ₗ #1;; jump: "k" [] ]
+      [ "r" <-{Σ none} ();; jump: "k" []
+      ; "r" <-{Σ some} "o'" +ₗ #1;; jump: "k" []]
     cont: "k" [] :=
       delete [ #1; "o"];; return: ["r"].
 
@@ -70,7 +66,7 @@ Section option.
       (λ (post: pred' (optionₛ (_*_))) '-[a], match a with
         | (Some a, Some a') => post (Some (a, a'))
         | (None, None) => post None
-        | _ => False
+        | _ => True
         end).
   Proof.
     eapply type_fn; [apply _|]=>/= ???[o[]]. simpl_subst. via_tr_impl.
@@ -121,15 +117,13 @@ Section option.
     fn: ["o"] :=
       case: !"o" of
       [ let: "panic" := panic in
-        letcall: "emp" := "panic" [] in
-        case: !"emp" of []
+        letcall: "emp" := "panic" [] in case: !"emp" of []
       ; letalloc: "r" <-{ty.(ty_size)} !("o" +ₗ #1) in
-        delete [ #(S ty.(ty_size)); "o"];;
-        return: ["r"]].
+        delete [ #(S ty.(ty_size)); "o"];; return: ["r"]].
 
-  Lemma option_unwrap_type {𝔄} (τ : type 𝔄) :
-    typed_val (option_unwrap τ) (fn(∅; option_ty τ) → τ)
-      (λ post '-[o], match o with Some v => post v | None => False end).
+  Lemma option_unwrap_type {𝔄} (ty: type 𝔄) :
+    typed_val (option_unwrap ty) (fn(∅; option_ty ty) → ty)
+      (λ post '-[o], match o with Some a => post a | None => False end).
   Proof.
     eapply type_fn; [apply _|]=>/= ???[?[]]. simpl_subst. via_tr_impl.
     { iApply (type_case_own +[_;_] -[inl _; inr _]); [solve_extract|].

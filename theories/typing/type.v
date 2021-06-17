@@ -959,7 +959,7 @@ Section subtyping.
     eqtype E L ty ty' f g → eqtype E L ty' ty g f.
   Proof. move=> [??]. by split. Qed.
 
-  Lemma subtype_trans {𝔄 𝔅 ℭ} f g (ty: type 𝔄) (ty': type 𝔅) (ty'': type ℭ)  E L :
+  Lemma subtype_trans {𝔄 𝔅 ℭ} ty ty' ty'' (f: 𝔄 → 𝔅) (g: 𝔅 → ℭ) E L :
     subtype E L ty ty' f → subtype E L ty' ty'' g → subtype E L ty ty'' (g ∘ f).
   Proof.
     move=> Sub Sub' ?. iIntros "L". iDestruct (Sub with "L") as "#Incl".
@@ -967,7 +967,7 @@ Section subtyping.
     iApply type_incl_trans; by [iApply "Incl"|iApply "Incl'"].
   Qed.
 
-  Lemma eqtype_trans {𝔄 𝔅 ℭ} f f' g g' (ty: type 𝔄) (ty': type 𝔅) (ty'': type ℭ) E L :
+  Lemma eqtype_trans {𝔄 𝔅 ℭ} ty ty' ty'' (f: 𝔄 → 𝔅) f' (g: 𝔅 → ℭ) g' E L :
     eqtype E L ty ty' f f' → eqtype E L ty' ty'' g g' →
     eqtype E L ty ty'' (g ∘ f) (f' ∘ g').
   Proof.
@@ -995,8 +995,8 @@ Section subtyping.
     Proper (eqtype_id E L ==> eqtype_id E L ==> (=@{𝔄 → 𝔅}) ==> (↔)) (subtype E L).
   Proof.
     move=> ??[Sub1 Sub1']??[Sub2 Sub2']??->. split; move=> ?;
-    eapply (subtype_trans id _); [by apply Sub1'| |by apply Sub1|];
-    eapply (subtype_trans _ id); [|by apply Sub2| |by apply Sub2']; done.
+    eapply (subtype_trans _ _ _ id _); [by apply Sub1'| |by apply Sub1|];
+    eapply (subtype_trans _ _ _ _ id); [|by apply Sub2| |by apply Sub2']; done.
   Qed.
 
   (** List *)
