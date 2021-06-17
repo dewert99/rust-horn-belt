@@ -111,6 +111,15 @@ Proof.
   - apply IH, Incl. etrans; [|by apply Sub]. by apply submseteq_cons.
 Qed.
 
+Lemma ty_outlives_E_elctx_sat_mono `{!typeG Σ} {𝔄} κ κ' (ty: type 𝔄) E L :
+  lctx_lft_incl E L κ' κ → elctx_sat E L (ty_outlives_E ty κ) →
+  elctx_sat E L (ty_outlives_E ty κ').
+Proof.
+  move=> ?. rewrite /ty_outlives_E. elim (ty_lfts ty); [done|]=>/= ?? IH ?.
+  apply elctx_sat_lft_incl. { etrans; [done|]. by eapply elctx_sat_head. }
+  apply IH. by eapply elctx_sat_tail.
+Qed.
+
 Lemma elctx_interp_ty_outlives_E `{!typeG Σ} {𝔄} (ty: type 𝔄) α :
   elctx_interp (ty_outlives_E ty α) ⊣⊢ α ⊑ ty.(ty_lft).
 Proof.
@@ -141,6 +150,15 @@ Proof.
   - eapply ty_outlives_E_elctx_sat; [|by apply Incl]. etrans; [|by apply Outlv].
     by apply submseteq_inserts_r.
   - apply IH; [|done]. etrans; [|by apply Outlv]. by apply submseteq_inserts_l.
+Qed.
+
+Lemma tyl_outlives_E_elctx_sat_mono `{!typeG Σ} {𝔄l} κ κ' (tyl: typel 𝔄l) E L :
+  lctx_lft_incl E L κ' κ → elctx_sat E L (tyl_outlives_E tyl κ) →
+  elctx_sat E L (tyl_outlives_E tyl κ').
+Proof.
+  move=> ?. rewrite /tyl_outlives_E. elim tyl; [done|]=>/= ???? IH ?.
+  apply elctx_sat_app; last first. { apply IH. by eapply elctx_sat_app_r. }
+  eapply ty_outlives_E_elctx_sat_mono; [done|]. by eapply elctx_sat_app_l.
 Qed.
 
 (** Simple Type *)

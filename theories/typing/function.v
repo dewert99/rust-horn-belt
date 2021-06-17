@@ -45,6 +45,16 @@ Section fn.
     f_equiv. do 2 (f_equiv; [by rewrite Eqi|]). by rewrite Eqo.
   Qed.
 
+  Lemma elctx_sat_fp_E (fp: fn_params) ϝ ϝ' L :
+    fp_E_ex fp = const [] →
+    elctx_sat (ϝ' ⊑ₑ ϝ :: fp_E fp ϝ) L (fp_E fp ϝ').
+  Proof.
+    move=> Eq. rewrite /fp_E Eq /=. apply elctx_sat_app; [solve_typing|].
+    apply elctx_sat_app. { apply (tyl_outlives_E_elctx_sat_mono ϝ'); solve_typing. }
+    apply elctx_sat_app; [solve_typing|].
+    apply (ty_outlives_E_elctx_sat_mono ϝ'); solve_typing.
+  Qed.
+
   Definition tr_ret {𝔄} : predl_trans' [𝔄] 𝔄 := λ post '-[a], post a.
 
   Program Definition fn (fp: A → fn_params) : type (predl_trans'ₛ 𝔄l 𝔅) :=
@@ -399,4 +409,5 @@ End typing.
 
 Ltac simpl_fp_E := rewrite /fp_E /ty_outlives_E /=.
 
+Global Hint Resolve elctx_sat_fp_E : lrust_typing.
 Global Hint Resolve fn_leak fn_subtype : lrust_typing.

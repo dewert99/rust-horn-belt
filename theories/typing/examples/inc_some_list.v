@@ -45,7 +45,7 @@ Section inc_some_list.
   Lemma inc_some_list_type {𝔄} :
     typed_val inc_some_list (fn(∅; list_ty int) → int) (λ post '-[_], post 1).
    Proof.
-    eapply type_fn; [apply _|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
+    eapply type_fn; [apply _|]=>/= _ ??[?[]]. simpl_subst. via_tr_impl.
     { iApply type_val; [apply get_sum_list_type|]. intro_subst.
       iApply type_val; [apply take_some_list_type|]. intro_subst.
       iApply type_newlft. iIntros (α).

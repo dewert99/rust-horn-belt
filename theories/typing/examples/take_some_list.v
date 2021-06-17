@@ -39,7 +39,7 @@ Section take_some_list.
     typed_val (take_some_list ty) (fn<α>(∅; &uniq{α} (list_ty ty)) → &uniq{α} ty)
       (trans'_gfp take_some_list_tr).
   Proof.
-    eapply type_fnrec; [apply _|]=> α ???[?[]]. simpl_subst. via_tr_impl.
+    eapply type_fnrec; [apply _|]=>/= α ???[?[]]. simpl_subst. via_tr_impl.
     { iApply type_deref; [solve_extract|solve_typing..|]. intro_subst.
       iApply (type_case_uniq_inner +[_;_] -[_;_]); [solve_extract|solve_typing|].
       rewrite/= right_id. iSplitL; [iApply type_inf_loop|].

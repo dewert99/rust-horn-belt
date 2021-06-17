@@ -463,18 +463,18 @@ Section type_sum.
     iSplitL "tyw'"; iExists _, _; (iSplit; [done|]); by iFrame.
   Qed.
 
-  Lemma type_sum_memcpy {𝔄 𝔄' 𝔅 𝔅' ℭ ℭl 𝔇l 𝔈l 𝔉} (tyl: typel ℭl) (i: fin _) (k: Z)
-      (tyw: type 𝔄) (tyw': type 𝔄') (tyr: type 𝔅) (tyr': type 𝔅') (tyb: type ℭ)
+  Lemma type_sum_memcpy {𝔄 𝔄' 𝔅 𝔅' ℭ ℭl 𝔇l 𝔈l 𝔉} (tyl: typel ℭl) (i: fin _)
+      (tyw: type 𝔄) (tyr: type 𝔅) (tyw': type 𝔄') (tyr': type 𝔅') (tyb: type ℭ) (k n: Z)
       (T: tctx 𝔇l) (T': tctx 𝔈l) p q gtw stw gtr str trx tr e Φ E L (C: cctx 𝔉) :
     Closed [] e → k = i → tctx_extract_ctx E L +[p ◁ tyw; q ◁ tyr] T T' trx →
     typed_write E L tyw tyb tyw' (Σ! tyl) gtw stw → leak' E L tyb Φ →
-    typed_read E L tyr (tyl +!! i) tyr' gtr str →
+    n = (tyl +!! i).(ty_size) → typed_read E L tyr (tyl +!! i) tyr' gtr str →
     typed_body E L C (p ◁ tyw' +:: q ◁ tyr' +:: T') e tr -∗
-    typed_body E L C T (p <-{(tyl +!! i).(ty_size),Σ i} !q;; e)
+    typed_body E L C T (p <-{n,Σ k} !q;; e)
       (trx ∘ (λ post '(a -:: b -:: el),
         Φ (gtw a) (tr post (stw a (pinj i (gtr b)) -:: str b -:: el)))).
   Proof.
-    iIntros (?->????) "e". iApply typed_body_tctx_incl; [done|].
+    iIntros (?->???->?) "e". iApply typed_body_tctx_incl; [done|].
     iApply type_seq; [by eapply type_sum_memcpy_instr|by apply tctx_incl_refl| |done].
     by move=> ?[?[??]]/=.
   Qed.

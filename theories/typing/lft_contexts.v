@@ -300,6 +300,34 @@ Section lft_contexts.
 
   Lemma elctx_sat_refl : elctx_sat E.
   Proof. iIntros (?) "_ !> ?". done. Qed.
+
+  Lemma elctx_sat_head E' κ κ' :
+    elctx_sat (κ ⊑ₑ κ' :: E') → lctx_lft_incl κ κ'.
+  Proof.
+    iIntros (InE' ?) "L". iDestruct (InE' with "L") as "#InE'"=>/=.
+    iIntros "!> #E". iDestruct ("InE'" with "E") as "[$ _]".
+  Qed.
+  Lemma elctx_sat_tail E' e :
+    elctx_sat (e :: E') → elctx_sat E'.
+  Proof.
+    iIntros (eE' ?) "L". iDestruct (eE' with "L") as "#eE'"=>/=.
+    iIntros "!> #E". iDestruct ("eE'" with "E") as "[_ $]".
+  Qed.
+
+  Lemma elctx_sat_app_l E₀ E₁ :
+    elctx_sat (E₀ ++ E₁) → elctx_sat E₀.
+  Proof.
+    iIntros (E₀E₁ ?) "L". iDestruct (E₀E₁ with "L") as "#E₀E₁".
+    iIntros "!> #E". rewrite elctx_interp_app.
+    iDestruct ("E₀E₁" with "E") as "[$ _]".
+  Qed.
+  Lemma elctx_sat_app_r E₀ E₁ :
+    elctx_sat (E₀ ++ E₁) → elctx_sat E₁.
+  Proof.
+    iIntros (E₀E₁ ?) "L". iDestruct (E₀E₁ with "L") as "#E₀E₁".
+    iIntros "!> #E". rewrite elctx_interp_app.
+    iDestruct ("E₀E₁" with "E") as "[_ $]".
+  Qed.
 End lft_contexts.
 
 Arguments lctx_lft_incl {_ _ _} _ _ _ _.

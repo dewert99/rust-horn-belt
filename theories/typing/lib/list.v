@@ -17,8 +17,14 @@ Section list.
 
   Definition list_map {𝔄} (ty: type 𝔄) (ty': type (listₛ 𝔄)) : type (listₛ 𝔄) :=
     <{psum_to_list: (Σ! [(); (𝔄 * listₛ 𝔄)])%ST → listₛ 𝔄}> (Σ! +[(); ty * box ty'])%T.
+End list.
 
-  Definition list_ty {𝔄} (ty: type 𝔄) : type (listₛ 𝔄) := fix_ty (list_map ty).
+Notation list_ty ty := (fix_ty (list_map ty)).
+Notation list_cons_ty ty := (ty * box (list_ty ty))%T.
+Notation list_xsum_ty ty := (Σ! +[(); list_cons_ty ty])%T.
+
+Section typing.
+  Context `{!typeG Σ}.
 
   Lemma list_leak {𝔄} E L (ty: type 𝔄) Φ :
     leak E L ty Φ → leak E L (list_ty ty) (lforall Φ).
@@ -50,7 +56,7 @@ Section list.
   Lemma list_eqtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) g ty ty' :
     eqtype E L ty ty' f g → eqtype E L (list_ty ty) (list_ty ty') (map f) (map g).
   Proof. move=> [??]. by split; apply list_subtype. Qed.
-End list.
+End typing.
 
 Global Hint Resolve list_leak | 5 : lrust_typing.
 Global Hint Resolve list_leak_just list_real list_subtype list_eqtype

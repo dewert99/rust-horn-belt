@@ -25,7 +25,7 @@ Section get_sum_list.
     typed_val get_sum_list (fn<α>(∅; &shr{α} (list_ty int)) → int)
       (λ post '-[la], post (sum_listZ la)).
   Proof.
-    eapply type_fnrec; [apply _|]=> α ???[?[]]. simpl_subst. simpl_fp_E. via_tr_impl.
+    eapply type_fnrec; [apply _|]=>/= α ???[?[]]. simpl_subst. simpl_fp_E. via_tr_impl.
     { iApply type_deref; [solve_extract|solve_typing..|]. intro_subst.
       iApply (type_case_shr_inner +[_;_] -[_;_]); [solve_extract|solve_typing|].
       rewrite/= right_id. iSplitL.

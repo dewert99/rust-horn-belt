@@ -109,6 +109,7 @@ theories/typing/examples/odd_sum.v
 theories/typing/examples/take_some_list.v
 theories/typing/examples/get_sum_list.v
 theories/typing/examples/inc_some_list.v
+theories/typing/examples/split_uniq_list.v
 theories/typing/examples/get_x.v
 theories/typing/examples/rebor.v
 theories/typing/examples/unbox.v
