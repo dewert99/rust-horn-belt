@@ -119,6 +119,24 @@ Section int.
     iIntros (? Extr) "?". iApply type_let; [by apply type_le_instr|solve_typing| |done].
     destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case=> [?[??]].
   Qed.
+
+  Lemma type_nd_int_instr E L :
+    typed_instr_ty E L +[] NdInt int (λ post '-[], ∀z, post z).
+  Proof.
+    iIntros (???) "_ _ _ _ _ $$ _ #?". iMod persistent_time_receipt_0 as "⧖".
+    wp_nd_int z. iExists -[const z]. rewrite right_id tctx_hasty_val'; [|done].
+    iSplit. { iExists 0%nat. iFrame "⧖". by iExists _. }
+    by iApply proph_obs_impl; [|done]=>/= ??.
+  Qed.
+
+  Lemma type_nd_int {𝔄l 𝔅} x e tr E L (C: cctx 𝔅) (T: tctx 𝔄l) :
+    Closed (x :b: []) e →
+    (∀v: val, typed_body E L C (v ◁ int +:: T) (subst' x v e) tr) -∗
+    typed_body E L C T (let: x := NdInt in e)
+      (λ post bl, ∀z, tr post (z -:: bl))%type.
+  Proof.
+    iIntros (?) "?". by iApply type_let; [apply type_nd_int_instr|solve_typing| |done].
+  Qed.
 End int.
 
 Global Hint Resolve int_leak : lrust_typing.

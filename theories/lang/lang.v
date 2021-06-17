@@ -34,6 +34,7 @@ Inductive expr :=
 | Lit (l : base_lit)
 | Rec (f : binder) (xl : list binder) (e : expr)
 | BinOp (op : bin_op) (e1 e2 : expr)
+| NdInt
 | App (e : expr) (el : list expr)
 | Read (o : order) (e : expr)
 | Write (o : order) (e1 e2: expr)
@@ -49,7 +50,7 @@ Arguments Case _%E _%E.
 Fixpoint is_closed (X : list string) (e : expr) : bool :=
   match e with
   | Var x => bool_decide (x ∈ X)
-  | Lit _ => true
+  | Lit _ | NdInt => true
   | Rec f xl e => is_closed (f :b: xl +b+ X) e
   | BinOp _ e1 e2 | Write _ e1 e2 | Free e1 e2 =>
     is_closed X e1 && is_closed X e2
@@ -132,6 +133,7 @@ Fixpoint subst (x : string) (es : expr) (e : expr)  : expr :=
   | Rec f xl e =>
     Rec f xl $ if bool_decide (BNamed x ≠ f ∧ BNamed x ∉ xl) then subst x es e else e
   | BinOp op e1 e2 => BinOp op (subst x es e1) (subst x es e2)
+  | NdInt => NdInt
   | App e el => App (subst x es e) (map (subst x es) el)
   | Read o e => Read o (subst x es e)
   | Write o e1 e2 => Write o (subst x es e1) (subst x es e2)
@@ -240,6 +242,8 @@ Inductive head_step : expr → state → list Empty_set → expr → state → l
 | BinOpS op l1 l2 l' σ :
     bin_op_eval σ op l1 l2 l' →
     head_step (BinOp op (Lit l1) (Lit l2)) σ [] (Lit l') σ []
+| NdIntS z σ :
+    head_step NdInt σ [] (Lit (LitInt z)) σ []
 | BetaS f xl e e' el σ:
     Forall (λ ei, is_Some (to_val ei)) el →
     Closed (f :b: xl +b+ []) e →
@@ -560,6 +564,7 @@ Fixpoint expr_beq (e : expr) (e' : expr) : bool :=
     bool_decide (f = f') && bool_decide (xl = xl') && expr_beq e e'
   | BinOp op e1 e2, BinOp op' e1' e2' =>
     bool_decide (op = op') && expr_beq e1 e1' && expr_beq e2 e2'
+  | NdInt, NdInt => true
   | App e el, App e' el' | Case e el, Case e' el' =>
     expr_beq e e' && expr_list_beq el el'
   | Read o e, Read o' e' => bool_decide (o = o') && expr_beq e e'
@@ -574,8 +579,8 @@ Fixpoint expr_beq (e : expr) (e' : expr) : bool :=
 Lemma expr_beq_correct (e1 e2 : expr) : expr_beq e1 e2 ↔ e1 = e2.
 Proof.
   revert e1 e2; fix FIX 1.
-    destruct e1 as [| | | |? el1| | | | | |? el1|],
-             e2 as [| | | |? el2| | | | | |? el2|]; simpl; try done;
+    destruct e1 as [| | | | |? el1| | | | | |? el1|],
+             e2 as [| | | | |? el2| | | | | |? el2|]; simpl; try done;
   rewrite ?andb_True ?bool_decide_spec ?FIX;
   try (split; intro; [destruct_and?|split_and?]; congruence).
   - match goal with |- context [?F el1 el2] => assert (F el1 el2 ↔ el1 = el2) end.

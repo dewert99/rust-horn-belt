@@ -199,6 +199,17 @@ Global Instance pure_if b e1 e2 :
   PureExec True 1 (If (Lit (lit_of_bool b)) e1 e2) (if b then e1 else e2) | 1.
 Proof. destruct b; solve_pure_exec. Qed.
 
+Lemma wp_nd_int E :
+  {{{ True }}} NdInt @ E
+  {{{ z, RET LitV $ LitInt z; True }}}.
+Proof.
+  iIntros (? _) "Φ". iApply wp_lift_atomic_head_step_no_fork; auto.
+  iIntros (σ1 stepcnt κ κs n') "[σ t] !>"; iSplit. { unshelve auto. apply 0. }
+  iNext; iIntros (v2 σ2 efs Hstep); inv_head_step.
+  iMod (time_interp_step with "t") as "$". iFrame "σ".
+  by iDestruct ("Φ" with "[//]") as "$".
+Qed.
+
 (** Heap *)
 Lemma wp_alloc E (n : Z) :
   0 < n →

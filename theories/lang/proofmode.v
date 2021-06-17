@@ -94,6 +94,16 @@ Implicit Types P Q : iProp Σ.
 Implicit Types Φ : val → iProp Σ.
 Implicit Types Δ : envs (uPredI (iResUR Σ)).
 
+Lemma tac_wp_nd_int `{!lrustG Σ} K Δ Δ' E Φ :
+  MaybeIntoLaterNEnvs 1 Δ Δ' →
+  (∀z, envs_entails Δ' (WP fill K (Lit (LitInt z)) @ E {{ Φ }})) →
+  envs_entails Δ (WP fill K NdInt @ E {{ Φ }}).
+Proof.
+  rewrite envs_entails_eq=> ? HΔ'. rewrite into_laterN_env_sound /=.
+  rewrite -wp_bind. eapply wand_apply; [by apply wp_nd_int|].
+  iIntros "Δ'". iSplit; [done|]. iIntros "!>% _". by iApply HΔ'.
+Qed.
+
 Lemma tac_wp_alloc K Δ Δ' E j1 j2 n Φ :
   0 < n →
   MaybeIntoLaterNEnvs 1 Δ Δ' →
@@ -176,6 +186,18 @@ Tactic Notation "wp_apply" open_constr(lem) :=
       end
     | _ => fail "wp_apply: not a 'wp'"
     end).
+
+Tactic Notation "wp_nd_int" ident(z) :=
+  iStartProof;
+  lazymatch goal with
+  | |- envs_entails _ (wp ?s ?E ?e ?Q) => reshape_expr e ltac:(fun K e' =>
+    unify e' NdInt;
+    eapply (tac_wp_nd_int K);
+    [iSolveTC                                   (* IntoLaters *)
+    |iIntros (z); simpl_subst; try wp_value_head (* new goal *)])
+   || fail "wp_nd_int: cannot find NdInt in" e
+  | _ => fail "wp_nd_int: not a 'wp'"
+  end.
 
 Tactic Notation "wp_alloc" ident(l) "as" constr(H) constr(Hf) :=
   iStartProof;
