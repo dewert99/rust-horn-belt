@@ -7,9 +7,9 @@ Implicit Type 𝔄 𝔅 ℭ: syn_type.
 Section mod_ty.
   Context `{!typeG Σ}.
 
-  Lemma split_mod_ty_mt {𝔄 𝔅} (f: 𝔄 → 𝔅) ty vπ' d tid l q :
-    (l ↦∗{q}: λ vl, ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ ty.(ty_own) vπ d tid vl)%I ⊣⊢
-    ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ l ↦∗{q}: ty.(ty_own) vπ d tid.
+  Lemma split_mt_mod_ty {𝔄 𝔅} (f: 𝔄 → 𝔅) ty vπ' d tid l :
+    (l ↦∗: λ vl, ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ ty.(ty_own) vπ d tid vl) ⊣⊢
+    ∃vπ, ⌜vπ' = f ∘ vπ⌝ ∗ l ↦∗: ty.(ty_own) vπ d tid.
   Proof.
     iSplit.
     - iIntros "(%vl &?& %vπ &->&?)". iExists vπ. iSplit; [done|]. iExists vl. iFrame.
@@ -36,7 +36,7 @@ Section mod_ty.
     by iApply ty_shr_lft_mono.
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT In Bor κ". rewrite split_mod_ty_mt.
+    move=> */=. iIntros "#LFT In Bor κ". rewrite split_mt_mod_ty.
     iMod (bor_exists_tok with "LFT Bor κ") as (vπ) "[Bor κ]"; [done|].
     iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].
     iMod (ty_share with "LFT In Bor κ") as "Upd"; [done|].

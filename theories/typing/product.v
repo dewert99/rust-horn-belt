@@ -52,11 +52,11 @@ Section product.
     iPureIntro; [split; [|done]|]; exists -[]; fun_ext=>/= π; by case (vπ π).
   Qed.
 
-  Lemma split_prod_mt {𝔄 𝔅} vπ d vπ' d' tid (ty: type 𝔄) (ty': type 𝔅) q l :
-    (l ↦∗{q}: λ vl, ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
-      ty.(ty_own) vπ d tid wl ∗ ty'.(ty_own) vπ' d' tid wl')%I ⊣⊢
-    l ↦∗{q}: ty.(ty_own) vπ d tid ∗
-      (l +ₗ ty.(ty_size)) ↦∗{q}: ty'.(ty_own) vπ' d' tid.
+  Lemma split_mt_prod {𝔄 𝔅} vπ d vπ' d' tid (ty: type 𝔄) (ty': type 𝔅) l :
+    (l ↦∗: λ vl, ∃wl wl', ⌜vl = wl ++ wl'⌝ ∗
+      ty.(ty_own) vπ d tid wl ∗ ty'.(ty_own) vπ' d' tid wl') ⊣⊢
+    l ↦∗: ty.(ty_own) vπ d tid ∗
+      (l +ₗ ty.(ty_size)) ↦∗: ty'.(ty_own) vπ' d' tid.
   Proof.
     iSplit.
     - iIntros "(%& ↦ &%&%&->& ty & ty')". rewrite heap_mapsto_vec_app.
@@ -84,7 +84,7 @@ Section product.
     iIntros "* In [??]". iSplit; by iApply (ty_shr_lft_mono with "In").
   Qed.
   Next Obligation.
-    move=> */=. iIntros "#LFT #? Bor [κ κ₊]". rewrite split_prod_mt.
+    move=> */=. iIntros "#LFT #? Bor [κ κ₊]". rewrite split_mt_prod.
     iMod (bor_sep with "LFT Bor") as "[Bor Bor']"; first done.
     iMod (ty_share with "LFT [] Bor κ") as "ty"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.

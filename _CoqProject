@@ -52,6 +52,7 @@ theories/typing/base_type.v
 theories/typing/mod_ty.v
 theories/typing/refined.v
 theories/typing/own.v
+theories/typing/uniq_util.v
 theories/typing/uniq_bor.v
 theories/typing/shr_bor.v
 theories/typing/product.v

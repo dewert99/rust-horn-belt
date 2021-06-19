@@ -72,7 +72,7 @@ Section vec_index.
       (?) "((α & α₊ & α₊₊) & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as "[(%&%&_& Pc & ↦vec) ToBor]"; [done|].
     wp_let. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
-    rewrite split_vec_mt. case d' as [|d']; [done|].
+    rewrite split_mt_vec. case d' as [|d']; [done|].
     iDestruct "↦vec" as (??? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & ex & †)".
     have ->: vπ = λ π, (lapply aπl π: list _, π ξ).
     { rewrite [vπ]surjective_pairing_fun. by rewrite Eq1 Eq2. }
@@ -132,7 +132,7 @@ Section vec_index.
       { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
         rewrite -vec_to_list_apply. iApply proph_eqz_constr.
         by iApply proph_eqz_vinsert. }
-      rewrite split_vec_mt. iExists _, _, _, _. iFrame "↦₀ ↦₁ ↦₂ ex †".
+      rewrite split_mt_vec. iExists _, _, _, _. iFrame "↦₀ ↦₁ ↦₂ ex †".
       iSplit; [by rewrite vec_to_list_apply|]. iNext. iClear "#".
       rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iSplitL "↦tys".
       { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }

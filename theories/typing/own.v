@@ -70,19 +70,16 @@ Section own.
     iSplit; by [iApply frac_bor_shorten|iApply ty_shr_lft_mono].
   Qed.
   Next Obligation.
-    move=> ????? d *. iIntros "#LFT #In Bor κ".
-    iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
-    iMod (bor_sep with "LFT Bor") as "[↦ Bor]"; [done|].
+    move=> ????? d *. iIntros "#LFT #In Bor κ". rewrite split_mt_ptr.
     move: d=> [|d]; [by iMod (bor_persistent with "LFT Bor κ") as "[>[]_]"|]=>/=.
-    rewrite {1}by_just_loc_ex. iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
-    iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].
-    rewrite heap_mapsto_vec_singleton.
+    iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
+    iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
+    iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT Bor↦") as "Bor↦"; [done|].
     iMod (bor_sep with "LFT Bor") as "[Bor _]"; [done|].
-    iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT ↦") as "↦"; [done|].
     iMod (bor_later_tok with "LFT Bor κ") as "Bor"; [done|].
     iIntros "!>!>!>". iMod "Bor" as "[Bor κ]".
     iMod (ty_share with "LFT In Bor κ") as "Upd"; [done|]. iModIntro.
-    iApply (step_fupdN_wand with "Upd"). iIntros ">[?$] !>". iExists l. iFrame.
+    iApply (step_fupdN_wand with "Upd"). iIntros ">[?$] !>". iExists _. iFrame.
   Qed.
   Next Obligation.
     move=> ?????[|?]*; [by iIntros|]. rewrite/= {1}by_just_loc_ex.

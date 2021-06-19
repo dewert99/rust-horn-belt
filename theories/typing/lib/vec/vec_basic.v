@@ -115,7 +115,7 @@ Section vec_basic.
     eapply type_fn; [apply _|]=> _ ??[v[]]. simpl_subst.
     iIntros (?[?[]]?) "_ TIME _ _ _ Na L C [v _] Obs".
     rewrite tctx_hasty_val. iDestruct "v" as ([|d]) "[_ bvec]"=>//.
-    case v as [[]|]=>//=. rewrite split_vec_mt.
+    case v as [[]|]=>//=. rewrite split_mt_vec.
     case d; [by iDestruct "bvec" as "[>[] _]"|]=> ?.
     iDestruct "bvec" as "[(%&%&%& big) †]".
     iMod (bi.later_exist_except_0 with "big") as (?) "(>-> & >↦₀ & >↦₁ & >↦₂ & big)".

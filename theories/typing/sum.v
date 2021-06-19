@@ -13,13 +13,13 @@ Section sum.
   Definition is_sum_pad {𝔄l} i (tyl: typel 𝔄l) (vl: list val) : iProp Σ :=
     ⌜((tyl +!! i).(ty_size) + length vl)%nat = max_ty_size tyl⌝.
 
-  Lemma split_sum_mt {𝔄l} (tyl: typel 𝔄l) vπ d l tid q :
-    (l ↦∗{q}: λ vl, ∃i vπ' vl' vl'',
+  Lemma split_mt_sum {𝔄l} (tyl: typel 𝔄l) vπ d l tid :
+    (l ↦∗: λ vl, ∃i vπ' vl' vl'',
       ⌜vπ = pinj i ∘ vπ' ∧ vl = #i :: vl' ++ vl'' ∧ length vl = S (max_ty_size tyl)⌝ ∗
-      (tyl +!! i).(ty_own) vπ' d tid vl')%I ⊣⊢
+      (tyl +!! i).(ty_own) vπ' d tid vl') ⊣⊢
     ∃i vπ', ⌜vπ = pinj i ∘ vπ'⌝ ∗
-      (l ↦{q} #i ∗ (l +ₗ S (tyl +!! i).(ty_size)) ↦∗{q}: is_sum_pad i tyl) ∗
-      (l +ₗ 1) ↦∗{q}: (tyl +!! i).(ty_own) vπ' d tid.
+      (l ↦ #i ∗ (l +ₗ S (tyl +!! i).(ty_size)) ↦∗: is_sum_pad i tyl) ∗
+      (l +ₗ 1) ↦∗: (tyl +!! i).(ty_own) vπ' d tid.
   Proof. iSplit.
     - iIntros "(%& ↦ & ty)". iDestruct "ty" as (i vπ' vl' vl'' (->&->&[=])) "ty".
       iExists i, vπ'. iSplit; [done|]. iDestruct (ty_size_eq with "ty") as "%Eq'".
@@ -62,7 +62,7 @@ Section sum.
     iSplit; by [iApply (frac_bor_shorten with "In")|iApply (ty_shr_lft_mono with "In")].
   Qed.
   Next Obligation.
-    move=> *. iIntros "#LFT #? Bor κ". rewrite split_sum_mt.
+    move=> *. iIntros "#LFT #? Bor κ". rewrite split_mt_sum.
     iMod (bor_exists_tok with "LFT Bor κ") as (i) "[Bor κ]"; [done|].
     iMod (bor_exists_tok with "LFT Bor κ") as (vπ') "[Bor κ]"; [done|].
     iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].

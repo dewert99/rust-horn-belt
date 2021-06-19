@@ -43,6 +43,20 @@ Section mutex.
       iApply "EqOwn". by rewrite compose_assoc semi_iso.
   Qed.
 
+  Lemma split_mt_mutex {𝔄} Ψ l (Φπ: proph (pred' 𝔄)) :
+    (l ↦∗: λ vl, ∃Φ (b: bool) vl' vπ d,
+      ⌜vl = #b :: vl' ∧ Φπ = const Φ⌝ ∗ ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ Ψ vπ d vl') ⊣⊢
+    (∃Φ (b: bool) vπ d, ⌜Φπ = const Φ⌝ ∗
+      l ↦ #b ∗ ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ∃vl', (l +ₗ 1) ↦∗ vl' ∗ Ψ vπ d vl').
+  Proof.
+    iSplit.
+    - iIntros "(%& ↦ &%&%&%&%&%&[->%]& Obs & ⧖ &?)". iExists _, _, _, _.
+      rewrite heap_mapsto_vec_cons. iDestruct "↦" as "[$ ?]". iFrame "Obs ⧖".
+      iSplit; [done|]. iExists _. iFrame.
+    - iIntros "(%&%&%&%&%& ↦b & Obs & ⧖ &%& ↦ &?)". iExists (_::_).
+      rewrite heap_mapsto_vec_cons. iFrame "↦b ↦". iExists _, _, _, _, _. by iFrame.
+  Qed.
+
   Program Definition mutex {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
       ty_size := 1 + ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
       ty_own Φπ _ tid vl := ∃Φ (b: bool) vl' (vπ: proph 𝔄) d,
@@ -62,18 +76,15 @@ Section mutex.
     iSplit; [|iSplit; [done|]]; by [iApply lft_incl_trans|iApply at_bor_shorten].
   Qed.
   Next Obligation.
-    iIntros "*% #LFT #In Bor κ !>". iApply step_fupdN_full_intro.
-    iMod (bor_acc_cons with "LFT Bor κ") as "[(%& >↦ & (%&%&%& big)) ToBor]"; [done|].
-    iMod (bi.later_exist_except_0 with "big") as (??) "(>[->->] & >Obs & >⧖ & ty)".
-    rewrite heap_mapsto_vec_cons. iDestruct "↦" as "[↦b ↦]".
+    iIntros "*% #LFT #In Bor κ !>". iApply step_fupdN_full_intro. rewrite split_mt_mutex.
+    iMod (bor_acc_cons with "LFT Bor κ") as "[(%&%& big) ToBor]"; [done|].
+    iMod (bi.later_exist_except_0 with "big") as (??) "(>->& ↦b & >Obs & >⧖ & ↦ty)".
     iMod ("ToBor" $! ((∃b: bool, l ↦ #b) ∗
-        ∃vπ d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ (l +ₗ 1) ↦∗: ty.(ty_own) vπ d tid)%I
-      with "[] [↦b Obs ⧖ ↦ ty]") as "[Bor κ]".
-    { iIntros "!> big !>!>". iDestruct "big" as "[[% ↦b] (%&%&?&?&%& ↦ &?)]".
-      iExists (_::_). rewrite heap_mapsto_vec_cons. iFrame "↦b ↦".
-      iExists _, _, _, _, _. by iFrame. }
-    { iNext. iSplitL "↦b"; [by iExists _|]. iExists _, _. iFrame "Obs ⧖".
-      iExists _. iFrame. }
+      ∃vπ d, ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ (l +ₗ 1) ↦∗: ty.(ty_own) vπ d tid)%I
+      with "[] [↦b Obs ⧖ ↦ty]") as "[Bor κ]".
+    { iIntros "!> big !>!>". iDestruct "big" as "[[% ↦b] (%&%& Obs & ⧖ &%& ↦ &?)]".
+      iExists _, _, _, _. iFrame "↦b Obs ⧖". iSplit; [done|]. iExists _. iFrame. }
+    { iNext. iSplitL "↦b"; [by iExists _|]. iExists _, _. iFrame. }
     iMod (bor_sep with "LFT Bor") as "[Borb Borty]"; [done|]. clear b.
     iMod (bor_acc_cons with "LFT Borb κ") as "[>(%b & ↦b) ToBorb]"; [done|].
     iMod (lock_proto_create with "↦b [Borty]") as "Proto".
@@ -171,9 +182,10 @@ Section mutex.
     iApply ("C" $! [# #_] -[const Φ] with "Na L [-] []"); last first.
     { by iApply proph_obs_impl; [|done]=>/= ?[_ ?]. }
     rewrite/= right_id (tctx_hasty_val #_). iExists _. iFrame "⧖".
-    rewrite/= freeable_sz_full. iFrame "†m". iNext. iExists (_::_).
-    rewrite heap_mapsto_vec_cons. iFrame "↦b ↦m". iExists Φ, _, _, _, _.
-    iFrame "⧖ ty". iSplit; [done|]. by iApply proph_obs_impl; [|done]=>/= ?[? _].
+    rewrite/= freeable_sz_full. iFrame "†m". iNext. rewrite split_mt_mutex.
+    iExists _, _, _, _. iSplit; [done|]. iFrame "↦b ⧖".
+    iSplit; last first. { iExists _. iFrame. }
+    by iApply proph_obs_impl; [|done]=>/= ?[? _].
   Qed.
 
   Definition mutex_into_inner {𝔄} (ty: type 𝔄) : val :=
@@ -188,13 +200,12 @@ Section mutex.
   Proof.
     eapply type_fn; [apply _|]=>/= _ ??[m[]]. simpl_subst.
     iIntros (?[?[]]?) "_ _ _ _ _ Na L C /=[m _] Obs". rewrite tctx_hasty_val.
-    iDestruct "m" as ([|]) "[_ box]"=>//. case m as [[|m|]|]=>//.
-    iDestruct "box" as "[(%& ↦m & mtx) †m]". wp_bind (new _).
+    iDestruct "m" as ([|]) "[_ box]"=>//. case m as [[|m|]|]=>//=.
+    rewrite split_mt_mutex. iDestruct "box" as "[↦mtx †m]". wp_bind (new _).
     iApply wp_new; [lia|done|]. rewrite Nat2Z.id. iIntros "!>% [†x ↦x]". wp_let.
-    iDestruct "mtx" as (?????[->->]) "(Obs' & ⧖ & ty)".
+    iDestruct "↦mtx" as (????->) "(↦b & Obs' & ⧖ &%& ↦m & ty)".
     iCombine "Obs Obs'" as "#?". iDestruct (ty_size_eq with "ty") as %Szvl.
-    rewrite heap_mapsto_vec_cons. iDestruct "↦m" as "[↦b ↦m]". wp_op.
-    wp_bind (_ <-{_} !_)%E.
+    wp_op. wp_bind (_ <-{_} !_)%E.
     iApply (wp_memcpy with "[$↦x $↦m]"); [|lia|]. { by rewrite repeat_length. }
     iIntros "!> [↦x ↦m]". wp_seq. wp_bind (delete _).
     iApply (wp_delete (_::_) with "[↦b ↦m †m]"); swap 1 2.
@@ -221,39 +232,34 @@ Section mutex.
     eapply type_fn; [apply _|]=>/= α ??[m[]]. simpl_subst.
     iIntros (?[vπ[]]?) "LFT TIME #PROPH UNIQ E Na L C /=[m _] Obs".
     rewrite tctx_hasty_val. iDestruct "m" as ([|]) "[_ box]"=>//.
-    case m as [[|m|]|]=>//. iDestruct "box" as "[(%vl & >↦m & #In & uniq) †m]".
-    case vl as [|[[]|][]]; try by iDestruct "uniq" as ">[]".
-    rewrite heap_mapsto_vec_singleton. wp_read.
-    iDestruct "uniq" as (? i [? Eq1]) "[Vo Bor]".
-    move: Eq. set ξ := PrVar _ i=> Eq.
+    case m as [[|m|]|]=>//=. rewrite split_mt_uniq_bor.
+    iDestruct "box" as "[(#In &%&%& %ξi &>[% %Eq1]& ↦ & Vo & Bor) †m]".
+    move: Eq. set ξ := PrVar _ ξi=> Eq. wp_read. setoid_rewrite split_mt_mutex.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as "[big ToBor]"; [done|]. wp_let.
-    iDestruct "big" as (??) "(_& Pc &%& ↦x &%&%&%& %aπ & %d &[->->]& Obs' & #⧖ & ty)".
-    iDestruct (uniq_agree with "Vo Pc") as %[Eq2 _].
-    iCombine "Obs Obs'" as "Obs". rewrite heap_mapsto_vec_cons.
-    iDestruct "↦x" as "[↦b ↦x]". wp_op. wp_bind (_ <- _)%E.
+    iDestruct "big" as (??) "(_& Pc &%&%& %aπ &%&->& ↦b & Obs' & #⧖ & ↦ty)".
+    iCombine "Obs Obs'" as "Obs". iDestruct (uniq_agree with "Vo Pc") as %[Eq2 _].
+    wp_op. wp_bind (_ <- _)%E.
     iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
     wp_write. iIntros "#⧖S". do 3 wp_seq.
     iMod (uniq_preresolve ξ [] (const (const True)) 1%Qp with "PROPH Vo Pc []")
       as "(Obs' &_& ToPc)"; [done..|]. iCombine "Obs' Obs" as "#Obs"=>/=.
-    iMod (uniq_intro aπ with "PROPH UNIQ") as (j) "[Vo' Pc']"; [done|].
-    set ζ := PrVar _ j.
-    iMod ("ToBor" with "[↦b ToPc] [↦x ty Pc']") as "[Bor α]"; last first.
+    iMod (uniq_intro aπ with "PROPH UNIQ") as (ζj) "[Vo' Pc']"; [done|].
+    set ζ := PrVar _ ζj.
+    iMod ("ToBor" with "[↦b ToPc] [↦ty Pc']") as "[Bor α]"; last first.
     - rewrite cctx_interp_singleton. iMod ("ToL" with "α L") as "L".
       iApply ("C" $! [# #_] -[λ π, (aπ π, π ζ)] with "Na L [-] []"); last first.
       { iApply proph_obs_impl; [|done]=>/= π.
         move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=.
         case (vπ π)=>/= ??->->[->[Imp ?]]. by apply Imp. }
       rewrite/= right_id (tctx_hasty_val #_). iExists _. iFrame "⧖S".
-      rewrite/= freeable_sz_full. iFrame "†m". iNext. iExists [_].
-      rewrite heap_mapsto_vec_singleton. iFrame "↦m In". iExists d, _.
-      by iFrame "Vo' Bor".
-    - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame.
-    - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc &%& ↦m & ty)".
+      rewrite/= freeable_sz_full. iFrame "†m". iNext. rewrite split_mt_uniq_bor.
+      iFrame "In". iExists _, _, _. by iFrame.
+    - iNext. iExists _, _. by iFrame.
+    - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' &_& ↦ty)".
       iExists _, _. iFrame "⧖".
       iSplitL "ToPc". { iApply "ToPc". iApply proph_eqz_refl. }
-      iExists (_::_). rewrite heap_mapsto_vec_cons. iFrame "↦b ↦m".
-      iExists _, _, _, _, _. iFrame "⧖' ty". iSplit; [done|].
+      iExists _, _, _, _. iSplit; [done|]. iFrame "↦b ⧖' ↦ty".
       by iApply proph_obs_true.
   Qed.
 End mutex.

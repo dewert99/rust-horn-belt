@@ -11,12 +11,12 @@ Section vec.
   Definition freeable_sz' (sz: nat) (l: loc) : iProp Σ :=
     †{1}l…sz ∨ ⌜Z.of_nat sz = 0%Z⌝.
 
-  Lemma split_vec_mt {𝔄} l' q d alπ Φ :
-    (l' ↦∗{q}: (λ vl, [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
-      ⌜vl = [ #len; #ex; #l] ∧ alπ = lapply aπl⌝ ∗ Φ d' len ex l aπl))%I ⊣⊢
+  Lemma split_mt_vec {𝔄} l' d alπ Φ :
+    (l' ↦∗: (λ vl, [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
+      ⌜vl = [ #len; #ex; #l] ∧ alπ = lapply aπl⌝ ∗ Φ d' len ex l aπl)) ⊣⊢
     [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
       ⌜alπ = lapply aπl⌝ ∗
-      l' ↦{q} #len ∗ (l' +ₗ 1) ↦{q} #ex ∗ (l' +ₗ 2) ↦{q} #l ∗ Φ d' len ex l aπl.
+      l' ↦ #len ∗ (l' +ₗ 1) ↦ #ex ∗ (l' +ₗ 2) ↦ #l ∗ Φ d' len ex l aπl.
   Proof.
     iSplit.
     - iIntros "(%& ↦ & big)". case d=>// ?. iDestruct "big" as (????[->->]) "Φ".
@@ -59,7 +59,7 @@ Section vec.
     iApply ty_shr_lft_mono; by [|iApply "All"].
   Qed.
   Next Obligation.
-    iIntros (???? d ? l' tid q ?) "#LFT In Bor κ". rewrite split_vec_mt. case d.
+    iIntros (???? d ? l' tid q ?) "#LFT In Bor κ". rewrite split_mt_vec. case d.
     { by iMod (bor_persistent with "LFT Bor κ") as "[>[] _]". }
     move=> ?. do 2 (iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|]).
     iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].

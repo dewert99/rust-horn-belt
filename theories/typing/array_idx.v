@@ -201,7 +201,7 @@ Section lemmas.
     iDestruct "uniq" as (? ξi [? Eq2]) "[Vo Bor]". set ξ := PrVar _ ξi.
     iMod (Alv with "E L") as (?) "[(κ & κ₊ & κ₊₊) ToL]"; [done|].
     iMod (bor_acc_cons with "LFT Bor κ") as "[big ToBor]"; [done|]. wp_op.
-    iDestruct "big" as (??) "(#⧖ & Pc & ↦tys)". rewrite split_array_mt.
+    iDestruct "big" as (??) "(#⧖ & Pc & ↦tys)". rewrite split_mt_array.
     iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     set aπl := vfunsep (fst ∘ vπ).
     have ->: vπ = pair ∘ vapply aπl ⊛ (.$ ξ).
@@ -245,7 +245,7 @@ Section lemmas.
       iDestruct ("ToPc" with "[Pc']") as "$".
       { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
         by iApply proph_eqz_vinsert. }
-      iClear "#". rewrite split_array_mt semi_iso' vinsert_backmid -big_sepL_vbackmid.
+      iClear "#". rewrite split_mt_array semi_iso' vinsert_backmid -big_sepL_vbackmid.
       iSplitL "↦tys". { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
       iSplitL "↦ty". { iStopProof. do 3 f_equiv. iApply ty_own_depth_mono. lia. }
       iStopProof. do 6 f_equiv; [|iApply ty_own_depth_mono; lia].

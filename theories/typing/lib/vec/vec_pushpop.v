@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import array_util typing.
+From lrust.typing Require Import array_util uniq_util typing.
 From lrust.typing.lib.vec Require Import vec.
 Set Default Proof Using "Type".
 
@@ -42,12 +42,12 @@ Section vec_pushpop.
     rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     iApply (wp_persistent_time_receipt with "TIME ⧖x"); [done|].
     iApply (wp_delete with "[$↦ $†]"); [done|]. iIntros "!>_ ⧖x".
-    iDestruct "uniq" as (du i [? Eq2]) "[Vo Bor]".
-    move: Eq2. set ξ := PrVar _ i=> Eq2.
+    iDestruct "uniq" as (du ξi [? Eq2]) "[Vo Bor]".
+    move: Eq2. set ξ := PrVar _ ξi=> Eq2.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc with "LFT Bor α") as "[(%&%& ⧖u & Pc & ↦vec) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
-    rewrite split_vec_mt. case du as [|du]=>//.
+    rewrite split_mt_vec. case du as [|du]=>//.
     iDestruct "↦vec" as (len ex ? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".
     wp_read. wp_let. wp_op. wp_read. wp_let. wp_write. wp_op. wp_write.
     have ->: (len + 1)%Z = S len by lia.
@@ -71,7 +71,7 @@ Section vec_pushpop.
       wp_bind (delete _). iApply (wp_delete with "[$↦x †x]"); [lia|by rewrite Sz|].
       iIntros "!>_". wp_seq. set vπ' := λ π, (lapply (vsnoc aπl aπ) π, π ξ).
       iMod ("ToBor" with "[↦₀ ↦₁ ↦₂ ↦tys ↦ ty ↦ex † Pc]") as "[Bor α]".
-      { iNext. iExists _, _. rewrite split_vec_mt. iFrame "⧖ Pc".
+      { iNext. iExists _, _. rewrite split_mt_vec. iFrame "⧖ Pc".
         iExists _, _, _, (vsnoc aπl _). iFrame "↦₀ ↦₁ ↦₂ †". iSplit; [done|].
         iSplitR "↦ex"; last first. { iExists _. rewrite/= plus_comm. by iFrame. }
         iNext. rewrite vec_to_list_snoc big_sepL_app. iSplitL "↦tys".
@@ -84,9 +84,9 @@ Section vec_pushpop.
       - iApply type_new; [done|]. intro_subst.
         iApply type_jump; [solve_typing|solve_extract|solve_typing].
       - rewrite/= right_id (tctx_hasty_val #_). iExists _.
-        iFrame "⧖ LftIn". iExists _, _.
-        rewrite (proof_irrel (@prval_to_inh' (listₛ 𝔄) vπ')
-          (@prval_to_inh' (listₛ 𝔄) vπ)). by iFrame.
+        iFrame "⧖ LftIn". iExists _, _. rewrite /uniq_own.
+        rewrite (proof_irrel (@prval_to_inh (listₛ 𝔄) (fst ∘ vπ'))
+          (@prval_to_inh (listₛ 𝔄) (fst ∘ vπ))). by iFrame.
       - iApply proph_obs_impl; [|done]=> π.
         move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=. case (vπ π)=>/= ??->-> Imp Eq.
         apply Imp. move: Eq. by rewrite vec_to_list_snoc lapply_app. }
@@ -143,11 +143,11 @@ Section vec_pushpop.
     rewrite heap_mapsto_vec_singleton. wp_read. wp_let. wp_bind (delete _).
     rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     iApply (wp_delete with "[$↦ $†]"); [done|]. iIntros "!>_".
-    iDestruct "uniq" as (d i [? Eq2]) "[Vo Bor]". move: Eq2. set ξ := PrVar _ i=> Eq2.
+    iDestruct "uniq" as (d ξi [? Eq2]) "[Vo Bor]". move: Eq2. set ξ := PrVar _ ξi=> Eq2.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc with "LFT Bor α") as "[(%&%& #⧖ & Pc & ↦vec) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
-    rewrite split_vec_mt. case d=>// ?.
+    rewrite split_mt_vec. case d=>// ?.
     iDestruct "↦vec" as (? ex ? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".
     wp_read. wp_let. wp_op. wp_read. wp_let. wp_op. wp_let. wp_write.
     do 2 wp_op. wp_write. wp_bind (new _). iApply wp_new; [lia|done|].
@@ -163,7 +163,7 @@ Section vec_pushpop.
     iIntros "!>[↦r ↦last]". wp_seq.
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     iMod ("ToBor" with "[↦₀ ↦₁ ↦₂ ↦tys ↦last ↦ex † ⧖ Pc]") as "(Bor & α)".
-    { iNext. iExists _, _. iFrame "⧖ Pc". rewrite split_vec_mt.
+    { iNext. iExists _, _. iFrame "⧖ Pc". rewrite split_mt_vec.
       have ->: ∀sz, sz + (len' + ex) * sz = (len' + S ex) * sz by lia.
       have ->: (ex + 1)%Z = S ex by lia. iExists _, _, _, _.
       iFrame "↦₀ ↦₁ ↦₂ ↦tys †". iSplit; [done|]. iExists (vl ++ wl).
@@ -174,9 +174,9 @@ Section vec_pushpop.
       -[vπ'; _] with "[] LFT TIME PROPH UNIQ E Na L C [-] []").
     - iApply type_jump; [solve_typing|solve_extract|solve_typing].
     - rewrite/= !(tctx_hasty_val #_) right_id. iSplitL "Vo Bor".
-      + iExists _. iFrame "⧖ LftIn". iExists _, _.
-        rewrite (proof_irrel (@prval_to_inh' (listₛ 𝔄) vπ')
-          (@prval_to_inh' (listₛ 𝔄) vπ)). by iFrame.
+      + iExists _. iFrame "⧖ LftIn". iExists _, _. rewrite /uniq_own.
+        rewrite (proof_irrel (@prval_to_inh (listₛ 𝔄) (fst ∘ vπ'))
+          (@prval_to_inh (listₛ 𝔄) (fst ∘ vπ))). by iFrame.
       + iExists _. rewrite -freeable_sz_full. iFrame "⧖ †r". iNext. iExists _.
         iFrame "↦r". iApply ty_own_depth_mono; [|done]. lia.
     - iApply proph_obs_impl; [|done]=> π. move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=.

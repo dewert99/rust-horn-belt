@@ -26,7 +26,7 @@ Section type_sum.
   Proof.
     split. { move=>/= ???[??]. by do 3 f_equiv. }
     iIntros (??[??]?) "_ PROPH _ _ $ /=[p T] #Obs".
-    iDestruct "p" as ([[]|][|]Ev) "[#⧖ own]"=>//. rewrite/= split_sum_mt.
+    iDestruct "p" as ([[]|][|]Ev) "[#⧖ own]"=>//. rewrite/= split_mt_sum.
     iDestruct "own" as "[big †]".
     iMod (bi.later_exist_except_0 with "big") as (?) "big".
     iMod (bi.later_exist_except_0 with "big") as (?) "(>->&(↦i &%& ↦p &><-)&%& ↦ & ty)".
@@ -221,7 +221,7 @@ Section type_sum.
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
     iMod (bor_acc_cons with "LFT Bor κ") as "[big ToBor]" ; [done|].
     iMod (bi.later_exist_except_0 with "big") as (??) "(>#⧖ & Pc & big)".
-    rewrite split_sum_mt. iMod (bi.later_exist_except_0 with "big") as (i') "big".
+    rewrite split_mt_sum. iMod (bi.later_exist_except_0 with "big") as (i') "big".
     iMod (bi.later_exist_except_0 with "big") as (aπ) "(>->& ↦ip &%& >↦ & ty)".
     iMod (uniq_strip_later with "Vo Pc") as (Eq1 <-) "[Vo Pc]".
     have ->: vπ = λ π, (pinj i' (aπ π), π ξ).
@@ -245,7 +245,7 @@ Section type_sum.
     - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' &%& ↦ & ty)".
       iExists _, _. iFrame "⧖'". iSplitL "Pc' ToPc".
       { iApply "ToPc". iApply proph_eqz_constr. by iApply proph_ctrl_eqz. }
-      rewrite split_sum_mt. iExists _, _. iSplit; [done|]. iFrame "↦ip".
+      rewrite split_mt_sum. iExists _, _. iSplit; [done|]. iFrame "↦ip".
       iExists _. iFrame.
   Qed.
 
@@ -266,11 +266,11 @@ Section type_sum.
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
     iMod (bor_acc with "LFT Bor κ") as "[big ToBor]"; [done|].
     iMod (bi.later_exist_except_0 with "big") as (??) "(#⧖ & Pc & big)".
-    rewrite split_sum_mt. iMod (bi.later_exist_except_0 with "big") as (i) "big".
+    rewrite split_mt_sum. iMod (bi.later_exist_except_0 with "big") as (i) "big".
     iMod (bi.later_exist_except_0 with "big") as (aπ) "(>->& [>↦i ↦p] & ↦ty)".
     wp_read. iDestruct (uniq_agree with "Vo Pc") as %[Eq <-].
     iMod ("ToBor" with "[Pc ↦i ↦p ↦ty]") as "[Bor κ]".
-    { iNext. iExists _, _. iFrame "⧖ Pc". rewrite split_sum_mt. iExists _, _. by iFrame. }
+    { iNext. iExists _, _. iFrame "⧖ Pc". rewrite split_mt_sum. iExists _, _. by iFrame. }
     iMod ("ToL" with "κ") as "L". wp_case.
     { split; [lia|]. by rewrite Nat2Z.id -vlookup_lookup plistc_to_vec_lookup. }
     rewrite big_sepHL_2_lookup. iApply ("el" $! _ (vπ -:: _) with

@@ -28,8 +28,18 @@ Section mutexguard.
       __poison: poison::Guard,
     }
   *)
-  Context `{!BiFUpd PROP}.
-Implicit Type P Q R: PROP.
+
+  Lemma split_mt_mutexguard {A B} φ (Φπ: proph A) Ψ l' :
+    (l' ↦∗: λ vl, ⌜φ⌝ ∗ [loc[l] := vl] ∃(Φ: A) (κ': B), ⌜Φπ = const Φ⌝ ∗ Ψ l Φ κ') ⊣⊢
+    ⌜φ⌝ ∗ ∃(l: loc) Φ κ', ⌜Φπ = const Φ⌝ ∗ l' ↦ #l ∗ Ψ l Φ κ'.
+  Proof.
+    iSplit.
+    - iIntros "(%vl & ↦ &$& big)". case vl as [|[[]|][]]=>//.
+      rewrite heap_mapsto_vec_singleton. iDestruct "big" as (??->) "?".
+      iExists _, _, _. by iFrame.
+    - iIntros "($&%&%&%&->& ↦ &?)". iExists [_].
+      rewrite heap_mapsto_vec_singleton. iFrame "↦". iExists _, _. by iFrame.
+  Qed.
 
   Program Definition mutexguard {𝔄} (κ: lft) (ty: type 𝔄) : type (predₛ 𝔄) := {|
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
@@ -54,21 +64,17 @@ Implicit Type P Q R: PROP.
     iSplit; [|by iApply frac_bor_shorten]. by iApply lft_incl_trans.
   Qed.
   Next Obligation.
-    iIntros (????? d κ') "*% #LFT #In Bor κ' //".
-    iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
-    iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
+    iIntros (????? d κ') "*% #LFT #In Bor κ' //". rewrite split_mt_mutexguard.
     iMod (bor_sep_persistent with "LFT Bor κ'") as "(>% & Bor & κ')"; [done|].
-    case d as [|]; [done|]. case vl as [|[[|l'|]|][]];
-      try by iMod (bor_persistent with "LFT Bor κ'") as "[>[] _]".
-    setoid_rewrite heap_mapsto_vec_singleton.
-    iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT Bor↦") as "#Bor↦"; [done|].
-    iMod (bor_exists with "LFT Bor") as (Φ) "Bor"; [done|].
-    iMod (bor_exists with "LFT Bor") as (κ'') "Bor"; [done|].
+    do 3 (iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|]).
     iMod (bor_sep_persistent with "LFT Bor κ'") as "(>-> & Bor & κ')"; [done|].
+    iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
+    iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT Bor↦") as "#Bor↦"; [done|].
     do 2 (iMod (bor_sep_persistent with "LFT Bor κ'") as "(#? & Bor & κ')"; [done|]).
     iMod (bor_sep with "LFT Bor") as "[_ Bor]"; [done|].
-    iMod (bor_unnest with "LFT Bor") as "Bor"; [done|]. iIntros "/=!>!>!>!>".
-    iApply step_fupdN_full_intro. iMod "Bor". set κᵢ := κ'' ⊓ κ'.
+    iMod (bor_unnest with "LFT Bor") as "Bor"; [done|].
+    case d as [|]; [done|]. iIntros "/=!>!>!>!>".
+    iApply step_fupdN_full_intro. iMod "Bor". set κᵢ := _ ⊓ κ'.
     iAssert (κ' ⊑ κᵢ)%I as "κ'⊑κᵢ".
     { iApply lft_incl_glb; [|iApply lft_incl_refl]. iApply lft_incl_trans; [|done].
       iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
@@ -194,12 +200,10 @@ Implicit Type P Q R: PROP.
   Proof.
     eapply type_fn; [apply _|]=>/= α ??[bm[]]. simpl_subst.
     iIntros (?[?[]]?) "#LFT TIME _ _ E Na L C /=[bm _] #Obs". rewrite tctx_hasty_val.
-    iDestruct "bm" as ([|d]) "[⧖ box]"=>//. case bm as [[|bm|]|]=>//.
-    iDestruct "box" as "[(%vl & >↦m & shr) †m]".
-    case d as [|]; try by iDestruct "shr" as ">[]".
-    case vl as [|[[|l|]|][]]; try by iDestruct "shr" as ">[]".
-    rewrite heap_mapsto_vec_singleton. wp_read. wp_let.
-    iDestruct "shr" as (??->) "(#? & #? & #At)".
+    iDestruct "bm" as ([|d]) "[⧖ box]"=>//. case bm as [[|bm|]|]=>//=.
+    rewrite split_mt_ptr. iDestruct "box" as "[↦mtx †m]".
+    case d as [|]; [by iDestruct "↦mtx" as ">[]"|].
+    iDestruct "↦mtx" as (?) "(↦m &%&%&>->& ? & ? & #At)". wp_read. wp_let.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     wp_apply (acquire_spec with "[] α"). { by iApply (mutex_acc with "LFT At"). }
     iIntros "[Bor α]". wp_seq. wp_bind (new _). iApply wp_new; [done..|].
@@ -209,9 +213,8 @@ Implicit Type P Q R: PROP.
     iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[_] with "Na L [-] Obs").
     rewrite/= right_id (tctx_hasty_val #_). iExists _. iSplit; [done|].
-    rewrite -freeable_sz_full. iFrame "†g". iNext. iExists [_].
-    rewrite heap_mapsto_vec_singleton. iFrame "↦g". iSplit; [done|].
-    iExists _, _. by do 4 (iSplit; [done|]).
+    rewrite -freeable_sz_full. iFrame "†g". iNext. rewrite split_mt_mutexguard.
+    iSplit; [done|]. iExists _, _, _. iFrame "At". by iFrame.
   Qed.
 
   Definition mutexguard_deref: val :=
@@ -228,10 +231,9 @@ Implicit Type P Q R: PROP.
     eapply type_fn; [apply _|]=>/= αβ ??[g[]]. case αβ=> α β. simpl_subst.
     iIntros (?[vπ[]]?) "#LFT TIME #PROPH #UNIQ E Na L C /=[g _] Obs".
     rewrite tctx_hasty_val. iDestruct "g" as ([|d]) "[_ box]"=>//.
-    case g as [[|g|]|]=>//. iDestruct "box" as "[(%vl & >↦g & #α⊑βty & uniq) †g]".
-    case vl as [|[[|l|]|][]]; try by iDestruct "uniq" as ">[]".
-    rewrite heap_mapsto_vec_singleton. wp_read.
-    iDestruct "uniq" as (? i [? Eq]) "[Vo Bor]". set ξ := PrVar _ i.
+    case g as [[|g|]|]=>//=. rewrite split_mt_uniq_bor.
+    iDestruct "box" as "[(#α⊑βty &%&%& %ξi &>[% %Eq]& ↦g & Vo & Bor) †g]".
+    wp_read. move: Eq. set ξ := PrVar _ ξi=> Eq.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "([α α₊] & L & ToL)";
       [solve_typing..|].
     do 2 (iMod (bor_exists_tok with "LFT Bor α") as (?) "[Bor α]"; [done|]).
@@ -239,47 +241,44 @@ Implicit Type P Q R: PROP.
     iMod (bor_sep with "LFT Bor") as "[BorPc Bor]"; [done|].
     iMod (bor_acc with "LFT BorPc α₊") as "[Pc Toα₊]"; [done|]. wp_let.
     iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
-    iMod (bor_exists with "LFT Bor") as (vl) "Bor"; [done|].
-    iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
-    iMod (bor_sep with "LFT Bor") as "[_ Bor]"; [done|].
-    case vl as [|[[|l'|]|][]];
-      try by iMod (bor_persistent with "LFT Bor α") as "[>[] _]".
-    rewrite heap_mapsto_vec_singleton.
-    iMod (bor_acc with "LFT Bor↦ α") as "[>↦l Toα]"; [done|]. wp_read.
-    iMod ("Toα" with "↦l") as "[_ α]".
+    rewrite split_mt_mutexguard.
+    iMod (bor_sep_persistent with "LFT Bor α") as "(>% & Bor & α)"; [done|].
+    iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
     iMod (bor_exists with "LFT Bor") as (Φ) "Bor"; [done|].
-    iMod (bor_exists with "LFT Bor") as (κ) "Bor"; [done|].
+    iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
     iMod (bor_sep_persistent with "LFT Bor α") as "(>%Eq' & Bor & α)"; [done|].
     have ->: vπ = λ π, (Φ, π ξ). { by rewrite [vπ]surjective_pairing_fun Eq Eq'. }
     iMod (uniq_resolve ξ [] 1%Qp (const Φ) with "PROPH Vo Pc [//]")
       as "(Obs' & Pc &_)"; [done|done|]. iCombine "Obs' Obs" as "Obs".
     iMod ("Toα₊" with "Pc") as "[_ α₊]". iCombine "α α₊" as "α".
+    iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
+    iMod (bor_acc with "LFT Bor↦ α") as "[>↦l Toα]"; [done|]. wp_read.
+    iMod ("Toα" with "↦l") as "[_ α]".
     iMod (bor_sep_persistent with "LFT Bor α") as "(#β⊑κ & Bor & α)"; [done|].
     do 2 (iMod (bor_sep with "LFT Bor") as "[_ Bor]"; [done|]).
     iMod (bor_unnest with "LFT Bor") as "Bor"; [done|]. wp_let. iMod "Bor".
     wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>% [†r ↦r]".
-    set κ' := κ ⊓ α. iAssert (α ⊑ κ')%I as "#α⊑κ'".
+    set κ' := _ ⊓ α. iAssert (α ⊑ κ')%I as "#α⊑κ'".
     { iApply lft_incl_glb; [|iApply lft_incl_refl]. iApply lft_incl_trans; [|done].
       iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
     iMod (lft_incl_acc with "α⊑κ' α") as (?) "[κ' Toα]"; [done|].
     iMod (bor_acc_cons with "LFT Bor κ'") as "[big ToBor]"; [done|]. wp_let.
     iDestruct "big" as (aπ dᵢ) "(Obs' & #⧖ &%& ↦ & ty)".
-    iCombine "Obs Obs'" as "#Obs". wp_op.
-    rewrite heap_mapsto_vec_singleton. wp_write. wp_bind (delete _).
+    iCombine "Obs Obs'" as "#Obs". wp_op. rewrite heap_mapsto_vec_singleton.
+    wp_write. wp_bind (delete _).
     iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
     rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     iApply (wp_delete with "[$↦g $†g]"); [done|]. iIntros "!>_ #⧖S". do 3 wp_seq.
-    iMod (uniq_intro aπ with "PROPH UNIQ") as (j) "[Vo' Pc']"; [done|].
-    set ζ := PrVar _ j. iMod ("ToBor" with "[] [Pc' ↦ ty]") as "[Bor κ']"; last first.
+    iMod (uniq_intro aπ with "PROPH UNIQ") as (ζj) "[Vo' Pc']"; [done|].
+    set ζ := PrVar _ ζj. iMod ("ToBor" with "[] [Pc' ↦ ty]") as "[Bor κ']"; last first.
     - iMod ("Toα" with "κ'") as "α". iMod ("ToL" with "α L") as "L".
       rewrite cctx_interp_singleton.
       iApply ("C" $! [# #_] -[λ π, (aπ π, π ζ)] with "Na L [-] []"); last first.
       { iApply proph_obs_impl; [|done]=>/= ?[[->[? Imp]]?]. by apply Imp. }
       rewrite/= right_id (tctx_hasty_val #_) -freeable_sz_full. iExists _.
-      iFrame "⧖S †r". iNext. iExists [_]. rewrite heap_mapsto_vec_singleton.
-      iFrame "↦r". iSplit.
+      iFrame "⧖S †r". iNext. rewrite split_mt_uniq_bor. iSplit.
       { iApply lft_incl_trans; [iApply "α⊑βty"|]. iApply lft_intersect_incl_r. }
-      iExists dᵢ, j. iFrame "Vo'". iSplit; [done|]. by iApply bor_shorten.
+      iExists _, dᵢ, ζj. iSplit; [done|]. iFrame "↦r Vo'". by iApply bor_shorten.
     - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame "↦ ty".
       iApply proph_obs_impl; [|done]=>/= ?[[_[Eqv _]]?]. by apply Eqv.
     - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' &%& ↦ & Obs' & ty)".
@@ -295,11 +294,10 @@ Implicit Type P Q R: PROP.
   Proof.
     eapply type_fn; [apply _|]=>/= αβ ??[g[]]. case αβ=> α β. simpl_subst.
     iIntros (?[?[]]?) "LFT #TIME _ _ #E Na L C /=[g _] Obs". rewrite tctx_hasty_val.
-    iDestruct "g" as ([|d]) "[_ box]"=>//. case g as [[|g|]|]=>//.
-    iDestruct "box" as "[(%vl & >↦g & guard) †g]".
-    case d as [|]; try by iDestruct "guard" as ">[]".
-    case vl as [|[[|l|]|][]]; try by iDestruct "guard" as ">[]".
-    rewrite heap_mapsto_vec_singleton. wp_read. wp_let.
+    iDestruct "g" as ([|d]) "[_ box]"=>//. case g as [[|g|]|]=>//=.
+    rewrite split_mt_ptr. iDestruct "box" as "[↦guard †g]".
+    case d as [|]; [by iDestruct "↦guard" as ">[]"|].
+    iDestruct "↦guard" as (?) "(↦g & guard)". wp_read. wp_let.
     iDestruct "guard" as (?????->) "(#⊑κᵢ &?& Bor↦ & Obs' & #⧖ & #Upd)".
     iCombine "Obs Obs'" as "#?".
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)";
@@ -337,11 +335,9 @@ Implicit Type P Q R: PROP.
   Proof.
     eapply type_fn; [apply _|]=>/= α ??[g[]]. simpl_subst.
     iIntros (?[?[]]?) "#LFT _ _ _ E Na L C /=[g _] #Obs". rewrite tctx_hasty_val.
-    iDestruct "g" as ([|d]) "[⧖ box]"=>//. case g as [[|g|]|]=>//.
-    iDestruct "box" as "[(%vl & >↦g & [>% guard]) †g]".
-    case vl as [|[[|l|]|][]]; try by iDestruct "guard" as ">[]".
-    rewrite heap_mapsto_vec_singleton. wp_read.
-    iDestruct "guard" as (??->) "(_&_& #At & Bor)".
+    iDestruct "g" as ([|d]) "[⧖ box]"=>//. case g as [[|g|]|]=>//=.
+    rewrite split_mt_mutexguard. iDestruct "box" as "((>%&%&%&%&>->& ↦g & big) & †g)".
+    wp_read. iDestruct "big" as "(_&_& #At & Bor)".
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     wp_apply (release_spec with "[] [α Bor]");
       [by iApply (mutex_acc with "LFT At")|by iFrame|].

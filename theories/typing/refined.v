@@ -8,9 +8,9 @@ Implicit Type 𝔄 𝔅 ℭ: syn_type.
 Section refined.
   Context `{!typeG Σ}.
 
-  Lemma split_refined_mt {𝔄} Φ (ty: type 𝔄) vπ d tid l q :
-    (l ↦∗{q}: λ vl, ⟨π, Φ (vπ π)⟩ ∗ ty.(ty_own) vπ d tid vl)%I ⊣⊢
-    ⟨π, Φ (vπ π)⟩ ∗ l ↦∗{q}: ty.(ty_own) vπ d tid.
+  Lemma split_mt_refined {𝔄} Φ (ty: type 𝔄) vπ d tid l :
+    (l ↦∗: λ vl, ⟨π, Φ (vπ π)⟩ ∗ ty.(ty_own) vπ d tid vl) ⊣⊢
+    ⟨π, Φ (vπ π)⟩ ∗ l ↦∗: ty.(ty_own) vπ d tid.
   Proof. iSplit; [|iIntros "[$$]"]. iIntros "(%&?&$&?)". iExists _. iFrame. Qed.
 
   Program Definition refined {𝔄} (Φ: pred' 𝔄) (ty: type 𝔄) :={|
@@ -23,7 +23,7 @@ Section refined.
   Next Obligation. iIntros "*% [$?]". by iApply ty_shr_depth_mono. Qed.
   Next Obligation. iIntros "* #? [$?]". by iApply ty_shr_lft_mono. Qed.
   Next Obligation.
-    iIntros "*% #LFT In Bor κ". rewrite split_refined_mt.
+    iIntros "*% #LFT In Bor κ". rewrite split_mt_refined.
     iMod (bor_sep_persistent with "LFT Bor κ") as "(>$& Bor & κ)"; [done|].
     by iApply (ty_share with "LFT In Bor κ").
   Qed.

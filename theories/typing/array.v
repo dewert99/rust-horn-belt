@@ -7,10 +7,10 @@ Implicit Type 𝔄 𝔅 ℭ: syn_type.
 Section array.
   Context `{!typeG Σ}.
 
-  Lemma split_array_mt {𝔄 n} (ty: type 𝔄) l q (aπl: _ n) d tid :
-    (l ↦∗{q}: λ vl, ∃wll: vec _ _, ⌜vl = concat wll⌝ ∗
-      [∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2)%I ⊣⊢
-    [∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{q}: ty.(ty_own) aπ d tid.
+  Lemma split_mt_array {𝔄 n} (ty: type 𝔄) l (aπl: _ n) d tid :
+    (l ↦∗: λ vl, ∃wll: vec _ _, ⌜vl = concat wll⌝ ∗
+      [∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2) ⊣⊢
+    [∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid.
   Proof.
     rewrite trans_big_sepL_mt_ty_own. iSplit.
     - iIntros "(%&?&%&->&?)". iExists _. iFrame.
@@ -34,7 +34,7 @@ Section array.
     iApply (ty_shr_lft_mono with "In"). by iApply "All".
   Qed.
   Next Obligation.
-    iIntros "*% LFT In Bor κ". rewrite split_array_mt.
+    iIntros "*% LFT In Bor κ". rewrite split_mt_array.
     iMod (ty_share_big_sepL with "LFT In Bor κ") as "Toshrs"; [done|].
     iApply (step_fupdN_wand with "Toshrs"). by iIntros "!> >[$$]".
   Qed.

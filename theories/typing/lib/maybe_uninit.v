@@ -9,7 +9,7 @@ Section maybe_uninit.
 
   Local Lemma maybe_uninit_mt {𝔄} (ty: type 𝔄) vπ d tid l q :
     (l ↦∗{q}: λ vl, ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
-      ∃vπ', ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl)%I ⊣⊢
+      ∃vπ', ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl) ⊣⊢
     ⌜vπ = const None⌝ ∗ l ↦∗{q}: (λ vl, ⌜length vl = ty.(ty_size)⌝) ∨
       ∃vπ', ⌜vπ = Some ∘ vπ'⌝ ∗ l ↦∗{q}: ty.(ty_own) vπ' d tid.
   Proof.
@@ -238,7 +238,7 @@ Section typing.
     { move=> ???[[[?|]?]?]; [|done]. by do 2 (apply forall_proper=> ?). }
     iIntros (??[vπ ?]?) "LFT #PROPH UNIQ E L /=[p T] #Obs".
     iDestruct "p" as ([[]|]??) "(_ &#?& uniq)"=>//.
-    iDestruct "uniq" as (? i [? Eq]) "[Vo Bor]". set ξ := PrVar _ i.
+    iDestruct "uniq" as (? ξi [? Eq]) "[Vo Bor]". move: Eq. set ξ := PrVar _ ξi=> Eq.
     iMod (lctx_lft_alive_tok with "E L") as (?) "(κ & L & ToL)"; [done..|].
     iMod (bor_acc_cons with "LFT Bor κ") as "[big ToBor]"; [done|].
     iMod (bi.later_exist_except_0 with "big") as (oπ ?) "(>#⧖ & Pc &%& >↦ & uty)".
@@ -247,8 +247,8 @@ Section typing.
     iMod (proph_obs_sat with "PROPH Obs") as %[??]; [done|].
     iDestruct "uty" as "[[>-> _]|big]"=>//.
     iMod (bi.later_exist_except_0 with "big") as (aπ) "[>-> ty]"=>/=.
-    iMod (uniq_intro aπ with "PROPH UNIQ") as (j) "[Vo' Pc']" ; [done|].
-    set ζ := PrVar _ j. iDestruct (uniq_proph_tok with "Vo' Pc'") as "(Vo' & ζ & Pc')".
+    iMod (uniq_intro aπ with "PROPH UNIQ") as (ζj) "[Vo' Pc']" ; [done|].
+    set ζ := PrVar _ ζj. iDestruct (uniq_proph_tok with "Vo' Pc'") as "(Vo' & ζ & Pc')".
     iMod (uniq_preresolve ξ [ζ] (Some ∘ (.$ ζ)) with "PROPH Vo Pc [$ζ //]")
       as "(Obs' & [ζ _] & ToPc)"; [done|apply proph_dep_constr, proph_dep_one|].
     iSpecialize ("Pc'" with "ζ"). iCombine "Obs' Obs" as "#?". iClear "Obs".

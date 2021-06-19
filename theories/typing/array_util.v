@@ -16,9 +16,9 @@ Section array_util.
     l +ₗ[ty] (m + n) = l +ₗ[ty] m +ₗ[ty] n.
   Proof. by rewrite Nat.mul_add_distr_r shift_loc_assoc_nat. Qed.
 
-  Lemma trans_big_sepL_mt_ty_own {𝔄} (ty: type 𝔄) n (aπl: vec _ n) l d tid q :
-    ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{q}: ty.(ty_own) aπ d tid)%I ⊣⊢
-    ∃wll: vec (list val) n, l ↦∗{q} concat wll ∗
+  Lemma trans_big_sepL_mt_ty_own {𝔄} (ty: type 𝔄) n (aπl: vec _ n) l d tid :
+    ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) ⊣⊢
+    ∃wll: vec (list val) n, l ↦∗ concat wll ∗
       [∗ list] aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2.
   Proof.
     iSplit.
@@ -84,12 +84,12 @@ Section array_util.
     iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
   Qed.
 
-  Lemma ty_own_proph_big_sepL_mt {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) l d tid κ qₘ q :
+  Lemma ty_own_proph_big_sepL_mt {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) l d tid κ q :
     ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty.(ty_lft) -∗
-    ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{qₘ}: ty.(ty_own) aπ d tid) -∗ q.[κ]
+    ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) -∗ q.[κ]
       ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
         (q':+[ξl] ={E}=∗
-          ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗{qₘ}: ty.(ty_own) aπ d tid) ∗ q.[κ]).
+          ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) ∗ q.[κ]).
   Proof.
     rewrite {1}trans_big_sepL_mt_ty_own. iIntros (?) "LFT In (%& ↦ & tys) κ".
     iMod (ty_own_proph_big_sepL with "LFT In tys κ") as "Upd"; [done|].

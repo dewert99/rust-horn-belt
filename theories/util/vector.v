@@ -160,7 +160,7 @@ Lemma big_sepL_vlookup {A n} {PROP: bi} (i: fin n) (xl: vec A n)
 Proof. rewrite big_sepL_vlookup_acc. apply bi.sep_elim_l, _. Qed.
 
 Lemma big_sepL_vinitlast {A n} {PROP: bi} (xl: vec A (S n)) (Φ: _ → _ → PROP) :
-  ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊣⊢
+  ([∗ list] k ↦ x ∈ xl, Φ k x) ⊣⊢
   ([∗ list] k ↦ x ∈ vinit xl, Φ k x) ∗ Φ n (vlast xl).
 Proof.
   inv_vec xl=>/= x xl. move: Φ x.
@@ -169,7 +169,7 @@ Proof.
 Qed.
 
 Lemma big_sepL_vtakemiddrop {A n} {PROP: bi} i (xl: vec A n) (Φ: _ → _ → PROP) :
-  ([∗ list] k ↦ x ∈ xl, Φ k x)%I ⊣⊢
+  ([∗ list] k ↦ x ∈ xl, Φ k x) ⊣⊢
   ([∗ list] k ↦ x ∈ vtake i xl, Φ k x) ∗ Φ i (xl !!! i) ∗
     ([∗ list] k ↦ x ∈ vdrop' i xl, Φ (S i + k) x).
 Proof.

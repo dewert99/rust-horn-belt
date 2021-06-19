@@ -188,11 +188,11 @@ Section cell.
     split. { move=>/= ???[??]/=. by f_equiv. }
     iIntros (??[??]?) "_ _ _ _ $ /=[p T] ? !>". iExists (const Φ -:: _).
     iFrame "T". iSplit; [|by iApply proph_obs_impl; [|done]=> ?[_?]].
-    iDestruct "p" as ([[]|][|d]?) "[? obox]"=>//.
-    iExists _, _. do 2 (iSplit; [done|]). iDestruct "obox" as "[(%vl & ↦ & box) $]".
-    iNext. iExists _. iFrame "↦". case d as [|]=>//. case vl as [|[[]|][]]=>//.
-    iDestruct "box" as "[(%& ↦ & ty) $]". iNext. iExists _. iFrame "↦".
-    iExists _, _, _. iSplit; [done|].
+    iDestruct "p" as ([[]|][|d]?) "[? obox]"=>//=. iExists _, _.
+    do 2 (iSplit; [done|]). iDestruct "obox" as "[↦box $]". iNext=>/=.
+    rewrite !split_mt_ptr. case d as [|]=>//. iDestruct "↦box" as (?) "(↦ & ↦ty & †)".
+    iExists _. iFrame "↦ †". iNext. iDestruct "↦ty" as (?) "[↦ ty]". iExists _.
+    iFrame "↦". iExists _, _, _. iSplit; [done|].
     iSplit; [by iApply proph_obs_impl; [|done]=> ?[? _]|]. iFrame "ty".
     iApply persistent_time_receipt_mono; [|done]. lia.
   Qed.
@@ -219,10 +219,10 @@ Section cell.
     eapply type_fn; [apply _|]=> _ ??[x[]]. simpl_subst.
     iIntros (?[?[]]?) "LFT #TIME PROPH UNIQ E Na L C /=[p _] Obs".
     rewrite tctx_hasty_val.  iDestruct "p" as ([|d]) "[_ bbox]"=>//.
-    case x as [[|l|]|]=>//. iDestruct "bbox" as "[(%vl & ↦ & box) †]".
+    case x as [[|l|]|]=>//=. rewrite split_mt_ptr. iDestruct "bbox" as "[↦box †]".
     wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
-    wp_seq. iIntros "⧗". wp_seq. case d=>// ?. case vl as [|[[]|][]]=>//=.
-    iDestruct "box" as "[(%& >↦' &%& big) †']".
+    wp_seq. iIntros "⧗". wp_seq. case d=>// ?.
+    iDestruct "↦box" as (?) "(↦ & (%& >↦' &%& big) & †')".
     iMod (bi.later_exist_except_0 with "big") as (??) "(>->& >Obs' & >⧖ & ty)".
     iCombine "Obs Obs'" as "#?".
     iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖") as "#⧖"; [done|].
@@ -230,7 +230,8 @@ Section cell.
       "[] LFT TIME PROPH UNIQ E Na L C [↦ † ↦' †' ty] []").
     - iApply type_jump; [solve_typing|solve_extract|solve_typing].
     - iSplit; [|done]. rewrite (tctx_hasty_val #l). iExists _. iFrame "⧖".
-      iFrame "†". iNext. iExists _. iFrame "↦ †'". iNext. iExists _. iFrame.
+      iFrame "†". iNext. rewrite split_mt_ptr. iExists _. iFrame "↦ †'". iNext.
+      iExists _. iFrame.
     - iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
   Qed.
 
@@ -249,21 +250,21 @@ Section cell.
     iIntros (?[vπ[]]?) "#LFT _ #PROPH #UNIQ E Na L C /=[x _] #?".
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
     rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[#⧖ box]"=>//.
-    case x as [[|x|]|]=>//. iDestruct "box" as "[(%vl & >↦ & [#? uniq]) †]".
-    do 2 wp_seq. case vl as [|[[]|][]]=>//=.
-    iDestruct "uniq" as (? i [? _]) "[Vo Bor]". set ξ := PrVar _ i.
+    case x as [[|x|]|]=>//=. rewrite split_mt_uniq_bor.
+    iDestruct "box" as "[[#In uniq] †]". do 2 wp_seq.
+    iDestruct "uniq" as (?? ξi [? _]) "(↦ & Vo & Bor)".
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as
       "[(%&%& >#⧖' & Pc &%& >↦' & ty) ToBor]"; [done|].
     iMod (uniq_strip_later with "Vo Pc") as (<-<-) "[Vo Pc]".
     iMod (uniq_intro (const (Φ: predₛ 𝔄)) with "PROPH UNIQ") as
-      (j) "[Vo' Pc']"; [done|]. set ζ := PrVar _ j.
+      (ζj) "[Vo' Pc']"; [done|]. set ζ := PrVar _ ζj.
     iMod ("ToBor" with "[Vo Pc] [↦' ty Pc']") as "[Bor α]"; last first.
     - iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton. do 2 wp_seq.
       iApply ("C" $! [# #x] -[λ π, (_, π ζ)] with "Na L [↦ † Vo' Bor] []"); last first.
       { iApply proph_obs_impl; [|done]=>/= π. by case (vπ π)=> ? _[_ ?]. }
       iSplit; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖ †".
-      iNext. iExists _. iFrame "↦". iSplit; [done|]. iExists _, _. by iFrame.
+      iNext. rewrite split_mt_uniq_bor. iFrame "In". iExists _, _, _. by iFrame.
     - iNext. iExists _, _. iFrame "⧖' Pc'". iExists _. iFrame "↦'".
       iExists _, _, _. iSplit; [done|]. iFrame "ty ⧖'".
       iApply proph_obs_impl; [|done]=>/= π. by case (vπ π)=>/= ??[? _].
@@ -280,11 +281,12 @@ Section cell.
   Proof.
     eapply type_fn; [apply _|]=> α ??[x[]]. simpl_subst.
     iIntros (?[vπ[]]?) "LFT #TIME #PROPH UNIQ E Na L C /=[x _] Obs".
-    rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[_ box]"=>//. case x as [[|x|]|]=>//.
-    iDestruct "box" as "[(%vl & ↦ & [#? uniq]) †]". wp_bind Skip.
+    rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[_ box]"=>//.
+    case x as [[|x|]|]=>//=. rewrite split_mt_uniq_bor.
+    iDestruct "box" as "[[#In ↦uniq] †]". wp_bind Skip.
     iApply (wp_cumulative_time_receipt with "TIME"); [done|]. wp_seq.
-    iIntros "⧗". wp_seq. case vl as [|[[]|][]]=>//.
-    iDestruct "uniq" as (??[? Eq]) "[Vo Bor]". set ξ := PrVar _ i.
+    iIntros "⧗". wp_seq. iDestruct "↦uniq" as (?? ξi [? Eq]) "(↦ & Vo & Bor)".
+    move: Eq. set ξ := PrVar _ ξi=> Eq.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as
       "[(%&%&_& Pc &%& >↦' & %Φ & big) ToBor]"; [done|].
@@ -295,15 +297,15 @@ Section cell.
     have ->: vπ = λ π, (Φ, π ξ). { by rewrite [vπ]surjective_pairing_fun Eq Eq'. }
     iMod (uniq_preresolve ξ [] (const Ψ) 1%Qp with "PROPH Vo Pc []")
       as "(Obs' &_& ToPc)"; [done..|]. iCombine "Obs' Obs" as "#?".
-    iMod (uniq_intro aπ with "PROPH UNIQ") as (j) "[Vo' Pc']"; [done|].
-    set ζ := PrVar _ j. have ?: Inhabited 𝔄 := populate (aπ inhabitant).
+    iMod (uniq_intro aπ with "PROPH UNIQ") as (ζj) "[Vo' Pc']"; [done|].
+    set ζ := PrVar _ ζj. have ?: Inhabited 𝔄 := populate (aπ inhabitant).
     iMod ("ToBor" with "[ToPc] [↦' ty Pc']") as "[Bor α]"; last first.
     - iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton. do 2 wp_seq.
       iApply ("C" $! [# #x] -[λ π, (_, π ζ)] with "Na L [↦ † Vo' Bor] []"); last first.
       { iApply proph_obs_impl; [|done]=>/= π. case (vπ π)=>/= ??[->[Imp ?]].
         by apply Imp. }
       iSplit; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖S †". iNext.
-      iExists _. iFrame "↦". iSplit; [done|]. iExists _, _. iSplit; [done|]. iFrame.
+      rewrite split_mt_uniq_bor. iFrame "In". iExists _, _, _. by iFrame.
     - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame "↦' ty".
       iApply proph_obs_impl; [|done]=>/= π. case (vπ π)=>/= ??[->[Imp ?]].
       apply Imp=>//. apply (aπ π).
