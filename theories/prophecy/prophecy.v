@@ -79,8 +79,8 @@ Lemma proph_dep_singleton {A} (vπ: proph A) :
   (∀ u v : A, u = v) → vπ ./ [].
 Proof. by intros ????. Qed.
 
-Lemma proph_dep_eq {A} (f g: proph A) ξl :
-  f ./ ξl → f = g → g ./ ξl.
+Lemma proph_dep_eq {A} (vπ wπ: proph A) ξl :
+  vπ ./ ξl → vπ = wπ → wπ ./ ξl.
 Proof. by move=> ?<-. Qed.
 
 Lemma proph_dep_prod {A B} ξl ζl (vπ: proph (A * B)) :
@@ -482,7 +482,11 @@ Proof.
   by iApply proph_obs_impl; [|done]=>/= ?[[->->]->].
 Qed.
 
-Lemma proph_eqz_pair {A B} (uπ vπ: proph (A * B)) :
+Lemma proph_eqz_eq {A} (uπ uπ' vπ vπ': proph A) ξl :
+  uπ = uπ' → vπ = vπ' → uπ :== vπ -∗ uπ' :== vπ'.
+Proof. iIntros (->->) "$". Qed.
+
+Lemma proph_eqz_prod {A B} (uπ vπ: proph (A * B)) :
   fst ∘ uπ :== fst ∘ vπ -∗ snd ∘ uπ :== snd ∘ vπ -∗ uπ :== vπ.
 Proof.
   iIntros "Eqz Eqz'". iDestruct (proph_eqz_constr2 with "Eqz Eqz'") as "?".
@@ -495,5 +499,4 @@ Proof.
   iIntros "Eqz". rewrite !vapply_insert_backmid.
   iApply (proph_eqz_constr3 with "[] Eqz []"); iApply proph_eqz_refl.
 Qed.
-
 End lemmas.

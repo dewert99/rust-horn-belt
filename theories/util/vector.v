@@ -8,18 +8,24 @@ From lrust.util Require Import basic.
 Notation vhd := Vector.hd.
 Notation vtl := Vector.tl.
 
+Definition vcons' {A n} (x: A) (xl': vec A n) : vec A (S n) := x ::: xl'.
+Global Arguments vcons' {_ _} /.
+
+Global Instance vcons_inj' {A n} : Inj2 (=) (=) (=) (@vcons' A n).
+Proof. move=>/= ?????. by apply vcons_inj. Qed.
+
 Lemma surjective_vcons {A n} (xl: vec A (S n)) : xl = vhd xl ::: vtl xl.
 Proof. by inv_vec xl. Qed.
 
 Lemma surjective_vcons_fun {A B n} (f: B → vec A (S n)) :
-  f = (λ a, vcons a) ∘ (vhd ∘ f) ⊛ (vtl ∘ f).
+  f = vcons' ∘ (vhd ∘ f) ⊛ (vtl ∘ f).
 Proof. fun_ext=>/= ?. by rewrite -surjective_vcons. Qed.
 
 Global Instance vhd_vsingleton_iso {A} : Iso vhd (λ x: A, [#x]).
 Proof. split; [|done]. fun_ext=> v. by inv_vec v. Qed.
 
 Global Instance vhd_vtl_vcons_iso {A n} :
-  Iso (λ v: vec A (S n), (vhd v, vtl v)) (curry (λ x, vcons x)).
+  Iso (λ v: vec A (S n), (vhd v, vtl v)) (curry vcons').
 Proof. split; fun_ext; [|by case]=> v. by inv_vec v. Qed.
 
 Global Instance vec_to_list_inj' {A n} : Inj (=) (=) (@vec_to_list A n).

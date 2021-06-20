@@ -20,8 +20,8 @@ Section borrow.
     iDestruct "p" as ([[]|][|]?) "[#⧖ own]"=>//.
     iDestruct "own" as "[(%& >↦ & ty) †]". iDestruct (Out with "L E") as "#Out".
     iDestruct (elctx_interp_ty_outlives_E with "Out") as "#?".
-    iMod (uniq_intro vπ with "PROPH UNIQ") as (i) "[Vo Pc]"; [done|].
-    set ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i.
+    iMod (uniq_intro vπ with "PROPH UNIQ") as (ξi) "[Vo Pc]"; [done|].
+    set ξ := PrVar _ ξi.
     iMod (bor_create ⊤ κ (∃vπ' d, ⧖(S d) ∗ .PC[ξ] vπ' d ∗
       _ ↦∗: ty.(ty_own) vπ' d _)%I with "LFT [↦ ty Pc]") as "[Bor Toty]"; [done| |].
     { iExists _, _. iFrame "Pc ⧖". iExists _. iFrame. }
@@ -133,7 +133,7 @@ Section borrow.
         iExists _, _. iFrame "⧖". iSplitL "ζPc"; last first.
         { iFrame "In". iExists _, _. by iFrame. }
         iNext. iDestruct (proph_ctrl_eqz with "PROPH ζPc") as "Eqz".
-        iApply (proph_eqz_pair with "[Eqz]"); [done|iApply proph_eqz_refl]. }
+        iApply (proph_eqz_prod with "[Eqz]"); [done|iApply proph_eqz_refl]. }
     iDestruct "ξBig" as (??) "(>#⧖ & ξPc & ↦ty)".
     iDestruct "ζBig" as (??) "(>ξVo & _ & ζPc)".
     iMod (uniq_strip_later with "ξVo ξPc") as (<-<-) "[ξVo ξPc]".
@@ -151,7 +151,7 @@ Section borrow.
     iMod ("ToζBig" with "†κ'") as (vπ' ?) "(>ξVo & >⧖' & ζPc)". iModIntro.
     iExists _, _. iFrame "⧖' In". iSplitL "ζPc".
     - iNext. iDestruct (proph_ctrl_eqz with "PROPH ζPc") as "Eqz".
-      iApply (proph_eqz_pair _ (pair ∘ vπ' ⊛ (snd ∘ vπ)) with "[Eqz]");
+      iApply (proph_eqz_prod _ (pair ∘ vπ' ⊛ (snd ∘ vπ)) with "[Eqz]");
       [done|iApply proph_eqz_refl].
     - iExists _, _.
       rewrite /uniq_own (proof_irrel (prval_to_inh _) (prval_to_inh (fst ∘ vπ))).
@@ -181,7 +181,7 @@ Section borrow.
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
     iMod (Alvκ with "E L") as (q) "[κ ToL]"; [done|]. wp_apply (wp_hasty with "p").
     iIntros ([[]|] ??) "#⧖ [#? uniq]"=>//.
-    iDestruct "uniq" as (? ξi [? Eq]) "[ξVo Bor]". set (ξ := PrVar _ ξi).
+    iDestruct "uniq" as (? ξi [? Eq]) "[ξVo Bor]". set ξ := PrVar _ ξi.
     iMod (bor_acc_cons with "LFT Bor κ") as "[Body ToBor]"; [done|].
     iDestruct "Body" as (? d'') "(_ & ξPc & ↦own)". rewrite split_mt_ptr.
     case d'' as [|]; [iDestruct "↦own" as ">[]"|].
@@ -306,7 +306,7 @@ Section borrow.
     { fun_ext => x /=. move: (equal_f H x) => /= y. by inversion y.  }
     iMod (uniq_strip_later with "Hvo Hpcω") as (<-->) "[ωVo ωPc]".
     iMod (uniq_intro (fst ∘ (fst ∘ vπ)) with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].
-    set (ζ := PrVar _ ζi).
+    set ζ := PrVar _ ζi.
     iDestruct (uniq_proph_tok with "ζVo ζPc") as "(ζVo & ζ & ToζPc)".
     iDestruct (uniq_proph_tok with "ωVo ωPc") as "(ωVo & ω & ToωPc)".
     iMod (uniq_preresolve ξ [ζ; ω] (λ π, (π ζ, π ω)) with "PROPH ξVo ξPc [$ζ $ω]")

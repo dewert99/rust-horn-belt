@@ -107,4 +107,94 @@ Section uniq_array_util.
     iDestruct (incl_uniq_own with "InLft EqOwn uniq") as "$"=>/=.
     setoid_rewrite <-shift_loc_assoc_nat. iDestruct ("IH" with "uniqs") as "$".
   Qed.
+
+  Lemma uniq_intro_vec {𝔄 n} (vπl: vec (proph 𝔄) n) d E :
+    ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗ ∃ξil,
+      [∗ list] vπξi ∈ vzip vπl ξil,
+        let ξ := PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2 in
+        .VO[ξ] vπξi.1 d ∗ .PC[ξ] vπξi.1 d.
+  Proof.
+    iIntros (?) "#PROPH #UNIQ". iInduction vπl as [|vπ] "IH".
+    { iModIntro. by iExists [#]. }
+    iMod (uniq_intro vπ with "PROPH UNIQ") as (?) "?"; [done|].
+    iMod "IH" as (?) "?". iModIntro. iExists (_:::_). iFrame.
+  Qed.
+
+  Lemma uniq_proph_tok_vec {𝔄 n} (vπξil: vec (proph 𝔄 * _) n) d :
+    ([∗ list] vπξi ∈ vπξil,
+      let ξ := PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2 in
+      .VO[ξ] vπξi.1 d ∗ .PC[ξ] vπξi.1 d) -∗
+    let ξl := map (λ vπξi, PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2) vπξil in
+    1:+[ξl] ∗ (1:+[ξl] -∗ [∗ list] vπξi ∈ vπξil,
+      let ξ := PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2 in
+      .VO[ξ] vπξi.1 d ∗ .PC[ξ] vπξi.1 d).
+  Proof.
+    iIntros "VoPcs". iInduction vπξil as [|] "IH". { iSplitL; by [|iIntros]. }
+    iDestruct "VoPcs" as "[[Vo Pc] VoPcs]"=>/=.
+    iDestruct (uniq_proph_tok with "Vo Pc") as "($&$& ToPc)".
+    iDestruct ("IH" with "VoPcs") as "[$ ToVoPcs]". iIntros "[ξ ξl]".
+    iDestruct ("ToPc" with "ξ") as "$". iDestruct ("ToVoPcs" with "ξl") as "$".
+  Qed.
+
+  Lemma proph_dep_prvars {𝔄 n} (vπξil: vec (proph 𝔄 * _) n) :
+    let ξl := map (λ vπξi, PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2) vπξil in
+    let vπl' := vmap (λ vπξi (π: proph_asn),
+      π (PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2): 𝔄) vπξil in
+    vapply vπl' ./ ξl.
+  Proof.
+    elim: vπξil; [done|]=>/= ????. apply (proph_dep_vec_S [_]); [|done].
+    apply proph_dep_one.
+  Qed.
+
+  Lemma merge_big_sepL_proph_ctrl_mt_ty_own {𝔄 n}
+      (vπl: vec _ n) ξil (ty: type 𝔄) d tid l :
+    ⧖(S d) -∗
+    ([∗ list] vπξi ∈ vzip vπl ξil,
+      .PC[PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2] vπξi.1 d) -∗
+    ([∗ list] i ↦ vπ ∈ vπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) vπ d tid) -∗
+    [∗ list] i ↦ vπξi ∈ vzip vπl ξil, ∃vπ' d', ⧖(S d') ∗
+      .PC[PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2] vπ' d' ∗
+      (l +ₗ[ty] i) ↦∗: ty.(ty_own) vπ' d' tid.
+  Proof.
+    iIntros "#⧖ Pcs ↦tys". iInduction vπl as [|] "IH" forall (l); inv_vec ξil=>//= ??.
+    iDestruct "Pcs" as "[Pc Pcs]". iDestruct "↦tys" as "[(%& ↦ & ty) ↦tys]".
+    setoid_rewrite <-shift_loc_assoc_nat. iDestruct ("IH" with "Pcs ↦tys") as "$".
+    iExists _, _. iFrame "⧖ Pc". iExists _. iFrame.
+  Qed.
+
+  Lemma split_big_sepL_proph_ctrl_mt_ty_own {𝔄 n}
+      (vπξil: vec _ n) (ty: type 𝔄) dex tid l :
+    proph_ctx -∗ ⧖(S dex) -∗
+    ([∗ list] i ↦ vπξi ∈ vπξil, ∃vπ' d', ⧖(S d') ∗
+      .PC[PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2] vπ' d' ∗
+      (l +ₗ[ty] i) ↦∗: ty.(ty_own) vπ' d' tid) -∗
+    ∃wπl d, ⧖(S d) ∗
+      ([∗ list] vπξiwπ ∈ vzip vπξil wπl,
+        (.$ PrVar (𝔄 ↾ prval_to_inh vπξiwπ.1.1) vπξiwπ.1.2) :== vπξiwπ.2) ∗
+      ([∗ list] i ↦ wπ ∈ wπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) wπ d tid).
+  Proof.
+    iIntros "#PROPH #⧖ex Pc↦tys". iInduction vπξil as [|] "IH" forall (l).
+    { iExists [#], _. by iFrame "⧖ex"=>/=. }
+    iDestruct "Pc↦tys" as "[(%&%& ⧖ & Pc & ↦ty) Pc↦tys]".
+    iDestruct (proph_ctrl_eqz with "PROPH Pc") as "Eqz".
+    setoid_rewrite <-shift_loc_assoc_nat.
+    iDestruct ("IH" with "Pc↦tys") as (??) "(⧖' & Eqzs & ↦tys)".
+    iCombine "⧖ ⧖'" as "⧖". iExists (_:::_), _=>/=. iFrame "⧖ Eqz Eqzs".
+    iSplitL "↦ty"; iClear "#"; iStopProof.
+    - do 3 f_equiv. apply ty_own_depth_mono. lia.
+    - setoid_rewrite shift_loc_assoc_nat. do 6 f_equiv. apply ty_own_depth_mono. lia.
+  Qed.
+
+  Lemma proph_eqz_prvars {𝔄 n} vπξil (wπl: vec (proph 𝔄) n) :
+    ([∗ list] vπξiwπ ∈ vzip vπξil wπl,
+      (.$ PrVar (𝔄 ↾ prval_to_inh vπξiwπ.1.1) vπξiwπ.1.2) :== vπξiwπ.2) -∗
+    let vπl := vmap (λ vπξi (π: proph_asn),
+      π (PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2): 𝔄) vπξil in
+    vapply vπl :== vapply wπl.
+  Proof.
+    iIntros "Eqzs". iInduction vπξil as [|] "IH"; inv_vec wπl=>/= *.
+    { iApply proph_eqz_refl. }
+    iDestruct "Eqzs" as "[Eqz Eqzs]". iDestruct ("IH" with "Eqzs") as "Eqz'".
+    iApply (proph_eqz_constr2 vcons' with "Eqz Eqz'").
+  Qed.
 End uniq_array_util.

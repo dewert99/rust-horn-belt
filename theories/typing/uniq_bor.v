@@ -58,14 +58,14 @@ Section uniq_bor.
     iApply ty_shr_depth_mono; [|done]. lia.
   Qed.
   Next Obligation.
-    move=> 𝔄 *. iIntros "#LFT #?". setoid_rewrite by_just_loc_ex at 1.
+    move=> *. iIntros "#LFT #?". setoid_rewrite by_just_loc_ex at 1.
     iIntros "[$ (%&->& Big)] κ'". iDestruct "Big" as (? ξi [Le Eq]) "uniq".
     iMod (ty_own_proph_uniq_own with "LFT [] [] uniq κ'") as "Upd"; [done|..].
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_r. }
     iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Upd").
-    iIntros "!> >(%&%&%& [ζlξ Touniq]) !>".
-    set ξ := PrVar _ ξi. iExists (_++[ξ]), _. iSplit.
+    iIntros "!> >(%&%&%& [ζlξ Touniq]) !>". set ξ := PrVar _ ξi.
+    iExists (_ ++ [ξ]), _. iSplit.
     { iPureIntro. apply proph_dep_prod; [done|]. rewrite Eq. apply proph_dep_one. }
     iIntros "{$ζlξ}ζlξ". iMod ("Touniq" with "ζlξ") as "[uniq $]". iModIntro.
     iExists _, _. by iFrame.

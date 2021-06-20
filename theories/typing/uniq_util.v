@@ -15,12 +15,10 @@ Section uniq_util.
   Lemma ty_share_uniq_own {𝔄} (ty: type 𝔄) vπ ξi d κ tid l κ' q E :
     ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
     &{κ'} (uniq_own ty vπ ξi d κ tid l) -∗ q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
-      let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
-      &{κ'} 1:[ξ] ∗ ty.(ty_shr) vπ d κ' tid l ∗ q.[κ'].
+      &{κ'} 1:[PrVar (𝔄 ↾ prval_to_inh vπ) ξi] ∗ ty.(ty_shr) vπ d κ' tid l ∗ q.[κ'].
   Proof.
-    set ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi.
-    have ?: Inhabited 𝔄 := populate (vπ inhabitant).
-    iIntros (?) "#LFT #In #In' Bor κ' /=".
+    set ξ := PrVar _ ξi. have ?: Inhabited 𝔄 := populate (vπ inhabitant).
+    iIntros (?) "#LFT #In #In' Bor κ'".
     iMod (bor_sep with "LFT Bor") as "[BorVo Bor]"; [done|].
     iMod (bor_unnest with "LFT Bor") as "Bor"; [done|]. iIntros "!>!>!>".
     iMod (bor_shorten with "[] Bor") as "Bor".
@@ -45,9 +43,8 @@ Section uniq_util.
       ∃ζl q', ⌜vπ ./ ζl⌝ ∗ q':+[ζl ++ [ξ]] ∗
         (q':+[ζl ++ [ξ]] ={E}=∗ uniq_own ty vπ ξi d κ tid l ∗ q.[κ']).
   Proof.
-    set ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi.
-    have ?: Inhabited 𝔄 := populate (vπ inhabitant).
-    iIntros (?) "#LFT #Inκ #? [Vo Bor] [κ' κ'₊] /=".
+    set ξ := PrVar _ ξi. have ?: Inhabited 𝔄 := populate (vπ inhabitant).
+    iIntros (?) "#LFT #Inκ #? [Vo Bor] [κ' κ'₊]".
     iMod (lft_incl_acc with "Inκ κ'") as (?) "[κ' Toκ']"; [done|].
     iMod (bor_acc with "LFT Bor κ'") as "[Big ToBor]"; [done|].
     iIntros "!>!>!>". iDestruct "Big" as (??) "(#⧖ & Pc & %vl & ↦ & ty)".
@@ -69,8 +66,7 @@ Section uniq_util.
     lctx_lft_alive E L κ → ↑lftN ∪ ↑prophN ⊆ F →
     lft_ctx -∗ proph_ctx -∗ κ ⊑ ty.(ty_lft) -∗ elctx_interp E -∗ llctx_interp L q -∗
     uniq_own ty vπ ξi d κ tid l ={F}=∗ |={F}▷=>^(S d) |={F}=>
-      let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
-      ⟨π, π ξ = vπ π⟩ ∗ llctx_interp L q.
+      ⟨π, π (PrVar (𝔄 ↾ prval_to_inh vπ) ξi) = vπ π⟩ ∗ llctx_interp L q.
   Proof.
     iIntros (Alv ?) "#LFT PROPH In E L [Vo Bor] /=".
     iMod (Alv with "E L") as (?) "[[κ κ₊] ToL]"; [solve_ndisj|].

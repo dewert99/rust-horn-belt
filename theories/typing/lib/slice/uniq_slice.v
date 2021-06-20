@@ -22,16 +22,13 @@ Section uniq_slice.
       iExists _, _, _, _. by iFrame.
   Qed.
 
-  Definition prval_pos_to_prpair {𝔄} : proph 𝔄 * positive → proph (𝔄 * 𝔄) :=
-    λ '(vπ, ξi) π, (vπ π, π (PrVar (𝔄 ↾ prval_to_inh vπ) ξi): 𝔄).
-
-  Program Definition uniq_slice {𝔄}
-      (κ: lft) (ty: type 𝔄) : type (listₛ (𝔄 * 𝔄)) := {|
+  Program Definition uniq_slice {𝔄} (κ: lft) (ty: type 𝔄) : type (listₛ (𝔄 * 𝔄)) := {|
     ty_size := 2;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
     ty_own vπ d tid vl := κ ⊑ ty.(ty_lft) ∗
       ∃(l: loc) (n d': nat) (aπξil: vec (proph 𝔄 * positive) n),
-        ⌜vl = [ #l; #n] ∧ vπ = lapply (vmap prval_pos_to_prpair aπξil)
-          ∧ (S d' ≤ d)%nat⌝ ∗
+        let aaπl := vmap
+          (λ aπξi π, (aπξi.1 π, π (PrVar (𝔄 ↾ prval_to_inh aπξi.1) aπξi.2): 𝔄)) aπξil in
+        ⌜vl = [ #l; #n] ∧ vπ = lapply aaπl ∧ (S d' ≤ d)%nat⌝ ∗
         [∗ list] i ↦ aπξi ∈ aπξil, uniq_own ty aπξi.1 aπξi.2 d' κ tid (l +ₗ[ty] i);
     ty_shr vπ d κ' tid l' := [S(d') := d]
       ∃(l: loc) (n: nat) (aπl: vec (proph 𝔄) n) ξl,
@@ -69,8 +66,8 @@ Section uniq_slice.
     iSplit; last first.
     { iClear "#". iNext. iStopProof. do 3 f_equiv. iApply ty_shr_depth_mono. lia. }
     iPureIntro. split.
-    - fun_ext=>/= ?. elim aπξil; [done|]. by move=>/= [??]??->.
-    - rewrite /ξl. elim aπξil; [done|]. case=>/= [??]???.
+    - fun_ext=>/= ?. by elim aπξil; [done|]=>/= ???->.
+    - rewrite /ξl. elim aπξil; [done|]=>/= ????.
       apply (proph_dep_constr2 _ _ _ [_]); [|done]. apply proph_dep_one.
   Qed.
   Next Obligation.
@@ -82,8 +79,8 @@ Section uniq_slice.
     iIntros "!> >(%&%& %Dep & ζξl & Touniqs) !>". iExists _, _. iFrame "ζξl". iSplit.
     { iPureIntro. apply proph_dep_list_prod.
       - apply (proph_dep_constr vec_to_list) in Dep. eapply proph_dep_eq; [done|].
-        fun_ext=>/= ?. elim aπξil; [done|]. by move=>/= [??]??->.
-      - elim aπξil; [done|]. move=>/= [??]???.
+        fun_ext=>/= ?. by elim aπξil; [done|]=>/= ???->.
+      - elim aπξil; [done|]=>/= ????.
         apply (proph_dep_constr2 _ _ _ [_]); [|done]. apply proph_dep_one. }
     iIntros "ζξl". iMod ("Touniqs" with "ζξl") as "[uniqs $]". iModIntro.
     iSplit; [done|]. iExists _, _, _, _. by iFrame.

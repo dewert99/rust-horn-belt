@@ -58,6 +58,9 @@ Notation ".PC[ ξ ]" := (proph_ctrl ξ)
 
 (** * Lemmas *)
 
+Definition prval_to_inh {𝔄} (vπ: proph 𝔄) : inh_syn_type 𝔄 :=
+  to_inh_syn_type (vπ inhabitant).
+
 Section lemmas.
 Context `{!invG Σ, !prophG Σ, !uniqG Σ}.
 
@@ -99,22 +102,19 @@ Proof.
   iMod (inv_alloc _ _ uniq_inv with "[●ε]") as "?"; by [iExists ε|].
 Qed.
 
-Definition prval_to_inh {𝔄} (vπ: proph 𝔄)
-  : inh_syn_type 𝔄 := to_inh_syn_type (vπ inhabitant).
-
 Lemma uniq_intro {𝔄} (vπ: proph 𝔄) d E :
-  ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗ ∃i,
-    let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) i in .VO[ξ] vπ d ∗ .PC[ξ] vπ d.
+  ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗ ∃ξi,
+    let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in .VO[ξ] vπ d ∗ .PC[ξ] vπ d.
 Proof.
   iIntros (?) "PROPH ?". iInv uniqN as (S) ">●S".
   set 𝔄i := 𝔄 ↾ prval_to_inh vπ. set I := dom (gset _) (S 𝔄i).
-  iMod (proph_intro 𝔄i I with "PROPH") as (i NIn) "ξ"; [by solve_ndisj|].
-  set ξ := PrVar 𝔄i i. set S' := add_line ξ 1 vπ d S.
+  iMod (proph_intro 𝔄i I with "PROPH") as (ξi NIn) "ξ"; [by solve_ndisj|].
+  set ξ := PrVar 𝔄i ξi. set S' := add_line ξ 1 vπ d S.
   move: NIn=> /not_elem_of_dom ?.
   iMod (own_update _ _ (● S' ⋅ ◯ line ξ 1 vπ d) with "●S") as "[? Vo2]".
   { by apply auth_update_alloc,
       discrete_fun_insert_local_update, alloc_singleton_local_update. }
-  iModIntro. iSplitR "Vo2 ξ"; [by iExists S'|]. iModIntro. iExists i.
+  iModIntro. iSplitR "Vo2 ξ"; [by iExists S'|]. iModIntro. iExists ξi.
   iDestruct (vo_vo2 with "Vo2") as "[$?]". iLeft. iFrame.
 Qed.
 
