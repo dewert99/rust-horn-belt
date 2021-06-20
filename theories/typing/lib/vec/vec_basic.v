@@ -25,8 +25,8 @@ Section vec_basic.
   Lemma vec_leak {𝔄} (ty: type 𝔄) Φ E L :
     leak E L ty Φ → leak E L (vec_ty ty) (lforall Φ).
   Proof.
-    iIntros (Lk ? q ?[|]???) "#LFT #PROPH #E L vec //=".
-    iDestruct "vec" as (?? l aπl[->->]) "[↦tys _]". iIntros "!>!>!>".
+    iIntros (????[|]???) "#LFT #PROPH #E L vec //=".
+    iDestruct "vec" as (????[->->]) "[↦tys _]". iIntros "!>!>!>".
     rewrite trans_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦ tys]".
     iMod (leak_big_sepL_ty_own with "LFT PROPH E L tys") as "Upd"; [done..|].
     iApply (step_fupdN_wand with "Upd"). by iIntros "!> ?".
@@ -79,7 +79,7 @@ Section vec_basic.
   Definition vec_new: val :=
     fn: [] :=
       let: "r" := new [ #3] in
-      "r" <- #0;; "r" +ₗ #1 <- #0;; "r" +ₗ #2 <- new [ #0];;
+      "r" <- new [ #0];; "r" +ₗ #1 <- #0;; "r" +ₗ #2 <- #0;;
       return: ["r"].
 
   Lemma vec_new_type {𝔄} (ty: type 𝔄) :
@@ -89,23 +89,23 @@ Section vec_basic.
     iIntros (???) "_ #TIME _ _ _ Na L C _ Obs".
     wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (r).
     rewrite !heap_mapsto_vec_cons shift_loc_assoc. iIntros "[† (↦₀ & ↦₁ & ↦₂ &_)]".
-    wp_seq. iMod persistent_time_receipt_0 as "⧖". wp_bind (_ <- _)%E.
-    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|]. wp_write.
-    iIntros "⧖". wp_seq. wp_op. wp_write. wp_op. wp_bind (new _).
+    wp_seq. iMod persistent_time_receipt_0 as "⧖". wp_bind (new _).
     iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
-    iApply wp_new; [done..|]. iIntros "!>" (l) "[†' _] ?". wp_write.
-    do 2 wp_seq. rewrite cctx_interp_singleton.
+    iApply wp_new; [done..|]. iIntros "!>" (l) "[†' _] ⧖". wp_bind (_ <- _)%E.
+    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|]. wp_write.
+    iIntros "⧖". wp_seq. wp_op. wp_write. wp_op. wp_write. do 2 wp_seq.
+    rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[const []] with "Na L [-Obs] Obs"). iSplit; [|done].
     iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full.
     iFrame "†". iNext. iExists [_; _; _].
     rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil.
-    iFrame "↦₀ ↦₁ ↦₂". iExists 0, 0, l, [#]. iSplit; [done|]. iFrame "†'".
+    iFrame "↦₀ ↦₁ ↦₂". iExists l, 0, 0, [#]. iSplit; [done|]. iFrame "†'".
     iSplit; [by iNext|]. iExists []. by rewrite heap_mapsto_vec_nil.
   Qed.
 
   Definition vec_delete {𝔄} (ty: type 𝔄) : val :=
     fn: ["v"] :=
-      delete [(!"v" + !("v" +ₗ #1)) * #ty.(ty_size); !("v" +ₗ #2)];;
+      delete [(!("v" +ₗ #1) + !("v" +ₗ #2)) * #ty.(ty_size); !"v"];;
       delete [ #3; "v"];;
       return: [new [ #0]].
 
@@ -119,7 +119,7 @@ Section vec_basic.
     case d; [by iDestruct "bvec" as "[>[] _]"|]=> ?.
     iDestruct "bvec" as "[(%&%&%& big) †]".
     iMod (bi.later_exist_except_0 with "big") as (?) "(>-> & >↦₀ & >↦₁ & >↦₂ & big)".
-    wp_read. wp_op. wp_read. do 3 wp_op. wp_read. rewrite trans_big_sepL_mt_ty_own.
+    do 2 (wp_op; wp_read). do 2 wp_op. wp_read. rewrite trans_big_sepL_mt_ty_own.
     iDestruct "big" as "((%& ↦old & tys) & (%& %Eq & ↦ex) & †')".
     iDestruct (big_sepL_ty_own_length with "tys") as %Eq'.
     wp_bind (delete _). iApply (wp_delete (_++_) with "[↦old ↦ex †']").

@@ -12,19 +12,19 @@ Section vec_pushpop.
   Definition vec_push {𝔄} (ty: type 𝔄) : val :=
     fn: ["v"; "x"] :=
       let: "v'" := !"v" in delete [ #1; "v"];;
-      let: "len" := !"v'" in let: "ex" := !("v'" +ₗ #1) in "v'" <- "len";;
-      "v'" <- "len" + #1;;
+      let: "len" := !("v'" +ₗ #1) in let: "ex" := !("v'" +ₗ #2) in
+      "v'" +ₗ #1 <- "len" + #1;;
       withcont: "push":
         if: "ex" ≤ #0 then
-          "v'" +ₗ #1 <- "len";; let: "l" := !("v'" +ₗ #2) in
+          "v'" +ₗ #2 <- "len";; let: "l" := !"v'" in
           let: "l'" := new [(#2 * "len" + #1) * #ty.(ty_size)] in
           memcpy ["l'"; "len" * #ty.(ty_size); "l"];;
           delete ["len" * #ty.(ty_size); "l"];;
-          "v'" +ₗ #2 <- "l'";; "push" []
+          "v'" <- "l'";; "push" []
         else
-          "v'" +ₗ #1 <- "ex" - #1;; "push" []
+          "v'" +ₗ #2 <- "ex" - #1;; "push" []
       cont: "push" [] :=
-        !("v'" +ₗ #2) +ₗ "len" * #ty.(ty_size) <-{ty.(ty_size)} !"x";;
+        !"v'" +ₗ "len" * #ty.(ty_size) <-{ty.(ty_size)} !"x";;
         delete [ #ty.(ty_size); "x"];;
         let: "r" := new [ #0] in return: ["r"].
 
@@ -33,7 +33,7 @@ Section vec_pushpop.
       (λ post '-[(al, al'); a], al' = al ++ [a] → post ()).
   Proof.
     eapply type_fn; [apply _|]=> α ??[v[x[]]]. simpl_subst.
-    iIntros (tid(vπ & aπ &[])?) "#LFT #TIME #PROPH #UNIQ #E Na L C /=(v & x &_) #Obs".
+    iIntros (tid (vπ & aπ &[]) ?) "#LFT #TIME #PROPH #UNIQ #E Na L C /=(v & x &_) #Obs".
     rewrite !tctx_hasty_val. iDestruct "v" as ([|dv]) "[_ v]"=>//.
     case v as [[|v|]|]=>//. iDestruct "v" as "[(%vl & >↦ & [#LftIn uniq]) †]".
     case vl as [|[[|v'|]|][]]; try by iDestruct "uniq" as ">[]".
@@ -48,21 +48,21 @@ Section vec_pushpop.
     iMod (bor_acc with "LFT Bor α") as "[(%&%& ⧖u & Pc & ↦vec) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_mt_vec. case du as [|du]=>//.
-    iDestruct "↦vec" as (len ex ? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".
-    wp_read. wp_let. wp_op. wp_read. wp_let. wp_write. wp_op. wp_write.
+    iDestruct "↦vec" as (? len ex aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".
+    do 2 (wp_op; wp_read; wp_let). do 2 wp_op. wp_write.
     have ->: (len + 1)%Z = S len by lia.
     iCombine "⧖u ⧖x" as "#⧖"=>/=. set d := du `max` dx.
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     set push := (rec: "push" _ := _)%E.
     iAssert (
-      (∃(ex: nat) (l: loc), v' ↦ #(S len) ∗ (v' +ₗ 1) ↦ #ex ∗ (v' +ₗ 2) ↦ #l ∗
+      (∃(l: loc) (ex: nat), v' ↦ #l ∗ (v' +ₗ 1) ↦ #(S len) ∗ (v' +ₗ 2) ↦ #ex ∗
         ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ du tid) ∗
         (l +ₗ[ty] len) ↦∗len (S ex * ty.(ty_size)) ∗
         freeable_sz' ((S len + ex) * ty.(ty_size)) l) -∗
       WP push [] {{ _, cont_postcondition }})%I
       with "[L ToL Na C Vo Pc ToBor x]" as "push".
-    { iIntros "/=(%ex' &%& ↦₀ & ↦₁ & ↦₂ & ↦tys & (%vl & %Len & ↦ex) & †)".
-      rewrite /push. wp_rec. wp_op. wp_read. do 2 wp_op. wp_bind (_ <-{_} !_)%E.
+    { iIntros "/=(%&%& ↦₀ & ↦₁ & ↦₂ & ↦tys & (%vl & %Len & ↦ex) & †)".
+      rewrite /push. wp_rec. wp_read. do 2 wp_op. wp_bind (_ <-{_} !_)%E.
       move: {Len}(app_length_ex vl _ _ Len)=> [vl'[?[->[Len ?]]]].
       rewrite heap_mapsto_vec_app shift_loc_assoc_nat Len -Nat2Z.inj_mul.
       iDestruct "↦ex" as "[↦ ↦ex]". iDestruct "x" as "[(%& ↦x & ty) †x]".
@@ -95,7 +95,7 @@ Section vec_pushpop.
       iApply "push". iExists _, _. iFrame "↦tys ↦₀ ↦₁ ↦₂".
       iSplitL "↦ex". { iExists _. iFrame. iPureIntro. lia. }
       iClear "#". iStopProof. f_equiv. lia. }
-    wp_op. wp_write. wp_op. wp_read. wp_let. do 3 wp_op. wp_bind (new _).
+    wp_op. wp_write. wp_read. wp_let. do 3 wp_op. wp_bind (new _).
     iApply wp_new; [lia|done|]. iIntros "!>" (?) "[†' ↦']". wp_let. wp_op.
     have ->: ∀sz: nat, ((2 * len + 1) * sz)%Z = (len + S len) * sz by lia.
     rewrite trans_big_sepL_mt_ty_own plus_0_r Nat2Z.id Nat.mul_add_distr_r
@@ -105,7 +105,7 @@ Section vec_pushpop.
     iApply (wp_memcpy with "[$↦' $↦]"); [rewrite repeat_length; lia|lia|].
     iIntros "!>[↦' ↦]". wp_seq. wp_op. rewrite -Nat2Z.inj_mul. wp_bind (delete _).
     iApply (wp_delete with "[$↦ †]"); [lia|by rewrite Len|]. iIntros "!>_".
-    wp_seq. wp_op. wp_write. iApply "push". iExists _, _. iFrame "↦₀ ↦₁ ↦₂".
+    wp_seq. wp_write. iApply "push". iExists _, _. iFrame "↦₀ ↦₁ ↦₂".
     iSplitL "↦' tys". { rewrite trans_big_sepL_mt_ty_own. iExists _. iFrame. }
     iSplitR "†'".
     - iExists _. rewrite repeat_length. iFrame "↦ex'". by rewrite repeat_length.
@@ -123,10 +123,10 @@ Section vec_pushpop.
   Definition vec_pop {𝔄} (ty: type 𝔄) : val :=
     fn: ["v"] :=
       let: "v'" := !"v" in delete [ #1; "v"];;
-      let: "len" := !"v'" in let: "ex" := !("v'" +ₗ #1) in
+      let: "len" := !("v'" +ₗ #1) in let: "ex" := !("v'" +ₗ #2) in
       let: "len'" := "len" - #1 in
-      "v'" <- "len'";; "v'" +ₗ #1 <- "ex" + #1;;
-      letalloc: "r" <-{ty.(ty_size)} ! !("v'" +ₗ #2) +ₗ "len'" * #ty.(ty_size) in
+      "v'" +ₗ #1 <- "len'";; "v'" +ₗ #2 <- "ex" + #1;;
+      letalloc: "r" <-{ty.(ty_size)} ! !"v'" +ₗ "len'" * #ty.(ty_size) in
       return: ["r"].
 
   (* The precondition requires that the input list is non-empty *)
@@ -148,10 +148,10 @@ Section vec_pushpop.
     iMod (bor_acc with "LFT Bor α") as "[(%&%& #⧖ & Pc & ↦vec) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_mt_vec. case d=>// ?.
-    iDestruct "↦vec" as (? ex ? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".
-    wp_read. wp_let. wp_op. wp_read. wp_let. wp_op. wp_let. wp_write.
-    do 2 wp_op. wp_write. wp_bind (new _). iApply wp_new; [lia|done|].
-    iIntros "!>" (r) "[†r ↦r]". rewrite Nat2Z.id. wp_let. wp_op. wp_read. do 2 wp_op.
+    iDestruct "↦vec" as (?? ex aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".
+    do 2 (wp_op; wp_read; wp_let). wp_op. wp_let. wp_op. wp_write. do 2 wp_op.
+    wp_write. wp_bind (new _). iApply wp_new; [lia|done|].
+    iIntros "!>" (r) "[†r ↦r]". rewrite Nat2Z.id. wp_let. wp_read. do 2 wp_op.
     iMod (proph_obs_sat with "PROPH Obs") as %[π' Obs]; [done|].
     move: Obs (equal_f Eq1 π')=>/=. case (vπ π')=>/= ??[?[?[-> _]]] /(f_equal length).
     rewrite last_length. case aπl as [|aπ len' aπl]=>// _.

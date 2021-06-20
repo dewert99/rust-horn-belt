@@ -11,7 +11,7 @@ Section vec_index.
 
   Definition vec_index {𝔄} (ty: type 𝔄) : val :=
     fn: ["v"; "i"] :=
-      letalloc: "r" <- !(!"v" +ₗ #2) +ₗ !"i" * #ty.(ty_size) in
+      letalloc: "r" <- !(!"v") +ₗ !"i" * #ty.(ty_size) in
       delete [ #1; "v"];; delete [ #1; "i"];;
       return: ["r"].
 
@@ -32,8 +32,7 @@ Section vec_index.
     iDestruct "i" as "[(%& ↦i & (%&->&->)) †i]"=>/=.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (frac_bor_acc with "LFT Bor α") as (?) "[(↦₀ & ↦₁ & ↦₂) Toα]"; [done|].
-    rewrite !heap_mapsto_vec_singleton.
-    wp_let. wp_read. wp_op. wp_read. wp_read. do 2 wp_op. wp_write.
+    rewrite !heap_mapsto_vec_singleton. wp_let. do 3 wp_read. do 2 wp_op. wp_write.
     iMod ("Toα" with "[$↦₀ $↦₁ $↦₂]") as "α". iMod ("ToL" with "α L") as "L".
     do 2 rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     wp_bind (delete _). iApply (wp_delete with "[$↦v $†v]"); [done|].
@@ -76,11 +75,10 @@ Section vec_index.
     iDestruct "↦vec" as (??? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & ex & †)".
     have ->: vπ = λ π, (lapply aπl π: list _, π ξ).
     { rewrite [vπ]surjective_pairing_fun. by rewrite Eq1 Eq2. }
-    wp_read. wp_op. wp_read. wp_read. do 2 wp_op. wp_write.
-    do 2 rewrite -{1}heap_mapsto_vec_singleton. rewrite !freeable_sz_full.
-    wp_bind (delete _). iApply (wp_delete with "[$↦v $†v]"); [done|].
-    iIntros "!>_". wp_seq. wp_bind (delete _).
-    iApply (wp_cumulative_time_receipt with "TIME"); [done|].
+    do 3 wp_read. do 2 wp_op. wp_write. do 2 rewrite -{1}heap_mapsto_vec_singleton.
+    rewrite !freeable_sz_full. wp_bind (delete _).
+    iApply (wp_delete with "[$↦v $†v]"); [done|]. iIntros "!>_". wp_seq.
+    wp_bind (delete _). iApply (wp_cumulative_time_receipt with "TIME"); [done|].
     iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!>_ ⧗". wp_seq.
     iMod (proph_obs_sat with "PROPH Obs") as %(?& Obs); [done|].
     move: Obs=> [inat[?[->[+ _]]]]. rewrite -vec_to_list_apply -vlookup_lookup'.

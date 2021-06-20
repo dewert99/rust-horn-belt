@@ -1,3 +1,4 @@
+From lrust.typing Require Export type.
 From lrust.typing Require Import typing uniq_array_util.
 From lrust.typing.lib.slice Require Import uniq_slice.
 Set Default Proof Using "Type".

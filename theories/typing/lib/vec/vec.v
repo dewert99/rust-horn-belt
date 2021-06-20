@@ -12,11 +12,11 @@ Section vec.
     †{1}l…sz ∨ ⌜Z.of_nat sz = 0%Z⌝.
 
   Lemma split_mt_vec {𝔄} l' d alπ Φ :
-    (l' ↦∗: (λ vl, [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
-      ⌜vl = [ #len; #ex; #l] ∧ alπ = lapply aπl⌝ ∗ Φ d' len ex l aπl)) ⊣⊢
-    [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
+    (l' ↦∗: (λ vl, [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
+      ⌜vl = [ #l; #len; #ex] ∧ alπ = lapply aπl⌝ ∗ Φ d' len ex l aπl)) ⊣⊢
+    [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
       ⌜alπ = lapply aπl⌝ ∗
-      l' ↦ #len ∗ (l' +ₗ 1) ↦ #ex ∗ (l' +ₗ 2) ↦ #l ∗ Φ d' len ex l aπl.
+      l' ↦ #l ∗ (l' +ₗ 1) ↦ #len ∗ (l' +ₗ 2) ↦ #ex ∗ Φ d' len ex l aπl.
   Proof.
     iSplit.
     - iIntros "(%& ↦ & big)". case d=>// ?. iDestruct "big" as (????[->->]) "Φ".
@@ -30,15 +30,15 @@ Section vec.
   Program Definition vec_ty {𝔄} (ty: type 𝔄) : type (listₛ 𝔄) := {|
     ty_size := 3;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own alπ d tid vl :=
-      [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
-        ⌜vl = [ #len; #ex; #l] ∧ alπ = lapply aπl⌝ ∗
+      [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
+        ⌜vl = [ #l; #len; #ex] ∧ alπ = lapply aπl⌝ ∗
         ▷ ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d' tid) ∗
         (l +ₗ[ty] len) ↦∗len (ex * ty.(ty_size)) ∗
         freeable_sz' ((len + ex) * ty.(ty_size)) l;
     ty_shr alπ d κ tid l' :=
       [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
         ⌜alπ = lapply aπl⌝ ∗
-        &frac{κ} (λ q, l' ↦{q} #len ∗ (l' +ₗ 1) ↦{q} #ex ∗ (l' +ₗ 2) ↦{q} #l) ∗
+        &frac{κ} (λ q, l' ↦{q} #l ∗ (l' +ₗ 1) ↦{q} #len ∗ (l' +ₗ 2) ↦{q} #ex) ∗
         ▷ [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d' κ tid (l +ₗ[ty] i);
   |}%I.
   Next Obligation.
@@ -59,11 +59,9 @@ Section vec.
     iApply ty_shr_lft_mono; by [|iApply "All"].
   Qed.
   Next Obligation.
-    iIntros (???? d ? l' tid q ?) "#LFT In Bor κ". rewrite split_mt_vec. case d.
+    iIntros (???? d) "*% #LFT In Bor κ". rewrite split_mt_vec. case d.
     { by iMod (bor_persistent with "LFT Bor κ") as "[>[] _]". }
-    move=> ?. do 2 (iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|]).
-    iMod (bor_exists with "LFT Bor") as (l) "Bor"; [done|].
-    iMod (bor_exists_tok with "LFT Bor κ") as (aπl) "[Bor κ]"; [done|].
+    move=> ?. do 4 (iMod (bor_exists_tok with "LFT Bor κ") as (?) "[Bor κ]"; [done|]).
     iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].
     do 2 rewrite assoc. iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
     rewrite -assoc. iMod (bor_fracture (λ q', _ ↦{q'} _ ∗ _ ↦{q'} _ ∗ _ ↦{q'} _)%I
@@ -76,8 +74,8 @@ Section vec.
     iExists _, _, _, _. by iFrame.
   Qed.
   Next Obligation.
-    iIntros (????[|d] tid ?? q ?) "LFT In vec κ //=".
-    iDestruct "vec" as (??? aπl [->->]) "(↦tys & ex & †)". iIntros "!>!>!>".
+    iIntros (????[|d]) "*% LFT In vec κ //=".
+    iDestruct "vec" as (????[->->]) "(↦tys & ex & †)". iIntros "!>!>!>".
     iMod (ty_own_proph_big_sepL_mt with "LFT In ↦tys κ") as "Upd"; [done|].
     iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&%& ξl & Totys) !>".
     iExists _, _. iSplit.
@@ -86,8 +84,8 @@ Section vec.
     iExists _, _, _, _. by iFrame.
   Qed.
   Next Obligation.
-    iIntros (????[|d] κ ? l' κ' q ?) "LFT In In' vec κ' //=".
-    iDestruct "vec" as (?? l aπl ->) "[? tys]". iIntros "!>!>!>".
+    iIntros (????[|d]) "*% LFT In In' vec κ' //=".
+    iDestruct "vec" as (???? ->) "[? tys]". iIntros "!>!>!>".
     iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Totys"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Totys").
     iIntros ">(%&%&%& ξl & Totys) !>". iExists _, _. iSplit.

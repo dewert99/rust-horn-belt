@@ -1,3 +1,4 @@
+From lrust.typing Require Export type.
 From lrust.typing Require Import typing uniq_array_util.
 Set Default Proof Using "Type".
 
