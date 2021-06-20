@@ -79,13 +79,21 @@ Lemma proph_dep_singleton {A} (vπ: proph A) :
   (∀ u v : A, u = v) → vπ ./ [].
 Proof. by intros ????. Qed.
 
-Lemma proph_dep_pair {A B} ξl ζl (vπ: proph (A * B)) :
+Lemma proph_dep_eq {A} (f g: proph A) ξl :
+  f ./ ξl → f = g → g ./ ξl.
+Proof. by move=> ?<-. Qed.
+
+Lemma proph_dep_prod {A B} ξl ζl (vπ: proph (A * B)) :
   fst ∘ vπ ./ ξl → snd ∘ vπ ./ ζl → vπ ./ ξl ++ ζl.
 Proof.
   move=> ??. rewrite (surjective_pairing_fun vπ). by apply proph_dep_constr2.
 Qed.
 
-Lemma proph_dep_vcons {A n} ξl ζl (vπ: proph (vec A (S n))) :
+Lemma proph_dep_list_prod {A B} ξl ζl (f: proph (list (A * B))) :
+  map fst ∘ f ./ ξl → map snd ∘ f ./ ζl → f ./ ξl ++ ζl.
+Proof. move=> ??. rewrite -(zip_fst_snd_fun f). by apply proph_dep_constr2. Qed.
+
+Lemma proph_dep_vec_S {A n} ξl ζl (vπ: proph (vec A (S n))) :
   vhd ∘ vπ ./ ξl → vtl ∘ vπ ./ ζl → vπ ./ ξl ++ ζl.
 Proof.
   move=> ??. rewrite (surjective_vcons_fun vπ). by apply proph_dep_constr2.

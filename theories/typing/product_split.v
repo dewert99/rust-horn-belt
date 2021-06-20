@@ -198,7 +198,7 @@ Section product_split.
     iDestruct (uniq_proph_tok with "ζ'Vo ζ'Pc") as "(ζ'Vo & ζ' & ζ'Pc)".
     iMod (uniq_preresolve ξ [ζ; ζ'] (λ π, (π ζ, π ζ')) with
       "PROPH ξVo ξPc [$ζ $ζ']") as "(Obs' & (ζ & ζ' &_) & ToξPc)"; [done| |done|].
-    { apply (proph_dep_pair [_] [_]); apply proph_dep_one. }
+    { apply (proph_dep_prod [_] [_]); apply proph_dep_one. }
     iCombine "Obs Obs'" as "#Obs".
     iSpecialize ("ζPc" with "ζ"). iSpecialize ("ζ'Pc" with "ζ'").
     iMod ("ToBor" with "[ToξPc] [↦ty ζPc ζ'Pc]") as "[Bor κ]"; last first.

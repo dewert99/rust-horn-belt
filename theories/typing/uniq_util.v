@@ -16,7 +16,7 @@ Section uniq_util.
     ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
     &{κ'} (uniq_own ty vπ ξi d κ tid l) -∗ q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
       let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
-      &frac{κ'} (λ q', q':[ξ]) ∗ ty.(ty_shr) vπ d κ' tid l ∗ q.[κ'].
+      &{κ'} 1:[ξ] ∗ ty.(ty_shr) vπ d κ' tid l ∗ q.[κ'].
   Proof.
     set ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi.
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).
@@ -34,7 +34,6 @@ Section uniq_util.
     iDestruct (uniq_proph_tok with "Vo Pc") as "(Vo & ξ & ToPc)".
     iMod ("ToBor" with "[Vo ToPc] ξ") as "[Borξ κ']".
     { iIntros "!> >ξ !>!>". iFrame "Vo". by iApply "ToPc". }
-    iMod (bor_fracture (λ q, q:[_])%I with "LFT Borξ") as "$"; [done|].
     iMod (ty_share with "LFT [] Borty κ'") as "Upd"; [done..|].
     iApply (step_fupdN_wand with "Upd"). by iIntros "!> >[$$]".
   Qed.
@@ -42,9 +41,9 @@ Section uniq_util.
   Lemma ty_own_proph_uniq_own {𝔄} (ty: type 𝔄) vπ ξi d κ tid l κ' q E :
     ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
     uniq_own ty vπ ξi d κ tid l -∗ q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
-    let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
-    ∃ζl q', ⌜vπ ./ ζl⌝ ∗ q':+[ζl ++ [ξ]] ∗
-      (q':+[ζl ++ [ξ]] ={E}=∗ uniq_own ty vπ ξi d κ tid l ∗ q.[κ']).
+      let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
+      ∃ζl q', ⌜vπ ./ ζl⌝ ∗ q':+[ζl ++ [ξ]] ∗
+        (q':+[ζl ++ [ξ]] ={E}=∗ uniq_own ty vπ ξi d κ tid l ∗ q.[κ']).
   Proof.
     set ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi.
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).
@@ -68,8 +67,7 @@ Section uniq_util.
 
   Lemma leak_uniq_own {𝔄} (ty: type 𝔄) vπ ξi d κ tid l E L q F :
     lctx_lft_alive E L κ → ↑lftN ∪ ↑prophN ⊆ F →
-    lft_ctx -∗ proph_ctx -∗ κ ⊑ ty.(ty_lft) -∗
-    elctx_interp E -∗ llctx_interp L q -∗
+    lft_ctx -∗ proph_ctx -∗ κ ⊑ ty.(ty_lft) -∗ elctx_interp E -∗ llctx_interp L q -∗
     uniq_own ty vπ ξi d κ tid l ={F}=∗ |={F}▷=>^(S d) |={F}=>
       let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
       ⟨π, π ξ = vπ π⟩ ∗ llctx_interp L q.

@@ -104,6 +104,10 @@ Proof.
   rewrite take_length drop_length take_drop. split; [done|lia].
 Qed.
 
+Lemma zip_fst_snd_fun {A B C} (f: C → list (A * B)) :
+  zip ∘ (map fst ∘ f) ⊛ (map snd ∘ f) = f.
+Proof. fun_ext=>/= ?. apply zip_fst_snd. Qed.
+
 Definition llookup {A} (xl: list A) (i: fin (length xl)) : A :=
   list_to_vec xl !!! i.
 Infix "!!ₗ" := llookup (at level 20, right associativity).

@@ -108,7 +108,7 @@ Section product.
     iMod "Toty'" as (???) "[ξl' Toty']".
     iDestruct (proph_tok_combine with "ξl ξl'") as (?) "[ξl Toξl]".
     iExists _, _. iModIntro. iSplit.
-    - iPureIntro. by apply proph_dep_pair.
+    - iPureIntro. by apply proph_dep_prod.
     - iIntros "{$ξl}ξl". iDestruct ("Toξl" with "ξl") as "[ξl ξl']".
       iMod ("Toty" with "ξl") as "[?$]". iMod ("Toty'" with "ξl'") as "[?$]".
       iModIntro. iExists wl, wl'. iSplit; [done|]. iFrame.
@@ -126,7 +126,7 @@ Section product.
     iMod "Toty" as (ξl q ?) "[ξl Toty]". iMod "Toty'" as (ξl' q' ?) "[ξl' Toty']".
     iDestruct (proph_tok_combine with "ξl ξl'") as (q0) "[ξl Toξl]".
     iExists (ξl ++ ξl'), q0. iModIntro. iSplit.
-    - iPureIntro. by apply proph_dep_pair.
+    - iPureIntro. by apply proph_dep_prod.
     - iIntros "{$ξl}ξl". iDestruct ("Toξl" with "ξl") as "[ξl ξl']".
       iMod ("Toty" with "ξl") as "[$$]". by iMod ("Toty'" with "ξl'") as "[$$]".
   Qed.

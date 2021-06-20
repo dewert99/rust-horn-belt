@@ -311,7 +311,7 @@ Section borrow.
     iDestruct (uniq_proph_tok with "ωVo ωPc") as "(ωVo & ω & ToωPc)".
     iMod (uniq_preresolve ξ [ζ; ω] (λ π, (π ζ, π ω)) with "PROPH ξVo ξPc [$ζ $ω]")
       as "(Hobs & (ζ & ω &_) & Heqz)"; [done| |done|].
-    { apply (proph_dep_pair [_] [_]); apply proph_dep_one. }
+    { apply (proph_dep_prod [_] [_]); apply proph_dep_one. }
     iDestruct ("ToζPc" with "ζ") as "ζPc".
     iDestruct ("ToωPc" with "ω") as "ωPc".
     iMod ("Hclose'" $! (∃vπ' d', ⧖ (S d') ∗ .PC[ζ] vπ' d' ∗

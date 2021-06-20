@@ -51,9 +51,10 @@ Section uniq_bor.
     iMod (ty_share_uniq_own with "LFT [] [] Bor κ'") as "Upd"; [done|..].
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_r. }
-    iApply (step_fupdN_wand with "Upd").
-    iIntros "!> >(Borξ & ty &$) !>". iExists _, _. iFrame "Bor↦ Borξ".
-    iSplit; [iPureIntro; apply proph_dep_one|].
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(Borξ & ty &$)".
+    iMod (bor_fracture (λ q', q':[_])%I with "LFT Borξ") as "Borξ"; [done|].
+    iModIntro. iExists _, _. iFrame "Bor↦ Borξ".
+    iSplit. { iPureIntro. apply proph_dep_one. }
     iApply ty_shr_depth_mono; [|done]. lia.
   Qed.
   Next Obligation.
@@ -65,7 +66,7 @@ Section uniq_bor.
     iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Upd").
     iIntros "!> >(%&%&%& [ζlξ Touniq]) !>".
     set ξ := PrVar _ ξi. iExists (_++[ξ]), _. iSplit.
-    { iPureIntro. apply proph_dep_pair; [done|]. rewrite Eq. apply proph_dep_one. }
+    { iPureIntro. apply proph_dep_prod; [done|]. rewrite Eq. apply proph_dep_one. }
     iIntros "{$ζlξ}ζlξ". iMod ("Touniq" with "ζlξ") as "[uniq $]". iModIntro.
     iExists _, _. by iFrame.
   Qed.
@@ -80,7 +81,7 @@ Section uniq_bor.
     iMod (frac_bor_acc with "LFT Bor κ1") as (?) "[>ξ Toκ1]"; [done|].
     rewrite proph_tok_singleton.
     iDestruct (proph_tok_combine with "ζl [$ξ]") as (q) "[ζlξ Toζlξ]". iModIntro.
-    iExists (ζl ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_pair|].
+    iExists (ζl ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_prod|].
     iIntros "{$ζlξ}ζlξ". iDestruct ("Toζlξ" with "ζlξ") as "[ζl ξ]".
     iMod ("Toty" with "ζl") as "[?$]". iMod ("Toκ1" with "ξ") as "κ1".
     iMod ("Toκ'₊" with "κ1") as "$". iModIntro. iExists l, ξ. by do 3 (iSplit; [done|]).

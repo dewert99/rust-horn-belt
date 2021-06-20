@@ -47,7 +47,7 @@ Section mutex.
     (l ↦∗: λ vl, ∃Φ (b: bool) vl' vπ d,
       ⌜vl = #b :: vl' ∧ Φπ = const Φ⌝ ∗ ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ Ψ vπ d vl') ⊣⊢
     (∃Φ (b: bool) vπ d, ⌜Φπ = const Φ⌝ ∗
-      l ↦ #b ∗ ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ∃vl', (l +ₗ 1) ↦∗ vl' ∗ Ψ vπ d vl').
+      l ↦ #b ∗ ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ (l +ₗ 1) ↦∗: Ψ vπ d).
   Proof.
     iSplit.
     - iIntros "(%& ↦ &%&%&%&%&%&[->%]& Obs & ⧖ &?)". iExists _, _, _, _.

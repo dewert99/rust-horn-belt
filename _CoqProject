@@ -71,12 +71,15 @@ theories/typing/fixpoint.v
 theories/typing/type_sum.v
 theories/typing/typing.v
 theories/typing/soundness.v
+theories/typing/uniq_array_util.v
 theories/typing/lib/gfp.v
 theories/typing/lib/panic.v
 theories/typing/lib/loop.v
 theories/typing/lib/option.v
 theories/typing/lib/list.v
 theories/typing/lib/maybe_uninit.v
+theories/typing/lib/slice/uniq_slice.v
+theories/typing/lib/slice/uniq_slice_basic.v
 theories/typing/lib/vec/vec.v
 theories/typing/lib/vec/vec_basic.v
 theories/typing/lib/vec/vec_index.v

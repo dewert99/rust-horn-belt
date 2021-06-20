@@ -79,7 +79,7 @@ Section array_util.
     iApply (step_fupdN_wand with "Upd").
     iIntros "!> [>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
     iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
-    iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_vcons|].
+    iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_vec_S|].
     iIntros "ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
     iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
   Qed.
@@ -115,7 +115,7 @@ Section array_util.
     iIntros "!>!>". iCombine "Upd Upd'" as "Upd". iApply (step_fupdN_wand with "Upd").
     iIntros "[>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
     iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
-    iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_vcons|].
+    iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_vec_S|].
     iIntros "ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
     iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
   Qed.
