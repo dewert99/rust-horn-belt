@@ -120,8 +120,8 @@ Section array_util.
     iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
   Qed.
 
-  Lemma leak_big_sepL_ty_own {𝔄} (ty: type 𝔄) Φ n (aπl: vec _ n) wll d tid F q E L :
-    leak E L ty Φ → ↑lftN ∪ ↑prophN ⊆ F →
+  Lemma resolve_big_sepL_ty_own {𝔄} (ty: type 𝔄) Φ n (aπl: vec _ n) wll d tid F q E L :
+    resolve E L ty Φ → ↑lftN ∪ ↑prophN ⊆ F →
     lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
     ([∗ list] i ↦ aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2)
       ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, lforall Φ (lapply aπl π)⟩ ∗ llctx_interp L q.

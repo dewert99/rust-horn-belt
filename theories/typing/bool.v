@@ -13,8 +13,8 @@ Section bool.
   Global Instance bool_send: Send bool_ty.
   Proof. done. Qed.
 
-  Lemma bool_leak E L : leak E L bool_ty (const True).
-  Proof. apply leak_just. Qed.
+  Lemma bool_resolve E L : resolve E L bool_ty (const True).
+  Proof. apply resolve_just. Qed.
 
   Lemma type_bool_instr (b: bool) : typed_val #b bool_ty b.
   Proof.
@@ -64,4 +64,4 @@ Section bool.
   Qed.
 End bool.
 
-Global Hint Resolve bool_leak : lrust_typing.
+Global Hint Resolve bool_resolve : lrust_typing.

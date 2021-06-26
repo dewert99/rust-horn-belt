@@ -59,7 +59,7 @@ Section uniq_array_util.
     by iMod ("Touniqs" with "[$ζl' $ξl]") as "[$$]".
   Qed.
 
-  Lemma leak_big_sepL_uniq_own {𝔄} (ty: type 𝔄) n (vπξil: vec _ n) d κ tid l E L q F :
+  Lemma resolve_big_sepL_uniq_own {𝔄} (ty: type 𝔄) n (vπξil: vec _ n) d κ tid l E L q F :
     lctx_lft_alive E L κ → ↑lftN ∪ ↑prophN ⊆ F →
     lft_ctx -∗ proph_ctx -∗ κ ⊑ ty.(ty_lft) -∗ elctx_interp E -∗ llctx_interp L q -∗
     ([∗ list] i ↦ vπξi ∈ vπξil, uniq_own ty vπξi.1 vπξi.2 d κ tid (l +ₗ[ty] i))
@@ -71,7 +71,7 @@ Section uniq_array_util.
     iIntros (??) "#LFT #PROPH #In #E L uniqs". iInduction vπξil as [|] "IH" forall (q l).
     { iApply step_fupdN_full_intro. iFrame "L". by iApply proph_obs_true. }
     iDestruct "uniqs" as "[uniq uniqs]". iDestruct "L" as "[L L₊]"=>/=.
-    iMod (leak_uniq_own with "LFT PROPH In E L uniq") as "Upd"; [done..|].
+    iMod (resolve_uniq_own with "LFT PROPH In E L uniq") as "Upd"; [done..|].
     setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "L₊ uniqs") as "Upd'".
     iCombine "Upd Upd'" as "Upd". iApply (step_fupdN_wand _ _ (S _) with "Upd").
     iIntros "!> [>[Obs $] >[Obs' $]]". by iCombine "Obs Obs'" as "$".

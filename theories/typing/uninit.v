@@ -122,8 +122,8 @@ Section typing.
   Global Instance uninit_sync n : Sync (↯ n).
   Proof. done. Qed.
 
-  Lemma uninit_leak n E L : leak E L (↯ n) (const True).
-  Proof. apply leak_just. Qed.
+  Lemma uninit_resolve n E L : resolve E L (↯ n) (const True).
+  Proof. apply resolve_just. Qed.
 
   Lemma uninit_real n E L : real E L (↯ n) id.
   Proof.
@@ -162,5 +162,5 @@ Section typing.
   Proof. eapply proj2, uninit_plus_prod. Qed.
 End typing.
 
-Global Hint Resolve uninit_leak uninit_real uninit_unit_1 uninit_unit_2
+Global Hint Resolve uninit_resolve uninit_real uninit_unit_1 uninit_unit_2
   uninit_plus_prod_1 uninit_plus_prod_2 : lrust_typing.

@@ -109,9 +109,9 @@ Section typing.
   Global Instance maybe_uninit_sync {𝔄} (ty: type 𝔄) : Sync ty → Sync (? ty).
   Proof. move=> >/=. by do 4 f_equiv. Qed.
 
-  Lemma maybe_uninit_leak {𝔄} (ty: type 𝔄) Φ E L :
-    leak E L ty Φ →
-    leak E L (? ty) (λ o, match o with None => True | Some a => Φ a end).
+  Lemma maybe_uninit_resolve {𝔄} (ty: type 𝔄) Φ E L :
+    resolve E L ty Φ →
+    resolve E L (? ty) (λ o, match o with None => True | Some a => Φ a end).
   Proof.
     move=> Lk > ?. iIntros "LFT PROPH E L [[-> _]|(%&->& ty)]".
     { iApply step_fupdN_full_intro. iIntros "!>!>". iFrame "L".
@@ -120,9 +120,9 @@ Section typing.
     iApply (step_fupdN_wand with "ToObs"). by iIntros "!> >[$$]".
   Qed.
 
-  Lemma maybe_uninit_leak_just {𝔄} (ty: type 𝔄) E L :
-    leak E L ty (const True) → leak E L (? ty) (const True).
-  Proof. move=> ?. apply leak_just. Qed.
+  Lemma maybe_uninit_resolve_just {𝔄} (ty: type 𝔄) E L :
+    resolve E L ty (const True) → resolve E L (? ty) (const True).
+  Proof. move=> ?. apply resolve_just. Qed.
 
   Lemma maybe_uninit_real {𝔄 𝔅} ty E L (f: 𝔄 → 𝔅) :
     real E L ty f → real (𝔅:=optionₛ _) E L (? ty) (option_map f).
@@ -267,6 +267,6 @@ Section typing.
   Qed.
 End typing.
 
-Global Hint Resolve maybe_uninit_leak | 5 : lrust_typing.
-Global Hint Resolve maybe_uninit_leak_just maybe_uninit_real
+Global Hint Resolve maybe_uninit_resolve | 5 : lrust_typing.
+Global Hint Resolve maybe_uninit_resolve_just maybe_uninit_real
   maybe_uninit_subtype maybe_uninit_eqtype : lrust_typing.

@@ -123,10 +123,10 @@ Section mutex.
   Global Instance mutex_sync {𝔄} (ty: type 𝔄) : Send ty → Sync (mutex ty).
   Proof. move=> ?>/=. rewrite /mutex_body. by do 19 f_equiv. Qed.
 
-  (* In order to prove [mutex_leak] with a non-trivial postcondition,
-    we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
-  Lemma mutex_leak {𝔄} (ty: type 𝔄) E L : leak E L (mutex ty) (const True).
-  Proof. apply leak_just. Qed.
+  (* In order to prove [mutex_resolve] with a non-trivial postcondition,
+    we need to modify the model of [resolve] to use [⧖d] inside [ty_own] *)
+  Lemma mutex_resolve {𝔄} (ty: type 𝔄) E L : resolve E L (mutex ty) (const True).
+  Proof. apply resolve_just. Qed.
 
   Lemma mutex_real {𝔄} (ty: type 𝔄) E L : real E L (mutex ty) id.
   Proof.
@@ -264,5 +264,5 @@ Section mutex.
   Qed.
 End mutex.
 
-Global Hint Resolve mutex_leak mutex_real mutex_subtype mutex_eqtype
+Global Hint Resolve mutex_resolve mutex_real mutex_subtype mutex_eqtype
   : lrust_typing.

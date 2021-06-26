@@ -18,14 +18,14 @@ Section option.
   Definition option_ty {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
     <{psum_to_option: (Σ! [(); 𝔄])%ST → optionₛ 𝔄}> (Σ! +[(); ty])%T.
 
-  Lemma option_leak {𝔄} E L (ty: type 𝔄) Φ :
-    leak E L ty Φ →
-    leak E L (option_ty ty) (λ o, match o with None => True | Some o => Φ o end).
-  Proof. move=> ?. eapply leak_impl; [solve_typing|]. by case. Qed.
+  Lemma option_resolve {𝔄} E L (ty: type 𝔄) Φ :
+    resolve E L ty Φ →
+    resolve E L (option_ty ty) (λ o, match o with None => True | Some o => Φ o end).
+  Proof. move=> ?. eapply resolve_impl; [solve_typing|]. by case. Qed.
 
-  Lemma option_leak_just {𝔄} E L (ty: type 𝔄) :
-    leak E L ty (const True) → leak E L (option_ty ty) (const True).
-  Proof. move=> ?. apply leak_just. Qed.
+  Lemma option_resolve_just {𝔄} E L (ty: type 𝔄) :
+    resolve E L ty (const True) → resolve E L (option_ty ty) (const True).
+  Proof. move=> ?. apply resolve_just. Qed.
 
   Lemma option_real {𝔄 𝔅} (f: 𝔄 → 𝔅) ty E L :
     real E L ty f → real (𝔅:=optionₛ _) E L (option_ty ty) (option_map f).
@@ -138,6 +138,6 @@ Section option.
   Qed.
 End option.
 
-Global Hint Resolve option_leak | 5 : lrust_typing.
-Global Hint Resolve option_leak_just option_real option_subtype option_eqtype
+Global Hint Resolve option_resolve | 5 : lrust_typing.
+Global Hint Resolve option_resolve_just option_real option_subtype option_eqtype
   : lrust_typing.

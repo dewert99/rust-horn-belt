@@ -162,8 +162,8 @@ Section typing.
   Global Instance fn_send {A 𝔄l 𝔅} (fp: A → fn_params 𝔄l 𝔅) : Send (fn fp).
   Proof. done. Qed.
 
-  Lemma fn_leak {A 𝔄l 𝔅} (fp: A → fn_params 𝔄l 𝔅) E L : leak E L (fn fp) (const True).
-  Proof. apply leak_just. Qed.
+  Lemma fn_resolve {A 𝔄l 𝔅} (fp: A → fn_params 𝔄l 𝔅) E L : resolve E L (fn fp) (const True).
+  Proof. apply resolve_just. Qed.
 
   Local Lemma subtypel_llctx_big_sep_box {𝔄l 𝔅l}
         (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl q E L :
@@ -402,7 +402,7 @@ Section typing.
   Proof.
     move=> Body. eapply type_fnrec; [apply _|]=> *.
     iApply typed_body_impl; last first.
-    { iApply typed_body_tctx_incl; [|iApply Body]. apply tctx_incl_leak_head. }
+    { iApply typed_body_tctx_incl; [|iApply Body]. apply tctx_incl_resolve_head. }
     by move=>/= ?[??][_ ?].
   Qed.
 End typing.
@@ -410,4 +410,4 @@ End typing.
 Ltac simpl_fp_E := rewrite /fp_E /ty_outlives_E /=.
 
 Global Hint Resolve elctx_sat_fp_E : lrust_typing.
-Global Hint Resolve fn_leak fn_subtype : lrust_typing.
+Global Hint Resolve fn_resolve fn_subtype : lrust_typing.

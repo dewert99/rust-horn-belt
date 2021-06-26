@@ -752,33 +752,33 @@ Section traits.
   Proof. move=> Eq >/=. by setoid_rewrite Eq at 1. Qed.
 End traits.
 
-(** * Leak *)
+(** * resolve *)
 
-Definition leak `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄) (Φ: 𝔄 → Prop) : Prop :=
+Definition resolve `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄) (Φ: 𝔄 → Prop) : Prop :=
   ∀F qL vπ d tid vl, ↑lftN ∪ ↑prophN ⊆ F →
     lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
     ty.(ty_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, Φ (vπ π)⟩ ∗ llctx_interp L qL.
-Instance: Params (@leak) 3 := {}.
+Instance: Params (@resolve) 3 := {}.
 
-Definition leakl `{!typeG Σ} {𝔄l} (E: elctx) (L: llctx) (tyl: typel 𝔄l)
+Definition resolvel `{!typeG Σ} {𝔄l} (E: elctx) (L: llctx) (tyl: typel 𝔄l)
                  (Φl: plist (λ 𝔄, 𝔄 → Prop) 𝔄l) : Prop :=
-  HForall_1 (λ _, leak E L) tyl Φl.
+  HForall_1 (λ _, resolve E L) tyl Φl.
 
-Definition leak' `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄)
+Definition resolve' `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄)
                  (Φ: 𝔄 → Prop → Prop) :=
-  leak E L ty (λ a, ∀φ, Φ a φ → φ).
+  resolve E L ty (λ a, ∀φ, Φ a φ → φ).
 
-Section leak.
+Section resolve.
   Context `{!typeG Σ}.
 
-  Lemma leak_just {𝔄} (ty: type 𝔄) E L : leak E L ty (const True).
+  Lemma resolve_just {𝔄} (ty: type 𝔄) E L : resolve E L ty (const True).
   Proof.
     move=> > ?. iIntros "_ _ _ $ _!>". iApply step_fupdN_full_intro.
     by iApply proph_obs_true.
   Qed.
 
-  Lemma leak_impl {𝔄} (ty: type 𝔄) E L (Φ Φ': 𝔄 → Prop) :
-    leak E L ty Φ → (∀a, Φ a → Φ' a) → leak E L ty Φ'.
+  Lemma resolve_impl {𝔄} (ty: type 𝔄) E L (Φ Φ': 𝔄 → Prop) :
+    resolve E L ty Φ → (∀a, Φ a → Φ' a) → resolve E L ty Φ'.
   Proof.
     move=> Lk Imp > ?. iIntros "LFT PROPH E L ty".
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
@@ -786,20 +786,20 @@ Section leak.
     iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
   Qed.
 
-  Lemma leakl_nil E L : leakl E L +[] -[].
+  Lemma resolvel_nil E L : resolvel E L +[] -[].
   Proof. constructor. Qed.
-  Lemma leakl_cons {𝔄 𝔄l} E L (ty: type 𝔄) (tyl: typel 𝔄l) Φ Φl :
-    leak E L ty Φ → leakl E L tyl Φl → leakl E L (ty +:: tyl) (Φ -:: Φl).
+  Lemma resolvel_cons {𝔄 𝔄l} E L (ty: type 𝔄) (tyl: typel 𝔄l) Φ Φl :
+    resolve E L ty Φ → resolvel E L tyl Φl → resolvel E L (ty +:: tyl) (Φ -:: Φl).
   Proof. by constructor. Qed.
 
-  Lemma leak'_post {𝔄} (ty: type 𝔄) E L Φ :
-    leak E L ty Φ → leak' E L ty (λ a φ, Φ a → φ).
-  Proof. move=> ?. eapply leak_impl; [done|]=>/= ??? Imp. by apply Imp. Qed.
+  Lemma resolve'_post {𝔄} (ty: type 𝔄) E L Φ :
+    resolve E L ty Φ → resolve' E L ty (λ a φ, Φ a → φ).
+  Proof. move=> ?. eapply resolve_impl; [done|]=>/= ??? Imp. by apply Imp. Qed.
 
-  Lemma leak'_just {𝔄} (ty: type 𝔄) E L Φ :
-    leak E L ty (const Φ) → leak' E L ty (const id).
-  Proof. move=> _. by eapply leak_impl; [apply leak_just|]=>/=. Qed.
-End leak.
+  Lemma resolve'_just {𝔄} (ty: type 𝔄) E L Φ :
+    resolve E L ty (const Φ) → resolve' E L ty (const id).
+  Proof. move=> _. by eapply resolve_impl; [apply resolve_just|]=>/=. Qed.
+End resolve.
 
 (** * Real *)
 (** It is for taking the prophecy-independent part of a value *)
@@ -1102,10 +1102,10 @@ Section subtyping.
     by iApply type_incl_plain_type.
   Qed.
 
-  (** Leak *)
+  (** resolve *)
 
-  Lemma leak_subtype {𝔄 𝔅} E L (ty: type 𝔄) (ty': type 𝔅) f Φ :
-    subtype E L ty ty' f → leak E L ty' Φ → leak E L ty (Φ ∘ f).
+  Lemma resolve_subtype {𝔄 𝔅} E L (ty: type 𝔄) (ty': type 𝔅) f Φ :
+    subtype E L ty ty' f → resolve E L ty' Φ → resolve E L ty (Φ ∘ f).
   Proof.
     iIntros (Sub Lk) "* LFT PROPH E L ty". iDestruct (Sub with "L") as "#Sub".
     iDestruct ("Sub" with "E") as "#(_&_& #InOwn &_)".
@@ -1191,15 +1191,15 @@ Section type_util.
 End type_util.
 
 Global Hint Resolve ty_outlives_E_elctx_sat tyl_outlives_E_elctx_sat : lrust_typing.
-Global Hint Resolve leak'_post | 5 : lrust_typing.
-Global Hint Resolve leakl_nil leak'_just plain_type_real reall_nil
+Global Hint Resolve resolve'_post | 5 : lrust_typing.
+Global Hint Resolve resolvel_nil resolve'_just plain_type_real reall_nil
   subtype_refl eqtype_refl subtypel_nil eqtypel_nil : lrust_typing.
 (* We use [Hint Extern] instead of [Hint Resolve] here, because
-  [leakl_cons], [reall_cons], [subtypel_cons] and [eqtypel_cons]
+  [resolvel_cons], [reall_cons], [subtypel_cons] and [eqtypel_cons]
   work with [apply] but not with [simple apply] *)
-Global Hint Extern 0 (leakl _ _ _ _) => apply leakl_cons : lrust_typing.
+Global Hint Extern 0 (resolvel _ _ _ _) => apply resolvel_cons : lrust_typing.
 Global Hint Extern 0 (reall _ _ _ _) => apply reall_cons : lrust_typing.
 Global Hint Extern 0 (subtypel _ _ _ _ _) => apply subtypel_cons : lrust_typing.
 Global Hint Extern 0 (eqtypel _ _ _ _ _ _) => apply eqtypel_cons : lrust_typing.
 
-Global Hint Opaque leak leak' real subtype eqtype : lrust_typing.
+Global Hint Opaque resolve resolve' real subtype eqtype : lrust_typing.

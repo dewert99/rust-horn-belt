@@ -36,7 +36,7 @@ Section lazy_lft.
           iApply type_assign; [solve_extract|solve_typing|solve_typing|].
           iApply (type_delete (&shr{α} int * &shr{α} int)); [solve_extract|done|done|].
           via_tr_impl.
-          { iApply type_endlft; [solve_leak_unblock|solve_typing|].
+          { iApply type_endlft; [solve_resolve_unblock|solve_typing|].
             iApply (type_new_subtype ()); [done|solve_typing|].
             intro_subst. do 2 (iApply type_delete; [solve_extract|done|done|]).
             iApply type_jump; [solve_typing|solve_extract|solve_typing]. }

@@ -117,8 +117,8 @@ Section own.
   Global Instance own_just_loc {𝔄} n (ty: type 𝔄) : JustLoc (own_ptr n ty).
   Proof. iIntros (?[|]?[|[[]|][]]) "? //". by iExists _. Qed.
 
-  Lemma own_leak {𝔄} E L n (ty: type 𝔄) Φ :
-    leak E L ty Φ → leak E L (own_ptr n ty) Φ.
+  Lemma own_resolve {𝔄} E L n (ty: type 𝔄) Φ :
+    resolve E L ty Φ → resolve E L (own_ptr n ty) Φ.
   Proof.
     iIntros (Lk ???[|]?[|[[]|][]]?) "LFT PROPH E L own //".
     iIntros "/=!>!>!>". iDestruct "own" as "[(%& _ & ty) _]".
@@ -344,7 +344,7 @@ Section typing.
   Qed.
 End typing.
 
-Global Hint Resolve own_leak own_real own_subtype own_eqtype
+Global Hint Resolve own_resolve own_real own_subtype own_eqtype
   box_subtype box_eqtype write_own read_own_copy : lrust_typing.
 (* By setting the priority high, we make sure copying is tried before
    moving. *)

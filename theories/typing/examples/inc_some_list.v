@@ -55,7 +55,7 @@ Section inc_some_list.
       { iApply (type_letcall α); [solve_typing|solve_extract|solve_typing..|].
         intro_subst. iApply type_deref; [solve_extract|solve_typing..|]. intro_subst.
         iApply type_delete; [solve_extract|done..|]. via_tr_impl.
-        { iApply type_endlft; [solve_leak_unblock|solve_typing|].
+        { iApply type_endlft; [solve_resolve_unblock|solve_typing|].
           iApply type_newlft. iIntros (β).
           iApply (type_letalloc_1 (&uniq{β} _)%T); [solve_extract|done|].
           intro_subst. via_tr_impl.
@@ -65,7 +65,7 @@ Section inc_some_list.
             iApply type_deref; [solve_extract|solve_typing..|]. intro_subst.
             iApply type_int. intro_subst. iApply type_plus; [solve_extract|]. intro_subst.
             iApply type_assign; [solve_extract|solve_typing..|]. via_tr_impl.
-            { iApply type_endlft; [solve_leak_unblock|solve_typing|].
+            { iApply type_endlft; [solve_resolve_unblock|solve_typing|].
               iApply type_newlft. iIntros (γ).
               iApply (type_letpath (&uniq{γ} _)%T); [solve_typing|]. intro_subst.
               iApply type_share; [solve_extract|solve_typing|].
@@ -73,7 +73,7 @@ Section inc_some_list.
               { iApply (type_letcall γ); [solve_typing|solve_extract|solve_typing..|].
                 intro_subst. iApply type_deref; [solve_extract|solve_typing..|].
                 intro_subst. via_tr_impl.
-                { iApply type_endlft; [solve_leak_unblock|solve_typing|].
+                { iApply type_endlft; [solve_resolve_unblock|solve_typing|].
                   iApply type_minus; [solve_extract|]. intro_subst.
                   iApply type_letalloc_1; [solve_extract|done|]. intro_subst.
                   iApply type_jump; [solve_typing|solve_extract|solve_typing]. }

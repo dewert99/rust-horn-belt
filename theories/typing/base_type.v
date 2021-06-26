@@ -17,7 +17,7 @@ Section base.
   Global Instance base_send {𝔄} : Send (@base 𝔄).
   Proof. done. Qed.
 
-  Lemma base_leak {𝔄} E L Φ : leak E L (@base 𝔄) Φ.
+  Lemma base_resolve {𝔄} E L Φ : resolve E L (@base 𝔄) Φ.
   Proof. by iIntros "* _ _ _ _" ([?[??]]). Qed.
 
   Lemma base_real {𝔄 𝔅} E L (f: 𝔄 → 𝔅) : real E L base f.
@@ -36,4 +36,4 @@ Section base.
   Proof. split; apply base_subtype. Qed.
 End base.
 
-Global Hint Resolve base_leak base_subtype base_eqtype : lrust_typing.
+Global Hint Resolve base_resolve base_subtype base_eqtype : lrust_typing.

@@ -224,7 +224,7 @@ Section typing.
   Lemma type_endlft {𝔄l 𝔅l ℭ} (T: tctx 𝔄l) (T' T'': tctx 𝔅l)
       κ κl tru tr e E L (C: cctx ℭ) :
     Closed [] e →
-    leak_unblock_tctx E (κ ⊑ₗ κl :: L) κ T T' tru → unblock_tctx E L κ T' T'' →
+    resolve_unblock_tctx E (κ ⊑ₗ κl :: L) κ T T' tru → unblock_tctx E L κ T' T'' →
     typed_body E L C T'' e tr -∗
     typed_body E (κ ⊑ₗ κl :: L) C T (Endlft;; e) (tru ∘ tr).
   Proof.
@@ -265,7 +265,7 @@ Section typing.
 
   Lemma type_assign_instr {𝔄 𝔅 𝔄' 𝔅'} (ty: type 𝔄) (tyb: type 𝔅)
                           (ty': type 𝔄') (tyb': type 𝔅') gt st Φ p pb E L :
-    typed_write E L ty tyb ty' tyb' gt st → leak' E L tyb Φ →
+    typed_write E L ty tyb ty' tyb' gt st → resolve' E L tyb Φ →
     typed_instr E L +[p ◁ ty; pb ◁ tyb'] (p <- pb) (λ _, +[p ◁ ty'])
       (λ post '-[a; b], Φ (gt a) (post -[st a b])).
   Proof.
@@ -293,7 +293,7 @@ Section typing.
                     (tyb': type 𝔅') gt st Φ p pb E L
                     (C: cctx ℭ) (T: tctx 𝔄l) (T': tctx 𝔅l) trx tr e :
     Closed [] e → tctx_extract_ctx E L +[p ◁ ty; pb ◁ tyb'] T T' trx →
-    typed_write E L ty tyb ty' tyb' gt st → leak' E L tyb Φ →
+    typed_write E L ty tyb ty' tyb' gt st → resolve' E L tyb Φ →
     typed_body E L C (p ◁ ty' +:: T') e tr -∗
     typed_body E L C T (p <- pb;; e)
       (trx ∘ (λ post '(a -:: b -:: bl), Φ (gt a) (tr post (st a b -:: bl)))).
@@ -333,7 +333,7 @@ Section typing.
   Lemma type_memcpy_instr {𝔄 𝔄' 𝔅 𝔅' ℭ ℭ'} (tyw: type 𝔄) (tyw': type 𝔄')
         (tyr: type 𝔅) (tyr': type 𝔅') (tyb: type ℭ) (tyb': type ℭ')
         gtw stw gtr str Φ (n: Z) pw pr E L :
-    typed_write E L tyw tyb tyw' tyb' gtw stw → leak' E L tyb Φ →
+    typed_write E L tyw tyb tyw' tyb' gtw stw → resolve' E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
     typed_instr E L +[pw ◁ tyw; pr ◁ tyr] (pw <-{n} !pr)
       (λ _, +[pw ◁ tyw'; pr ◁ tyr'])
@@ -364,7 +364,7 @@ Section typing.
       (tyr: type 𝔅) (tyr': type 𝔅') (tyb: type ℭ) (tyb': type ℭ') gtw stw gtr
       str Φ (n: Z) pw pr E L (C: cctx 𝔇) (T: tctx 𝔄l) (T': tctx 𝔅l) e trx tr :
     Closed [] e → tctx_extract_ctx E L +[pw ◁ tyw; pr ◁ tyr] T T' trx →
-    typed_write E L tyw tyb tyw' tyb' gtw stw → leak' E L tyb Φ →
+    typed_write E L tyw tyb tyw' tyb' gtw stw → resolve' E L tyb Φ →
     typed_read E L tyr tyb' tyr' gtr str → n = tyb'.(ty_size) →
     typed_body E L C (pw ◁ tyw' +:: pr ◁ tyr' +:: T') e tr -∗
     typed_body E L C T (pw <-{n} !pr;; e)

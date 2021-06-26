@@ -56,8 +56,9 @@ Section spawn.
   Global Instance join_handle_sync {𝔄} (ty: type 𝔄) : Sync (join_handle ty).
   Proof. done. Qed.
 
-  Lemma join_handle_leak {𝔄} (ty: type 𝔄) E L : leak E L (join_handle ty) (const True).
-  Proof. apply leak_just. Qed.
+  Lemma join_handle_resolve {𝔄} (ty: type 𝔄) E L :
+    resolve E L (join_handle ty) (const True).
+  Proof. apply resolve_just. Qed.
 
   Lemma join_handle_real {𝔄} (ty: type 𝔄) E L : real E L (join_handle ty) id.
   Proof.
@@ -162,5 +163,5 @@ Section spawn.
   Qed.
 End spawn.
 
-Global Hint Resolve join_handle_leak join_handle_real
+Global Hint Resolve join_handle_resolve join_handle_real
   join_handle_subtype join_handle_eqtype : lrust_typing.

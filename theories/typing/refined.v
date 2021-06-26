@@ -54,8 +54,8 @@ Section typing.
   Global Instance refined_sync {𝔄} (Φ: 𝔄 → _) ty : Sync ty → Sync (!{Φ} ty).
   Proof. move=> ?>/=. by f_equiv. Qed.
 
-  Lemma refined_leak {𝔄} (Φ: 𝔄 → _) ty Ψ E L :
-    leak E L ty Ψ → leak E L (!{Φ} ty) Ψ.
+  Lemma refined_resolve {𝔄} (Φ: 𝔄 → _) ty Ψ E L :
+    resolve E L ty Ψ → resolve E L (!{Φ} ty) Ψ.
   Proof.
     iIntros (Lk) "* LFT PROPH E L [_ ty]". by iApply (Lk with "LFT PROPH E L ty").
   Qed.
@@ -162,5 +162,5 @@ Section typing.
   Qed.
 End typing.
 
-Global Hint Resolve refined_leak refined_real refined_subtype refined_eqtype
+Global Hint Resolve refined_resolve refined_real refined_subtype refined_eqtype
   : lrust_typing.

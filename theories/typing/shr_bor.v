@@ -51,8 +51,8 @@ Section typing.
   Global Instance shr_just_loc {𝔄} κ (ty: type 𝔄) : JustLoc (&shr{κ} ty).
   Proof. iIntros (?[|]?[|[[]|][]]) "? //". by iExists _. Qed.
 
-  Lemma shr_leak {𝔄} κ (ty: type 𝔄) E L : leak E L (&shr{κ} ty) (const True).
-  Proof. apply leak_just. Qed.
+  Lemma shr_resolve {𝔄} κ (ty: type 𝔄) E L : resolve E L (&shr{κ} ty) (const True).
+  Proof. apply resolve_just. Qed.
 
   Lemma shr_real {𝔄 𝔅} κ ty E L (f: 𝔄 → 𝔅) :
     real E L ty f → real E L (&shr{κ} ty) f.
@@ -100,4 +100,4 @@ Section typing.
   Qed.
 End typing.
 
-Global Hint Resolve shr_leak shr_subtype shr_eqtype read_shr : lrust_typing.
+Global Hint Resolve shr_resolve shr_subtype shr_eqtype read_shr : lrust_typing.

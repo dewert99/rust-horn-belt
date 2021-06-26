@@ -115,12 +115,12 @@ Section typing.
   Global Instance uniq_just_loc {𝔄} κ (ty: type 𝔄) : JustLoc (&uniq{κ} ty).
   Proof. iIntros (???[|[[]|][]]) "[_ ?] //". by iExists _. Qed.
 
-  Lemma uniq_leak {𝔄} E L κ (ty: type 𝔄) :
-    lctx_lft_alive E L κ → leak E L (&uniq{κ} ty) (λ '(a, a'), a' = a).
+  Lemma uniq_resolve {𝔄} E L κ (ty: type 𝔄) :
+    lctx_lft_alive E L κ → resolve E L (&uniq{κ} ty) (λ '(a, a'), a' = a).
   Proof.
     move=>/= ??? vπ ?? vl ?. iIntros "LFT PROPH E L [In uniq]".
     case vl as [|[[]|][]]=>//. iDestruct "uniq" as (??[Le Eq]) "uniq".
-    iMod (leak_uniq_own with "LFT PROPH In E L uniq") as "Upd"; [done..|].
+    iMod (resolve_uniq_own with "LFT PROPH In E L uniq") as "Upd"; [done..|].
     iApply step_fupdN_nmono; [done|]. iApply (step_fupdN_wand with "Upd").
     iIntros "!> >(?&$) !>". iApply proph_obs_eq; [|done]=>/= π.
     move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.
@@ -283,7 +283,8 @@ Section typing.
   Proof. move=> ???. by eapply tctx_uniq_eqtype. Qed.
 End typing.
 
-Global Hint Resolve uniq_leak uniq_real uniq_subtype uniq_eqtype : lrust_typing.
+Global Hint Resolve uniq_resolve uniq_real uniq_subtype uniq_eqtype
+  : lrust_typing.
 
 (* Registering [write_uniq]/[read_uniq] to [Hint Resolve]
   doesnt't help automation in some situations,

@@ -43,8 +43,8 @@ Section product.
   Global Instance unit0_sync : Sync unit0.
   Proof. done. Qed.
 
-  Lemma unit0_leak E L : leak E L unit0 (const True).
-  Proof. apply leak_just. Qed.
+  Lemma unit0_resolve E L : resolve E L unit0 (const True).
+  Proof. apply resolve_just. Qed.
 
   Lemma unit0_real E L : real E L unit0 id.
   Proof.
@@ -162,8 +162,8 @@ Section typing.
     ().(ty_shr) vπ d κ tid l ⊣⊢ True.
   Proof. by rewrite /unit_ty mod_ty_shr. Qed.
 
-  Lemma unit_leak E L : leak E L () (const True).
-  Proof. apply leak_just. Qed.
+  Lemma unit_resolve E L : resolve E L () (const True).
+  Proof. apply resolve_just. Qed.
 
   Hint Resolve unit0_real : lrust_typing.
   Lemma unit_real E L : real E L () id.
@@ -270,8 +270,9 @@ Section typing.
   Global Instance xprod_sync {𝔄l} (tyl: typel 𝔄l) : ListSync tyl → Sync (Π! tyl).
   Proof. elim; apply _. Qed.
 
-  Lemma prod_leak {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) Φ Φ' E L :
-    leak E L ty Φ → leak E L ty' Φ' → leak E L (ty * ty') (λ '(a, b), Φ a ∧ Φ' b).
+  Lemma prod_resolve {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) Φ Φ' E L :
+    resolve E L ty Φ → resolve E L ty' Φ' →
+    resolve E L (ty * ty') (λ '(a, b), Φ a ∧ Φ' b).
   Proof.
     iIntros (Lk Lk' ?? vπ ????) "#LFT #PROPH #E [L L'] (%&%&->& ty & ty')".
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
@@ -281,24 +282,24 @@ Section typing.
     iApply proph_obs_eq; [|done]=>/= π. by case (vπ π).
   Qed.
 
-  Lemma prod_leak_just {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) E L :
-    leak E L ty (const True) → leak E L ty' (const True) →
-    leak E L (ty * ty') (const True).
-  Proof. move=> ??. apply leak_just. Qed.
+  Lemma prod_resolve_just {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) E L :
+    resolve E L ty (const True) → resolve E L ty' (const True) →
+    resolve E L (ty * ty') (const True).
+  Proof. move=> ??. apply resolve_just. Qed.
 
-  Hint Resolve prod_leak : lrust_typing.
-  Lemma xprod_leak {𝔄l} (tyl: typel 𝔄l) Φl E L :
-    leakl E L tyl Φl →
-    leak E L (Π! tyl) (λ al, pforall (λ _, curry ($)) (pzip Φl al)).
+  Hint Resolve prod_resolve : lrust_typing.
+  Lemma xprod_resolve {𝔄l} (tyl: typel 𝔄l) Φl E L :
+    resolvel E L tyl Φl →
+    resolve E L (Π! tyl) (λ al, pforall (λ _, curry ($)) (pzip Φl al)).
   Proof.
-    elim; [eapply leak_impl; [apply leak_just|done]|]=>/= *.
-    by eapply leak_impl; [solve_typing|]=>/= [[??][??]].
+    elim; [eapply resolve_impl; [apply resolve_just|done]|]=>/= *.
+    by eapply resolve_impl; [solve_typing|]=>/= [[??][??]].
   Qed.
 
-  Lemma xprod_leak_just {𝔄l} (tyl: typel 𝔄l) E L :
-    HForall (λ _ ty, leak E L ty (const True)) tyl →
-    leak E L (Π! tyl) (const True).
-  Proof. move=> ?. apply leak_just. Qed.
+  Lemma xprod_resolve_just {𝔄l} (tyl: typel 𝔄l) E L :
+    HForall (λ _ ty, resolve E L ty (const True)) tyl →
+    resolve E L (Π! tyl) (const True).
+  Proof. move=> ?. apply resolve_just. Qed.
 
   Lemma prod_real {𝔄 𝔅 ℭ 𝔇} ty ty' (f: 𝔄 → ℭ) (g: 𝔅 → 𝔇) E L :
     real E L ty f → real E L ty' g →
@@ -452,8 +453,8 @@ Section typing.
   Qed.
 End typing.
 
-Global Hint Resolve prod_leak xprod_leak | 5 : lrust_typing.
-Global Hint Resolve unit_leak prod_leak_just xprod_leak_just
+Global Hint Resolve prod_resolve xprod_resolve | 5 : lrust_typing.
+Global Hint Resolve unit_resolve prod_resolve_just xprod_resolve_just
   unit_real prod_real xprod_real
   prod_subtype prod_eqtype xprod_subtype xprod_eqtype
   xprod_outlives_E_elctx_sat : lrust_typing.

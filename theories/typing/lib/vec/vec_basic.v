@@ -22,19 +22,19 @@ Section vec_basic.
   Global Instance vec_sync {𝔄} (ty: type 𝔄) : Sync ty → Sync (vec_ty ty).
   Proof. move=> ?>/=. by do 16 f_equiv. Qed.
 
-  Lemma vec_leak {𝔄} (ty: type 𝔄) Φ E L :
-    leak E L ty Φ → leak E L (vec_ty ty) (lforall Φ).
+  Lemma vec_resolve {𝔄} (ty: type 𝔄) Φ E L :
+    resolve E L ty Φ → resolve E L (vec_ty ty) (lforall Φ).
   Proof.
     iIntros (????[|]???) "#LFT #PROPH #E L vec //=".
     iDestruct "vec" as (????[->->]) "[↦tys _]". iIntros "!>!>!>".
     rewrite trans_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦ tys]".
-    iMod (leak_big_sepL_ty_own with "LFT PROPH E L tys") as "Upd"; [done..|].
+    iMod (resolve_big_sepL_ty_own with "LFT PROPH E L tys") as "Upd"; [done..|].
     iApply (step_fupdN_wand with "Upd"). by iIntros "!> ?".
   Qed.
 
-  Lemma vec_leak_just {𝔄} (ty: type 𝔄) E L :
-    leak E L ty (const True) → leak E L (vec_ty ty) (const True).
-  Proof. move=> ?. apply leak_just. Qed.
+  Lemma vec_resolve_just {𝔄} (ty: type 𝔄) E L :
+    resolve E L ty (const True) → resolve E L (vec_ty ty) (const True).
+  Proof. move=> ?. apply resolve_just. Qed.
 
   Lemma vec_real {𝔄 𝔅} (ty: type 𝔄) (f: 𝔄 → 𝔅) E L :
     real E L ty f → real (𝔅:=listₛ _) E L (vec_ty ty) (map f).
@@ -141,5 +141,5 @@ Section vec_basic.
   Qed.
 End vec_basic.
 
-Global Hint Resolve vec_leak | 5 : lrust_typing.
-Global Hint Resolve vec_leak_just vec_subtype vec_eqtype : lrust_typing.
+Global Hint Resolve vec_resolve | 5 : lrust_typing.
+Global Hint Resolve vec_resolve_just vec_subtype vec_eqtype : lrust_typing.

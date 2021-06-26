@@ -44,7 +44,7 @@ Section product_split.
   Proof.
     move=> HSub Split. elim: tyl.
     { move=> ?.
-      by eapply tctx_incl_ext; [apply tctx_incl_leak_head|]=>/= ?[[][]]. }
+      by eapply tctx_incl_ext; [apply tctx_incl_resolve_head|]=>/= ?[[][]]. }
     move=>/= ??? tyl IH ?.
     eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [by eapply subtype_tctx_incl, HSub, mod_ty_out, _|].
@@ -243,7 +243,7 @@ Section product_split.
   Proof.
     move=> ?. move: p. elim: tyl.
     { move=>/= ?. by eapply tctx_incl_ext;
-        [apply tctx_incl_leak_head|]=>/= ?[[][]]_[]. }
+        [apply tctx_incl_resolve_head|]=>/= ?[[][]]_[]. }
     move=>/= 𝔄 𝔅l ty tyl IH p. eapply tctx_incl_ext.
     { eapply tctx_incl_trans.
       { eapply tctx_uniq_eqtype; first apply mod_ty_outin; solve_typing. }

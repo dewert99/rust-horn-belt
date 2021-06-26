@@ -282,11 +282,11 @@ Section lemmas.
     apply limit_preserving_equiv=> ??? Eq; apply Eq.
   Qed.
 
-  Lemma fix_leak E L Φ :
-    (∀ty, leak E L ty Φ → leak E L (T ty) Φ) → leak E L (fix_ty T) Φ.
+  Lemma fix_resolve E L Φ :
+    (∀ty, resolve E L ty Φ → resolve E L (T ty) Φ) → resolve E L (fix_ty T) Φ.
   Proof.
-    move=> Loop. have Lk: ∀n, leak E L (Tn T n) Φ.
-    { elim=> [|? H]; apply Loop; [apply base_leak|apply H]. }
+    move=> Loop. have Lk: ∀n, resolve E L (Tn T n) Φ.
+    { elim=> [|? H]; apply Loop; [apply base_resolve|apply H]. }
     rewrite /fix_ty=> > /=. eapply @limit_preserving; [|move=> ?; apply Lk].
     apply limit_preserving_forall=> ?.
     apply limit_preserving_entails; [done|]=> ??? Eq. do 4 f_equiv. apply Eq.

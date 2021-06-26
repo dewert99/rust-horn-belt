@@ -137,27 +137,27 @@ Section lemmas.
     tctx_elt_interp tid (p ◁ ty) vπ -∗ ⌜Closed [] p⌝.
   Proof. iIntros "(%&%&%&_)!%". by eapply eval_path_closed. Qed.
 
-  (** Leaking a Type Context *)
+  (** resolveing a Type Context *)
 
-  Definition leak_tctx {𝔄l} (E: elctx) (L: llctx) (T: tctx 𝔄l)
+  Definition resolve_tctx {𝔄l} (E: elctx) (L: llctx) (T: tctx 𝔄l)
     (Φ: plist of_syn_type 𝔄l → Prop → Prop) : Prop :=
     ∀F q tid vπl, ↑lftN ∪ ↑prophN ⊆ F → lft_ctx -∗ proph_ctx -∗
       elctx_interp E -∗ llctx_interp L q -∗ tctx_interp tid T vπl ={F}=∗
         ∃d, ⧖d ∗ |={F}▷=>^d |={F}=>
           ⟨π, ∀φ, Φ (vπl -$ π) φ → φ⟩ ∗ llctx_interp L q.
 
-  Lemma leak_tctx_just {𝔄l} E L (T: tctx 𝔄l) : leak_tctx E L T (const id).
+  Lemma resolve_tctx_just {𝔄l} E L (T: tctx 𝔄l) : resolve_tctx E L T (const id).
   Proof.
     move=> *. iMod persistent_time_receipt_0 as "⧖". iIntros "_ _ _ $ _!>". iExists _.
     iFrame "⧖". iApply step_fupdN_full_intro. by iApply proph_obs_true=>/= ?.
   Qed.
 
-  Lemma leak_tctx_nil E L : leak_tctx E L +[] (const id).
-  Proof. apply leak_tctx_just. Qed.
+  Lemma resolve_tctx_nil E L : resolve_tctx E L +[] (const id).
+  Proof. apply resolve_tctx_just. Qed.
 
-  Lemma leak_tctx_cons_hasty {𝔄 𝔅l} E L p (ty: type 𝔄) Φ (T: tctx 𝔅l) Ψ :
-    leak E L ty Φ → leak_tctx E L T Ψ →
-    leak_tctx E L (p ◁ ty +:: T) (λ '(a -:: bl) φ, Φ a → Ψ bl φ).
+  Lemma resolve_tctx_cons_hasty {𝔄 𝔅l} E L p (ty: type 𝔄) Φ (T: tctx 𝔅l) Ψ :
+    resolve E L ty Φ → resolve_tctx E L T Ψ →
+    resolve_tctx E L (p ◁ ty +:: T) (λ '(a -:: bl) φ, Φ a → Ψ bl φ).
   Proof.
     iIntros (Lk Lk' ???[??]?) "#LFT #PROPH #E [L L₊] /=[(%&%&_& ⧖ & ty) T]".
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
@@ -168,21 +168,21 @@ Section lemmas.
     iApply proph_obs_impl; [|done]=>/= ?[? Imp]? Imp'. by apply Imp, Imp'.
   Qed.
 
-  Lemma leak_tctx_cons_just {𝔄 𝔅l} E L (t: tctx_elt 𝔄) (T: tctx 𝔅l) Φ :
-    leak_tctx E L T Φ → leak_tctx E L (t +:: T) (λ '(_ -:: bl), Φ bl).
+  Lemma resolve_tctx_cons_just {𝔄 𝔅l} E L (t: tctx_elt 𝔄) (T: tctx 𝔅l) Φ :
+    resolve_tctx E L T Φ → resolve_tctx E L (t +:: T) (λ '(_ -:: bl), Φ bl).
   Proof.
     iIntros (Lk ???[??]?) "LFT PROPH E L /=[_ T]".
     by iApply (Lk with "LFT PROPH E L T").
   Qed.
 
-  Lemma leak_tctx_cons_just_hasty {𝔄 𝔅l} E L p (ty: type 𝔄) (T: tctx 𝔅l) Φ :
-    leak E L ty (const True) → leak_tctx E L T Φ →
-    leak_tctx E L (p ◁ ty +:: T) (λ '(_ -:: bl), Φ bl).
-  Proof. move=> ?. apply leak_tctx_cons_just. Qed.
+  Lemma resolve_tctx_cons_just_hasty {𝔄 𝔅l} E L p (ty: type 𝔄) (T: tctx 𝔅l) Φ :
+    resolve E L ty (const True) → resolve_tctx E L T Φ →
+    resolve_tctx E L (p ◁ ty +:: T) (λ '(_ -:: bl), Φ bl).
+  Proof. move=> ?. apply resolve_tctx_cons_just. Qed.
 
-  Lemma leak_tctx_cons_just_blocked {𝔄 𝔅l} E L p κ (ty: type 𝔄) (T: tctx 𝔅l) Φ :
-    leak_tctx E L T Φ → leak_tctx E L (p ◁{κ} ty +:: T) (λ '(_ -:: bl), Φ bl).
-  Proof. apply leak_tctx_cons_just. Qed.
+  Lemma resolve_tctx_cons_just_blocked {𝔄 𝔅l} E L p κ (ty: type 𝔄) (T: tctx 𝔅l) Φ :
+    resolve_tctx E L T Φ → resolve_tctx E L (p ◁{κ} ty +:: T) (λ '(_ -:: bl), Φ bl).
+  Proof. apply resolve_tctx_cons_just. Qed.
 
   (** Taking Out the Real Part of a Type Context *)
 
@@ -315,14 +315,14 @@ Section lemmas.
     iExists (vπ' -:: vπ -:: wπl). iFrame.
   Qed.
 
-  Lemma tctx_incl_leak_head {𝔄 𝔅l} (t: tctx_elt 𝔄) (T: tctx 𝔅l) E L :
+  Lemma tctx_incl_resolve_head {𝔄 𝔅l} (t: tctx_elt 𝔄) (T: tctx 𝔅l) E L :
     tctx_incl E L (t +:: T) T (λ post '(_ -:: bl), post bl).
   Proof.
     split; [by intros ??? [? ?]|].
     iIntros (??[??]?) "_ _ _ _ $ [_ T] ? !>". iExists _. by iFrame "T".
   Qed.
 
-  Lemma tctx_incl_leak_lower {𝔄l 𝔅l} (T: tctx 𝔄l) (T': tctx 𝔅l) E L :
+  Lemma tctx_incl_resolve_lower {𝔄l 𝔅l} (T: tctx 𝔄l) (T': tctx 𝔅l) E L :
     tctx_incl E L (T h++ T') T (λ post abl, post (psepl abl)).
   Proof.
     split; [by intros ????|].
@@ -468,39 +468,39 @@ Section lemmas.
     tctx_incl E L T T' (λ post, tr (λ bcl, post (psepl bcl))).
   Proof.
     move=> Ex. eapply tctx_incl_ext.
-    { eapply tctx_incl_trans; [apply Ex|apply tctx_incl_leak_lower]. }
+    { eapply tctx_incl_trans; [apply Ex|apply tctx_incl_resolve_lower]. }
     done.
   Qed.
 
-  (** Leaking for Unblocking *)
+  (** resolveing for Unblocking *)
 
   (* [κ] is a dummy parameter for automation *)
-  Definition leak_unblock_tctx {𝔄l 𝔅l} (E: elctx) (L: llctx) (κ: lft)
+  Definition resolve_unblock_tctx {𝔄l 𝔅l} (E: elctx) (L: llctx) (κ: lft)
       (T: tctx 𝔄l) (T': tctx 𝔅l) (tr: predl_trans 𝔄l 𝔅l) : Prop :=
     ∀q tid vπl postπ, lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
       tctx_interp tid T vπl -∗ ⟨π, tr (postπ π) (vπl -$ π)⟩ ={⊤}=∗
         ∃d vπl', ⧖d ∗ |={⊤}▷=>^d |={⊤}=>
           llctx_interp L q ∗ tctx_interp tid T' vπl' ∗ ⟨π, postπ π (vπl' -$ π)⟩.
 
-  Lemma leak_unblock_tctx_impl {𝔄l 𝔅l} (tr tr': predl_trans 𝔄l 𝔅l) T T' E L κ :
-    leak_unblock_tctx E L κ T T' tr' → (∀post al, tr post al → tr' post al) →
-    leak_unblock_tctx E L κ T T' tr.
+  Lemma resolve_unblock_tctx_impl {𝔄l 𝔅l} (tr tr': predl_trans 𝔄l 𝔅l) T T' E L κ :
+    resolve_unblock_tctx E L κ T T' tr' → (∀post al, tr post al → tr' post al) →
+    resolve_unblock_tctx E L κ T T' tr.
   Proof.
     iIntros (LkU Imp ????) "LFT PROPH E L T Obs".
     iApply (LkU with "LFT PROPH E L T [Obs]").
     iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
   Qed.
 
-  Lemma leak_unblock_tctx_nil κ E L : leak_unblock_tctx E L κ +[] +[] id.
+  Lemma resolve_unblock_tctx_nil κ E L : resolve_unblock_tctx E L κ +[] +[] id.
   Proof.
     iIntros (??[]?) "/= _ _ _ $ _ $". iMod persistent_time_receipt_0 as "⧖".
     iExists 0%nat, -[]. by iFrame "⧖".
   Qed.
 
-  Lemma leak_unblock_tctx_cons_leak {𝔄 𝔅l ℭl} (ty: type 𝔄) p Φ
+  Lemma resolve_unblock_tctx_cons_resolve {𝔄 𝔅l ℭl} (ty: type 𝔄) p Φ
       (T: tctx 𝔅l) (T': tctx ℭl) tr κ E L :
-    κ ∈ ty_lfts ty → leak' E L ty Φ → leak_unblock_tctx E L κ T T' tr →
-    leak_unblock_tctx E L κ (p ◁ ty +:: T) T'
+    κ ∈ ty_lfts ty → resolve' E L ty Φ → resolve_unblock_tctx E L κ T T' tr →
+    resolve_unblock_tctx E L κ (p ◁ ty +:: T) T'
       (λ post '(a -:: bl), tr (λ cl, Φ a (post cl)) bl).
   Proof.
     iIntros (_ Lk LkU ??[vπ ?]?)
@@ -513,10 +513,10 @@ Section lemmas.
     iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
   Qed.
 
-  Lemma leak_unblock_tctx_cons_keep {𝔄 𝔅l ℭl} (t: tctx_elt 𝔄)
+  Lemma resolve_unblock_tctx_cons_keep {𝔄 𝔅l ℭl} (t: tctx_elt 𝔄)
       (T: tctx 𝔅l) (T': tctx ℭl) tr κ E L :
-    leak_unblock_tctx E L κ T T' tr →
-    leak_unblock_tctx E L κ (t +:: T) (t +:: T') (trans_tail tr).
+    resolve_unblock_tctx E L κ T T' tr →
+    resolve_unblock_tctx E L κ (t +:: T) (t +:: T') (trans_tail tr).
   Proof.
     iIntros (LkU ??[vπ ?]?) "LFT PROPH E L /=[t T] Obs".
     iMod (LkU with "LFT PROPH E L T Obs") as (d vπl') "[⧖ Upd]". iModIntro.
@@ -579,20 +579,20 @@ Ltac solve_extract :=
   eapply tctx_extract_ctx_eq; [solve_typing|];
   rewrite /trans_tail /compose /=; by reflexivity.
 
-Ltac solve_leak_unblock :=
-  eapply leak_unblock_tctx_impl; [solve_typing|]=> ??;
+Ltac solve_resolve_unblock :=
+  eapply resolve_unblock_tctx_impl; [solve_typing|]=> ??;
   rewrite /trans_tail /=; by exact id.
 
-Global Hint Resolve leak_tctx_nil : lrust_typing.
-(* Mysteriously, registering [leak_tctx_cons_*] with [Global Hint Resolve]
+Global Hint Resolve resolve_tctx_nil : lrust_typing.
+(* Mysteriously, registering [resolve_tctx_cons_*] with [Global Hint Resolve]
   does not help automation in some situations,
   but the following hints let automation work *)
-Global Hint Extern 10 (leak_tctx _ _ _ _) =>
-  simple apply leak_tctx_cons_hasty : lrust_typing.
-Global Hint Extern 0 (leak_tctx _ _ _ _) =>
-  simple apply leak_tctx_cons_just_hasty : lrust_typing.
-Global Hint Extern 0 (leak_tctx _ _ _ _) =>
-  simple apply leak_tctx_cons_just_blocked : lrust_typing.
+Global Hint Extern 10 (resolve_tctx _ _ _ _) =>
+  simple apply resolve_tctx_cons_hasty : lrust_typing.
+Global Hint Extern 0 (resolve_tctx _ _ _ _) =>
+  simple apply resolve_tctx_cons_just_hasty : lrust_typing.
+Global Hint Extern 0 (resolve_tctx _ _ _ _) =>
+  simple apply resolve_tctx_cons_just_blocked : lrust_typing.
 
 Global Hint Resolve real_tctx_nil real_tctx_cons real_tctx_cons_blocked
   : lrust_typing.
@@ -607,12 +607,12 @@ Global Hint Extern 50 (tctx_extract_elt _ _ _ _ _ _) =>
 Global Hint Resolve tctx_extract_ctx_nil tctx_extract_ctx_elt
   tctx_extract_ctx_incl : lrust_typing.
 
-Global Hint Resolve leak_unblock_tctx_nil leak_unblock_tctx_cons_leak
+Global Hint Resolve resolve_unblock_tctx_nil resolve_unblock_tctx_cons_resolve
   : lrust_typing.
-Global Hint Resolve leak_unblock_tctx_cons_keep | 20 : lrust_typing.
+Global Hint Resolve resolve_unblock_tctx_cons_keep | 20 : lrust_typing.
 
 Global Hint Resolve unblock_tctx_nil unblock_tctx_cons_unblock
   unblock_tctx_cons_just_hasty unblock_tctx_cons_just_blocked : lrust_typing.
 
-Global Hint Opaque leak_tctx tctx_incl tctx_extract_elt tctx_extract_ctx
-  leak_unblock_tctx unblock_tctx : lrust_typing.
+Global Hint Opaque resolve_tctx tctx_incl tctx_extract_elt tctx_extract_ctx
+  resolve_unblock_tctx unblock_tctx : lrust_typing.

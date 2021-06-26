@@ -62,7 +62,7 @@ Section uniq_util.
     iMod ("Toκ'" with "κ'") as "$". by iFrame.
   Qed.
 
-  Lemma leak_uniq_own {𝔄} (ty: type 𝔄) vπ ξi d κ tid l E L q F :
+  Lemma resolve_uniq_own {𝔄} (ty: type 𝔄) vπ ξi d κ tid l E L q F :
     lctx_lft_alive E L κ → ↑lftN ∪ ↑prophN ⊆ F →
     lft_ctx -∗ proph_ctx -∗ κ ⊑ ty.(ty_lft) -∗ elctx_interp E -∗ llctx_interp L q -∗
     uniq_own ty vπ ξi d κ tid l ={F}=∗ |={F}▷=>^(S d) |={F}=>

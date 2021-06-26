@@ -57,7 +57,7 @@ Section inc_max.
       { do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
         iApply type_int. intro_subst. iApply type_plus; [solve_extract|]. intro_subst.
         iApply type_assign; [solve_extract|solve_typing|solve_typing|]. via_tr_impl.
-        { iApply type_endlft; [solve_leak_unblock|solve_typing|].
+        { iApply type_endlft; [solve_resolve_unblock|solve_typing|].
           do 2 (iApply type_deref; [solve_extract|solve_typing|done|]; intro_subst).
           iApply type_minus; [solve_extract|]. intro_subst.
           iApply type_letalloc_1; [solve_extract|done|]. intro_subst.

@@ -106,8 +106,8 @@ Section typing.
   Global Instance mod_ty_sync {𝔄 𝔅} (f: 𝔄 → 𝔅) ty : Sync ty → Sync (<{f}> ty).
   Proof. move=> ?>/=. by do 3 f_equiv. Qed.
 
-  Lemma mod_ty_leak' {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty Φ :
-    leak E L ty Φ → leak E L (<{f}> ty) (λ b, ∃a, b = f a ∧ Φ a).
+  Lemma mod_ty_resolve' {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty Φ :
+    resolve E L ty Φ → resolve E L (<{f}> ty) (λ b, ∃a, b = f a ∧ Φ a).
   Proof.
     move=> Lk > ?. iIntros "LFT PROPH E L (%&->& ty)".
     iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
@@ -115,16 +115,16 @@ Section typing.
     iApply proph_obs_impl; [|done]=>/= ??. by eexists _.
   Qed.
 
-  Lemma mod_ty_leak {𝔄 𝔅} E L f g `{!@SemiIso 𝔄 𝔅 f g} ty Φ :
-    leak E L ty Φ → leak E L (<{f}> ty) (Φ ∘ g).
+  Lemma mod_ty_resolve {𝔄 𝔅} E L f g `{!@SemiIso 𝔄 𝔅 f g} ty Φ :
+    resolve E L ty Φ → resolve E L (<{f}> ty) (Φ ∘ g).
   Proof.
-    move=> ?. eapply leak_impl; [by apply mod_ty_leak'|]=>/=
+    move=> ?. eapply resolve_impl; [by apply mod_ty_resolve'|]=>/=
     ?[?[/(f_equal g) + ?]]. by rewrite semi_iso'=> ->.
   Qed.
 
-  Lemma mod_ty_leak_just {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty :
-    leak E L ty (const True) → leak E L (<{f}> ty) (const True).
-  Proof. move=> ?. apply leak_just. Qed.
+  Lemma mod_ty_resolve_just {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty :
+    resolve E L ty (const True) → resolve E L (<{f}> ty) (const True).
+  Proof. move=> ?. apply resolve_just. Qed.
 
   Lemma mod_ty_real {𝔄 𝔅 ℭ} E L f g `{!@Iso 𝔄 𝔅 f g} (h: _ → ℭ) ty :
     real E L ty h → real E L (<{f}> ty) (h ∘ g).
@@ -187,5 +187,6 @@ End typing.
 
 Global Hint Resolve mod_ty_in mod_ty_out mod_ty_inout mod_ty_outin
   | 20 : lrust_typing.
-Global Hint Resolve mod_ty_leak | 5 : lrust_typing.
-Global Hint Resolve mod_ty_leak_just mod_ty_subtype mod_ty_eqtype : lrust_typing.
+Global Hint Resolve mod_ty_resolve | 5 : lrust_typing.
+Global Hint Resolve mod_ty_resolve_just mod_ty_subtype mod_ty_eqtype
+  : lrust_typing.

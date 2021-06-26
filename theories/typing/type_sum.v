@@ -330,7 +330,7 @@ Section type_sum.
 
   Lemma type_sum_assign_instr {𝔄 𝔄' 𝔅 𝔅l} (tyl: typel 𝔅l) (i: fin _)
       (ty: type 𝔄) (tyb: type 𝔅) (ty': type 𝔄')  p q gt st Φ E L :
-    typed_write E L ty tyb ty' (Σ! tyl) gt st → leak' E L tyb Φ →
+    typed_write E L ty tyb ty' (Σ! tyl) gt st → resolve' E L tyb Φ →
     typed_instr E L +[p ◁ ty; q ◁ tyl +!! i] (p <-{Σ i} q) (λ _, +[p ◁ ty'])
       (λ post '-[a; b], Φ (gt a) (post -[st a (pinj i b)])).
   Proof.
@@ -365,7 +365,7 @@ Section type_sum.
       (k: Z) (ty: type 𝔄) (tyb: type 𝔅) (ty': type 𝔄')
       (T: tctx ℭl) (T': tctx 𝔇l) p q gt st Φ tr trx E L (C: cctx 𝔈) e :
     Closed [] e → k = i → tctx_extract_ctx E L +[p ◁ ty; q ◁ tyl +!! i] T T' trx →
-    typed_write E L ty tyb ty' (Σ! tyl) gt st → leak' E L tyb Φ →
+    typed_write E L ty tyb ty' (Σ! tyl) gt st → resolve' E L tyb Φ →
     typed_body E L C (p ◁ ty' +:: T') e tr -∗
     typed_body E L C T (p <-{Σ k} q;; e) (trx ∘ (λ post '(a -:: b' -:: dl),
       Φ (gt a) (tr post (st a (pinj i b') -:: dl)))).
@@ -377,7 +377,7 @@ Section type_sum.
 
   Lemma type_sum_unit_instr {𝔄 𝔄' 𝔅 𝔅l} (tyl: typel 𝔅l) (i: fin _)
       (ty: type 𝔄) (tyb: type 𝔅) (ty': type 𝔄') f p gt st Φ E L :
-    typed_write E L ty tyb ty' (Σ! tyl) gt st → leak' E L tyb Φ →
+    typed_write E L ty tyb ty' (Σ! tyl) gt st → resolve' E L tyb Φ →
     subtype E L () (tyl +!! i) f →
     typed_instr E L +[p ◁ ty] (p <-{Σ i} ()) (λ _, +[p ◁ ty'])
       (λ post '-[a], Φ (gt a) (post -[st a (pinj i (f ()))])).
@@ -410,7 +410,7 @@ Section type_sum.
       (ty: type 𝔄) (tyb: type 𝔅) (ty': type 𝔄') (T: tctx ℭl) (T': tctx 𝔇l)
       f trx tr p gt st e Φ E L (C: cctx 𝔈) :
     Closed [] e → k = i → tctx_extract_ctx E L +[p ◁ ty] T T' trx →
-    typed_write E L ty tyb ty' (Σ! tyl) gt st → leak' E L tyb Φ →
+    typed_write E L ty tyb ty' (Σ! tyl) gt st → resolve' E L tyb Φ →
     subtype E L () (tyl +!! i) f →
     typed_body E L C (p ◁ ty' +:: T') e tr -∗
     typed_body E L C T (p <-{Σ k} ();; e) (trx ∘
@@ -424,7 +424,7 @@ Section type_sum.
   Lemma type_sum_memcpy_instr {𝔄 𝔄' 𝔅 𝔅' ℭ ℭl} (tyl: typel ℭl) (i: fin _)
       (tyw: type 𝔄) (tyw': type 𝔄') (tyr: type 𝔅) (tyr': type 𝔅')
       (tyb: type ℭ) p q gtw stw gtr str Φ E L :
-    typed_write E L tyw tyb tyw' (Σ! tyl) gtw stw → leak' E L tyb Φ →
+    typed_write E L tyw tyb tyw' (Σ! tyl) gtw stw → resolve' E L tyb Φ →
     typed_read E L tyr (tyl +!! i) tyr' gtr str →
     typed_instr E L +[p ◁ tyw; q ◁ tyr]
       (p <-{(tyl +!! i).(ty_size),Σ i} !q) (λ _, +[p ◁ tyw'; q ◁ tyr'])
@@ -467,7 +467,7 @@ Section type_sum.
       (tyw: type 𝔄) (tyr: type 𝔅) (tyw': type 𝔄') (tyr': type 𝔅') (tyb: type ℭ) (k n: Z)
       (T: tctx 𝔇l) (T': tctx 𝔈l) p q gtw stw gtr str trx tr e Φ E L (C: cctx 𝔉) :
     Closed [] e → k = i → tctx_extract_ctx E L +[p ◁ tyw; q ◁ tyr] T T' trx →
-    typed_write E L tyw tyb tyw' (Σ! tyl) gtw stw → leak' E L tyb Φ →
+    typed_write E L tyw tyb tyw' (Σ! tyl) gtw stw → resolve' E L tyb Φ →
     n = (tyl +!! i).(ty_size) → typed_read E L tyr (tyl +!! i) tyr' gtr str →
     typed_body E L C (p ◁ tyw' +:: q ◁ tyr' +:: T') e tr -∗
     typed_body E L C T (p <-{n,Σ k} !q;; e)

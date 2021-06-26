@@ -25,12 +25,12 @@ Section uniq_slice_basic.
   Global Instance uniq_slice_sync {𝔄} κ (ty: type 𝔄) : Sync ty → Sync (uniq_slice κ ty).
   Proof. move=> >/=. by do 17 f_equiv. Qed.
 
-  Lemma uniq_slice_leak {𝔄} κ (ty: type 𝔄) E L :
+  Lemma uniq_slice_resolve {𝔄} κ (ty: type 𝔄) E L :
     lctx_lft_alive E L κ →
-    leak E L (uniq_slice κ ty) (λ pl, lforall (λ '(a, a'), a' = a) pl).
+    resolve E L (uniq_slice κ ty) (λ pl, lforall (λ '(a, a'), a' = a) pl).
   Proof.
     iIntros "%* LFT PROPH E L (In &%&%&%& %aπξil &(->&->&%)& uniqs)".
-    iMod (leak_big_sepL_uniq_own with "LFT PROPH In E L uniqs") as "Upd"; [done..|].
+    iMod (resolve_big_sepL_uniq_own with "LFT PROPH In E L uniqs") as "Upd"; [done..|].
     iApply step_fupdN_nmono; [done|]. iApply (step_fupdN_wand with "Upd").
     iIntros "!> >[? $]". iApply proph_obs_impl; [|done]=>/= ?.
     elim aπξil; [done|]. move=> [??]/=?? IH [??]. split; by [|apply IH].
@@ -82,5 +82,5 @@ Section uniq_slice_basic.
   Proof. move=> [??][??]. split; (apply uniq_slice_subtype; by [|split]). Qed.
 End uniq_slice_basic.
 
-Global Hint Resolve uniq_slice_leak uniq_slice_real
+Global Hint Resolve uniq_slice_resolve uniq_slice_real
   uniq_slice_subtype uniq_slice_eqtype : lrust_typing.

@@ -216,9 +216,9 @@ Section typing.
   Global Instance xsum_sync {𝔄l} (tyl: typel 𝔄l) : ListSync tyl → Sync (Σ! tyl).
   Proof. move=> Sync ?*/=. do 6 f_equiv. by eapply TCHForall_lookup in Sync. Qed.
 
-  Lemma xsum_leak {𝔄l} E L (tyl: typel 𝔄l) Φl :
-    leakl E L tyl Φl →
-    leak E L (Σ! tyl) (λ s, let 'xinj i x := to_xsum s in (Φl -!! i) x).
+  Lemma xsum_resolve {𝔄l} E L (tyl: typel 𝔄l) Φl :
+    resolvel E L tyl Φl →
+    resolve E L (Σ! tyl) (λ s, let 'xinj i x := to_xsum s in (Φl -!! i) x).
   Proof.
     iIntros (Lk ???????) "LFT PROPH E L (%&%&%&%&[-> _] & ty)".
     eapply HForall_1_lookup in Lk.
@@ -227,9 +227,9 @@ Section typing.
     iApply proph_obs_impl; [|done]=>/= ??. by rewrite to_xsum_pinj.
   Qed.
 
-  Lemma xsum_leak_just {𝔄l} E L (tyl: typel 𝔄l) :
-    HForall (λ _ ty, leak E L ty (const True)) tyl → leak E L (Σ! tyl) (const True).
-  Proof. move=> ?. apply leak_just. Qed.
+  Lemma xsum_resolve_just {𝔄l} E L (tyl: typel 𝔄l) :
+    HForall (λ _ ty, resolve E L ty (const True)) tyl → resolve E L (Σ! tyl) (const True).
+  Proof. move=> ?. apply resolve_just. Qed.
 
   Lemma xsum_real {𝔄l 𝔅l} E L tyl (fl: plist2 _ 𝔄l 𝔅l) :
     reall E L tyl fl → real (𝔅:=Σ!_) E L (Σ! tyl) (psum_map fl).
@@ -292,6 +292,6 @@ End typing.
 
 Global Instance empty_ty_empty `{!typeG Σ} : Empty (type ∅) := empty_ty.
 
-Global Hint Resolve xsum_leak | 5 : lrust_typing.
-Global Hint Resolve xsum_leak_just xsum_real xsum_subtype xsum_eqtype
+Global Hint Resolve xsum_resolve | 5 : lrust_typing.
+Global Hint Resolve xsum_resolve_just xsum_real xsum_subtype xsum_eqtype
   : lrust_typing.

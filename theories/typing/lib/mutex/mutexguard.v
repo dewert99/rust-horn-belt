@@ -134,11 +134,11 @@ Section mutexguard.
     move=> ?>/=. rewrite /mutex_body. do 21 f_equiv; [|done]. by do 2 f_equiv.
   Qed.
 
-  (* In order to prove [mutexguard_leak] with a non-trivial postcondition,
-    we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
-  Lemma mutexguard_leak {𝔄} κ (ty: type 𝔄) E L :
-    leak E L (mutexguard κ ty) (const True).
-  Proof. apply leak_just. Qed.
+  (* In order to prove [mutexguard_resolve] with a non-trivial postcondition,
+    we need to modify the model of [resolve] to use [⧖d] inside [ty_own] *)
+  Lemma mutexguard_resolve {𝔄} κ (ty: type 𝔄) E L :
+    resolve E L (mutexguard κ ty) (const True).
+  Proof. apply resolve_just. Qed.
 
   Lemma mutexguard_real {𝔄} κ (ty: type 𝔄) E L : real E L (mutexguard κ ty) id.
   Proof.
@@ -354,5 +354,5 @@ Section mutexguard.
   (* TODO: Should we do try_lock? *)
 End mutexguard.
 
-Global Hint Resolve mutexguard_leak mutexguard_real
+Global Hint Resolve mutexguard_resolve mutexguard_real
   mutexguard_subtype mutexguard_eqtype : lrust_typing.

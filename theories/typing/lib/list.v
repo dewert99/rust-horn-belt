@@ -26,15 +26,15 @@ Notation list_xsum_ty ty := (Σ! +[(); list_cons_ty ty])%T.
 Section typing.
   Context `{!typeG Σ}.
 
-  Lemma list_leak {𝔄} E L (ty: type 𝔄) Φ :
-    leak E L ty Φ → leak E L (list_ty ty) (lforall Φ).
+  Lemma list_resolve {𝔄} E L (ty: type 𝔄) Φ :
+    resolve E L ty Φ → resolve E L (list_ty ty) (lforall Φ).
   Proof.
-    move=> ?. apply fix_leak=> ??. eapply leak_impl; [solve_typing|]. by case.
+    move=> ?. apply fix_resolve=> ??. eapply resolve_impl; [solve_typing|]. by case.
   Qed.
 
-  Lemma list_leak_just {𝔄} E L (ty: type 𝔄) :
-    leak E L ty (const True) → leak E L (list_ty ty) (const True).
-  Proof. move=> ?. apply leak_just. Qed.
+  Lemma list_resolve_just {𝔄} E L (ty: type 𝔄) :
+    resolve E L ty (const True) → resolve E L (list_ty ty) (const True).
+  Proof. move=> ?. apply resolve_just. Qed.
 
   Lemma list_real {𝔄 𝔅} ty (f: 𝔄 → 𝔅) E L :
     real E L ty f → real (𝔅:=listₛ _) E L (list_ty ty) (map f).
@@ -58,6 +58,6 @@ Section typing.
   Proof. move=> [??]. by split; apply list_subtype. Qed.
 End typing.
 
-Global Hint Resolve list_leak | 5 : lrust_typing.
-Global Hint Resolve list_leak_just list_real list_subtype list_eqtype
+Global Hint Resolve list_resolve | 5 : lrust_typing.
+Global Hint Resolve list_resolve_just list_real list_subtype list_eqtype
   : lrust_typing.

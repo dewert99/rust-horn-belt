@@ -34,7 +34,7 @@ Section lemmas.
       (λ post '-[al], post (vec_to_plist al)).
   Proof.
     move: p. elim n.
-    { move=> ?. eapply tctx_incl_ext; [by apply tctx_incl_leak_head|]=>/= ?[v[]].
+    { move=> ?. eapply tctx_incl_ext; [by apply tctx_incl_resolve_head|]=>/= ?[v[]].
       by inv_vec v. }
     move=>/= ? IH ?. eapply tctx_incl_ext.
     { eapply tctx_incl_trans;
@@ -159,7 +159,7 @@ Section lemmas.
   Proof.
     move=> ?. move: p. elim: n.
     { move=> ?. eapply tctx_incl_ext;
-       [by apply tctx_incl_leak_head|]=>/= ?[[v v'][]]. inv_vec v. by inv_vec v'. }
+       [by apply tctx_incl_resolve_head|]=>/= ?[[v v'][]]. inv_vec v. by inv_vec v'. }
     move=>/= n IH p. eapply tctx_incl_ext.
     { eapply tctx_incl_trans.
       { eapply tctx_uniq_eqtype; by [apply array_succ_prod|apply _|]. }

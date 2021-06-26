@@ -82,10 +82,10 @@ Section cell.
   Global Instance cell_send {𝔄} (ty: type 𝔄) : Send ty → Send (cell ty).
   Proof. move=> ?>/=. by do 9 f_equiv. Qed.
 
-  (* In order to prove [cell_leak] with a non-trivial postcondition,
-    we need to modify the model of [leak] to use [⧖d] inside [ty_own] *)
-  Lemma cell_leak {𝔄} (ty: type 𝔄) E L : leak E L (cell ty) (const True).
-  Proof. apply leak_just. Qed.
+  (* In order to prove [cell_resolve] with a non-trivial postcondition,
+    we need to modify the model of [resolve] to use [⧖d] inside [ty_own] *)
+  Lemma cell_resolve {𝔄} (ty: type 𝔄) E L : resolve E L (cell ty) (const True).
+  Proof. apply resolve_just. Qed.
 
   Lemma cell_real {𝔄} (ty: type 𝔄) E L : real E L (cell ty) id.
   Proof.
@@ -465,4 +465,5 @@ Section cell.
   Qed.
 End cell.
 
-Global Hint Resolve cell_leak cell_real cell_subtype cell_eqtype : lrust_typing.
+Global Hint Resolve cell_resolve cell_real cell_subtype cell_eqtype
+  : lrust_typing.

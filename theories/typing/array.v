@@ -99,17 +99,17 @@ Section typing.
   Global Instance array_sync {𝔄} n (ty: type 𝔄) : Sync ty → Sync [ty;^ n].
   Proof. move=> >/=. by do 3 f_equiv. Qed.
 
-  Lemma array_leak {𝔄} (ty: type 𝔄) n Φ E L :
-    leak E L ty Φ → leak E L [ty;^ n] (λ al, lforall Φ al).
+  Lemma array_resolve {𝔄} (ty: type 𝔄) n Φ E L :
+    resolve E L ty Φ → resolve E L [ty;^ n] (λ al, lforall Φ al).
   Proof.
     iIntros "% * LFT PROPH E L (%&->& tys)".
-    iMod (leak_big_sepL_ty_own with "LFT PROPH E L tys"); [done..|].
+    iMod (resolve_big_sepL_ty_own with "LFT PROPH E L tys"); [done..|].
     by rewrite -vec_to_list_apply vapply_funsep.
   Qed.
 
-  Lemma array_leak_just {𝔄} (ty: type 𝔄) n E L :
-    leak E L ty (const True) → leak E L [ty;^ n] (const True).
-  Proof. move=> ?. apply leak_just. Qed.
+  Lemma array_resolve_just {𝔄} (ty: type 𝔄) n E L :
+    resolve E L ty (const True) → resolve E L [ty;^ n] (const True).
+  Proof. move=> ?. apply resolve_just. Qed.
 
   Lemma array_real {𝔄 𝔅} (ty: type 𝔄) n (f: 𝔄 → 𝔅) E L :
     real E L ty f → real (𝔅:=vecₛ _ _) E L [ty;^ n] (vmap f).
@@ -189,6 +189,6 @@ Section typing.
   Qed.
 End typing.
 
-Global Hint Resolve array_leak | 5 : lrust_typing.
-Global Hint Resolve array_leak_just array_real array_subtype array_eqtype
+Global Hint Resolve array_resolve | 5 : lrust_typing.
+Global Hint Resolve array_resolve_just array_real array_subtype array_eqtype
   : lrust_typing.

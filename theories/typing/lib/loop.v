@@ -13,11 +13,11 @@ Section loop.
     iApply (type_cont [] (λ _, +[]) (λ _ _, True) L).
     { intro_subst. via_tr_impl.
       { iApply (type_jump (λ _, +[]));
-          [solve_typing|apply tctx_incl_refl|apply leak_tctx_just]. }
+          [solve_typing|apply tctx_incl_refl|apply resolve_tctx_just]. }
       done. }
     iIntros "!>" (? v). inv_vec v. simpl_subst. via_tr_impl.
     { iApply (type_jump (λ _, +[]));
-      [solve_typing|apply tctx_incl_refl|apply leak_tctx_just]. }
+      [solve_typing|apply tctx_incl_refl|apply resolve_tctx_just]. }
     done.
   Qed.
 End loop.
