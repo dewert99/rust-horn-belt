@@ -247,6 +247,30 @@ Section typing.
     by iApply proph_obs_impl; [|done]=>/= ?[?<-].
   Qed.
 
+  (** Explicit resolution of a path *)
+  Lemma type_resolve_instr {𝔄} (ty: type 𝔄) Φ E L p :
+    resolve E L ty Φ →
+    typed_instr E L +[p ◁ ty] Skip (λ _, +[]) (λ post '-[a], Φ a → post -[]).
+  Proof.
+    iIntros (Rslv ??[?[]]) "LFT TIME PROPH _ E $ L /=[(%&%&%& ⧖ & ty) _] Obs".
+    iDestruct (Rslv ⊤ with "LFT PROPH E L ty") as "Upd"; [done|].
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]")=>//.
+    { iApply step_fupdN_with_emp. by rewrite difference_empty_L. }
+    wp_seq. iIntros "[Obs' $] !>". iExists -[]. iCombine "Obs Obs'" as "?".
+    rewrite left_id. iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
+  Qed.
+
+  Lemma type_resolve {𝔄 𝔅l ℭl 𝔇} (ty: type 𝔄) Φ E L p trx e tr
+      (T: tctx 𝔅l) (T': tctx ℭl) (C: cctx 𝔇) :
+    Closed [] e → resolve E L ty Φ → tctx_extract_ctx E L +[p ◁ ty] T T' trx →
+    typed_body E L C T' e tr -∗
+    typed_body E L C T (Skip;; e)
+      (trx ∘ (λ post '(a -:: cl), Φ a → tr post cl))%type.
+  Proof.
+    iIntros (?? Extr) "?". iApply type_seq; [by eapply type_resolve_instr|done| |done].
+    move: Extr=> [Htrx _]??/=. apply Htrx. by case.
+  Qed.
+
   Lemma type_path_instr {𝔄} p (ty: type 𝔄) E L :
     typed_instr_ty E L +[p ◁ ty] p ty (λ post '-[v], post v).
   Proof.
