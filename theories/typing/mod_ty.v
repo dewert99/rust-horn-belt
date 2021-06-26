@@ -109,8 +109,8 @@ Section typing.
   Lemma mod_ty_resolve' {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty Φ :
     resolve E L ty Φ → resolve E L (<{f}> ty) (λ b, ∃a, b = f a ∧ Φ a).
   Proof.
-    move=> Lk > ?. iIntros "LFT PROPH E L (%&->& ty)".
-    iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
+    move=> Rslv > ?. iIntros "LFT PROPH E L (%&->& ty)".
+    iMod (Rslv with "LFT PROPH E L ty") as "ToObs"; [done|].
     iApply (step_fupdN_wand with "ToObs"). iIntros "!> >[Obs $] !>".
     iApply proph_obs_impl; [|done]=>/= ??. by eexists _.
   Qed.

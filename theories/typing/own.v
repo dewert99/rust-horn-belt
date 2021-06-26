@@ -120,9 +120,9 @@ Section own.
   Lemma own_resolve {𝔄} E L n (ty: type 𝔄) Φ :
     resolve E L ty Φ → resolve E L (own_ptr n ty) Φ.
   Proof.
-    iIntros (Lk ???[|]?[|[[]|][]]?) "LFT PROPH E L own //".
+    iIntros (Rslv ???[|]?[|[[]|][]]?) "LFT PROPH E L own //".
     iIntros "/=!>!>!>". iDestruct "own" as "[(%& _ & ty) _]".
-    by iApply (Lk with "LFT PROPH E L").
+    by iApply (Rslv with "LFT PROPH E L").
   Qed.
 
   Lemma own_real {𝔄 𝔅} E L n ty (f: 𝔄 → 𝔅) :

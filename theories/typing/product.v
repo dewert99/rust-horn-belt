@@ -274,9 +274,9 @@ Section typing.
     resolve E L ty Φ → resolve E L ty' Φ' →
     resolve E L (ty * ty') (λ '(a, b), Φ a ∧ Φ' b).
   Proof.
-    iIntros (Lk Lk' ?? vπ ????) "#LFT #PROPH #E [L L'] (%&%&->& ty & ty')".
-    iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
-    iMod (Lk' with "LFT PROPH E L' ty'") as "ToObs'"; [done|].
+    iIntros (Rslv Rslv' ?? vπ ????) "#LFT #PROPH #E [L L'] (%&%&->& ty & ty')".
+    iMod (Rslv with "LFT PROPH E L ty") as "ToObs"; [done|].
+    iMod (Rslv' with "LFT PROPH E L' ty'") as "ToObs'"; [done|].
     iCombine "ToObs ToObs'" as "ToObs". iApply (step_fupdN_wand with "ToObs").
     iIntros "!> [>[Obs $] >[Obs' $]] !>". iCombine "Obs Obs'" as "?".
     iApply proph_obs_eq; [|done]=>/= π. by case (vπ π).

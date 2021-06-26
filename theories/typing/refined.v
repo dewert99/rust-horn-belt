@@ -57,7 +57,7 @@ Section typing.
   Lemma refined_resolve {𝔄} (Φ: 𝔄 → _) ty Ψ E L :
     resolve E L ty Ψ → resolve E L (!{Φ} ty) Ψ.
   Proof.
-    iIntros (Lk) "* LFT PROPH E L [_ ty]". by iApply (Lk with "LFT PROPH E L ty").
+    iIntros (Rslv) "* LFT PROPH E L [_ ty]". by iApply (Rslv with "LFT PROPH E L ty").
   Qed.
 
   Lemma refined_real {𝔄 𝔅} Φ (f: 𝔄 → 𝔅) ty E L :

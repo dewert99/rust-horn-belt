@@ -159,9 +159,9 @@ Section lemmas.
     resolve E L ty Φ → resolve_tctx E L T Ψ →
     resolve_tctx E L (p ◁ ty +:: T) (λ '(a -:: bl) φ, Φ a → Ψ bl φ).
   Proof.
-    iIntros (Lk Lk' ???[??]?) "#LFT #PROPH #E [L L₊] /=[(%&%&_& ⧖ & ty) T]".
-    iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
-    iMod (Lk' with "LFT PROPH E L₊ T") as (?) "[⧖' ToObs']"; [done|].
+    iIntros (Rslv Rslv' ???[??]?) "#LFT #PROPH #E [L L₊] /=[(%&%&_& ⧖ & ty) T]".
+    iMod (Rslv with "LFT PROPH E L ty") as "ToObs"; [done|].
+    iMod (Rslv' with "LFT PROPH E L₊ T") as (?) "[⧖' ToObs']"; [done|].
     iCombine "⧖ ⧖'" as "⧖". iCombine "ToObs ToObs'" as "ToObs".
     iExists _. iFrame "⧖". iApply (step_fupdN_wand with "ToObs").
     iIntros "!> [>[Obs $] >[Obs' $]] !>". iCombine "Obs Obs'" as "?".
@@ -171,8 +171,8 @@ Section lemmas.
   Lemma resolve_tctx_cons_just {𝔄 𝔅l} E L (t: tctx_elt 𝔄) (T: tctx 𝔅l) Φ :
     resolve_tctx E L T Φ → resolve_tctx E L (t +:: T) (λ '(_ -:: bl), Φ bl).
   Proof.
-    iIntros (Lk ???[??]?) "LFT PROPH E L /=[_ T]".
-    by iApply (Lk with "LFT PROPH E L T").
+    iIntros (Rslv ???[??]?) "LFT PROPH E L /=[_ T]".
+    by iApply (Rslv with "LFT PROPH E L T").
   Qed.
 
   Lemma resolve_tctx_cons_just_hasty {𝔄 𝔅l} E L p (ty: type 𝔄) (T: tctx 𝔅l) Φ :
@@ -486,8 +486,8 @@ Section lemmas.
     resolve_unblock_tctx E L κ T T' tr' → (∀post al, tr post al → tr' post al) →
     resolve_unblock_tctx E L κ T T' tr.
   Proof.
-    iIntros (LkU Imp ????) "LFT PROPH E L T Obs".
-    iApply (LkU with "LFT PROPH E L T [Obs]").
+    iIntros (RslvU Imp ????) "LFT PROPH E L T Obs".
+    iApply (RslvU with "LFT PROPH E L T [Obs]").
     iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
   Qed.
 
@@ -503,10 +503,10 @@ Section lemmas.
     resolve_unblock_tctx E L κ (p ◁ ty +:: T) T'
       (λ post '(a -:: bl), tr (λ cl, Φ a (post cl)) bl).
   Proof.
-    iIntros (_ Lk LkU ??[vπ ?]?)
+    iIntros (_ Rslv RslvU ??[vπ ?]?)
       "#LFT #PROPH #E [L L₊] /=[(%& %d &_& ⧖ & ty) T] Obs".
-    iMod (Lk with "LFT PROPH E L₊ ty") as "Upd"; [done|].
-    iMod (LkU with "LFT PROPH E L T Obs") as (? vπl') "[⧖' Upd']".
+    iMod (Rslv with "LFT PROPH E L₊ ty") as "Upd"; [done|].
+    iMod (RslvU with "LFT PROPH E L T Obs") as (? vπl') "[⧖' Upd']".
     iCombine "Upd Upd'" as "Upd". iCombine "⧖ ⧖'" as "⧖".
     iExists _, vπl'. iFrame "⧖". iApply (step_fupdN_wand with "Upd").
     iIntros "!> [>[Obs $] >($&$& Obs')]". iCombine "Obs Obs'" as "?".
@@ -518,8 +518,8 @@ Section lemmas.
     resolve_unblock_tctx E L κ T T' tr →
     resolve_unblock_tctx E L κ (t +:: T) (t +:: T') (trans_tail tr).
   Proof.
-    iIntros (LkU ??[vπ ?]?) "LFT PROPH E L /=[t T] Obs".
-    iMod (LkU with "LFT PROPH E L T Obs") as (d vπl') "[⧖ Upd]". iModIntro.
+    iIntros (RslvU ??[vπ ?]?) "LFT PROPH E L /=[t T] Obs".
+    iMod (RslvU with "LFT PROPH E L T Obs") as (d vπl') "[⧖ Upd]". iModIntro.
     iExists d, (vπ -:: vπl'). iFrame "⧖". iApply (step_fupdN_wand with "Upd").
     iIntros ">($&$&?) !>". iFrame.
   Qed.

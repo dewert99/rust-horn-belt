@@ -24,9 +24,9 @@ Section typing.
     ⊢ typed_body E L C T (jump: k el)
         (trx ∘ (λ post bcl, let '(bl, cl) := psep bcl in Φ cl (tr post bl)))%type.
   Proof.
-    move=> -> ? TT' Lk. iApply typed_body_tctx_incl; [done|]. iIntros (? bcπl ?).
+    move=> -> ? TT' Rslv. iApply typed_body_tctx_incl; [done|]. iIntros (? bcπl ?).
     move: (papp_ex bcπl)=> [?[?->]]. iIntros "LFT TIME PROPH _ E Na L C /=[T' Tx] Obs".
-    iMod (Lk with "LFT PROPH E L Tx") as (?) "[⧖ ToObs]"; [done|]. wp_bind Skip.
+    iMod (Rslv with "LFT PROPH E L Tx") as (?) "[⧖ ToObs]"; [done|]. wp_bind Skip.
     iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [ToObs]")=>//.
     { iApply step_fupdN_with_emp. by rewrite difference_empty_L. }
     wp_seq. iIntros "[Obs' L] !>". iCombine "Obs Obs'" as "#?". wp_seq.

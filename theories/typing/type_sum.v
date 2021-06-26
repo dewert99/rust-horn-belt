@@ -334,7 +334,7 @@ Section type_sum.
     typed_instr E L +[p ◁ ty; q ◁ tyl +!! i] (p <-{Σ i} q) (λ _, +[p ◁ ty'])
       (λ post '-[a; b], Φ (gt a) (post -[st a (pinj i b)])).
   Proof.
-    iIntros ([Sztyb Wrt] Lk ??(?&?&[]))
+    iIntros ([Sztyb Wrt] Rslv ??(?&?&[]))
       "#LFT #TIME PROPH UNIQ #E $ [L L₊] /=(p & q &_) Obs".
     iDestruct (closed_hasty with "p") as %?. iDestruct (closed_hasty with "q") as %?.
     wp_apply (wp_hasty with "p"). iIntros (???) "⧖ ty".
@@ -343,7 +343,7 @@ Section type_sum.
     move: Lenvl. rewrite Sztyb. move: vl=> [|]; [done|]=>/= ? vl [= Lenvl].
     rewrite heap_mapsto_vec_cons. iDestruct "↦" as "[>↦i ↦]". wp_write.
     wp_bind p. iApply wp_wand; [by iApply wp_eval_path|]. iIntros (?->).
-    iMod (Lk with "LFT PROPH E L₊ tyb") as "Upd"; [done|]. wp_bind (_+ₗ_)%E.
+    iMod (Rslv with "LFT PROPH E L₊ tyb") as "Upd"; [done|]. wp_bind (_+ₗ_)%E.
     iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]");
       [done..| |]. { iApply step_fupdN_with_emp. by rewrite difference_empty_L. }
     wp_op. iIntros "[Obs' $] !>". iCombine "Obs Obs'" as "Obs".
@@ -382,7 +382,7 @@ Section type_sum.
     typed_instr E L +[p ◁ ty] (p <-{Σ i} ()) (λ _, +[p ◁ ty'])
       (λ post '-[a], Φ (gt a) (post -[st a (pinj i (f ()))])).
   Proof.
-    iIntros ([Sztyb Wrt] Lk Sub ??[?[]]) "#LFT #TIME PROPH UNIQ #E $ [L L₊] [p _] Obs".
+    iIntros ([Sztyb Wrt] Rslv Sub ??[?[]]) "#LFT #TIME PROPH UNIQ #E $ [L L₊] [p _] Obs".
     iDestruct (Sub with "L") as "#In". iDestruct ("In" with "E") as "(%&_& #InOwn &_)".
     wp_apply (wp_hasty with "p"). iIntros (???) "⧖ ty".
     iMod (Wrt with "LFT UNIQ E L ty") as (?->) "[(%vl & ↦ & tyb) Toty']".
@@ -390,7 +390,7 @@ Section type_sum.
     move: Lenvl. rewrite Sztyb. move: vl=> [|]; [done|]=>/= ? vl [= Lenvl].
     rewrite heap_mapsto_vec_cons. iDestruct "↦" as "[>↦i ↦]". wp_bind (_<-_)%E.
     iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|]. wp_write.
-    iIntros "#⧖". iMod (Lk with "LFT PROPH E L₊ tyb") as "Upd"; [done|].
+    iIntros "#⧖". iMod (Rslv with "LFT PROPH E L₊ tyb") as "Upd"; [done|].
     iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]");
       [done..| |].
     { iApply step_fupdN_with_emp. rewrite difference_empty_L /=.
@@ -430,7 +430,7 @@ Section type_sum.
       (p <-{(tyl +!! i).(ty_size),Σ i} !q) (λ _, +[p ◁ tyw'; q ◁ tyr'])
       (λ post '-[a; b], Φ (gtw a) (post -[stw a (pinj i (gtr b)); str b])).
   Proof.
-    set tyi := tyl +!! i. iIntros ([Sztyb Wrt] Lk Rd ??(?&?&[]))
+    set tyi := tyl +!! i. iIntros ([Sztyb Wrt] Rslv Rd ??(?&?&[]))
       "#LFT #TIME PROPH UNIQ #E Na [L L₊] /=(p & q &_) Obs".
     iDestruct (closed_hasty with "p") as %?. iDestruct (closed_hasty with "q") as %?.
     wp_apply (wp_hasty with "p"). iIntros (???) "#⧖ tyw".
@@ -439,7 +439,7 @@ Section type_sum.
     move: Lenvl. rewrite Sztyb. move: vl=> [|]; [done|]=>/= ? vl [= Lenvl].
     rewrite heap_mapsto_vec_cons. iDestruct "↦" as "[>↦i ↦]". wp_write.
     wp_bind p. iApply wp_wand; [by iApply wp_eval_path|]. iIntros (?->).
-    iMod (Lk with "LFT PROPH E L₊ tyb") as "Upd"; [done|]. wp_bind (_+ₗ_)%E.
+    iMod (Rslv with "LFT PROPH E L₊ tyb") as "Upd"; [done|]. wp_bind (_+ₗ_)%E.
     iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]");
       [done..| |]. { iApply step_fupdN_with_emp. by rewrite difference_empty_L. }
     wp_op. iIntros "[Obs' L₊] !>". iCombine "Obs Obs'" as "Obs".

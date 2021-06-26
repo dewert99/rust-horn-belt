@@ -126,11 +126,11 @@ Section array_util.
     ([∗ list] i ↦ aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2)
       ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, lforall Φ (lapply aπl π)⟩ ∗ llctx_interp L q.
   Proof.
-    iIntros (Lk ?) "#LFT #PROPH #E L tys".
+    iIntros (Rslv ?) "#LFT #PROPH #E L tys".
     iInduction aπl as [|] "IH" forall (q).
     { iApply step_fupdN_full_intro. iFrame "L". by iApply proph_obs_true. }
     inv_vec wll=>/= ??. iDestruct "tys" as "[ty tys]". iDestruct "L" as "[L L₊]".
-    iMod (Lk with "LFT PROPH E L ty") as "Upd"; [done|].
+    iMod (Rslv with "LFT PROPH E L ty") as "Upd"; [done|].
     iMod ("IH" with "L₊ tys") as "Upd'". iCombine "Upd Upd'" as "Upd".
     iApply (step_fupdN_wand with "Upd"). iIntros "!> [>[#? $] >[#? $]]".
     by iApply proph_obs_and.

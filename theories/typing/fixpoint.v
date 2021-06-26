@@ -285,9 +285,9 @@ Section lemmas.
   Lemma fix_resolve E L Φ :
     (∀ty, resolve E L ty Φ → resolve E L (T ty) Φ) → resolve E L (fix_ty T) Φ.
   Proof.
-    move=> Loop. have Lk: ∀n, resolve E L (Tn T n) Φ.
+    move=> Loop. have Rslv: ∀n, resolve E L (Tn T n) Φ.
     { elim=> [|? H]; apply Loop; [apply base_resolve|apply H]. }
-    rewrite /fix_ty=> > /=. eapply @limit_preserving; [|move=> ?; apply Lk].
+    rewrite /fix_ty=> > /=. eapply @limit_preserving; [|move=> ?; apply Rslv].
     apply limit_preserving_forall=> ?.
     apply limit_preserving_entails; [done|]=> ??? Eq. do 4 f_equiv. apply Eq.
   Qed.

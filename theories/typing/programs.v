@@ -21,7 +21,8 @@ Section typing.
     Proper ((≡) ==> (≡)) (@typed_body 𝔄l 𝔅 E L C T e).
   Proof. intros ?? EQ. unfold typed_body. do 18 f_equiv. apply EQ. Qed.
 
-  Lemma typed_body_impl {𝔄l 𝔅} (tr tr': predl_trans' 𝔄l 𝔅) E L (C: cctx 𝔅) (T: tctx 𝔄l) e :
+  Lemma typed_body_impl {𝔄l 𝔅} (tr tr': predl_trans' 𝔄l 𝔅) E L
+      (C: cctx 𝔅) (T: tctx 𝔄l) e :
     (∀post vl, tr post vl → tr' post vl) →
     typed_body E L C T e tr' -∗ typed_body E L C T e tr.
   Proof.
@@ -29,7 +30,8 @@ Section typing.
     by apply Imp.
   Qed.
 
-  Lemma typed_body_tctx_incl {𝔄l 𝔅l ℭ} tr' tr (T: tctx 𝔄l) (T': tctx 𝔅l) E L (C: cctx ℭ) e :
+  Lemma typed_body_tctx_incl {𝔄l 𝔅l ℭ} tr' tr (T: tctx 𝔄l) (T': tctx 𝔅l) E L
+      (C: cctx ℭ) e :
     tctx_incl E L T T' tr' →
     typed_body E L C T' e tr -∗ typed_body E L C T e (tr' ∘ tr).
   Proof.
@@ -228,8 +230,8 @@ Section typing.
     typed_body E L C T'' e tr -∗
     typed_body E (κ ⊑ₗ κl :: L) C T (Endlft;; e) (tru ∘ tr).
   Proof.
-    iIntros (? LkU Un) "e %%% #LFT #TIME #PROPH UNIQ #E Na L' C T Obs".
-    wp_bind Skip. iMod (LkU with "LFT PROPH E L' T Obs") as (??) "[⧖ ToT']".
+    iIntros (? RslvU Un) "e %%% #LFT #TIME #PROPH UNIQ #E Na L' C T Obs".
+    wp_bind Skip. iMod (RslvU with "LFT PROPH E L' T Obs") as (??) "[⧖ ToT']".
     iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [ToT']")=>//.
     { iApply step_fupdN_with_emp. by rewrite difference_empty_L. }
     wp_seq. iIntros "([(%&%& κ' & To†) L] & T' & Obs) !>".
@@ -269,17 +271,18 @@ Section typing.
     typed_instr E L +[p ◁ ty; pb ◁ tyb'] (p <- pb) (λ _, +[p ◁ ty'])
       (λ post '-[a; b], Φ (gt a) (post -[st a b])).
   Proof.
-    iIntros ([Eq Wrt] Lk ?? (vπ & wπ &[]))
+    iIntros ([Eq Wrt] Rslv ?? (vπ & wπ &[]))
       "#LFT #TIME PROPH UNIQ #E $ [L L'] (p & pb & _) Obs".
     wp_bind p. iApply (wp_hasty with "p"). iIntros (???) "⧖ ty".
     iMod (Wrt with "LFT UNIQ E L ty") as (? ->) "[(%vl & ↦ & tyb) Toty']".
     iDestruct (ty_size_eq with "tyb") as "#>%Sz".
-    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH E L' tyb") as "ToObs";
+    iDestruct (Rslv (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH E L' tyb") as "ToObs";
     [set_solver|]. iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
     with "TIME ⧖ [ToObs]")=>//. { by iApply step_fupdN_with_emp. }
     wp_bind pb. iApply (wp_hasty with "pb"). iIntros (vb db ?) "#⧖' tyb'".
     iDestruct (ty_size_eq with "tyb'") as %Sz'. move: Sz. rewrite Eq -Sz' /=.
-    case vl=> [|?[|]]=>// ?. iApply (wp_persistent_time_receipt with "TIME ⧖'"); [solve_ndisj|].
+    case vl=> [|?[|]]=>// ?.
+    iApply (wp_persistent_time_receipt with "TIME ⧖'"); [solve_ndisj|].
     rewrite heap_mapsto_vec_singleton.
     wp_write. iIntros "#⧖S [Obs' $]". iCombine "Obs Obs'" as "Obs".
     iMod ("Toty'" with "[↦ tyb'] ⧖S") as "[$ ty']".
@@ -339,7 +342,7 @@ Section typing.
       (λ _, +[pw ◁ tyw'; pr ◁ tyr'])
       (λ post '-[a; b], Φ (gtw a) (post -[stw a (gtr b); str b])).
   Proof.
-    iIntros ([Eq Wrt] Lk Rd ->??(?&?&[]))
+    iIntros ([Eq Wrt] Rslv Rd ->??(?&?&[]))
       "/= #LFT #TIME PROPH UNIQ #E Na [[L L'] L''] (pw & pr &_) Obs".
     wp_bind pw. iApply (wp_hasty with "pw"). iIntros (???) "⧖ tyw".
     iMod (Wrt with "LFT UNIQ E L tyw") as (?->) "[(% & >↦ & tyb) Totyw]".
@@ -347,9 +350,10 @@ Section typing.
     iMod (Rd with "LFT E Na L' tyr") as (? vlb ?->) "(↦' & tyb' & Totyr')".
     iDestruct (ty_size_eq with "tyb") as "#>%".
     iDestruct (ty_size_eq with "tyb'") as "#>%".
-    iDestruct (Lk (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH E L'' tyb") as "ToObs";
-    [set_solver|]. iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
-    with "TIME ⧖ [ToObs]")=>//; [by iApply step_fupdN_with_emp|].
+    iDestruct (Rslv (⊤ ∖ (⊤ ∖ ↑lftN ∖ ↑prophN)) with "LFT PROPH E L'' tyb") as "ToObs";
+      [set_solver|].
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ (⊤ ∖ ↑lftN ∖ ↑prophN)
+      with "TIME ⧖ [ToObs]")=>//; [by iApply step_fupdN_with_emp|].
     iApply (wp_persistent_time_receipt with "TIME ⧖'"); [solve_ndisj|].
     iApply (wp_memcpy with "[$↦ $↦']"); [congruence|congruence|].
     iIntros "!> [↦ ↦'] #⧖'S [Obs' $]". iCombine "Obs Obs'" as "Obs".

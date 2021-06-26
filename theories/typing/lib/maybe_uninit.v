@@ -113,10 +113,10 @@ Section typing.
     resolve E L ty Φ →
     resolve E L (? ty) (λ o, match o with None => True | Some a => Φ a end).
   Proof.
-    move=> Lk > ?. iIntros "LFT PROPH E L [[-> _]|(%&->& ty)]".
+    move=> Rslv > ?. iIntros "LFT PROPH E L [[-> _]|(%&->& ty)]".
     { iApply step_fupdN_full_intro. iIntros "!>!>". iFrame "L".
       by iApply proph_obs_true. }
-    iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
+    iMod (Rslv with "LFT PROPH E L ty") as "ToObs"; [done|].
     iApply (step_fupdN_wand with "ToObs"). by iIntros "!> >[$$]".
   Qed.
 

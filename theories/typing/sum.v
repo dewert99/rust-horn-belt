@@ -220,9 +220,9 @@ Section typing.
     resolvel E L tyl Φl →
     resolve E L (Σ! tyl) (λ s, let 'xinj i x := to_xsum s in (Φl -!! i) x).
   Proof.
-    iIntros (Lk ???????) "LFT PROPH E L (%&%&%&%&[-> _] & ty)".
-    eapply HForall_1_lookup in Lk.
-    iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
+    iIntros (Rslv ???????) "LFT PROPH E L (%&%&%&%&[-> _] & ty)".
+    eapply HForall_1_lookup in Rslv.
+    iMod (Rslv with "LFT PROPH E L ty") as "ToObs"; [done|].
     iApply (step_fupdN_wand with "ToObs"). iIntros "!> >[Obs $] !>".
     iApply proph_obs_impl; [|done]=>/= ??. by rewrite to_xsum_pinj.
   Qed.

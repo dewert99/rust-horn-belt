@@ -780,8 +780,8 @@ Section resolve.
   Lemma resolve_impl {𝔄} (ty: type 𝔄) E L (Φ Φ': 𝔄 → Prop) :
     resolve E L ty Φ → (∀a, Φ a → Φ' a) → resolve E L ty Φ'.
   Proof.
-    move=> Lk Imp > ?. iIntros "LFT PROPH E L ty".
-    iMod (Lk with "LFT PROPH E L ty") as "ToObs"; [done|].
+    move=> Rslv Imp > ?. iIntros "LFT PROPH E L ty".
+    iMod (Rslv with "LFT PROPH E L ty") as "ToObs"; [done|].
     iApply (step_fupdN_wand with "ToObs"). iIntros "!> >[? $] !>".
     iApply proph_obs_impl; [|done]=>/= ?. apply Imp.
   Qed.
@@ -1107,9 +1107,9 @@ Section subtyping.
   Lemma resolve_subtype {𝔄 𝔅} E L (ty: type 𝔄) (ty': type 𝔅) f Φ :
     subtype E L ty ty' f → resolve E L ty' Φ → resolve E L ty (Φ ∘ f).
   Proof.
-    iIntros (Sub Lk) "* LFT PROPH E L ty". iDestruct (Sub with "L") as "#Sub".
+    iIntros (Sub Rslv) "* LFT PROPH E L ty". iDestruct (Sub with "L") as "#Sub".
     iDestruct ("Sub" with "E") as "#(_&_& #InOwn &_)".
-    iDestruct ("InOwn" with "ty") as "ty'". by iApply (Lk with "LFT PROPH E L ty'").
+    iDestruct ("InOwn" with "ty") as "ty'". by iApply (Rslv with "LFT PROPH E L ty'").
   Qed.
 End subtyping.
 
