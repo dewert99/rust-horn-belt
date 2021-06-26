@@ -139,7 +139,8 @@ Section time.
 
   Lemma time_receipt_le `{!invG Σ} E n m m' :
     ↑timeN ⊆ E →
-    time_ctx -∗ time_interp n -∗ ⧖m -∗ ⧗m' ={E}=∗ ⌜m+m' ≤ n⌝%nat ∗ ⧗m'.
+    time_ctx -∗ time_interp n -∗ ⧖m -∗ ⧗m' ={E}=∗
+    ⌜m+m' ≤ n⌝%nat ∗ time_interp n ∗ ⧗m'.
   Proof.
     iIntros (?) "#TIME Hn Hm Hm'". iInv "TIME" as (m'0 m0) ">(Hglob & Hm'0 & Hm0)".
     iDestruct (own_valid_2 with "Hn Hglob") as %?%mono_nat_both_valid.
