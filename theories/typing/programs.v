@@ -248,7 +248,7 @@ Section typing.
   Qed.
 
   (** Explicit resolution of a path *)
-  Lemma type_resolve_instr {𝔄} (ty: type 𝔄) Φ E L p :
+  Lemma type_resolve_instr {𝔄} p (ty: type 𝔄) Φ E L :
     resolve E L ty Φ →
     typed_instr E L +[p ◁ ty] Skip (λ _, +[]) (λ post '-[a], Φ a → post -[]).
   Proof.
@@ -260,14 +260,14 @@ Section typing.
     rewrite left_id. iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp.
   Qed.
 
-  Lemma type_resolve {𝔄 𝔅l ℭl 𝔇} (ty: type 𝔄) Φ E L p trx e tr
+  Lemma type_resolve {𝔄 𝔅l ℭl 𝔇} p (ty: type 𝔄) Φ E L trx e tr
       (T: tctx 𝔅l) (T': tctx ℭl) (C: cctx 𝔇) :
-    Closed [] e → resolve E L ty Φ → tctx_extract_ctx E L +[p ◁ ty] T T' trx →
+    Closed [] e → tctx_extract_ctx E L +[p ◁ ty] T T' trx → resolve E L ty Φ →
     typed_body E L C T' e tr -∗
     typed_body E L C T (Skip;; e)
       (trx ∘ (λ post '(a -:: cl), Φ a → tr post cl))%type.
   Proof.
-    iIntros (?? Extr) "?". iApply type_seq; [by eapply type_resolve_instr|done| |done].
+    iIntros (? Extr ?) "?". iApply type_seq; [by eapply type_resolve_instr|done| |done].
     move: Extr=> [Htrx _]??/=. apply Htrx. by case.
   Qed.
 
