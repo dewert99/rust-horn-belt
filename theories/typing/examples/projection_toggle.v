@@ -38,3 +38,4 @@ Section code.
       move =>/= ??. exact id.
     - move => ? [[[? ?] [? ?]] [[|] []]] //=.
   Qed.
+End code.
