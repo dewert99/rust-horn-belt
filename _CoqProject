@@ -83,6 +83,7 @@ theories/typing/lib/slice/uniq_slice_basic.v
 theories/typing/lib/slice/iter.v
 theories/typing/lib/vec/vec.v
 theories/typing/lib/vec/vec_basic.v
+theories/typing/lib/vec/vec_len.v
 theories/typing/lib/vec/vec_slice.v
 theories/typing/lib/vec/vec_index.v
 theories/typing/lib/vec/vec_pushpop.v
