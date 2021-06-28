@@ -8,12 +8,13 @@ dev-repo: "git+https://gitlab.mpi-sws.org/iris/lambda-rust.git"
 
 synopsis: "LambdaRust Coq formalization for RustHornBelt"
 description: """
-A formal model of a Rust core language and type system, a logical relation for
-the type system, and safety proof for some Rust libraries.
+A fork of RustBelt which extends typing judgments with specification to make
+it possible to easily prove the functionnal correctness of well-typed program.
 """
 
 depends: [
   "coq-iris" { (= "dev.2021-03-27.0.f1484b2b") | (= "dev") }
+  "coq" { (>= "8.13.0") }
 ]
 
 build: [make "-j%{jobs}%"]
