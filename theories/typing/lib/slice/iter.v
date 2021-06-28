@@ -15,11 +15,12 @@ Section iter.
   Definition iter_next {𝔄} (ty: type 𝔄) : val :=
     fn: ["b"] :=
       let: "it" := !"b" in delete [ #1; "b"];;
-      if: !("it" +ₗ #1) ≤ #0 then
+      let: "len" := !("it" +ₗ #1) in
+      if: "len" ≤ #0 then
         let: "r" := new [ #2] in "r" <-{Σ 0} ();; return: ["r"]
       else
         let: "l" := !"it" in
-        "it" <- "l" +ₗ #ty.(ty_size);; "it" +ₗ #1 <- !("it" +ₗ #1) - #1;;
+        "it" <- "l" +ₗ #ty.(ty_size);; "it" +ₗ #1 <- "len" - #1;;
         let: "r" := new [ #2] in "r" <-{Σ 1} "l";; return: ["r"].
 
   (* The precondition requires that is the sliced list is non-empty *)
@@ -28,7 +29,7 @@ Section iter.
       (fn<(α, β)>(∅; &uniq{β} (iter_uniq α ty)) → option_ty (&uniq{α} ty))
       (λ post '-[(aal, aal')],
         match aal with
-        | [] => aal' = aal → post None
+        | [] => aal' = [] → post None
         | aa :: aalₜ => aal' = aalₜ → post (Some aa)
         end).
   Proof.
@@ -46,7 +47,7 @@ Section iter.
     wp_apply (wp_delete with "[$↦b $†b]"); [done|]. iIntros "_". wp_seq.
     iDestruct "big" as (aπζil [->?]) "(↦ & ↦' & uniqs)".
     set aaπl := vmap _ _. iDestruct (uniq_agree with "Vo Pc") as %[Eq1 <-].
-    wp_op. wp_read. wp_op. wp_case. case len as [|].
+    wp_op. wp_read. wp_let. wp_op. wp_case. case len as [|].
     { iMod ("ToBor" with "[Pc ↦ ↦' uniqs]") as "[Bor β]".
       { iNext. iExists _, _. rewrite split_mt_uniq_slice. iFrame "⧖ Pc In".
         iExists _, _, _, _. by iFrame. }
@@ -61,8 +62,8 @@ Section iter.
         iFrame "⧖' In'". iExists _, _. iFrame. iPureIntro. split; [lia|done].
       - iApply proph_obs_eq; [|done]=> π. move: (equal_f Eq1 π)=>/=.
         case (vπ π)=>/= ??->. move: (aaπl)=> aaπl'. by inv_vec aaπl'. }
-    inv_vec aπζil. move=> [aπ ζi] aπζil' aaπl Eq1=>/=.
-    wp_read. wp_let. wp_op. wp_write. do 2 wp_op. wp_read. wp_op. wp_write.
+    inv_vec aπζil. move=> [aπ ζi] aπζil' aaπl Eq1 /=.
+    wp_read. wp_let. wp_op. wp_write. do 2 wp_op. wp_write.
     have ->: S len - 1 = len by lia.
     have ->: vπ = λ π, (lapply aaπl π, π ξ).
     { by rewrite [vπ]surjective_pairing_fun Eq1 Eq2. }
@@ -93,25 +94,21 @@ Section iter.
   Definition iter_next_back {𝔄} (ty: type 𝔄) : val :=
     fn: ["b"] :=
       let: "it" := !"b" in delete [ #1; "b"];;
-      let: "len" := !("it" +ₗ #1) - #1 in "it" +ₗ #1 <- "len";;
-      letalloc: "r" <- !"it" +ₗ "len" * #ty.(ty_size) in return: ["r"].
-
-  Local Lemma lapply_vmap_app_vinitlast {A B C n}
-      (cl: vec C (S n)) (f: C → B → A) b al a :
-    lapply (vmap f cl) b = al ++ [a] →
-    al = lapply (vmap f (vinit cl)) b ∧ a = f (vlast cl) b.
-  Proof.
-    inv_vec cl=>/= c cl. move: al c. elim: cl=>/= [|??? IH] al ? Eq;
-    move/(f_equal length): (Eq); rewrite last_length; case al as [|a' al]=>// _.
-    { by move: Eq=> [=?]. } { by move: Eq=>/= [=->/IH[<-<-]]. }
-  Qed.
+      let: "len" := !("it" +ₗ #1) in
+      if: "len" ≤ #0 then
+        let: "r" := new [ #2] in "r" <-{Σ 0} ();; return: ["r"]
+      else
+        let: "len'" := "len" - #1 in "it" +ₗ #1 <- "len'";;
+        let: "l'" := !"it" +ₗ "len'" * #ty.(ty_size) in
+        let: "r" := new [ #2] in "r" <-{Σ 1} "l'";; return: ["r"].
 
   (* The precondition requires that is the sliced list is non-empty *)
   Lemma iter_uniq_next_back_type {𝔄} (ty: type 𝔄) :
     typed_val (iter_next_back ty)
-      (fn<(α, β)>(∅; &uniq{β} (iter_uniq α ty)) → &uniq{α} ty)
+      (fn<(α, β)>(∅; &uniq{β} (iter_uniq α ty)) → option_ty (&uniq{α} ty))
       (λ post '-[(aal, aal')],
-        ∃aalᵢ (aa: 𝔄 * 𝔄), aal = aalᵢ ++ [aa] ∧ (aal' = aalᵢ → post aa)).
+        (aal = [] → aal' = [] → post None) ∧
+        ∀aalᵢ (aa: 𝔄 * 𝔄), aal = aalᵢ ++ [aa] → aal' = aalᵢ → post (Some aa)).
   Proof.
     eapply type_fn; [apply _|]. move=>/= [α β]??[b[]]. simpl_subst.
     iIntros (?[vπ[]]?) "#LFT TIME #PROPH #UNIQ #E Na L C /=[b _] #Obs".
@@ -122,22 +119,34 @@ Section iter.
     iMod (lctx_lft_alive_tok β with "E L") as (?) "(β & L & ToL)"; [solve_typing..|].
     iMod (bor_acc with "LFT Bor β") as "[big ToBor]"; [done|]. wp_let.
     iDestruct "big" as (??) "(#⧖ & Pc & ↦it)". rewrite split_mt_uniq_slice.
-    iDestruct "↦it" as "(#In &%&%&%& big)".
+    iDestruct "↦it" as "(#In & %l & %len &%& big)".
     rewrite freeable_sz_full -heap_mapsto_vec_singleton.
     wp_apply (wp_delete with "[$↦b $†b]"); [done|]. iIntros "_". wp_seq.
     iDestruct "big" as (aπζil [->?]) "(↦ & ↦' & uniqs)".
-    wp_op. wp_read. wp_op. wp_let. wp_op. wp_write. wp_apply wp_new; [done..|].
-    iIntros (r) "[†r ↦r]". wp_let. rewrite heap_mapsto_vec_singleton.
-    wp_read. do 2 wp_op. wp_write.
     set aaπl := vmap _ _. iDestruct (uniq_agree with "Vo Pc") as %[Eq1 <-].
+    wp_op. wp_read. wp_let. wp_op. wp_case. case len as [|].
+    { iMod ("ToBor" with "[Pc ↦ ↦' uniqs]") as "[Bor β]".
+      { iNext. iExists _, _. rewrite split_mt_uniq_slice. iFrame "⧖ Pc In".
+        iExists _, _, _, _. by iFrame. }
+      iMod ("ToL" with "β L") as "L".
+      iApply (type_type +[#it ◁ &uniq{β} (iter_uniq α ty)] -[vπ]
+        with "[] LFT TIME PROPH UNIQ E Na L C [-] []").
+      - iApply type_new; [done|]. intro_subst.
+        iApply (type_sum_unit +[(); &uniq{_} _]%T 0%fin);
+          [done|solve_extract|solve_typing..|].
+        iApply type_jump; [solve_typing|solve_extract|solve_typing].
+      - rewrite/= !(tctx_hasty_val #_). iSplitL; [|done]. iExists _.
+        iFrame "⧖' In'". iExists _, _. iFrame. iPureIntro. split; [lia|done].
+      - iApply proph_obs_impl; [|done]=> π. move: (equal_f Eq1 π)=>/=.
+        case (vπ π)=>/= ??->. move: (aaπl)=> aaπl'. inv_vec aaπl'.
+        case=>/= Imp _. by apply Imp. }
+    inv_vec aπζil. move=> [aπ ζi] aπζilₜ aaπl Eq1.
+    iDestruct (big_sepL_vinitlast with "uniqs") as "[uniqs uniq]"=>/=.
+    wp_op. wp_let. wp_op. wp_write. wp_read. do 2 wp_op. wp_let.
+    have ->: S len - 1 = len by lia. rewrite -Nat2Z.inj_mul.
     have ->: vπ = λ π, (lapply aaπl π, π ξ).
     { by rewrite [vπ]surjective_pairing_fun Eq1 Eq2. }
-    iMod (proph_obs_sat with "PROPH Obs") as %(?&?&?& Eq &_); [done|].
-    move: Eq=> /(f_equal length). rewrite last_length.
-    case aπζil as [|? n' ?]; [done|]=> _.
-    have ->: (S n' - 1)%Z = n' by lia. rewrite -Nat2Z.inj_mul.
-    iDestruct (big_sepL_vinitlast with "uniqs") as "[uniqs uniq]".
-    set aπζil' := vinit _. set aπζi := vlast _.
+    set aπζil' := vinit' _ _. set aπζi := vlast' _ _.
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     iMod ("ToBor" with "[Pc ↦ ↦' uniqs]") as "[Bor β]".
     { iNext. iExists _, _. rewrite split_mt_uniq_slice. iFrame "⧖ Pc In".
@@ -145,20 +154,21 @@ Section iter.
     iMod ("ToL" with "β L") as "L".
     set aaπl' := vmap _ aπζil'. rewrite /uniq_own. set ζ := PrVar _ aπζi.2.
     iApply (type_type
-      +[#it ◁ &uniq{β} (iter_uniq α ty); #r ◁ box (&uniq{α} ty)]
+      +[#it ◁ &uniq{β} (iter_uniq α ty); #(l +ₗ[ty] len) ◁ &uniq{α} ty]
       -[λ π, (lapply aaπl' π, π ξ); λ π, (aπζi.1 π, π ζ)]
       with "[] LFT TIME PROPH UNIQ E Na L C [-] []").
-    - iApply type_jump; [solve_typing|solve_extract|solve_typing].
+    - iApply type_new; [done|]. intro_subst.
+      iApply (type_sum_assign +[(); &uniq{_} _]%T 1%fin);
+        [done|solve_extract|solve_typing..|].
+      iApply type_jump; [solve_typing|solve_extract|solve_typing].
     - rewrite/= !(tctx_hasty_val #_). iSplitL "Vo Bor"; [|iSplitL; [|done]].
       + iExists _. iFrame "⧖ In'". iExists _, _. rewrite /uniq_own.
         rewrite (proof_irrel (@prval_to_inh (listₛ (_*_)) (lapply aaπl'))
           (@prval_to_inh (listₛ (_*_)) (fst ∘ vπ))).
         by iFrame.
-      + iExists _. rewrite -freeable_sz_full. iFrame "⧖' †r". iNext.
-        rewrite split_mt_uniq_bor. iFrame "In". iExists _, _, _. iFrame.
-        iPureIntro. split; [lia|done].
-    - iApply proph_obs_impl; [|done]=> ?[?[?[Eq +]]]+.
-      apply (lapply_vmap_app_vinitlast _) in Eq.
-      move: Eq=> [->->] Imp ? /=. by apply Imp.
+      + iExists _. iFrame "⧖ In". iExists _, _. iFrame. iPureIntro. split; [lia|done].
+    - iApply proph_obs_impl; [|done]=>/= ?[_ Imp]. apply Imp.
+      rewrite /aaπl' /aπζil' /ζ  /aπζi. clear. move: aπ ζi.
+      induction aπζilₜ as [|[??]]; [done|]=>/= ??. by f_equal.
   Qed.
 End iter.
