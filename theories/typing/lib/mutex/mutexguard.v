@@ -103,8 +103,7 @@ Section mutexguard.
   Qed.
   Next Obligation.
     iIntros "*% _ _ _ (%&%&%&%&%&->&?) $ !>!>!>". iApply step_fupdN_full_intro.
-    iModIntro. iExists [], 1%Qp. do 2 (iSplit; [done|]). iIntros "_!>".
-    iExists _, _, _, _, _. by iFrame.
+    iModIntro. iExists [], 1%Qp. do 2 (iSplit; [done|]). by iIntros.
   Qed.
 
   Global Instance mutexguard_ne {𝔄} κ : NonExpansive (mutexguard (𝔄:=𝔄) κ).

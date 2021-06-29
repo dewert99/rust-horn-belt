@@ -103,8 +103,7 @@ Section array_util.
     ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
     ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i)) -∗ q.[κ']
       ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
-        (q':+[ξl] ={E}=∗
-          ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i)) ∗ q.[κ']).
+        (q':+[ξl] ={E}=∗ q.[κ']).
   Proof.
     iIntros (?) "#LFT #In #In' tys κ'". iInduction aπl as [|] "IH" forall (l q)=>/=.
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
@@ -113,11 +112,11 @@ Section array_util.
     iMod (ty_shr_proph with "LFT In In' ty κ'") as "Upd"; [done|].
     setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "tys κ'₊") as "Upd'".
     iIntros "!>!>". iCombine "Upd Upd'" as "Upd". iApply (step_fupdN_wand with "Upd").
-    iIntros "[>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
+    iIntros "[>(%&%&%& ξl & Toκ') >(%&%&%& ζl & Toκ'₊)] !>".
     iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
     iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_vec_S|].
     iIntros "ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
-    iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
+    iMod ("Toκ'" with "ξl") as "$". by iMod ("Toκ'₊" with "ζl") as "$".
   Qed.
 
   Lemma resolve_big_sepL_ty_own {𝔄} (ty: type 𝔄) Φ n (aπl: vec _ n) wll d tid F q E L :

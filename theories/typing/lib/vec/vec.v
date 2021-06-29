@@ -86,12 +86,11 @@ Section vec.
   Next Obligation.
     iIntros (????[|d]) "*% LFT In In' vec κ' //=".
     iDestruct "vec" as (???? ->) "[? tys]". iIntros "!>!>!>".
-    iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Totys"; [done|].
-    iIntros "!>!>". iApply (step_fupdN_wand with "Totys").
-    iIntros ">(%&%&%& ξl & Totys) !>". iExists _, _. iSplit.
+    iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Toκ'"; [done|].
+    iIntros "!>!>". iApply (step_fupdN_wand with "Toκ'").
+    iIntros ">(%&%&%& ξl & Toκ') !>". iExists _, _. iSplit.
     { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
-    iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[?$]". iModIntro.
-    iExists _, _, _, _. by iFrame.
+    iIntros "{$ξl}ξl". by iMod ("Toκ'" with "ξl") as "$".
   Qed.
 
   Global Instance vec_ty_ne {𝔄} : NonExpansive (@vec_ty 𝔄).

@@ -99,9 +99,8 @@ Section uniq_slice.
     { iPureIntro. apply proph_dep_list_prod; [|done]. rewrite Eq.
       rewrite -vec_to_list_apply. by apply proph_dep_constr. }
     iIntros "ζξl". iDestruct ("Toζξl" with "ζξl") as "[ζl ξl]".
-    iMod ("Toshr" with "ζl") as "[tys $]". iMod ("Toκ0" with "ξl") as "κ0".
-    iMod ("Toκ'₊" with "κ0") as "$". iModIntro. iExists _, _, _, _.
-    iSplit; [done|]. by iFrame.
+    iMod ("Toshr" with "ζl") as "$". iMod ("Toκ0" with "ξl") as "κ0".
+    by iMod ("Toκ'₊" with "κ0") as "$".
   Qed.
 
   Global Instance uniq_slice_ne {𝔄} κ : NonExpansive (@uniq_slice 𝔄 κ).

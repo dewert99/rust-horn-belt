@@ -39,7 +39,7 @@ Section spawn.
   Qed.
   Next Obligation.
     iIntros "* _ _ _ _ (%&->) $ !>!>!>". iApply step_fupdN_full_intro.
-    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros. by iExists _.
+    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). by iIntros.
   Qed.
 
   Global Instance join_handle_ne {𝔄} : NonExpansive (@join_handle 𝔄).

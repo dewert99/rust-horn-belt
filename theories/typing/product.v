@@ -115,20 +115,20 @@ Section product.
   Qed.
   Next Obligation.
     move=> *. iIntros "#LFT #In #? [ty ty'] [κ κ₊]".
-    iDestruct (ty_shr_proph with "LFT In [] ty κ") as "> Toty"; first done.
+    iDestruct (ty_shr_proph with "LFT In [] ty κ") as "> Toκ"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_l. }
-    iDestruct (ty_shr_proph with "LFT In [] ty' κ₊") as "> Toty'"; first done.
+    iDestruct (ty_shr_proph with "LFT In [] ty' κ₊") as "> Toκ₊"; first done.
     { iApply lft_incl_trans; [done|]. rewrite lft_intersect_list_app.
       iApply lft_intersect_incl_r. }
-    iIntros "!>!>". iCombine "Toty Toty'" as ">Toty2".
-    iApply (step_fupdN_wand with "Toty2"). iIntros "!> [Toty Toty']".
-    iMod "Toty" as (ξl q ?) "[ξl Toty]". iMod "Toty'" as (ξl' q' ?) "[ξl' Toty']".
+    iIntros "!>!>". iCombine "Toκ Toκ₊" as ">Toκ2".
+    iApply (step_fupdN_wand with "Toκ2"). iIntros "!> [Toκ Toκ₊]".
+    iMod "Toκ" as (ξl q ?) "[ξl Toκ]". iMod "Toκ₊" as (ξl' q' ?) "[ξl' Toκ₊]".
     iDestruct (proph_tok_combine with "ξl ξl'") as (q0) "[ξl Toξl]".
     iExists (ξl ++ ξl'), q0. iModIntro. iSplit.
     - iPureIntro. by apply proph_dep_prod.
     - iIntros "{$ξl}ξl". iDestruct ("Toξl" with "ξl") as "[ξl ξl']".
-      iMod ("Toty" with "ξl") as "[$$]". by iMod ("Toty'" with "ξl'") as "[$$]".
+      iMod ("Toκ" with "ξl") as "$". by iMod ("Toκ₊" with "ξl'") as "$".
   Qed.
 
   Global Instance prod_ty_ne {𝔄 𝔅} : NonExpansive2 (@prod_ty 𝔄 𝔅).

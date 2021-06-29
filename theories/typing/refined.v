@@ -31,7 +31,7 @@ Section refined.
     iIntros "*% LFT In [$ ty] κ". by iApply (ty_own_proph with "LFT In ty κ").
   Qed.
   Next Obligation.
-    iIntros "*% LFT In In' [$ ty] κ". by iApply (ty_shr_proph with "LFT In In' ty κ").
+    iIntros "*% LFT In In' [_ ty] κ". by iApply (ty_shr_proph with "LFT In In' ty κ").
   Qed.
 
   Global Instance refined_ne {𝔄} (Φ: 𝔄 → _) : NonExpansive (refined Φ).

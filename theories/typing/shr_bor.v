@@ -20,7 +20,7 @@ Section shr_bor.
   Qed.
   Next Obligation.
     move=> ?????[|?]*/=; [by iIntros|]. rewrite {1}by_just_loc_ex.
-    iIntros "#LFT #? (%&->& ty) κ' !>/=".
+    iIntros "#LFT #? (%&->& #ty) κ' !>/=".
     iDestruct (ty_shr_proph with "LFT [] [] ty κ'") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }

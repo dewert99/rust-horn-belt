@@ -93,9 +93,8 @@ Section own.
     move=> ?????[|?]*/=; [by iIntros|]. iIntros "#LFT #In #In' [%l[↦ ty]] κ !>!>".
     iDestruct (ty_shr_proph with "LFT In In' ty κ") as "> Upd"; [done|].
     iIntros "!>!>!>". iApply (step_fupdN_wand with "Upd").
-    iIntros ">(%ξl & %q &%& ξl & Toty) !>". iExists ξl, q. iSplit; [done|].
-    iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[? $]".
-    iExists l. by iFrame.
+    iIntros ">(%ξl & %q &%& ξl & Toκ) !>". iExists ξl, q. iSplit; [done|].
+    iIntros "{$ξl}ξl". by iMod ("Toκ" with "ξl").
   Qed.
 
   Global Instance own_ne {𝔄} n : NonExpansive (@own_ptr 𝔄 n).

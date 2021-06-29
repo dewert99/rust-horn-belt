@@ -70,12 +70,12 @@ Section maybe_uninit.
   Next Obligation.
     move=> *. iIntros "LFT In In' [[-> ?]|(%vπ &->& ty)] κ".
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
-      do 2 (iSplit; [done|]). iIntros "_!>". iFrame "κ". iLeft. by iFrame. }
+      do 2 (iSplit; [done|]). by iIntros. }
     iMod (ty_shr_proph with "LFT In In' ty κ") as "Upd"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
-    iIntros ">(%ξl&%q&%& ξl & Toty) !>". iExists ξl, q.
+    iIntros ">(%ξl&%q&%& ξl & Toκ) !>". iExists ξl, q.
     iSplit; [iPureIntro; by apply proph_dep_constr|]. iIntros "{$ξl}ξl".
-    iMod ("Toty" with "ξl") as "[?$]". iRight. iExists vπ. by iFrame.
+    by iMod ("Toκ" with "ξl").
   Qed.
 
   Global Instance maybe_uninit_ne {𝔄} : NonExpansive (@maybe_uninit 𝔄).

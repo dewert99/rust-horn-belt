@@ -41,8 +41,7 @@ Section cell.
   Qed.
   Next Obligation.
     iIntros "* _ _ _ _ (%&->&?) $ !>!>!>". iApply step_fupdN_full_intro.
-    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
-    iExists _. by iSplit.
+    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). by iIntros.
   Qed.
 
   Global Instance cell_ne {𝔄} : NonExpansive (@cell 𝔄).

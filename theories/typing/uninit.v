@@ -96,7 +96,7 @@ Section uninit.
     iSplit; [done|]. by iIntros.
   Qed.
   Next Obligation.
-    iIntros "*% _ _ _ $$ !>!>!>". iApply step_fupdN_full_intro.
+    iIntros "*% _ _ _ _ $ !>!>!>". iApply step_fupdN_full_intro.
     iModIntro. iExists [], 1%Qp. iSplit.
     { iPureIntro. apply proph_dep_singleton. by case=> [][]. }
     iSplit; [done|]. by iIntros.

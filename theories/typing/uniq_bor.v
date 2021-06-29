@@ -76,15 +76,15 @@ Section uniq_bor.
     iDestruct (ty_shr_proph with "LFT In [] ty κ'") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
     iModIntro. iApply (step_fupdN_wand with "Upd"). iNext.
-    iMod 1 as (ζl q' ?) "[ζl Toty]".
+    iMod 1 as (ζl q' ?) "[ζl Toκ']".
     iMod (lft_incl_acc with "In κ'₊") as (?) "[κ1 Toκ'₊]"; [done|].
     iMod (frac_bor_acc with "LFT Bor κ1") as (?) "[>ξ Toκ1]"; [done|].
     rewrite proph_tok_singleton.
     iDestruct (proph_tok_combine with "ζl [$ξ]") as (q) "[ζlξ Toζlξ]". iModIntro.
     iExists (ζl ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_prod|].
     iIntros "{$ζlξ}ζlξ". iDestruct ("Toζlξ" with "ζlξ") as "[ζl ξ]".
-    iMod ("Toty" with "ζl") as "[?$]". iMod ("Toκ1" with "ξ") as "κ1".
-    iMod ("Toκ'₊" with "κ1") as "$". iModIntro. iExists l, ξ. by do 3 (iSplit; [done|]).
+    iMod ("Toκ'" with "ζl") as "$". iMod ("Toκ1" with "ξ") as "κ1".
+    by iMod ("Toκ'₊" with "κ1") as "$".
   Qed.
 
   Global Instance uniq_bor_ne {𝔄} κ : NonExpansive (@uniq_bor 𝔄 κ).

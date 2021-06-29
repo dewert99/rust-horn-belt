@@ -122,8 +122,7 @@ Section S.
   Qed.
   Next Obligation.
     move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_shr_proph (Tn' _))].
-    apply limit_preserving_entails; [done|]=> ??? Eq.
-    do 3 f_equiv; [|do 15 f_equiv]; apply Eq.
+    apply limit_preserving_entails; [done|]=> ??? Eq. do 3 f_equiv. apply Eq.
   Qed.
 
   Lemma fix_ty_Tn'_dist n : fix_ty ≡{n}≡ Tn' (3 + n).

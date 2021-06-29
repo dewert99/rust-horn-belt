@@ -53,10 +53,9 @@ Section mod_ty.
   Next Obligation.
     move=> */=. iIntros "#LFT In In' [%vπ[->ty]] κ".
     iMod (ty_shr_proph with "LFT In In' ty κ") as "Upd"; [done|]. iIntros "!>!>".
-    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q ?) "[ξl Toty]".
+    iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q ?) "[ξl Toκ]".
     iModIntro. iExists ξl, q. iSplit; [iPureIntro; by apply (proph_dep_constr _)|].
-    iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[? $]".
-    iModIntro. iExists vπ. by iSplit.
+    iIntros "{$ξl}ξl". by iMod ("Toκ" with "ξl").
   Qed.
 
   Global Instance mod_ty_ne {𝔄 𝔅} (f: 𝔄 → 𝔅) : NonExpansive (mod_ty f).

@@ -87,11 +87,10 @@ Section sum.
     move=> *. iIntros "#LFT #In #? (%i & %vπ' &->& Bor & ty) κ".
     iMod (ty_shr_proph with "LFT In [] ty κ") as "Upd"; [done| |].
     { iApply lft_incl_trans; by [|iApply ty_lfts_lookup_incl]. }
-    iIntros "!>!>". iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toty]".
+    iIntros "!>!>". iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toκ]".
     iModIntro. iExists ξl, q'. iSplit.
     - iPureIntro. by apply proph_dep_constr.
-    - iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[?$]".
-      iModIntro. iExists i, vπ'. by do 2 (iSplit; [done|]).
+    - iIntros "{$ξl}ξl". by iMod ("Toκ" with "ξl").
   Qed.
 
   Global Instance xsum_ty_ne {𝔄l} : NonExpansive (@xsum_ty 𝔄l).

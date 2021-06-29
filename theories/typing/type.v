@@ -65,7 +65,7 @@ Record type `{!typeG Σ} 𝔄 := {
   ty_shr_proph E vπ d κ tid l κ' q : ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗
     κ' ⊑ lft_intersect_list ty_lfts -∗ ty_shr vπ d κ tid l -∗ q.[κ']
     ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vπ ./ ξl⌝ ∗
-      q':+[ξl] ∗ (q':+[ξl] ={E}=∗ ty_shr vπ d κ tid l ∗ q.[κ']);
+      q':+[ξl] ∗ (q':+[ξl] ={E}=∗ q.[κ']);
 }.
 Existing Instance ty_shr_persistent.
 Instance: Params (@ty_size) 3 := {}.
@@ -213,8 +213,8 @@ Next Obligation.
   move=> *. iIntros "#LFT _ In [%vl[? st]]". iIntros "κ !>!>".
   iMod (st_own_proph with "LFT In st κ") as "Upd"; [done|].
   iModIntro. iApply (step_fupdN_wand with "Upd").
-  iIntros ">(%&%&%& ξl & Tost) !>". iExists _, _. iSplit; [done|]. iIntros "{$ξl}ξl".
-  iMod ("Tost" with "ξl") as "[?$]". iModIntro. iExists _. iFrame.
+  iIntros ">(%&%&%& ξl & Toκ) !>". iExists _, _. iSplit; [done|]. iIntros "{$ξl}ξl".
+  by iMod ("Toκ" with "ξl") as "[_ $]".
 Qed.
 
 Coercion ty_of_st: simple_type >-> type.
