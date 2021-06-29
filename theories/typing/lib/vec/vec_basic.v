@@ -139,6 +139,38 @@ Section vec_basic.
     rewrite tctx_hasty_val. iExists _. iFrame "⧖". iSplit; [|done]. iNext.
     iExists _. iFrame "↦". by rewrite unit_ty_own.
   Qed.
+
+  Definition vec_len: val :=
+    fn: ["bv"] :=
+      let: "v" := !"bv" in delete [ #1; "bv"];;
+      letalloc: "r" <- !("v" +ₗ #1) in
+      return: ["r"].
+
+  Lemma vec_len_type {𝔄} (ty: type 𝔄) :
+    typed_val vec_len (fn<α>(∅; &shr{α} (vec_ty ty)) → int)
+      (λ post '-[v], post (length v)).
+  Proof.
+    eapply type_fn; [apply _|]=>/= α ??[bv[]]. simpl_subst.
+    iIntros (?[?[]]?) "LFT _ _ _ E Na L C /=[bv _] #Obs".
+    rewrite tctx_hasty_val. iDestruct "bv" as ([|d]) "[⧖ box]"=>//.
+    case bv as [[]|]=>//=. rewrite split_mt_ptr.
+    case d as [|d]; first by iDestruct "box" as "[>[] _]".
+    iDestruct "box" as "[(%& >↦bv  & vec) †bv]". wp_read. wp_let.
+    rewrite -heap_mapsto_vec_singleton freeable_sz_full.
+    wp_apply (wp_delete with "[$↦bv $†bv]"); [done|]. iIntros "_". wp_seq.
+    case d as [|]=>//. iDestruct "vec" as (????->) "[Bor _]".
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (frac_bor_acc with "LFT Bor α") as (?) "[(↦₀ & ↦₁ & ↦₂) Toα]"; [done|].
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]". wp_let. wp_op. wp_read.
+    rewrite heap_mapsto_vec_singleton. wp_write. do 2 wp_seq.
+    iMod ("Toα" with "[$↦₀ $↦₁ $↦₂]") as "α". iMod ("ToL" with "α L") as "L".
+    rewrite cctx_interp_singleton. iApply ("C" $! [# #_] -[_] with "Na L [-] []").
+    - rewrite/= right_id (tctx_hasty_val #_) -freeable_sz_full. iExists _.
+      iFrame "⧖ †r". iNext. iExists [_]. rewrite heap_mapsto_vec_singleton.
+      iFrame "↦r". by iExists _.
+    - iApply proph_obs_eq; [|done]=>/= ?. f_equal.
+      by rewrite -vec_to_list_apply vec_to_list_length.
+  Qed.
 End vec_basic.
 
 Global Hint Resolve vec_resolve | 5 : lrust_typing.
