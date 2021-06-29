@@ -302,7 +302,7 @@ Section borrow.
     iMod (bi.later_exist_except_0 with "Hown") as (wπ depth3') "(>#? & Hpcω & Hown)".
     iMod (uniq_strip_later with "ξVo Hpc") as (?->) "[ξVo ξPc]".
     have ->: vπ' = fst ∘ (fst ∘ vπ).
-    (* TODO(xavier): remove usage of fun_ext here.  *)
+    (* TODO: remove usage of fun_ext here.  *)
     { fun_ext => x /=. move: (equal_f H x) => /= y. by inversion y.  }
     iMod (uniq_strip_later with "Hvo Hpcω") as (<-->) "[ωVo ωPc]".
     iMod (uniq_intro (fst ∘ (fst ∘ vπ)) with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].

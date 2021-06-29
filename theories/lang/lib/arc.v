@@ -6,7 +6,7 @@ From iris.algebra Require Import excl csum frac auth numbers.
 From lrust.lang Require Import lang proofmode notation new_delete.
 Set Default Proof Using "Type".
 
-(* JH: while working on Arc, I think figured that the "weak count
+(* A: while working on Arc, I think figured that the "weak count
 locking" mechanism that Rust is using and that is verified below may
 not be necessary.
 
@@ -24,7 +24,7 @@ What's wrong with this protocol? The "only" problem I can see is that if
 someone tries to upgrade a weak after we did the CAS, then this will
 fail even though this could be possible.
 
-RJ: Upgrade failing spuriously sounds like a problem severe enough to
+B: Upgrade failing spuriously sounds like a problem severe enough to
 justify the locking protocol.
 *)
 
