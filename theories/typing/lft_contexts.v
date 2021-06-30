@@ -225,6 +225,16 @@ Section lft_contexts.
     iIntros (F qL ?) "_ $". iExists 1%Qp. iSplitL. by iApply lft_tok_static. auto.
   Qed.
 
+  Lemma lctx_lft_alive_intersect α β :
+    lctx_lft_alive α →
+    lctx_lft_alive β →
+    lctx_lft_alive (α ⊓ β).
+  Proof.
+    iIntros (Hα Hβ F qL ?) "#HE HL".
+    iMod (lctx_lft_alive_tok_list [α; β] with "HE HL") as (q) "(Htok & HL & Hclose)"; [done | auto | ].
+    rewrite /= right_id_L. iExists q. iFrame. iIntros "!> tok". iDestruct ("Hclose" with "tok HL") as "$".
+  Qed.
+
   Lemma lctx_lft_alive_local κ κs:
     κ ⊑ₗ κs ∈ L → Forall lctx_lft_alive κs → lctx_lft_alive κ.
   Proof.
@@ -342,7 +352,7 @@ Lemma elctx_sat_submseteq `{!invG Σ, !lftG Σ} E E' L :
 Proof. iIntros (HE' ?) "_ !> H". by iApply big_sepL_submseteq. Qed.
 
 Global Hint Resolve
-     lctx_lft_incl_refl lctx_lft_incl_static lctx_lft_incl_local'
+     lctx_lft_incl_refl lctx_lft_incl_static lctx_lft_alive_intersect lctx_lft_incl_local'
      lctx_lft_incl_external' lctx_lft_incl_intersect
      lctx_lft_incl_intersect_l lctx_lft_incl_intersect_r
      lctx_lft_alive_static lctx_lft_alive_local lctx_lft_alive_external

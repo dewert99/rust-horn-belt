@@ -57,7 +57,7 @@ Section code.
       iApply (type_letalloc_1 (&uniq{γ} _)); [solve_extract| solve_typing |..]. intro_subst.
       iApply (type_letcall (_, γ)); [solve_typing | solve_extract | solve_typing | ..]. intro_subst.
       (* why do we need to rewrite static? *)
-      iApply type_endlft; [solve_resolve_unblock| rewrite -{1}(lft_intersect_right_id α); solve_typing | .. ].
+      iApply type_endlft; [solve_resolve_unblock| solve_typing | .. ].
       { iApply (type_case_own_inner +[_; _] -[_; _]); [solve_extract|..].
         rewrite/= right_id. iSplitL.
         + iApply (type_jump (λ _, +[_])); [solve_typing| solve_extract| solve_typing].
