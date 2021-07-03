@@ -108,6 +108,14 @@ Fixpoint vinit' {A n} (x: A) (yl: vec A n) : vec A n :=
 Definition vinit {A n} (xl: vec A (S n)) : vec A n :=
   let '(x ::: xl') := xl in vinit' x xl'.
 
+Lemma vec_to_list_last_error {A n} (xl: vec A (S n)) :
+  Some (vlast xl) = last_error xl.
+Proof. inv_vec xl=>/= + xl. by elim xl=>/= *. Qed.
+
+Lemma vec_to_list_init {A n} (xl: vec A (S n)) :
+  vec_to_list (vinit xl) = removelast xl.
+Proof. inv_vec xl=>/= + xl. by elim xl; [done|]=>/= ???->. Qed.
+
 (** [vinsert] *)
 
 Lemma vapply_insert {A B n} (fl: vec (B → A) n) i g :

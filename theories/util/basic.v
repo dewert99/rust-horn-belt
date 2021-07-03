@@ -118,7 +118,7 @@ Lemma lapply_app {A B} (fl gl: list (B → A)) x :
   lapply (fl ++ gl) x = lapply fl x ++ lapply gl x.
 Proof. by elim fl; [done|]=>/= ??->. Qed.
 
-(** Fixpoint version of List.Forall *)
+(** Fixpoint version of [List.Forall: *)
 Fixpoint lforall {A} (Φ: A → Prop) (xl: list A) : Prop :=
   match xl with [] => True | x :: xl' => Φ x ∧ lforall Φ xl' end.
 
@@ -130,6 +130,10 @@ Fixpoint forall2b (xl: list A) (yl: list B) :=
   | _, _ => false
   end.
 End forall2b.
+
+(** Option-returning version of [last] *)
+Fixpoint last_error {A} (xl: list A) : option A :=
+  match xl with [] => None | [x] => Some x | _ :: xl' => last_error xl' end.
 
 (** * Utility for [fin] *)
 

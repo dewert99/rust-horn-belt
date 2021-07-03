@@ -23,15 +23,10 @@ Section iter.
         "it" <- "l" +ₗ #ty.(ty_size);; "it" +ₗ #1 <- "len" - #1;;
         let: "r" := new [ #2] in "r" <-{Σ 1} "l";; return: ["r"].
 
-  (* The precondition requires that is the sliced list is non-empty *)
   Lemma iter_uniq_next_type {𝔄} (ty: type 𝔄) :
     typed_val (iter_next ty)
       (fn<(α, β)>(∅; &uniq{β} (iter_uniq α ty)) → option_ty (&uniq{α} ty))
-      (λ post '-[(aal, aal')],
-        match aal with
-        | [] => aal' = [] → post None
-        | aa :: aalₜ => aal' = aalₜ → post (Some aa)
-        end).
+      (λ post '-[(aal, aal')], aal' = tail aal → post (hd_error aal)).
   Proof.
     eapply type_fn; [apply _|]. move=>/= [α β]??[b[]]. simpl_subst.
     iIntros (?[vπ[]]?) "#LFT TIME #PROPH #UNIQ #E Na L C /=[b _] #Obs".
@@ -102,13 +97,10 @@ Section iter.
         let: "l'" := !"it" +ₗ "len'" * #ty.(ty_size) in
         let: "r" := new [ #2] in "r" <-{Σ 1} "l'";; return: ["r"].
 
-  (* The precondition requires that is the sliced list is non-empty *)
   Lemma iter_uniq_next_back_type {𝔄} (ty: type 𝔄) :
     typed_val (iter_next_back ty)
       (fn<(α, β)>(∅; &uniq{β} (iter_uniq α ty)) → option_ty (&uniq{α} ty))
-      (λ post '-[(aal, aal')],
-        (aal = [] → aal' = [] → post None) ∧
-        ∀aalᵢ (aa: 𝔄 * 𝔄), aal = aalᵢ ++ [aa] → aal' = aalᵢ → post (Some aa)).
+      (λ post '-[(aal, aal')], aal' = removelast aal → post (last_error aal)).
   Proof.
     eapply type_fn; [apply _|]. move=>/= [α β]??[b[]]. simpl_subst.
     iIntros (?[vπ[]]?) "#LFT TIME #PROPH #UNIQ #E Na L C /=[b _] #Obs".
@@ -124,7 +116,7 @@ Section iter.
     wp_apply (wp_delete with "[$↦b $†b]"); [done|]. iIntros "_". wp_seq.
     iDestruct "big" as (aπζil [->?]) "(↦ & ↦' & uniqs)".
     set aaπl := vmap _ _. iDestruct (uniq_agree with "Vo Pc") as %[Eq1 <-].
-    wp_op. wp_read. wp_let. wp_op. wp_case. case len as [|].
+    wp_op. wp_read. wp_let. wp_op. wp_case. case len as [|]=>/=.
     { iMod ("ToBor" with "[Pc ↦ ↦' uniqs]") as "[Bor β]".
       { iNext. iExists _, _. rewrite split_mt_uniq_slice. iFrame "⧖ Pc In".
         iExists _, _, _, _. by iFrame. }
@@ -138,15 +130,14 @@ Section iter.
       - rewrite/= !(tctx_hasty_val #_). iSplitL; [|done]. iExists _.
         iFrame "⧖' In'". iExists _, _. iFrame. iPureIntro. split; [lia|done].
       - iApply proph_obs_impl; [|done]=> π. move: (equal_f Eq1 π)=>/=.
-        case (vπ π)=>/= ??->. move: (aaπl)=> aaπl'. inv_vec aaπl'.
-        case=>/= Imp _. by apply Imp. }
-    inv_vec aπζil. move=> [aπ ζi] aπζilₜ aaπl Eq1.
-    iDestruct (big_sepL_vinitlast with "uniqs") as "[uniqs uniq]"=>/=.
+        case (vπ π)=>/= ??->. move: (aaπl)=> aaπl'. inv_vec aaπl'=>/= [Imp ?].
+        by apply Imp. }
+    iDestruct (big_sepL_vinitlast with "uniqs") as "[uniqs uniq]".
     wp_op. wp_let. wp_op. wp_write. wp_read. do 2 wp_op. wp_let.
     have ->: S len - 1 = len by lia. rewrite -Nat2Z.inj_mul.
     have ->: vπ = λ π, (lapply aaπl π, π ξ).
     { by rewrite [vπ]surjective_pairing_fun Eq1 Eq2. }
-    set aπζil' := vinit' _ _. set aπζi := vlast' _ _.
+    set aπζil' := vinit _. set aπζi := vlast _.
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     iMod ("ToBor" with "[Pc ↦ ↦' uniqs]") as "[Bor β]".
     { iNext. iExists _, _. rewrite split_mt_uniq_slice. iFrame "⧖ Pc In".
@@ -167,8 +158,11 @@ Section iter.
           (@prval_to_inh (listₛ (_*_)) (fst ∘ vπ))).
         by iFrame.
       + iExists _. iFrame "⧖ In". iExists _, _. iFrame. iPureIntro. split; [lia|done].
-    - iApply proph_obs_impl; [|done]=>/= ?[_ Imp]. apply Imp.
-      rewrite /aaπl' /aπζil' /ζ  /aπζi. clear. move: aπ ζi.
-      induction aπζilₜ as [|[??]]; [done|]=>/= ??. by f_equal.
+    - iApply proph_obs_impl; [|done]=>/= π. clear.
+      have ->: last_error (lapply aaπl π) = Some (aπζi.1 π, π ζ).
+      { inv_vec aπζil=>/= + aπζil'. by elim aπζil'; [done|]=>/= *. }
+      have ->: removelast (lapply aaπl π) = lapply aaπl' π.
+      { inv_vec aπζil=>/= + aπζil'. elim aπζil'; [done|]=>/= *. by f_equal. }
+      done.
   Qed.
 End iter.

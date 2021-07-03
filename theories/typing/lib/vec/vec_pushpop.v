@@ -126,12 +126,9 @@ Section vec_pushpop.
         "r" <- #1;; "r" +ₗ #1 <-{ty.(ty_size)} ! (!"v'" +ₗ "len'" * #ty.(ty_size));;
         return: ["r"].
 
-  (* The precondition requires that the input list is non-empty *)
   Lemma vec_pop_type {𝔄} (ty: type 𝔄) :
     typed_val (vec_pop ty) (fn<α>(∅; &uniq{α} (vec_ty ty)) → option_ty ty)
-      (λ post '-[(al, al')],
-        (al = [] → al' = [] → post None) ∧
-        ∀alᵢ (a: 𝔄), al = alᵢ ++ [a] → al' = alᵢ → post (Some a)).
+      (λ post '-[(al, al')], al' = removelast al → post (last_error al)).
   Proof.
     eapply type_fn; [apply _|]=> α ??[v[]]. simpl_subst.
     iIntros (?[vπ[]]?) "#LFT TIME #PROPH #UNIQ #E Na L C /=[v _] #Obs".
@@ -160,11 +157,9 @@ Section vec_pushpop.
       - rewrite/= !(tctx_hasty_val #_). iSplitL; [|done]. iExists _.
         iFrame "⧖ LftIn". iExists _, _. iFrame. iPureIntro. split; [lia|done].
       - iApply proph_obs_impl; [|done]=> π. move: (equal_f Eq1 π)=>/=. clear.
-        inv_vec aπl. case (vπ π)=>/= ??->[Imp _]. by apply Imp. }
-    inv_vec aπl=> aπₕ aπlₜ Eq1.
+        inv_vec aπl. by case (vπ π)=>/= ??->. }
     iDestruct (big_sepL_vinitlast with "↦tys") as "[↦tys (%vl & ↦last & ty)]"=>/=.
-    set aπl' := vinit' aπₕ aπlₜ. set aπ := vlast' aπₕ aπlₜ.
-    set vπ' := λ π, (lapply aπl' π, π ξ).
+    set vπ' := λ π, (lapply (vinit aπl) π, π ξ).
     wp_op. wp_let. wp_op. wp_write. do 2 wp_op. wp_read. wp_op. wp_write.
     wp_bind (new _). iApply wp_new; [lia|done|]. iIntros "!>" (r) "[†r ↦r]". wp_let.
     rewrite Nat2Z.id /= heap_mapsto_vec_cons. have ->: (S len - 1)%Z = len by lia.
@@ -182,7 +177,7 @@ Section vec_pushpop.
       iSplit; [iPureIntro; lia|]. iFrame. }
     iMod ("ToL" with "α L") as "L".
     iApply (type_type +[#v' ◁ &uniq{α} (vec_ty ty); #r ◁ box (option_ty ty)]
-      -[vπ'; Some ∘ aπ] with "[] LFT TIME PROPH UNIQ E Na L C [-] []").
+      -[vπ'; Some ∘ _] with "[] LFT TIME PROPH UNIQ E Na L C [-] []").
     - iApply type_jump; [solve_typing|solve_extract|solve_typing].
     - rewrite/= !(tctx_hasty_val #_) right_id. iSplitL "Vo Bor".
       + iExists _. iFrame "⧖ LftIn". iExists _, _. rewrite /uniq_own.
@@ -190,12 +185,16 @@ Section vec_pushpop.
           (@prval_to_inh (listₛ 𝔄) (fst ∘ vπ))). by iFrame.
       + iExists _. rewrite -freeable_sz_full. iFrame "⧖ †r". iNext.
         rewrite /option_ty. setoid_rewrite mod_ty_own; [|apply _].
-        rewrite split_mt_sum. iExists 1%fin, aπ. iSplit; [done|]. iFrame "↦r". iSplitR.
+        rewrite split_mt_sum. iExists 1%fin, _. iSplit; [done|]. iFrame "↦r". iSplitR.
         { iExists []. rewrite heap_mapsto_vec_nil left_id. iPureIntro=>/=.
           move: ty.(ty_size)=> ?. lia. }
         iExists _. iFrame "↦r'". iApply ty_own_depth_mono; [|done]. lia.
-    - iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=.
-      case (vπ π)=>/= ??->->[_ Imp]. apply Imp. rewrite /aπl' /aπ. clear.
-      move: aπₕ π. induction aπlₜ; [done|]=>/= ??. by f_equal.
+    - iApply proph_obs_impl; [|done]=>/= π.
+      move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=. clear. case (vπ π)=>/= ??->->.
+      have ->: last_error (lapply aπl π) = Some (vlast aπl π).
+      { inv_vec aπl=> + aπl'. by elim aπl'=>/= *. }
+      have ->: removelast (lapply aπl π) = lapply (vinit aπl) π.
+      { inv_vec aπl=> + aπl'. elim aπl'; [done|]=>/= *. by f_equal. }
+      done.
   Qed.
 End vec_pushpop.
