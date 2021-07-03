@@ -385,55 +385,85 @@ Section cell.
 
   (** Writing to a Cell *)
 
+  Definition cell_set {𝔄} (ty: type 𝔄) : val :=
+    fn: ["c"; "x"] :=
+      let: "c'" := !"c" in delete [ #1; "c"];;
+      "c'" <-{ty.(ty_size)} !"x";; delete [ #ty.(ty_size); "x"];;
+      return: [new [ #0]].
+
+  Lemma cell_set_type {𝔄} (ty: type 𝔄) :
+    typed_val (cell_set ty) (fn<α>(∅; &shr{α} (cell ty), ty) → ())
+      (λ post '-[Φ; a], Φ a ∧ post ()).
+  Proof.
+    eapply type_fn; [apply _|]=>/= α ??[c[x[]]]. simpl_subst.
+    iIntros (?(?&?&[])?) "#LFT TIME PROPH UNIQ #E Na L C /=(c & x &_) #?".
+    rewrite !tctx_hasty_val. iDestruct "c" as ([|d]) "[_ bcell]"=>//=.
+    case c as [[|c|]|]=>//=. rewrite split_mt_ptr.
+    case d as [|]; first by iDestruct "bcell" as "[>[] _]".
+    iDestruct "bcell" as "[(%& >↦c & cell) †c]".
+    iDestruct "x" as ([|]) "[#⧖ bty]"=>//=. case x as [[|x|]|]=>//=.
+    iDestruct "bty" as "[(%& >↦x & ty) †x]". wp_read. wp_let.
+    rewrite -heap_mapsto_vec_singleton !freeable_sz_full.
+    wp_apply (wp_delete with "[$↦c $†c]"); [done|]. iIntros "_".
+    iDestruct "cell" as (?->) "Bor".
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (na_bor_acc with "LFT Bor α Na") as "(big & Na & Toα)"; [solve_ndisj..|].
+    wp_seq. iDestruct "big" as (??) "(_&_&%& ↦c' & ty')".
+    iDestruct (ty_size_eq with "ty") as %Eq. iDestruct (ty_size_eq with "ty'") as %?.
+    wp_apply (wp_memcpy with "[$↦c' $↦x]"); [lia..|]. iIntros "[↦c' ↦x]". wp_seq.
+    rewrite -Eq. wp_apply (wp_delete with "[$↦x $†x]"); [done|]. iIntros "_".
+    do 3 wp_seq. wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]".
+    iMod ("Toα" with "[↦c' ty] Na") as "[α Na]".
+    { iNext. iExists _, _. iSplit. { by iApply proph_obs_impl; [|done]=>/= ?[? _]. }
+      iFrame "⧖". iExists _. iFrame. }
+    iMod ("ToL" with "α L") as "L".
+    rewrite cctx_interp_singleton. iApply ("C" $! [# #_] -[const ()] with "Na L [-]").
+    - iSplitL; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖".
+      rewrite -freeable_sz_full. iFrame "†r". iNext. iExists _. iFrame "↦r".
+      by rewrite unit_ty_own.
+    - by iApply proph_obs_impl; [|done]=>/= ?[_ ?].
+  Qed.
+
   Definition cell_replace {𝔄} (ty: type 𝔄) : val :=
     fn: ["c"; "x"] :=
-      let: "c'" := !"c" in
+      let: "c'" := !"c" in delete [ #1; "c"];;
       letalloc: "r" <-{ty.(ty_size)} !"c'" in
       "c'" <-{ty.(ty_size)} !"x";;
-      delete [ #1; "c"];; delete [ #ty.(ty_size); "x"];; return: ["r"].
+      delete [ #ty.(ty_size); "x"];; return: ["r"].
 
   Lemma cell_replace_type {𝔄} (ty: type 𝔄) :
     typed_val (cell_replace ty) (fn<α>(∅; &shr{α} (cell ty), ty) → ty)
       (λ post '-[Φ; a], Φ a ∧ ∀a': 𝔄, Φ a' → post a').
   Proof.
-    eapply type_fn; [apply _|]=>/= α ϝ k[c[x[]]]. simpl_subst. via_tr_impl.
-    { iApply type_deref; [solve_extract|solve_typing|done|]. intro_subst_as c'.
-      iApply type_new; [lia|]. intro_subst_as r. rewrite Nat2Z.id.
-      iApply (type_with_tr [_;predₛ _;_;_] _
-        (λ post '-[_; Φ; _; a], Φ a ∧ ∀a': 𝔄, Φ a' → post a')%type).
-      (* Drop to Iris level. *)
-      iIntros (?(?&?&?&?&[])?)
-        "/= #LFT TIME PROPH UNIQ #E Na L C (r & c' & c & x &_) Obs".
-      rewrite !tctx_hasty_val.
-      iDestruct "c'" as ([|]) "[_ cell]"; case c' as [[|c'|]|]=>//.
-      iDestruct "cell" as (?->) "Bor".
-      iDestruct "x" as ([|]) "[#⧖ bty]"; case x as [[|x|]|]=>//.
-      iDestruct "bty" as "[(%& >↦x & ty) †x]".
-      iDestruct (ty_size_eq with "ty") as "#>%".
-      iDestruct "r" as ([|]) "[_ own]"; case r as [[|r|]|]=>//.
-      iDestruct "own" as "[(%& >↦r & >%) †r]".
-      iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-      iMod (na_bor_acc with "LFT Bor α Na") as "(big & Na & Toα)"; [solve_ndisj..|].
-      iMod (bi.later_exist_except_0 with "big") as (??) "(>Obs' & >#⧖' &%& >↦c & ty')".
-      iCombine "Obs Obs'" as "#Obs". iDestruct (ty_size_eq with "ty'") as "#>%".
-      wp_bind (_ <-{_} !_)%E. wp_apply (wp_memcpy with "[$↦r $↦c]"); [lia..|].
-      iIntros "[↦r ↦c]". wp_seq. wp_apply (wp_memcpy with "[$↦c $↦x]"); [by f_equal..|].
-      iIntros "[↦c ↦x]". wp_seq. iMod ("Toα" with "[↦c ty] Na") as "[α Na]".
-      { iNext. iExists _, _. iSplit; [by iApply proph_obs_impl; [|done]=> ?[[? _]_]|].
-        iFrame "⧖". iExists _. iFrame. }
-      iMod ("ToL" with "α L") as "L".
-      (* Now go back to typing level. *)
-      iApply (type_type
-        +[c ◁ box (&shr{α} (cell ty)); #x ◁ box (↯ ty.(ty_size)); #r ◁ box ty]
-        -[_; const (); _]
-        with "[] LFT TIME PROPH UNIQ E Na L C [ty' c ↦x †x ↦r †r] []").
-      - do 2 (iApply type_delete; [solve_extract|done|done|]).
-        iApply type_jump; [solve_typing|solve_extract|solve_typing].
-      - rewrite/= tctx_hasty_val right_id. iFrame "c".
-        have Eq: ∀l: loc, (#l)%E = (#l)%V by done. rewrite !Eq !tctx_hasty_val.
-        iSplitL "↦x †x"; iExists _; iFrame "⧖'"; iFrame; iNext; iExists _; by iFrame.
-      - iApply proph_obs_impl; [|done]=>/= ?[[_ Imp]?]. by apply Imp. }
-    by move=> ?[?[?[]]]/=.
+    eapply type_fn; [apply _|]=>/= α ??[c[x[]]]. simpl_subst.
+    iIntros (?(?&?&[])?) "#LFT TIME PROPH UNIQ #E Na L C /=(c & x &_) Obs".
+    rewrite !tctx_hasty_val. iDestruct "c" as ([|d]) "[_ bcell]"=>//=.
+    case c as [[|c|]|]=>//=. rewrite split_mt_ptr.
+    case d as [|]; first by iDestruct "bcell" as "[>[] _]".
+    iDestruct "bcell" as "[(%& >↦c & cell) †c]".
+    iDestruct "x" as ([|]) "[#⧖ bty]"=>//=. case x as [[|x|]|]=>//=.
+    iDestruct "bty" as "[(%& >↦x & ty) †x]". wp_read. wp_let.
+    rewrite -heap_mapsto_vec_singleton !freeable_sz_full.
+    wp_apply (wp_delete with "[$↦c $†c]"); [done|]. iIntros "_".
+    iDestruct "cell" as (?->) "Bor".
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (na_bor_acc with "LFT Bor α Na") as "(big & Na & Toα)"; [solve_ndisj..|].
+    wp_seq. iDestruct "big" as (??) "(Obs' & #⧖' &%& ↦c' & ty')".
+    iCombine "Obs Obs'" as "#?".
+    iDestruct (ty_size_eq with "ty") as %Eq. iDestruct (ty_size_eq with "ty'") as %?.
+    wp_apply wp_new; [lia|done|]. iIntros (?) "[†r ↦r]". wp_let.
+    wp_apply (wp_memcpy with "[$↦r $↦c']"); [rewrite ?repeat_length; lia..|].
+    iIntros "[↦r ↦c']". wp_seq. wp_apply (wp_memcpy with "[$↦c' $↦x]"); [lia..|].
+    iIntros "[↦c' ↦x]". wp_seq. rewrite -{1}Eq.
+    wp_apply (wp_delete with "[$↦x $†x]"); [lia|]. iIntros "_". do 3 wp_seq.
+    iMod ("Toα" with "[↦c' ty] Na") as "[α Na]".
+    { iNext. iExists _, _. iSplit. { by iApply proph_obs_impl; [|done]=>/= ?[[? _]_]. }
+      iFrame "⧖". iExists _. iFrame. }
+    iMod ("ToL" with "α L") as "L".
+    rewrite cctx_interp_singleton. iApply ("C" $! [# #_] -[_] with "Na L [-]").
+    - iSplitL; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖'".
+      rewrite Nat2Z.id -freeable_sz_full. iFrame "†r". iNext. iExists _. iFrame.
+    - iApply proph_obs_impl; [|done]=>/= ?[[_ Imp]?]. by apply Imp.
   Qed.
 
   (** Create a shared cell from a unique borrow.
