@@ -15,12 +15,12 @@ Section slice_basic.
     - move=> > EqSz EqLft */=. f_equiv.
       + apply equiv_dist. iDestruct EqLft as "#[??]".
         iSplit; iIntros "#In"; (iApply lft_incl_trans; [iApply "In"|done]).
-      + rewrite EqSz /uniq_own. do 23 (f_contractive || f_equiv). by simpl in *.
+      + rewrite EqSz /uniq_body. do 23 (f_contractive || f_equiv). by simpl in *.
     - move=> > EqSz */=. rewrite EqSz. do 17 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
   Global Instance uniq_slice_send {𝔄} κ (ty: type 𝔄) : Send ty → Send (uniq_slice κ ty).
-  Proof. move=> >/=. rewrite /uniq_own. by do 24 f_equiv. Qed.
+  Proof. move=> >/=. rewrite /uniq_body. by do 24 f_equiv. Qed.
 
   Global Instance uniq_slice_sync {𝔄} κ (ty: type 𝔄) : Sync ty → Sync (uniq_slice κ ty).
   Proof. move=> >/=. by do 17 f_equiv. Qed.
@@ -30,7 +30,7 @@ Section slice_basic.
     resolve E L (uniq_slice κ ty) (λ pl, lforall (λ '(a, a'), a' = a) pl).
   Proof.
     iIntros "%* LFT PROPH E L (In &%&%&%& %aπξil &(->&->&%)& uniqs)".
-    iMod (resolve_big_sepL_uniq_own with "LFT PROPH In E L uniqs") as "Upd"; [done..|].
+    iMod (resolve_big_sepL_uniq_body with "LFT PROPH In E L uniqs") as "Upd"; [done..|].
     iApply step_fupdN_nmono; [done|]. iApply (step_fupdN_wand with "Upd").
     iIntros "!> >[? $]". iApply proph_obs_impl; [|done]=>/= ?.
     elim aπξil; [done|]. move=> [??]/=?? IH [??]. split; by [|apply IH].
@@ -42,7 +42,7 @@ Section slice_basic.
   Proof.
     move=> ??. split.
     - iIntros "*% LFT E L ($&%&%&%& %aπξil &(->&->&%)& uniqs)".
-      iMod (real_big_sepL_uniq_own with "LFT E L uniqs") as "Upd"; [done..|].
+      iMod (real_big_sepL_uniq_body with "LFT E L uniqs") as "Upd"; [done..|].
       iApply step_fupdN_nmono; [done|]. iApply (step_fupdN_wand with "Upd").
       iIntros "!> >([%bl %Eq] &$& uniqs) !>". iSplit.
       { iPureIntro. exists (bl: list _). fun_ext=> π. move: (equal_f Eq π)=>/= <-.
@@ -70,7 +70,7 @@ Section slice_basic.
     - iIntros "* (#?&%&%&%&%&(->&->&%)& uniqs)". iSplitR.
       { iApply lft_incl_trans; [|done]. by iApply lft_incl_trans. }
       iExists _, _, _, _. iSplit; [done|]. rewrite -EqSz.
-      iApply (incl_big_sepL_uniq_own with "In EqOwn uniqs").
+      iApply (incl_big_sepL_uniq_body with "In EqOwn uniqs").
     - iIntros (?[|?]???); [by iIntros|]. iDestruct 1 as (?????) "(?&?& tys)".
       iExists _, _, _, _. do 3 (iSplit; [done|]). iNext.
       rewrite !(big_sepL_forall (λ _ (_: proph _), _)) -EqSz. iIntros (???).

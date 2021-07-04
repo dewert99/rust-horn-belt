@@ -6,15 +6,15 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section uniq_util.
   Context `{!typeG Σ}.
 
-  Definition uniq_own {𝔄} (ty: type 𝔄) (vπ: proph 𝔄) (ξi: positive) (d: nat)
+  Definition uniq_body {𝔄} (ty: type 𝔄) (vπ: proph 𝔄) (ξi: positive) (d: nat)
       (κ: lft) (tid: thread_id) (l: loc) : iProp Σ :=
     let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
     .VO[ξ] vπ d ∗
     &{κ} (∃vπ' d', ⧖(S d') ∗ .PC[ξ] vπ' d' ∗ l ↦∗: ty.(ty_own) vπ' d' tid).
 
-  Lemma ty_share_uniq_own {𝔄} (ty: type 𝔄) vπ ξi d κ tid l κ' q E :
+  Lemma ty_share_uniq_body {𝔄} (ty: type 𝔄) vπ ξi d κ tid l κ' q E :
     ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
-    &{κ'} (uniq_own ty vπ ξi d κ tid l) -∗ q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
+    &{κ'} (uniq_body ty vπ ξi d κ tid l) -∗ q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
       &{κ'} 1:[PrVar (𝔄 ↾ prval_to_inh vπ) ξi] ∗ ty.(ty_shr) vπ d κ' tid l ∗ q.[κ'].
   Proof.
     set ξ := PrVar _ ξi. have ?: Inhabited 𝔄 := populate (vπ inhabitant).
@@ -36,12 +36,12 @@ Section uniq_util.
     iApply (step_fupdN_wand with "Upd"). by iIntros "!> >[$$]".
   Qed.
 
-  Lemma ty_own_proph_uniq_own {𝔄} (ty: type 𝔄) vπ ξi d κ tid l κ' q E :
+  Lemma ty_own_proph_uniq_body {𝔄} (ty: type 𝔄) vπ ξi d κ tid l κ' q E :
     ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
-    uniq_own ty vπ ξi d κ tid l -∗ q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
+    uniq_body ty vπ ξi d κ tid l -∗ q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
       let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
       ∃ζl q', ⌜vπ ./ ζl⌝ ∗ q':+[ζl ++ [ξ]] ∗
-        (q':+[ζl ++ [ξ]] ={E}=∗ uniq_own ty vπ ξi d κ tid l ∗ q.[κ']).
+        (q':+[ζl ++ [ξ]] ={E}=∗ uniq_body ty vπ ξi d κ tid l ∗ q.[κ']).
   Proof.
     set ξ := PrVar _ ξi. have ?: Inhabited 𝔄 := populate (vπ inhabitant).
     iIntros (?) "#LFT #Inκ #? [Vo Bor] [κ' κ'₊]".
@@ -62,10 +62,10 @@ Section uniq_util.
     iMod ("Toκ'" with "κ'") as "$". by iFrame.
   Qed.
 
-  Lemma resolve_uniq_own {𝔄} (ty: type 𝔄) vπ ξi d κ tid l E L q F :
+  Lemma resolve_uniq_body {𝔄} (ty: type 𝔄) vπ ξi d κ tid l E L q F :
     lctx_lft_alive E L κ → ↑lftN ∪ ↑prophN ⊆ F →
     lft_ctx -∗ proph_ctx -∗ κ ⊑ ty.(ty_lft) -∗ elctx_interp E -∗ llctx_interp L q -∗
-    uniq_own ty vπ ξi d κ tid l ={F}=∗ |={F}▷=>^(S d) |={F}=>
+    uniq_body ty vπ ξi d κ tid l ={F}=∗ |={F}▷=>^(S d) |={F}=>
       ⟨π, π (PrVar (𝔄 ↾ prval_to_inh vπ) ξi) = vπ π⟩ ∗ llctx_interp L q.
   Proof.
     iIntros (Alv ?) "#LFT PROPH In E L [Vo Bor] /=".
@@ -82,11 +82,11 @@ Section uniq_util.
     iApply "ToL". iFrame.
   Qed.
 
-  Lemma real_uniq_own {𝔄 𝔅} (ty: type 𝔄) vπ ξi d κ tid l E L (f: _ → 𝔅) q F :
+  Lemma real_uniq_body {𝔄 𝔅} (ty: type 𝔄) vπ ξi d κ tid l E L (f: _ → 𝔅) q F :
     lctx_lft_alive E L κ → real E L ty f → ↑lftN ⊆ F →
     lft_ctx -∗ elctx_interp E -∗ llctx_interp L q -∗
-    uniq_own ty vπ ξi d κ tid l ={F}=∗ |={F}▷=>^(S d) |={F}=>
-      ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L q ∗ uniq_own ty vπ ξi d κ tid l.
+    uniq_body ty vπ ξi d κ tid l ={F}=∗ |={F}▷=>^(S d) |={F}=>
+      ⌜∃v, f ∘ vπ = const v⌝ ∗ llctx_interp L q ∗ uniq_body ty vπ ξi d κ tid l.
   Proof.
     iIntros (Alv [Rlo _] ?) "#LFT #E [L L₊] [Vo Bor] /=".
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
@@ -100,9 +100,9 @@ Section uniq_util.
     iMod ("ToL" with "κ") as "$". by iFrame.
   Qed.
 
-  Lemma incl_uniq_own {𝔄} (ty ty': type 𝔄) vπ ξi d κ κ' tid l :
+  Lemma incl_uniq_body {𝔄} (ty ty': type 𝔄) vπ ξi d κ κ' tid l :
     κ' ⊑ κ -∗ □ (∀vπ d tid vl, ty.(ty_own) vπ d tid vl ↔ ty'.(ty_own) vπ d tid vl) -∗
-    uniq_own ty vπ ξi d κ tid l -∗ uniq_own ty' vπ ξi d κ' tid l.
+    uniq_body ty vπ ξi d κ tid l -∗ uniq_body ty' vπ ξi d κ' tid l.
   Proof.
     iIntros "#InLft #EqOwn [$ Pc]". iApply (bor_shorten with "InLft").
     iApply bor_iff; [|done]. iIntros "!>!>".

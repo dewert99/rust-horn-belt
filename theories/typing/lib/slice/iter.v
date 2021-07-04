@@ -68,7 +68,7 @@ Section iter.
     { iNext. iExists _, _. rewrite split_mt_uniq_slice. iFrame "⧖ Pc In".
       iExists _, _, _, aπζil'. setoid_rewrite <-shift_loc_assoc_nat. by iFrame. }
     iMod ("ToL" with "β L") as "L".
-    set aaπl' := vmap _ aπζil'. rewrite /uniq_own. set ζ := PrVar _ ζi.
+    set aaπl' := vmap _ aπζil'. rewrite /uniq_body. set ζ := PrVar _ ζi.
     iApply (type_type
       +[#it ◁ &uniq{β} (iter_uniq α ty); #l ◁ &uniq{α} ty]
       -[λ π, (lapply aaπl' π, π ξ); λ π, (aπ π, π ζ)]
@@ -78,7 +78,7 @@ Section iter.
         [done|solve_extract|solve_typing..|].
       iApply type_jump; [solve_typing|solve_extract|solve_typing].
     - rewrite/= !(tctx_hasty_val #_). iSplitL "Vo Bor"; [|iSplitL; [|done]].
-      + iExists _. iFrame "⧖ In'". iExists _, _. rewrite /uniq_own.
+      + iExists _. iFrame "⧖ In'". iExists _, _. rewrite /uniq_body.
         rewrite (proof_irrel (@prval_to_inh (listₛ (_*_)) (lapply aaπl'))
           (@prval_to_inh (listₛ (_*_)) (fst ∘ vπ))).
         by iFrame.
@@ -143,7 +143,7 @@ Section iter.
     { iNext. iExists _, _. rewrite split_mt_uniq_slice. iFrame "⧖ Pc In".
       iExists _, _, _, aπζil'. by iFrame. }
     iMod ("ToL" with "β L") as "L".
-    set aaπl' := vmap _ aπζil'. rewrite /uniq_own. set ζ := PrVar _ aπζi.2.
+    set aaπl' := vmap _ aπζil'. rewrite /uniq_body. set ζ := PrVar _ aπζi.2.
     iApply (type_type
       +[#it ◁ &uniq{β} (iter_uniq α ty); #(l +ₗ[ty] len) ◁ &uniq{α} ty]
       -[λ π, (lapply aaπl' π, π ξ); λ π, (aπζi.1 π, π ζ)]
@@ -153,7 +153,7 @@ Section iter.
         [done|solve_extract|solve_typing..|].
       iApply type_jump; [solve_typing|solve_extract|solve_typing].
     - rewrite/= !(tctx_hasty_val #_). iSplitL "Vo Bor"; [|iSplitL; [|done]].
-      + iExists _. iFrame "⧖ In'". iExists _, _. rewrite /uniq_own.
+      + iExists _. iFrame "⧖ In'". iExists _, _. rewrite /uniq_body.
         rewrite (proof_irrel (@prval_to_inh (listₛ (_*_)) (lapply aaπl'))
           (@prval_to_inh (listₛ (_*_)) (fst ∘ vπ))).
         by iFrame.

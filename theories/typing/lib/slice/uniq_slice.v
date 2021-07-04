@@ -29,7 +29,7 @@ Section uniq_slice.
         let aaπl := vmap
           (λ aπξi π, (aπξi.1 π, π (PrVar (𝔄 ↾ prval_to_inh aπξi.1) aπξi.2): 𝔄)) aπξil in
         ⌜vl = [ #l; #n] ∧ vπ = lapply aaπl ∧ (S d' ≤ d)%nat⌝ ∗
-        [∗ list] i ↦ aπξi ∈ aπξil, uniq_own ty aπξi.1 aπξi.2 d' κ tid (l +ₗ[ty] i);
+        [∗ list] i ↦ aπξi ∈ aπξil, uniq_body ty aπξi.1 aπξi.2 d' κ tid (l +ₗ[ty] i);
     ty_shr vπ d κ' tid l' := [S(d') := d]
       ∃(l: loc) (n: nat) (aπl: vec (proph 𝔄) n) ξl,
         ⌜map fst ∘ vπ = lapply aπl ∧ map snd ∘ vπ ./ ξl⌝ ∗
@@ -56,7 +56,7 @@ Section uniq_slice.
     iMod (bor_sep_persistent with "LFT Bor κ'") as "(>[->%] & Bor & κ')"; [done|].
     rewrite assoc. iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
     iMod (bor_fracture (λ q, _ ↦{q} _ ∗ _ ↦{q} _)%I with "LFT Bor↦") as "Bor↦"; [done|].
-    iMod (ty_share_big_sepL_uniq_own with "LFT [] [] Bor κ'") as "Upd"; [done|..].
+    iMod (ty_share_big_sepL_uniq_body with "LFT [] [] Bor κ'") as "Upd"; [done|..].
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_r. }
     iApply step_fupdN_nmono; [done|]. iApply (step_fupdN_wand with "Upd").
@@ -72,7 +72,7 @@ Section uniq_slice.
   Qed.
   Next Obligation.
     iIntros "*% LFT #? (#? & %&%&%& %aπξil &(->&->&%)& uniqs) κ'".
-    iMod (ty_own_proph_big_sepL_uniq_own with "LFT [] [] uniqs κ'") as "Upd"; [done|..].
+    iMod (ty_own_proph_big_sepL_uniq_body with "LFT [] [] uniqs κ'") as "Upd"; [done|..].
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_r. }
     iApply step_fupdN_nmono; [done|]. iApply (step_fupdN_wand with "Upd").
@@ -104,5 +104,5 @@ Section uniq_slice.
   Qed.
 
   Global Instance uniq_slice_ne {𝔄} κ : NonExpansive (@uniq_slice 𝔄 κ).
-  Proof. rewrite /uniq_slice /uniq_own. solve_ne_type. Qed.
+  Proof. rewrite /uniq_slice /uniq_body. solve_ne_type. Qed.
 End uniq_slice.

@@ -84,7 +84,7 @@ Section vec_pushpop.
       - iApply type_new; [done|]. intro_subst.
         iApply type_jump; [solve_typing|solve_extract|solve_typing].
       - rewrite/= right_id (tctx_hasty_val #_). iExists _.
-        iFrame "⧖ LftIn". iExists _, _. rewrite /uniq_own.
+        iFrame "⧖ LftIn". iExists _, _. rewrite /uniq_body.
         rewrite (proof_irrel (@prval_to_inh (listₛ 𝔄) (fst ∘ vπ'))
           (@prval_to_inh (listₛ 𝔄) (fst ∘ vπ))). by iFrame.
       - iApply proph_obs_impl; [|done]=> π.
@@ -180,7 +180,7 @@ Section vec_pushpop.
       -[vπ'; Some ∘ _] with "[] LFT TIME PROPH UNIQ E Na L C [-] []").
     - iApply type_jump; [solve_typing|solve_extract|solve_typing].
     - rewrite/= !(tctx_hasty_val #_) right_id. iSplitL "Vo Bor".
-      + iExists _. iFrame "⧖ LftIn". iExists _, _. rewrite /uniq_own.
+      + iExists _. iFrame "⧖ LftIn". iExists _, _. rewrite /uniq_body.
         rewrite (proof_irrel (@prval_to_inh (listₛ 𝔄) (fst ∘ vπ'))
           (@prval_to_inh (listₛ 𝔄) (fst ∘ vπ))). by iFrame.
       + iExists _. rewrite -freeable_sz_full. iFrame "⧖ †r". iNext.

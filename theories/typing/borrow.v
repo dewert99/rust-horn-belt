@@ -154,7 +154,7 @@ Section borrow.
       iApply (proph_eqz_prod _ (pair ∘ vπ' ⊛ (snd ∘ vπ)) with "[Eqz]");
       [done|iApply proph_eqz_refl].
     - iExists _, _.
-      rewrite /uniq_own (proof_irrel (prval_to_inh _) (prval_to_inh (fst ∘ vπ))).
+      rewrite /uniq_body (proof_irrel (prval_to_inh _) (prval_to_inh (fst ∘ vπ))).
       by iFrame.
   Qed.
 
@@ -280,7 +280,7 @@ Section borrow.
       with "[] [Hbor Hl ωVo ξPc]") as "[Hbor Htok]".
     { iIntros "!> H !>!>". iDestruct "H" as (l') "(H↦ & (%&%& ωVo & ξPc & ⧖) & H)".
       iExists _, (S d'). iFrame "⧖ ξPc". rewrite split_mt_uniq_bor. iFrame "Hκ'".
-      iExists _, d', ωi. iFrame "H↦". rewrite /uniq_own.
+      iExists _, d', ωi. iFrame "H↦". rewrite /uniq_body.
       rewrite (proof_irrel (prval_to_inh _) (prval_to_inh (fst ∘ (fst ∘ vπ)))).
       by iFrame. }
     { iNext. iExists _. iFrame "Hl Hbor". iExists _, _. iFrame.

@@ -23,7 +23,7 @@ Section uniq_bor.
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
     ty_own vπ d tid vl := κ ⊑ ty.(ty_lft) ∗ [loc[l] := vl] ∃d' ξi,
       let ξ := PrVar (𝔄 ↾ prval_to_inh (fst ∘ vπ)) ξi in
-      ⌜(S d' ≤ d)%nat ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ uniq_own ty (fst ∘ vπ) ξi d' κ tid l;
+      ⌜(S d' ≤ d)%nat ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ uniq_body ty (fst ∘ vπ) ξi d' κ tid l;
     ty_shr vπ d κ' tid l := [S(d') := d] ∃(l': loc) ξ, ⌜snd ∘ vπ ./ [ξ]⌝ ∗
       &frac{κ'} (λ q, l ↦{q} #l') ∗ &frac{κ'} (λ q, q:[ξ]) ∗
       ▷ ty.(ty_shr) (fst ∘ vπ) d' κ' tid l';
@@ -48,7 +48,7 @@ Section uniq_bor.
     case d as [|]; [lia|]. iApply step_fupdN_nmono; [done|].
     iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
     iMod (bor_fracture (λ q, _ ↦{q} _)%I with "LFT Bor↦") as "Bor↦"; [done|].
-    iMod (ty_share_uniq_own with "LFT [] [] Bor κ'") as "Upd"; [done|..].
+    iMod (ty_share_uniq_body with "LFT [] [] Bor κ'") as "Upd"; [done|..].
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_r. }
     iApply (step_fupdN_wand with "Upd"). iIntros "!> >(Borξ & ty &$)".
@@ -60,7 +60,7 @@ Section uniq_bor.
   Next Obligation.
     move=> *. iIntros "#LFT #?". setoid_rewrite by_just_loc_ex at 1.
     iIntros "[$ (%&->& Big)] κ'". iDestruct "Big" as (? ξi [Le Eq]) "uniq".
-    iMod (ty_own_proph_uniq_own with "LFT [] [] uniq κ'") as "Upd"; [done|..].
+    iMod (ty_own_proph_uniq_body with "LFT [] [] uniq κ'") as "Upd"; [done|..].
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_r. }
     iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Upd").
@@ -88,7 +88,7 @@ Section uniq_bor.
   Qed.
 
   Global Instance uniq_bor_ne {𝔄} κ : NonExpansive (@uniq_bor 𝔄 κ).
-  Proof. rewrite /uniq_bor /uniq_own. solve_ne_type. Qed.
+  Proof. rewrite /uniq_bor /uniq_body. solve_ne_type. Qed.
 End uniq_bor.
 
 Notation "&uniq{ κ }" := (uniq_bor κ) (format "&uniq{ κ }") : lrust_type_scope.
@@ -102,12 +102,12 @@ Section typing.
     - move=> > ? Hl * /=. f_equiv.
       + apply equiv_dist. iDestruct Hl as "#[??]".
         iSplit; iIntros "#H"; (iApply lft_incl_trans; [iApply "H"|done]).
-      + rewrite /uniq_own. do 18 (f_contractive || f_equiv). by simpl in *.
+      + rewrite /uniq_body. do 18 (f_contractive || f_equiv). by simpl in *.
     - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
   Global Instance uniq_send {𝔄} κ (ty: type 𝔄) : Send ty → Send (&uniq{κ} ty).
-  Proof. move=> >/=. rewrite /uniq_own. by do 19 f_equiv. Qed.
+  Proof. move=> >/=. rewrite /uniq_body. by do 19 f_equiv. Qed.
 
   Global Instance uniq_sync {𝔄} κ (ty: type 𝔄) : Sync ty → Sync (&uniq{κ} ty).
   Proof. move=> >/=. by do 10 f_equiv. Qed.
@@ -120,7 +120,7 @@ Section typing.
   Proof.
     move=>/= ??? vπ ?? vl ?. iIntros "LFT PROPH E L [In uniq]".
     case vl as [|[[]|][]]=>//. iDestruct "uniq" as (??[Le Eq]) "uniq".
-    iMod (resolve_uniq_own with "LFT PROPH In E L uniq") as "Upd"; [done..|].
+    iMod (resolve_uniq_body with "LFT PROPH In E L uniq") as "Upd"; [done..|].
     iApply step_fupdN_nmono; [done|]. iApply (step_fupdN_wand with "Upd").
     iIntros "!> >(?&$) !>". iApply proph_obs_eq; [|done]=>/= π.
     move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.
@@ -133,7 +133,7 @@ Section typing.
     move=> Alv [Rlo Rls]. split.
     - iIntros (????? vl ?) "#LFT #E L [$ uniq]". case vl as [|[[]|][]]=>//.
       iDestruct "uniq" as (d' ?[??]) "uniq". iApply step_fupdN_nmono; [done|].
-      iMod (real_uniq_own with "LFT E L uniq") as "Upd"; [done..|].
+      iMod (real_uniq_body with "LFT E L uniq") as "Upd"; [done..|].
       iApply (step_fupdN_wand with "Upd"). iIntros "!> >($&$& uniq) !>".
       iExists _, _. by iFrame.
     - iIntros (???[|]????) "LFT E L uniq //".
@@ -154,7 +154,7 @@ Section typing.
     - iIntros "*". rewrite {1}by_just_loc_ex. iIntros "[#? (%&->& Big)]".
       iSplitR. { iApply lft_incl_trans; [|done]. by iApply lft_incl_trans. }
       iDestruct "Big" as (???) "uniq". iExists _, _. iSplit; [done|].
-      by iApply incl_uniq_own.
+      by iApply incl_uniq_body.
     - iIntros (?[|?]???); [by iIntros|]. iDestruct 1 as (l' ξ ?) "(?&?&?)".
       iExists l', ξ. do 3 (iSplit; [done|]). by iApply "EqShr".
   Qed.
@@ -179,7 +179,7 @@ Section typing.
     iMod ("ToBor" with "[↦ Pc ty]") as "[Bor κ]".
     { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. }
     iMod ("ToL" with "κ") as "$". iModIntro. iExists d'', ξi.
-    rewrite /uniq_own (proof_irrel (prval_to_inh _) (prval_to_inh (fst ∘ vπ))).
+    rewrite /uniq_body (proof_irrel (prval_to_inh _) (prval_to_inh (fst ∘ vπ))).
     by iFrame.
   Qed.
 
