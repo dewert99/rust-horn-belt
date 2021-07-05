@@ -546,14 +546,15 @@ Section lemmas.
     iMod (Un with "LFT E L †κ T") as (dT vπl') "[⧖dT >ToT']".
     iMod (Alv with "E L'") as (?) "[lft ToL']"; [done|].
     iMod (ty_own_proph with "LFT [] ty lft") as "Toty";
-    [done|by iApply lft_incl_refl|]. iExists _, (vπ' -:: vπl').
-    iCombine "⧖dp ⧖dT" as "$". iIntros "!>!>!>". iMod "ToT'".
+      [done|by iApply lft_incl_refl|].
+    iExists _, (vπ' -:: vπl'). iCombine "⧖dp ⧖dT" as "$". iIntros "!>!>!>". iMod "ToT'".
     iModIntro. iCombine "Toty ToT'" as "Big". iApply (step_fupdN_wand with "Big").
     iIntros "[>(%&%&%& ξl & Toty) >($&$& Obs')]".
     iMod ("Eqz" with "[] ξl") as "[Obs ξl]"; [done|]. iCombine "Obs Obs'" as "?".
     iMod ("Toty" with "ξl") as "[ty lft]". iMod ("ToL'" with "lft") as "$".
-    iModIntro. iSplit. { iExists v, dp. iSplit; [done|]. by iFrame. }
-    { by iApply proph_obs_impl; [|done]=> ?[->->]. }
+    iModIntro. iSplit.
+    - iExists v, dp. iSplit; [done|]. by iFrame.
+    - by iApply proph_obs_impl; [|done]=> ?[->->].
   Qed.
 
   Lemma unblock_tctx_cons_just {𝔄 𝔄l} (t: tctx_elt 𝔄) (T T': tctx 𝔄l) κ E L :
