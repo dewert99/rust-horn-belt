@@ -6,58 +6,60 @@ Set Default Proof Using "Type".
 Section swap.
   Context `{!typeG Σ}.
 
-  Definition swap ty : val :=
-    fn: ["p1"; "p2"] :=
-      let: "p1'" := !"p1" in
-      let: "p2'" := !"p2" in
-      swap ["p1'"; "p2'"; #ty.(ty_size)];;
-      delete [ #1; "p1"];; delete [ #1; "p2"];;
-      let: "r" := new [ #0] in return: ["r"].
+  Definition swap {𝔄} (ty: type 𝔄) : val :=
+    fn: ["ba"; "bb"] :=
+      let: "a" := !"ba" in let: "b" := !"bb" in
+      delete [ #1; "ba"];; delete [ #1; "bb"];;
+      swap ["a"; "b"; #ty.(ty_size)];;
+      let: "r" := new [ #0] in
+      return: ["r"].
 
-  Lemma swap_type τ :
-    typed_val (swap τ) (fn(∀ α, ∅; &uniq{α} τ, &uniq{α} τ) → unit).
+  Lemma swap_type {𝔄} (ty: type 𝔄) :
+    typed_val (swap ty) (fn<α>(∅; &uniq{α} ty, &uniq{α} ty) → ())
+      (λ post '-[(a, a'); (b, b')], a' = b → b' = a → post ()).
   Proof.
-    intros E L. iApply type_fn; [solve_typing..|]. iIntros "/= !>". iIntros (α ϝ ret p).
-      inv_vec p=>p1 p2. simpl_subst.
-    iApply type_deref; [solve_typing..|]. iIntros (p1'). simpl_subst.
-    iApply type_deref; [solve_typing..|]. iIntros (p2'). simpl_subst.
-    iIntros (tid) "#LFT #TIME #HE Hna HL Hk (H2 & H2' & H1 & H1' & _)".
+    eapply type_fn; [apply _|]=> α ??[ba[bb[]]]. simpl_subst.
+    iIntros (?(vπ & vπ' &[])?) "#LFT TIME PROPH #UNIQ #E Na L C /=(ba & bb &_) #?".
     rewrite !tctx_hasty_val.
-    iMod (lctx_lft_alive_tok α with "HE HL") as (qα) "([Hα1 Hα2] & HL & Hclose)";
+    iDestruct "ba" as ([|]) "[_ box]"=>//. iDestruct "bb" as ([|]) "[_ box']"=>//.
+    case ba as [[]|]=>//. case bb as [[]|]=>//=. rewrite !split_mt_uniq_bor.
+    iDestruct "box" as "[[#In (%a &%&%&>[% %Eq]& >↦ba & Vo & Bor)] †ba]".
+    iDestruct "box'" as "[[_ (%b &%&%&>[% %Eq']& >↦bb & Vo' & Bor')] †bb]".
+    do 2 (wp_read; wp_let). rewrite -!heap_mapsto_vec_singleton !freeable_sz_full.
+    wp_apply (wp_delete with "[$↦ba $†ba]"); [done|]. iIntros "_". wp_seq.
+    wp_apply (wp_delete with "[$↦bb $†bb]"); [done|]. iIntros "_".
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "([α α₊] & L & ToL)";
       [solve_typing..|].
-    iDestruct "H1" as (depth1) "[#Hdepth1 H1]".
-    iDestruct "H1'" as ([|depth1']) "[#Hdepth1' H1']"; try iDestruct "H1'" as "[_ []]".
-    iDestruct "H2" as (depth2) "[#Hdepth2 H2]".
-    iDestruct "H2'" as ([|depth2']) "[#Hdepth2' H2']"; try iDestruct "H2'" as "[_ []]".
-    iDestruct (uniq_is_ptr with "H1'") as (l1) "#H1eq". iDestruct "H1eq" as %[=->].
-    iDestruct "H1'" as "[#H1o H1']". iDestruct "H1'" as (depth1'' γ1 ?) "[H◯1 H1']".
-    iMod (bor_acc with "LFT H1' Hα1") as "[H1' Hclose1]"=>//.
-    iDestruct "H1'" as (depth1''0) "(>H●1 & >#Hdepth1'' & H1')". iDestruct "H1'" as (vl1) "[>H↦1 H1']".
-    iDestruct (τ.(ty_size_eq) with "H1'") as "#>%".
-    iDestruct (uniq_is_ptr with "H2'") as (l2) "#H2eq". iDestruct "H2eq" as %[=->].
-    iDestruct "H2'" as "[#H2o H2']". iDestruct "H2'" as (depth2'' γ2 ?) "[H◯2 H2']".
-    iMod (bor_acc with "LFT H2' Hα2") as "[H2' Hclose2]"=>//.
-    iDestruct "H2'" as (depth2''0) "(>H●2 & >#Hdepth2'' & H2')". iDestruct "H2'" as (vl2) "[>H↦2 H2']".
-    iDestruct (τ.(ty_size_eq) with "H2'") as "#>%".
-    wp_apply (wp_swap with "[$H↦1 $H↦2]"); try lia. iIntros "[H↦1 H↦2]". wp_seq.
-    iDestruct (own_valid_2 with "H●1 H◯1") as %->%excl_auth_agree_L.
-    iDestruct (own_valid_2 with "H●2 H◯2") as %->%excl_auth_agree_L.
-    iMod (own_update_2 with "H●1 H◯1") as "[H●1 H◯1]"; [by apply excl_auth_update|].
-    iMod (own_update_2 with "H●2 H◯2") as "[H●2 H◯2]"; [by apply excl_auth_update|].
-    iMod ("Hclose" with "[>-Hna HL H1 H2 Hk] HL") as "HL".
-    { iMod ("Hclose1" with "[H2' H↦1 H●1]") as "[_ $]".
-      { iExists depth2''. iFrame "∗#". by iExists _; iFrame. }
-      iMod ("Hclose2" with "[H1' H↦2 H●2]") as "[_ $]".
-      { iExists depth1''. iFrame "∗#". by iExists _; iFrame. }
-      done. }
-    (* Finish up the proof. *)
-    iApply (type_type _ _ _ [ p1 ◁ box (uninit 1); p2 ◁ box (uninit 1) ]
-      with "[] LFT TIME HE Hna HL Hk [-]"); last first.
-    { rewrite tctx_interp_cons tctx_interp_singleton !tctx_hasty_val.
-      iSplitL "H1"; auto with iFrame. }
-    iApply type_delete; [solve_typing..|].
-    iApply type_delete; [solve_typing..|].
-    iApply (type_new _); [solve_typing..|]; iIntros (r); simpl_subst.
-    iApply type_jump; solve_typing.
+    iMod (bor_acc with "LFT Bor α") as "[big ToBor]"; [done|].
+    iMod (bor_acc with "LFT Bor' α₊") as "[big' ToBor']"; [done|]. wp_seq.
+    iDestruct "big" as (??) "(#⧖ & Pc &%& ↦ & ty)".
+    iDestruct "big'" as (??) "(#⧖' & Pc' &%& ↦' & ty')".
+    iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
+    iDestruct (uniq_agree with "Vo' Pc'") as %[<-<-].
+    iDestruct (ty_size_eq with "ty") as %?. iDestruct (ty_size_eq with "ty'") as %?.
+    wp_apply (wp_swap with "[$↦ $↦']"); [lia..|]. iIntros "[↦ ↦']". wp_seq.
+    iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
+    iMod (uniq_update with "UNIQ Vo' Pc'") as "[Vo' Pc']"; [done|].
+    iMod ("ToBor" with "[Pc ↦ ty']") as "[Bor α]".
+    { iNext. iExists _, _. iFrame "⧖' Pc". iExists _. iFrame. }
+    iMod ("ToBor'" with "[Pc' ↦' ty]") as "[Bor' α₊]".
+    { iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame. }
+    iMod ("ToL" with "[$α $α₊] L") as "L".
+    set wπ := λ π, ((vπ' π).1, (vπ π).2).
+    set wπ' := λ π, ((vπ π).1, (vπ' π).2).
+    iApply (type_type +[#a ◁ &uniq{α} ty; #b ◁ &uniq{α} ty] -[wπ; wπ']
+      with "[] LFT TIME PROPH UNIQ E Na L C [-] []").
+    - iApply type_new; [done|]. intro_subst.
+      iApply type_jump; [solve_typing|solve_extract|solve_typing].
+    - iSplitL "Vo Bor"; [|iSplitL; [|done]].
+      + rewrite (tctx_hasty_val #_). iExists _. iFrame "⧖' In".
+        iExists _, _. move: Eq.
+        rewrite (proof_irrel (prval_to_inh (fst ∘ vπ))
+          (prval_to_inh (fst ∘ wπ)))=> ?. by iFrame.
+      + rewrite (tctx_hasty_val #_). iExists _. iFrame "⧖ In".
+        iExists _, _. move: Eq'.
+        rewrite (proof_irrel (prval_to_inh (fst ∘ vπ'))
+          (prval_to_inh (fst ∘ wπ')))=> ?. by iFrame.
+    - iApply proph_obs_impl; [|done]=>/= π. by case (vπ π), (vπ' π).
   Qed.
 End swap.
