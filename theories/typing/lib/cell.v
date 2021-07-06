@@ -124,7 +124,7 @@ Section cell.
 
   (** Constructing a cell. *)
 
-  Lemma tctx_cell_new {𝔄 𝔅l} Φ (ty: type 𝔄) n p (T: tctx 𝔅l) E L :
+  Lemma tctx_cell_new {𝔄 𝔅l} (ty: type 𝔄) Φ n p (T: tctx 𝔅l) E L :
     tctx_incl E L (p ◁ own_ptr n ty +:: T) (p ◁ own_ptr n (cell ty) +:: T)
       (λ post '(a -:: bl), Φ a ∧ post (Φ -:: bl)).
   Proof.
@@ -139,7 +139,7 @@ Section cell.
 
   Definition cell_new: val := fn: ["x"] := return: ["x"].
 
-  Lemma cell_new_type {𝔄} Φ (ty: type 𝔄) :
+  Lemma cell_new_type {𝔄} (ty: type 𝔄) Φ :
     typed_val cell_new (fn(∅; ty) → cell ty) (λ post '-[a], Φ a ∧ post Φ).
   Proof.
     eapply type_fn; [apply _|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
@@ -180,7 +180,7 @@ Section cell.
 
   (** Conversion under [box] *)
 
-  Lemma tctx_cell_from_box {𝔄 𝔅l} Φ (ty: type 𝔄) n p (T: tctx 𝔅l) E L :
+  Lemma tctx_cell_from_box {𝔄 𝔅l} (ty: type 𝔄) Φ n p (T: tctx 𝔅l) E L :
     tctx_incl E L (p ◁ own_ptr n (box ty) +:: T) (p ◁ own_ptr n (box (cell ty)) +:: T)
       (λ post '(a -:: bl), Φ a ∧ post (Φ -:: bl)).
   Proof.
@@ -198,7 +198,7 @@ Section cell.
 
   Definition cell_from_box: val := fn: ["x"] := return: ["x"].
 
-  Lemma cell_from_box_type {𝔄} Φ (ty: type 𝔄) :
+  Lemma cell_from_box_type {𝔄} (ty: type 𝔄) Φ :
     typed_val cell_from_box (fn(∅; box ty) → box (cell ty))
       (λ post '-[a], Φ a ∧ post Φ).
   Proof.
@@ -320,7 +320,7 @@ Section cell.
       (λ post '(Φ' -:: bl), (∀a: 𝔄, Φ' a → Φ a) ∧ post (Φ -:: bl)).
   Proof.
     eapply tctx_incl_impl.
-    - eapply tctx_incl_trans; [apply tctx_cell_into_inner|apply (tctx_cell_new Φ)].
+    - eapply tctx_incl_trans; [apply tctx_cell_into_inner|apply (tctx_cell_new _ Φ)].
     - move=> ?[??][Imp ?]??. split; by [apply Imp|].
     - move=>/= ???[??]. by f_equiv.
   Qed.
@@ -478,7 +478,7 @@ Section cell.
       delete [ #1; "c"];; return: ["r"].
 
   (* In this rule, we lose the prophecy information *)
-  Lemma fake_shared_cell_type {𝔄} Φ (ty: type 𝔄) :
+  Lemma fake_shared_cell_type {𝔄} (ty: type 𝔄) Φ :
     typed_val fake_shared_cell (fn<α>(∅; &uniq{α} ty) → &shr{α} (cell ty))
       (λ post '-[(a, _)], Φ a ∧ post Φ).
   Proof.

@@ -595,8 +595,11 @@ Global Hint Extern 0 (resolve_tctx _ _ _ _) =>
 Global Hint Extern 0 (resolve_tctx _ _ _ _) =>
   simple apply resolve_tctx_cons_just_blocked : lrust_typing.
 
-Global Hint Resolve real_tctx_nil real_tctx_cons real_tctx_cons_blocked
+Global Hint Resolve real_tctx_nil real_tctx_cons_blocked
   : lrust_typing.
+(* We need [eapply] to use [real_tctx_cons] *)
+Global Hint Extern 0 (real_tctx _ _ _ _) =>
+    eapply real_tctx_cons : lrust_typing.
 
 Global Hint Resolve tctx_extract_elt_here_copy | 1 : lrust_typing.
 Global Hint Resolve tctx_extract_elt_here_exact | 2 : lrust_typing.
