@@ -182,6 +182,15 @@ Proof.
   by rewrite (IH (λ n, Φ (S n))) assoc.
 Qed.
 
+Lemma big_sepL_vtakedrop {A n} {PROP: bi} i (xl: vec A n) (Φ: _ → _ → PROP) :
+  ([∗ list] k ↦ x ∈ xl, Φ k x) ⊣⊢
+  ([∗ list] k ↦ x ∈ vtake i xl, Φ k x) ∗
+    ([∗ list] k ↦ x ∈ vdrop i xl, Φ (i + k) x).
+Proof.
+  move: xl Φ. elim i. { move=> ? xl ?. inv_vec xl=>/= ??. by rewrite left_id. }
+  move=> ?? IH xl ?. inv_vec xl=>/= ??. by rewrite -assoc IH.
+Qed.
+
 Lemma big_sepL_vtakemiddrop {A n} {PROP: bi} i (xl: vec A n) (Φ: _ → _ → PROP) :
   ([∗ list] k ↦ x ∈ xl, Φ k x) ⊣⊢
   ([∗ list] k ↦ x ∈ vtake i xl, Φ k x) ∗ Φ i (xl !!! i) ∗

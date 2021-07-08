@@ -81,6 +81,7 @@ theories/typing/lib/maybe_uninit.v
 theories/typing/lib/slice/uniq_slice.v
 theories/typing/lib/slice/slice_basic.v
 theories/typing/lib/slice/array_slice.v
+theories/typing/lib/slice/slice_split.v
 theories/typing/lib/slice/iter.v
 theories/typing/lib/vec/vec.v
 theories/typing/lib/vec/vec_basic.v
