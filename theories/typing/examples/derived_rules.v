@@ -61,3 +61,4 @@ Section rules.
     iApply (type_let' +[_]); [eapply type_path_instr| done].
     rewrite /trans_app => ? [? ?] //=.
   Qed.
+End rules.
