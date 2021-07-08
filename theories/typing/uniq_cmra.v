@@ -44,7 +44,7 @@ Local Definition own_line ξ q vπ d := own uniq_name (◯ line ξ q vπ d).
 Definition val_obs (ξ: proph_var) (vπ: proph ξ.(pv_ty)) (d: nat) : iProp Σ :=
   own_line ξ (1/2) vπ d.
 
-(** Prophecy Control *)
+(** Prophecy Controller *)
 Local Definition val_obs2 ξ vπ d : iProp Σ := own_line ξ 1 vπ d.
 Definition proph_ctrl (ξ: proph_var) (vπ: proph ξ.(pv_ty)) (d: nat) : iProp Σ :=
   (val_obs ξ vπ d ∗ 1:[ξ]) ∨ ((∃vπ' d', val_obs2 ξ vπ' d') ∗ (.$ ξ) :== vπ).
