@@ -2,6 +2,7 @@ From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
 Section rules.
+  Local Set Warnings "-non-reversible-notation".
   Context `{!typeG Σ}.
 
   Lemma ty_assgn_box {𝔄 𝔄'} E L p (τ : type 𝔄) p' (τ' : type 𝔄'):
