@@ -1,12 +1,6 @@
 # RustHornBelt COQ DEVELOPMENT
 
-This is the Coq development for RustHornBelt.
-
-## References
-
-* [RustBelt: Securing the Foundations of the RustProgramming Language](https://people.mpi-sws.org/~dreyer/papers/rustbelt/paper.pdf)
-* [RustHorn: CHC-based Verification for Rust Programs](http://www.kb.is.s.u-tokyo.ac.jp/~yskm24t/papers/esop2020-rust-horn.pdf)
-* [Extensible Functional-Correctness Verification of Rust Programs by the Technique of Prophecy](http://www.kb.is.s.u-tokyo.ac.jp/~yskm24t/papers/master-thesis.pdf)
+This is the Coq development for "RustHornBelt: A Semantic Foundation for Functional Verification of Rust Programs with Unsafe Code".
 
 ## Prerequisites
 
@@ -56,26 +50,21 @@ followed by `make build-dep`.
   * [programs.v](theories/typing/programs.v) defines the typing judgments for
     instructions and function bodies.
   * [soundness.v](theories/typing/soundness.v) contains the main soundness
-    theorem of the type system.
-  * The subfolder [examples](theories/typing/examples) verifies some examples
-    in Coq to show how functional verification using RustHornBelt's reduction
-    works.
-  * The subfolder [lib](theories/typing/lib) contains proofs of safety of some
-    unsafely implement types from the Rust standard library and some user
-    crates. Some libraries are not yet verified, being commented out in
-    `_CoqProject`.
-    * Verified: `MaybeUninit`, `Vec`, `Cell`, `thread::spawn`.
-    * Work in Process: `Mutex`.
-    * Unverified: `RefCell`, `Rc`, `Arc`, `RwLock`, `mem::swap`,
-      `take_mut::take`, `alias::once`, converting `&&T` to `&Box<T>`.
+    (adequacy) theorem of the type system.
+  * The subfolder [examples](theories/typing/examples) verifies some example
+    Rust programs in Coq to conceptually demonstrate how functional verification
+    works under the RustHorn-style translation.
+  * The subfolder [lib](theories/typing/lib) contains proofs for some APIs
+    with unsafe code from the Rust standard library and some user crates.
+    Some libraries are not yet verified, being commented out in `_CoqProject`.
 
 ## Where to Find the Proof Rules From the Paper
 
 ### Type System Rules
 
 The files in [typing](theories/typing) prove semantic versions of the proof
-rules given in the paper.  Notice that mutable borrows are called "unique
-borrows" in the Coq development.
+rules given in the (RustBelt) paper.  Notice that mutable borrows are called
+"unique borrows" in the Coq development.
 
 | Proof Rule            | File            | Lemma                 |
 |-----------------------|-----------------|-----------------------|
@@ -109,7 +98,7 @@ borrows" in the Coq development.
 | F-call                | function.v      | type_call             |
 
 Some of these lemmas are called `something'` because the version without the
-`'` is a derived, more specialized form used together with our eauto-based
+`'` is a derived, more specialized form used together with our `eauto`-based
 `solve_typing` tactic.  You can see this tactic in action in the
 [examples](theories/typing/examples) subfolder.
 
@@ -119,7 +108,6 @@ The files in [lifetime](theories/lifetime) prove the lifetime logic, with the
 core rules being proven in the [model](theories/lifetime/model) subfolder and
 then sealed behind a module signature in
 [lifetime.v](theories/lifetime/lifetime.v).
-
 
 | Proof Rule        | File                | Lemma                |
 |-------------------|---------------------|----------------------|
