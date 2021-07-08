@@ -60,6 +60,7 @@ followed by `make build-dep`.
 
 ## Where to Find the Proof Rules From the Paper
 
+The derived rules mentioned in the paper can be found [here](theories/typing/examples/derived_rules.v).
 ### Type System Rules
 
 The files in [typing](theories/typing) prove semantic versions of the proof
