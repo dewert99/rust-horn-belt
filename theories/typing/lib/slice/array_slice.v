@@ -21,16 +21,15 @@ Section array_slice.
   Proof.
     eapply type_fn; [apply _|]=>/= α ??[ba[]]. simpl_subst.
     iIntros (?(vπ &[])?) "#LFT #TIME #PROPH UNIQ E Na L C /=[ba _] Obs".
-    rewrite tctx_hasty_val. iDestruct "ba" as ([|]) "[_ box]"=>//.
+    rewrite tctx_hasty_val. iDestruct "ba" as ([|]) "[#⧖ box]"=>//.
     case ba as [[|ba|]|]=>//=. rewrite split_mt_uniq_bor.
     iDestruct "box" as "[(#In &%&%& %ξi &>[% %Eq2]& ↦ba & Vo & Bor) †ba]".
     wp_read. wp_seq. rewrite freeable_sz_full -heap_mapsto_vec_singleton.
     wp_apply (wp_delete with "[$↦ba $†ba]"); [done|]. iIntros "_".
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as "[big ToBor]"; [done|]. wp_seq.
-    iDestruct "big" as (vπ' ?) "(⧖ & Pc & ↦tys)". rewrite split_mt_array.
-    wp_bind (new _). iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
-    iApply wp_new; [done..|]. iIntros "!>" (?) "[†r ↦r] #⧖". wp_let.
+    iDestruct "big" as (vπ' ?) "(_ & Pc & ↦tys)". rewrite split_mt_array.
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]". wp_let.
     set ξ := PrVar _ ξi.
     have ->: vπ' = vapply (vfunsep vπ') by rewrite semi_iso'.
     move: (vfunsep vπ')=> aπl. rewrite semi_iso'.

@@ -82,25 +82,24 @@ Section slice_basic.
   Proof. move=> [??][??]. split; (apply uniq_slice_subtype; by [|split]). Qed.
 
   Definition slice_len: val :=
-    fn: ["bv"] :=
-      let: "v" := !"bv" in delete [ #1; "bv"];;
-      letalloc: "r" <- !("v" +ₗ #1) in
+    fn: ["bs"] :=
+      let: "s" := !"bs" in delete [ #1; "bs"];;
+      letalloc: "r" <- !("s" +ₗ #1) in
       return: ["r"].
 
   Lemma uniq_slice_len_type {𝔄} (ty: type 𝔄) :
     typed_val slice_len (fn<(α, β)>(∅; &shr{β} (uniq_slice α ty)) → int)
-      (λ post '-[v], post (length v)).
+      (λ post '-[aal], post (length aal)).
   Proof.
     eapply type_fn; [apply _|]. move=>/= [α β]??[b[]]. simpl_subst.
-
-    iIntros (?[?[]]?) "LFT _ _ _ E Na L C /=[bv _] #Obs".
-    rewrite tctx_hasty_val. iDestruct "bv" as ([|d]) "[⧖ box]"=>//.
+    iIntros (?[?[]]?) "LFT _ _ _ E Na L C /=[bs _] #Obs".
+    rewrite tctx_hasty_val. iDestruct "bs" as ([|d]) "[⧖ box]"=>//.
     case b as [[]|]=>//=. rewrite split_mt_ptr.
     case d as [|d]; first by iDestruct "box" as "[>[] _]".
-    iDestruct "box" as "[(%& >↦bv  & slice) †bv]". wp_read. wp_let.
+    iDestruct "box" as "[(%& >↦bs  & slice) †bs]". wp_read. wp_let.
     rewrite -heap_mapsto_vec_singleton freeable_sz_full.
-    wp_apply (wp_delete with "[$↦bv $†bv]"); [done|]. iIntros "_". wp_seq.
-    case d as [|]=>//. iDestruct "slice" as (???? [Hsl ?]) "[Bor _]".
+    wp_apply (wp_delete with "[$↦bs $†bs]"); [done|]. iIntros "_". wp_seq.
+    case d as [|]=>//. iDestruct "slice" as (???? [Eq1 ?]) "[Bor _]".
     iMod (lctx_lft_alive_tok β with "E L") as (?) "(β & L & ToL)"; [solve_typing..|].
     iMod (frac_bor_acc with "LFT Bor β") as (?) "[(↦₀ & ↦₁ & ↦₂) Toα]"; [done|].
     wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]". wp_let. wp_op. wp_read.
@@ -111,7 +110,7 @@ Section slice_basic.
       iFrame "⧖ †r". iNext. iExists [_]. rewrite heap_mapsto_vec_singleton.
       iFrame "↦r". by iExists _.
     - iApply proph_obs_eq; [|done]=>/= π. f_equal.
-      rewrite -(map_length fst). move: (equal_f Hsl π) => /= ->.
+      rewrite -(map_length fst). move: (equal_f Eq1 π)=> /= ->.
       by rewrite -vec_to_list_apply vec_to_list_length.
   Qed.
 End slice_basic.
