@@ -136,8 +136,42 @@ Section smallvec.
       iApply (step_fupdN_wand with "Toshrs"). iIntros "!> >[?$] !>".
       iExists _, len, _, _. rewrite Eqb/=. iFrame "Bor↦". by iSplit.
   Qed.
-  Next Obligation. Admitted.
-  Next Obligation. Admitted.
+  Next Obligation.
+    iIntros (?????[|?]) "*% LFT In svec κ/="; [done|].
+    iDestruct "svec" as (? len ???(->&?&->)) "big".
+    case Eqb: (bool_decide (len ≤ _))=>/=.
+    - iDestruct "big" as (??->) "tys".
+      iMod (ty_own_proph_big_sepL with "LFT In tys κ") as "Upd"; [done|].
+      iApply (step_fupdN_wand with "Upd").
+      iIntros "!>!>!>!> >(%&%&%& ξl & Totys) !>". iExists _, _. iSplit.
+      { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+      iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[? $]". iExists _.
+      iModIntro. iExists len, _, _, _. iSplit; [done|].
+      rewrite Eqb/=. iExists _, _. by iFrame.
+    - iDestruct "big" as "(↦tys & ex & †)". iIntros "!>!>!>".
+      iMod (ty_own_proph_big_sepL_mt with "LFT In ↦tys κ") as "Upd"; [done|].
+      iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&%& ξl & Totys) !>".
+      iExists _, _. iSplit.
+      { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+      iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[tys $]". iModIntro.
+      iExists _, len, _, _, _. iSplit; [done|].
+      rewrite Eqb/=. iFrame.
+  Qed.
+  Next Obligation.
+    iIntros (?????[|?]) "*% LFT In In' svec κ'/="; [done|].
+    iDestruct "svec" as (????->) "[? tys]".
+    case Eqb: (bool_decide (len ≤ _))=>/=; iIntros "!>!>!>".
+    - iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Upd"; [done|].
+      iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
+      iIntros ">(%&%&%& ξl & Totys) !>". iExists _, _. iSplit.
+      { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+      iIntros "{$ξl}ξl". by iMod ("Totys" with "ξl") as "[$$]".
+    - iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Toκ'"; [done|].
+      iIntros "!>!>". iApply (step_fupdN_wand with "Toκ'").
+      iIntros ">(%&%&%& ξl & Toκ') !>". iExists _, _. iSplit.
+      { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+      iIntros "{$ξl}ξl". by iMod ("Toκ'" with "ξl") as "$".
+  Qed.
 
   Global Instance smallvec_ty_ne {𝔄} n : NonExpansive (@smallvec_ty 𝔄 n).
   Proof. solve_ne_type. Qed.

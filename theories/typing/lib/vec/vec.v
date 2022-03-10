@@ -71,7 +71,7 @@ Section vec.
     iExists _, _, _, _. by iFrame.
   Qed.
   Next Obligation.
-    iIntros (????[|d]) "*% LFT In vec κ //=".
+    iIntros (????[|?]) "*% LFT In vec κ/="; [done|].
     iDestruct "vec" as (????[->->]) "(↦tys & ex & †)". iIntros "!>!>!>".
     iMod (ty_own_proph_big_sepL_mt with "LFT In ↦tys κ") as "Upd"; [done|].
     iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&%& ξl & Totys) !>".
@@ -81,8 +81,8 @@ Section vec.
     iExists _, _, _, _. by iFrame.
   Qed.
   Next Obligation.
-    iIntros (????[|d]) "*% LFT In In' vec κ' //=".
-    iDestruct "vec" as (???? ->) "[? tys]". iIntros "!>!>!>".
+    iIntros (????[|?]) "*% LFT In In' vec κ'/="; [done|].
+    iDestruct "vec" as (????->) "[? tys]". iIntros "!>!>!>".
     iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Toκ'"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Toκ'").
     iIntros ">(%&%&%& ξl & Toκ') !>". iExists _, _. iSplit.
