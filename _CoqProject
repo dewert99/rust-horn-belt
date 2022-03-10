@@ -88,6 +88,7 @@ theories/typing/lib/vec/vec_basic.v
 theories/typing/lib/vec/vec_slice.v
 theories/typing/lib/vec/vec_index.v
 theories/typing/lib/vec/vec_pushpop.v
+theories/typing/lib/smallvec/smallvec.v
 # theories/typing/lib/fake_shared.v
 theories/typing/lib/cell.v
 theories/typing/lib/spawn.v

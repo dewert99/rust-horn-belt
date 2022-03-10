@@ -8,15 +8,12 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section vec.
   Context `{!typeG Σ}.
 
-  Definition freeable_sz' (sz: nat) (l: loc) : iProp Σ :=
-    †{1}l…sz ∨ ⌜Z.of_nat sz = 0%Z⌝.
-
   Lemma split_mt_vec {𝔄} l' d alπ Φ :
     (l' ↦∗: (λ vl, [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
-      ⌜vl = [ #l; #len; #ex] ∧ alπ = lapply aπl⌝ ∗ Φ d' len ex l aπl)) ⊣⊢
+      ⌜vl = [ #l; #len; #ex] ∧ alπ = lapply aπl⌝ ∗ Φ d' l len ex aπl)) ⊣⊢
     [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
       ⌜alπ = lapply aπl⌝ ∗
-      l' ↦ #l ∗ (l' +ₗ 1) ↦ #len ∗ (l' +ₗ 2) ↦ #ex ∗ Φ d' len ex l aπl.
+      l' ↦ #l ∗ (l' +ₗ 1) ↦ #len ∗ (l' +ₗ 2) ↦ #ex ∗ Φ d' l len ex aπl.
   Proof.
     iSplit.
     - iIntros "(%& ↦ & big)". case d=>// ?. iDestruct "big" as (????[->->]) "Φ".
@@ -36,7 +33,7 @@ Section vec.
         (l +ₗ[ty] len) ↦∗len (ex * ty.(ty_size)) ∗
         freeable_sz' ((len + ex) * ty.(ty_size)) l;
     ty_shr alπ d κ tid l' :=
-      [S(d') := d] ∃(len ex: nat) (l: loc) (aπl: vec (proph 𝔄) len),
+      [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
         ⌜alπ = lapply aπl⌝ ∗
         &frac{κ} (λ q, l' ↦{q} #l ∗ (l' +ₗ 1) ↦{q} #len ∗ (l' +ₗ 2) ↦{q} #ex) ∗
         ▷ [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d' κ tid (l +ₗ[ty] i);

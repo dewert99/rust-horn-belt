@@ -1188,6 +1188,9 @@ Section type_util.
     iDestruct (ty_size_eq with "ty") as %<-. iExists (list_to_vec vl).
     rewrite vec_to_list_to_vec. iFrame.
   Qed.
+
+  Definition freeable_sz' (sz: nat) (l: loc) : iProp Σ :=
+    †{1}l…sz ∨ ⌜Z.of_nat sz = 0%Z⌝.
 End type_util.
 
 Global Hint Resolve ty_outlives_E_elctx_sat tyl_outlives_E_elctx_sat : lrust_typing.
