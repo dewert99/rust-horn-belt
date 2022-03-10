@@ -40,12 +40,12 @@ Section vec_basic.
     real E L ty f → real (𝔅:=listₛ _) E L (vec_ty ty) (map f).
   Proof.
     move=> Rl. split; iIntros (???[|]) "*% LFT E L vec //=".
-    - iDestruct "vec" as (????[->->]) "(↦tys & ex & †)". iIntros "!>!>!>".
+    - iDestruct "vec" as (????[->->]) "[↦tys ex†]". iIntros "!>!>!>".
       rewrite trans_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦ tys]".
       iMod (real_big_sepL_ty_own with "LFT E L tys") as "Upd"; [done..|].
       iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%Eq &$&?) !>".
       iSplit; last first.
-      { iExists _, _, _, _. iFrame "ex †". iSplit; [done|]. iNext.
+      { iExists _, _, _, _. iFrame "ex†". iSplit; [done|]. iNext.
         rewrite trans_big_sepL_mt_ty_own. iExists _. iFrame. }
       iPureIntro. move: Eq=> [bl Eq]. exists bl. fun_ext=>/= π.
       move: (equal_f Eq π)=>/= <-. by rewrite -vec_to_list_apply vec_to_list_map.
