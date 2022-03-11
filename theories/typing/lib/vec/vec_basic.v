@@ -123,11 +123,9 @@ Section vec_basic.
     do 2 (wp_op; wp_read). do 2 wp_op. wp_read. rewrite trans_big_sepL_mt_ty_own.
     iDestruct "big" as "((%& ↦old & tys) & (%& %Eq & ↦ex) & †')".
     iDestruct (big_sepL_ty_own_length with "tys") as %Eq'.
-    wp_bind (delete _). iApply (wp_delete (_++_) with "[↦old ↦ex †']").
-    { rewrite app_length -Nat2Z.inj_add -Nat2Z.inj_mul Nat.mul_add_distr_r.
-      by do 2 f_equal. }
-    { rewrite heap_mapsto_vec_app /freeable_sz' app_length
-        -Nat2Z.inj_add -Nat2Z.inj_mul Nat.mul_add_distr_r Eq Eq'. iFrame. }
+    rewrite -Nat2Z.inj_add -Nat2Z.inj_mul !Nat.mul_add_distr_r -Eq -Eq' -app_length.
+    wp_bind (delete _). iApply (wp_delete (_++_) with "[↦old ↦ex †']"); [done|..].
+    { rewrite heap_mapsto_vec_app app_length. iFrame. }
     iIntros "!>_". wp_seq. wp_bind (delete _).
     iApply (wp_delete [_;_;_] with "[↦₀ ↦₁ ↦₂ †]"); [done| |].
     { rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil
@@ -156,7 +154,7 @@ Section vec_basic.
     rewrite tctx_hasty_val. iDestruct "bv" as ([|d]) "[⧖ box]"=>//.
     case bv as [[]|]=>//=. rewrite split_mt_ptr.
     case d as [|d]; first by iDestruct "box" as "[>[] _]".
-    iDestruct "box" as "[(%& >↦bv  & vec) †bv]". wp_read. wp_let.
+    iDestruct "box" as "[(%& >↦bv & vec) †bv]". wp_read. wp_let.
     rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     wp_apply (wp_delete with "[$↦bv $†bv]"); [done|]. iIntros "_". wp_seq.
     case d as [|]=>//. iDestruct "vec" as (????->) "[Bor _]".
