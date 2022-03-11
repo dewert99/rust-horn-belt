@@ -31,6 +31,7 @@ Section smallvec.
   Context `{!typeG Σ}.
 
   Global Instance loc_inhabited : Inhabited loc := populate (inhabitant, inhabitant).
+  Definition any_loc: loc := inhabitant.
 
   Lemma split_mt_smallvec {𝔄} (ty: type 𝔄) k l' tid d alπ Φ :
     (l' ↦∗: (λ vl, [S(d') := d]
@@ -76,7 +77,7 @@ Section smallvec.
   Qed.
 
   (* For simplicity, it always has the location and capacity *)
-  Program Definition smallvec_ty {𝔄} (n: nat) (ty: type 𝔄) : type (listₛ 𝔄) := {|
+  Program Definition smallvec {𝔄} (n: nat) (ty: type 𝔄) : type (listₛ 𝔄) := {|
     ty_size := 4 + n * ty.(ty_size);
     ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own alπ d tid vl := [S(d') := d]
@@ -173,7 +174,7 @@ Section smallvec.
       iIntros "{$ξl}ξl". by iMod ("Toκ'" with "ξl") as "$".
   Qed.
 
-  Global Instance smallvec_ty_ne {𝔄} n : NonExpansive (@smallvec_ty 𝔄 n).
+  Global Instance smallvec_ne {𝔄} n : NonExpansive (@smallvec 𝔄 n).
   Proof. solve_ne_type. Qed.
 
 End smallvec.
