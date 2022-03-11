@@ -73,7 +73,7 @@ Section vec_index.
     iMod (bor_acc_cons with "LFT Bor α") as "[(%&%&_& Pc & ↦vec) ToBor]"; [done|].
     wp_let. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_mt_vec. case d' as [|d']; [done|].
-    iDestruct "↦vec" as (??? aπl Eq1) "(↦ & ↦tys & ex & †)".
+    iDestruct "↦vec" as (??? aπl Eq1) "(↦ & ↦tys & ex†)".
     rewrite !heap_mapsto_vec_cons shift_loc_assoc. iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)".
     have ->: vπ = λ π, (lapply aπl π: list _, π ξ).
     { rewrite [vπ]surjective_pairing_fun. by rewrite Eq1 Eq2. }
@@ -111,7 +111,7 @@ Section vec_index.
     iDestruct ("Toζξl" with "ζξl") as "[ζ ξl']". iSpecialize ("Pc'" with "ζ").
     iMod ("To↦tys" with "ξl") as "(↦tys & α₊)".
     iMod ("To↦tys'" with "ξl'") as "(↦tys' & α₊₊)".
-    iMod ("ToBor" with "[⧗ ↦₀ ↦₁ ↦₂ ex † ↦tys ↦tys' ToPc] [Pc' ↦ty]")
+    iMod ("ToBor" with "[⧗ ↦₀ ↦₁ ↦₂ ex† ↦tys ↦tys' ToPc] [Pc' ↦ty]")
       as "[Bor α]"; last first.
     - rewrite cctx_interp_singleton.
       iMod ("ToL" with "[$α $α₊ $α₊₊] L") as "L".
@@ -134,7 +134,7 @@ Section vec_index.
         by iApply proph_eqz_vinsert. }
       rewrite split_mt_vec. iExists _, _, _, _.
       rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil shift_loc_assoc.
-      iFrame "↦₀ ↦₁ ↦₂ ex †". iSplit; [by rewrite vec_to_list_apply|]. iNext.
+      iFrame "↦₀ ↦₁ ↦₂ ex†". iSplit; [by rewrite vec_to_list_apply|]. iNext.
       iClear "#". rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iSplitL "↦tys".
       { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
       iSplitL "↦ty". { iStopProof. do 3 f_equiv. iApply ty_own_depth_mono. lia. }
