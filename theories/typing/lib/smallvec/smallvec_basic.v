@@ -14,22 +14,21 @@ Section smallvec_basic.
     split.
     - by apply type_lft_morphism_id_like.
     - by move=> ??/=->.
-    - move=>/= > ->*. by do 22 f_equiv.
-    - move=>/= > ->*. by do 16 f_equiv; [|f_equiv].
+    - move=>/= > ->*. by do 24 f_equiv.
+    - move=>/= > ->*. by do 18 f_equiv; [|f_equiv].
   Qed.
 
   Global Instance smallvec_send {𝔄} n (ty: type 𝔄) : Send ty → Send (smallvec_ty n ty).
-  Proof. move=> ?>/=. by do 22 f_equiv. Qed.
+  Proof. move=> ?>/=. by do 24 f_equiv. Qed.
 
   Global Instance smallvec_sync {𝔄} n (ty: type 𝔄) : Sync ty → Sync (smallvec_ty n ty).
-  Proof. move=> ?>/=. by do 16 f_equiv; [|f_equiv]. Qed.
+  Proof. move=> ?>/=. by do 18 f_equiv; [|f_equiv]. Qed.
 
   Lemma smallvec_resolve {𝔄} n (ty: type 𝔄) Φ E L :
     resolve E L ty Φ → resolve E L (smallvec_ty n ty) (lforall Φ).
   Proof.
     iIntros (????[|]???) "LFT PROPH E L svec/="; [done|].
-    iDestruct "svec" as (? len ???(->&?&->)) "big".
-    case Eqb: (bool_decide (len ≤ _))=>/=.
+    iDestruct "svec" as (b ?????(->&?&->)) "big". case b=>/=.
     - iDestruct "big" as (???) "tys".
       by iMod (resolve_big_sepL_ty_own with "LFT PROPH E L tys").
     - iDestruct "big" as "[↦tys _]". iIntros "!>!>!>".
@@ -46,36 +45,34 @@ Section smallvec_basic.
     real E L ty f → real (𝔅:=listₛ _) E L (smallvec_ty n ty) (map f).
   Proof.
     move=> Rl. split; iIntros (???[|]) "*% LFT E L svec//=".
-    - iDestruct "svec" as (? len ???(->&?&->)) "big".
-      case Eqb: (bool_decide (len ≤ _))=>/=.
+    - iDestruct "svec" as (b ?????(->&?&->)) "big". case b=>/=.
       + iDestruct "big" as (???) "tys".
         iMod (real_big_sepL_ty_own with "LFT E L tys") as "Upd"; [done..|].
         iApply (step_fupdN_wand with "Upd"). iIntros "!>!>!>!> >(%Eq&$&?) !>". iSplit.
         { iPureIntro. move: Eq=> [bl Eq]. exists bl. fun_ext=>/= π.
           move: (equal_f Eq π)=>/= <-. by rewrite -vec_to_list_apply vec_to_list_map. }
-        iExists _, len, _, _, _. rewrite Eqb/=. iSplit; [done|]. iExists _, _. by iFrame.
+        iExists true, _, _, _, _, _. iSplit; [done|]. iExists _, _. by iFrame.
       + iDestruct "big" as "[↦tys ex†]". iIntros "!>!>!>".
         rewrite trans_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦ tys]".
         iMod (real_big_sepL_ty_own with "LFT E L tys") as "Upd"; [done..|].
         iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%Eq &$&?) !>". iSplit.
         { iPureIntro. move: Eq=> [bl Eq]. exists bl. fun_ext=>/= π.
           move: (equal_f Eq π)=>/= <-. by rewrite -vec_to_list_apply vec_to_list_map. }
-        iExists _, len, _, _, _. rewrite Eqb/=. iFrame "ex†". iSplit; [done|].
-        iNext. rewrite trans_big_sepL_mt_ty_own. iExists _. iFrame.
-    - iDestruct "svec" as (????->) "[Bor tys]".
-      case Eqb: (bool_decide (len ≤ _))=>/=; iIntros "!>!>!>".
+        iExists false, _, _, _, _, _. iFrame "ex†". iSplit; [done|]. iNext.
+        rewrite trans_big_sepL_mt_ty_own. iExists _. iFrame.
+    - iDestruct "svec" as (b ????->) "[Bor tys]". case b=>/=; iIntros "!>!>!>".
       + iMod (real_big_sepL_ty_shr with "LFT E L tys") as "Upd"; [done..|].
         iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
         iIntros ">(%Eq &$&?) !>". iSplit.
         { iPureIntro. move: Eq=> [bl Eq]. exists bl. fun_ext=>/= π.
           move: (equal_f Eq π)=>/= <-. by rewrite -vec_to_list_apply vec_to_list_map. }
-        iExists _, len, _, _. rewrite Eqb/=. by iFrame.
+        iExists true, _, _, _, _. by iFrame.
       + iMod (real_big_sepL_ty_shr with "LFT E L tys") as "Upd"; [done..|].
         iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
         iIntros ">(%Eq &$& tys) !>". iSplit.
         { iPureIntro. move: Eq=> [bl Eq]. exists bl. fun_ext=>/= π.
           move: (equal_f Eq π)=>/= <-. by rewrite -vec_to_list_apply vec_to_list_map. }
-        iExists _, len, _, _. rewrite Eqb/=. by iFrame.
+        iExists false, _, _, _, _. by iFrame.
   Qed.
 
   Lemma smallvec_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) n ty ty' E L :
@@ -87,16 +84,14 @@ Section smallvec_basic.
     { move=> ?. elim; [done|]=> ??? IH. fun_ext=>/= ?. f_equal. apply (equal_f IH). }
     iSplit. { iPureIntro. rewrite/=. lia. } iSplit; [done|].
     iSplit; iIntros "!>" (?[|]) "* svec //=".
-    - iDestruct "svec" as (? len ???(->&?&->)) "big". iExists _, len, _, _, _.
-      case (bool_decide (len ≤ n))=>/=.
+    - iDestruct "svec" as (b ?????(->&?&->)) "big". iExists b, _, _, _, _, _. case b=>/=.
       + iDestruct "big" as (???) "?". rewrite Eq -EqSz. iSplit; [done|].
         iExists _, _. iSplit; [done|]. by iApply incl_big_sepL_ty_own.
       + iDestruct "big" as "[↦tys ex†]". rewrite !trans_big_sepL_mt_ty_own Eq -EqSz.
         iSplit; [done|]. iFrame "ex†". iNext. iDestruct "↦tys" as (?) "[↦ ?]".
         iExists _. iFrame "↦". by iApply incl_big_sepL_ty_own.
-    - iDestruct "svec" as (????->) "[↦ big]". iExists _, len, _, _. rewrite Eq.
-      iSplit; [done|]. iFrame "↦".
-      case (bool_decide (len ≤ n))=>/=; by iApply incl_big_sepL_ty_shr.
+    - iDestruct "svec" as (b ????->) "[↦ big]". iExists b, _, _, _, _. rewrite Eq.
+      iSplit; [done|]. iFrame "↦". case b=>/=; by iApply incl_big_sepL_ty_shr.
   Qed.
   Lemma smallvec_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g n ty ty' E L :
     eqtype E L ty ty' f g →
