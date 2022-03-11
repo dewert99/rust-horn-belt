@@ -118,7 +118,8 @@ Section vec_basic.
     case v as [[]|]=>//=. rewrite split_mt_vec.
     case d; [by iDestruct "bvec" as "[>[] _]"|]=> ?.
     iDestruct "bvec" as "[(%&%&%& big) †]".
-    iMod (bi.later_exist_except_0 with "big") as (?) "(>-> & >↦₀ & >↦₁ & >↦₂ & big)".
+    iMod (bi.later_exist_except_0 with "big") as (?) "(>-> & >↦ & big)".
+    rewrite !heap_mapsto_vec_cons shift_loc_assoc. iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)".
     do 2 (wp_op; wp_read). do 2 wp_op. wp_read. rewrite trans_big_sepL_mt_ty_own.
     iDestruct "big" as "((%& ↦old & tys) & (%& %Eq & ↦ex) & †')".
     iDestruct (big_sepL_ty_own_length with "tys") as %Eq'.
@@ -160,7 +161,9 @@ Section vec_basic.
     wp_apply (wp_delete with "[$↦bv $†bv]"); [done|]. iIntros "_". wp_seq.
     case d as [|]=>//. iDestruct "vec" as (????->) "[Bor _]".
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-    iMod (frac_bor_acc with "LFT Bor α") as (?) "[(↦₀ & ↦₁ & ↦₂) Toα]"; [done|].
+    iMod (frac_bor_acc with "LFT Bor α") as (?) "[↦ Toα]"; [done|].
+    rewrite !heap_mapsto_vec_cons !heap_mapsto_vec_nil.
+    iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)".
     wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]". wp_let. wp_op. wp_read.
     rewrite heap_mapsto_vec_singleton. wp_write. do 2 wp_seq.
     iMod ("Toα" with "[$↦₀ $↦₁ $↦₂]") as "α". iMod ("ToL" with "α L") as "L".

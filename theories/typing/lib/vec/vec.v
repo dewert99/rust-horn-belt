@@ -12,16 +12,13 @@ Section vec.
     (l' ↦∗: (λ vl, [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
       ⌜vl = [ #l; #len; #ex] ∧ alπ = lapply aπl⌝ ∗ Φ d' l len ex aπl)) ⊣⊢
     [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
-      ⌜alπ = lapply aπl⌝ ∗
-      l' ↦ #l ∗ (l' +ₗ 1) ↦ #len ∗ (l' +ₗ 2) ↦ #ex ∗ Φ d' l len ex aπl.
+      ⌜alπ = lapply aπl⌝ ∗ l' ↦∗ [ #l; #len; #ex] ∗ Φ d' l len ex aπl.
   Proof.
     iSplit.
     - iIntros "(%& ↦ & big)". case d=>// ?. iDestruct "big" as (????[->->]) "Φ".
-      iExists _, _, _, _. iSplit; [done|]. iFrame "Φ".
-      rewrite !heap_mapsto_vec_cons shift_loc_assoc. iDestruct "↦" as "($&$&$&_)".
-    - iIntros "big". case d=>// ?. iDestruct "big" as (????->) "(↦₀ & ↦₁ & ↦₂ & ?)".
-      iExists [_;_;_]. rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil.
-      iFrame "↦₀ ↦₁ ↦₂". iExists _, _, _, _. by iFrame.
+      iExists _, _, _, _. iSplit; [done|iFrame].
+    - iIntros "big". case d=>// ?. iDestruct "big" as (????->) "(↦ & ?)".
+      iExists [_;_;_]. iFrame "↦". iExists _, _, _, _. by iFrame.
   Qed.
 
   Program Definition vec_ty {𝔄} (ty: type 𝔄) : type (listₛ 𝔄) := {|
@@ -35,7 +32,7 @@ Section vec.
     ty_shr alπ d κ tid l' :=
       [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
         ⌜alπ = lapply aπl⌝ ∗
-        &frac{κ} (λ q, l' ↦{q} #l ∗ (l' +ₗ 1) ↦{q} #len ∗ (l' +ₗ 2) ↦{q} #ex) ∗
+        &frac{κ} (λ q, l' ↦∗{q} [ #l; #len; #ex]) ∗
         ▷ [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d' κ tid (l +ₗ[ty] i);
   |}%I.
   Next Obligation.
@@ -60,9 +57,8 @@ Section vec.
     { by iMod (bor_persistent with "LFT Bor κ") as "[>[] _]". }
     move=> ?. do 4 (iMod (bor_exists_tok with "LFT Bor κ") as (?) "[Bor κ]"; [done|]).
     iMod (bor_sep_persistent with "LFT Bor κ") as "(>-> & Bor & κ)"; [done|].
-    do 2 rewrite assoc. iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
-    rewrite -assoc. iMod (bor_fracture (λ q', _ ↦{q'} _ ∗ _ ↦{q'} _ ∗ _ ↦{q'} _)%I
-      with "LFT Bor↦") as "Bor↦"; [done|].
+    iMod (bor_sep with "LFT Bor") as "[Bor↦ Bor]"; [done|].
+    iMod (bor_fracture (λ q', _ ↦∗{q'} _)%I with "LFT Bor↦") as "Bor↦"; [done|].
     iMod (bor_sep with "LFT Bor") as "[Bor _]"; [done|].
     iMod (bor_later_tok with "LFT Bor κ") as "Borκ"; [done|].
     iIntros "/=!>!>!>". iMod "Borκ" as "[Bor κ]".

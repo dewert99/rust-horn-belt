@@ -29,14 +29,15 @@ Section vec_slice.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as "[big ToBor]"; [done|]. wp_seq.
     iDestruct "big" as (? d') "(#⧖ & Pc & big)". rewrite split_mt_vec.
-    case d'=>// ?. iDestruct "big" as (??? aπl ->) "(↦₀ & ↦₁ & ↦₂ & ↦tys & ex & †)".
+    case d'=>// ?. iDestruct "big" as (??? aπl ->) "(↦ & ↦tys & ex & †)".
     wp_bind (new _). iApply (wp_cumulative_time_receipt with "TIME"); [done|].
     iApply wp_new; [done..|]. iIntros "!>" (?) "[†r ↦r] ⧗". wp_let.
     set ξ := PrVar _ ξi. iDestruct (uniq_agree with "Vo Pc") as %[Eq1 ->].
     have ->: vπ = λ π, (lapply aπl π, π ξ).
     { by rewrite [vπ]surjective_pairing_fun Eq1 Eq2. }
-    rewrite !heap_mapsto_vec_cons. iDestruct "↦r" as "(↦r & ↦r' &_)".
-    wp_read. wp_write. do 2 wp_op. wp_read. wp_write. do 2 wp_seq.
+    rewrite !heap_mapsto_vec_cons. iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)".
+    iDestruct "↦r" as "(↦r & ↦r' &_)". wp_read. wp_write. do 2 wp_op. wp_read.
+    wp_write. do 2 wp_seq.
     iMod (uniq_intro_vec aπl with "PROPH UNIQ") as (ζil) "VoPcs"; [done|].
     iDestruct (uniq_proph_tok_vec with "VoPcs") as "[ζl VoPcs]".
     set aπζil := vzip _ _. set ζl := map _ aπζil.
@@ -70,6 +71,7 @@ Section vec_slice.
       iIntros "!>!>". iExists (lapply wπl), _. iFrame "⧖'". iSplitL "Eqzs ToPc".
       { iApply "ToPc". rewrite -!vec_to_list_apply.
         iApply proph_eqz_constr. iApply (proph_eqz_prvars with "Eqzs"). }
-      rewrite split_mt_vec. iExists _, _, _, _. by iFrame.
+      rewrite split_mt_vec. iExists _, _, _, _.
+      rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil. by iFrame.
   Qed.
 End vec_slice.

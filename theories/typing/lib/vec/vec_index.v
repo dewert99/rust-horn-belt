@@ -31,8 +31,9 @@ Section vec_index.
     iDestruct "vec" as (??? aπl ->) "[Bor tys]".
     iDestruct "i" as "[(%& ↦i & (%&->&->)) †i]"=>/=.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-    iMod (frac_bor_acc with "LFT Bor α") as (?) "[(↦₀ & ↦₁ & ↦₂) Toα]"; [done|].
-    rewrite !heap_mapsto_vec_singleton. wp_let. do 3 wp_read. do 2 wp_op. wp_write.
+    iMod (frac_bor_acc with "LFT Bor α") as (?) "[>↦ Toα]"; [done|].
+    rewrite !heap_mapsto_vec_singleton !heap_mapsto_vec_cons !heap_mapsto_vec_nil.
+    iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)". wp_let. do 3 wp_read. do 2 wp_op. wp_write.
     iMod ("Toα" with "[$↦₀ $↦₁ $↦₂]") as "α". iMod ("ToL" with "α L") as "L".
     do 2 rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     wp_bind (delete _). iApply (wp_delete with "[$↦v $†v]"); [done|].
@@ -72,7 +73,8 @@ Section vec_index.
     iMod (bor_acc_cons with "LFT Bor α") as "[(%&%&_& Pc & ↦vec) ToBor]"; [done|].
     wp_let. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_mt_vec. case d' as [|d']; [done|].
-    iDestruct "↦vec" as (??? aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & ex & †)".
+    iDestruct "↦vec" as (??? aπl Eq1) "(↦ & ↦tys & ex & †)".
+    rewrite !heap_mapsto_vec_cons shift_loc_assoc. iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)".
     have ->: vπ = λ π, (lapply aπl π: list _, π ξ).
     { rewrite [vπ]surjective_pairing_fun. by rewrite Eq1 Eq2. }
     do 3 wp_read. do 2 wp_op. wp_write. do 2 rewrite -{1}heap_mapsto_vec_singleton.
@@ -130,9 +132,10 @@ Section vec_index.
       { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
         rewrite -vec_to_list_apply. iApply proph_eqz_constr.
         by iApply proph_eqz_vinsert. }
-      rewrite split_mt_vec. iExists _, _, _, _. iFrame "↦₀ ↦₁ ↦₂ ex †".
-      iSplit; [by rewrite vec_to_list_apply|]. iNext. iClear "#".
-      rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iSplitL "↦tys".
+      rewrite split_mt_vec. iExists _, _, _, _.
+      rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil shift_loc_assoc.
+      iFrame "↦₀ ↦₁ ↦₂ ex †". iSplit; [by rewrite vec_to_list_apply|]. iNext.
+      iClear "#". rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iSplitL "↦tys".
       { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
       iSplitL "↦ty". { iStopProof. do 3 f_equiv. iApply ty_own_depth_mono. lia. }
       iStopProof. do 6 f_equiv; [|iApply ty_own_depth_mono; lia].

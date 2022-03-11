@@ -48,20 +48,22 @@ Section vec_pushpop.
     iMod (bor_acc with "LFT Bor α") as "[(%&%& ⧖u & Pc & ↦vec) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_mt_vec. case du as [|du]=>//.
-    iDestruct "↦vec" as (? len ex aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".
+    iDestruct "↦vec" as (? len ex aπl Eq1) "(↦ & ↦tys & (%wl &%& ↦ex) & †)".
+    rewrite !heap_mapsto_vec_cons shift_loc_assoc. iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)".
     do 2 (wp_op; wp_read; wp_let). do 2 wp_op. wp_write.
     have ->: (len + 1)%Z = S len by lia.
     iCombine "⧖u ⧖x" as "#⧖"=>/=. set d := du `max` dx.
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     set push := (rec: "push" _ := _)%E.
     iAssert (
-      (∃(l: loc) (ex: nat), v' ↦ #l ∗ (v' +ₗ 1) ↦ #(S len) ∗ (v' +ₗ 2) ↦ #ex ∗
+      (∃(l: loc) (ex: nat), v' ↦∗ [ #l; #(S len); #ex] ∗
         ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ du tid) ∗
         (l +ₗ[ty] len) ↦∗len (S ex * ty.(ty_size)) ∗
         freeable_sz' ((S len + ex) * ty.(ty_size)) l) -∗
       WP push [] {{ _, cont_postcondition }})%I
       with "[L ToL Na C Vo Pc ToBor x]" as "push".
-    { iIntros "/=(%&%& ↦₀ & ↦₁ & ↦₂ & ↦tys & (%vl & %Len & ↦ex) & †)".
+    { iIntros "/=(%&%& ↦ & ↦tys & (%vl & %Len & ↦ex) & †)".
+      rewrite !heap_mapsto_vec_cons. iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)".
       rewrite /push. wp_rec. wp_read. do 2 wp_op. wp_bind (_ <-{_} !_)%E.
       move: {Len}(app_length_ex vl _ _ Len)=> [vl'[?[->[Len ?]]]].
       rewrite heap_mapsto_vec_app shift_loc_assoc_nat Len -Nat2Z.inj_mul.
@@ -72,8 +74,10 @@ Section vec_pushpop.
       iIntros "!>_". wp_seq. set vπ' := λ π, (lapply (vsnoc aπl aπ) π, π ξ).
       iMod ("ToBor" with "[↦₀ ↦₁ ↦₂ ↦tys ↦ ty ↦ex † Pc]") as "[Bor α]".
       { iNext. iExists _, _. rewrite split_mt_vec. iFrame "⧖ Pc".
-        iExists _, _, _, (vsnoc aπl _). iFrame "↦₀ ↦₁ ↦₂ †". iSplit; [done|].
-        iSplitR "↦ex"; last first. { iExists _. rewrite/= plus_comm. by iFrame. }
+        iExists _, _, _, (vsnoc aπl _).
+        rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil shift_loc_assoc.
+        iFrame "↦₀ ↦₁ ↦₂ †". iSplit; [done|]. iSplitR "↦ex"; last first.
+        { iExists _. rewrite/= plus_comm. by iFrame. }
         iNext. rewrite vec_to_list_snoc big_sepL_app. iSplitL "↦tys".
         { iClear "#". iStopProof. do 6 f_equiv. apply ty_own_depth_mono. lia. }
         rewrite/= right_id. iExists _. rewrite vec_to_list_length Nat.add_0_r.
@@ -92,8 +96,9 @@ Section vec_pushpop.
         apply Imp. move: Eq. by rewrite vec_to_list_snoc lapply_app. }
     rewrite /push. wp_let. wp_op. wp_case. case ex as [|ex']=>/=; last first.
     { do 2 wp_op. have ->: (S ex' - 1)%Z = ex' by lia. wp_write.
-      iApply "push". iExists _, _. iFrame "↦tys ↦₀ ↦₁ ↦₂".
-      iSplitL "↦ex". { iExists _. iFrame. iPureIntro. lia. }
+      iApply "push". iExists _, _.
+      rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil shift_loc_assoc.
+      iFrame "↦tys ↦₀ ↦₁ ↦₂". iSplitL "↦ex". { iExists _. iFrame. iPureIntro. lia. }
       iClear "#". iStopProof. f_equiv. lia. }
     wp_op. wp_write. wp_read. wp_let. do 3 wp_op. wp_bind (new _).
     iApply wp_new; [lia|done|]. iIntros "!>" (?) "[†' ↦']". wp_let. wp_op.
@@ -105,9 +110,10 @@ Section vec_pushpop.
     iApply (wp_memcpy with "[$↦' $↦]"); [rewrite repeat_length; lia|lia|].
     iIntros "!>[↦' ↦]". wp_seq. wp_op. rewrite -Nat2Z.inj_mul. wp_bind (delete _).
     iApply (wp_delete with "[$↦ †]"); [lia|by rewrite Len|]. iIntros "!>_".
-    wp_seq. wp_write. iApply "push". iExists _, _. iFrame "↦₀ ↦₁ ↦₂".
-    iSplitL "↦' tys". { rewrite trans_big_sepL_mt_ty_own. iExists _. iFrame. }
-    iSplitR "†'".
+    wp_seq. wp_write. iApply "push". iExists _, _.
+    rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil shift_loc_assoc.
+    iFrame "↦₀ ↦₁ ↦₂". iSplitL "↦' tys".
+    { rewrite trans_big_sepL_mt_ty_own. iExists _. iFrame. } iSplitR "†'".
     - iExists _. rewrite repeat_length. iFrame "↦ex'". by rewrite repeat_length.
     - by have <-: ∀sz, sz + (len + len) * sz = len * sz + (sz + len * sz) by lia.
   Qed.
@@ -143,10 +149,12 @@ Section vec_pushpop.
     iMod (bor_acc with "LFT Bor α") as "[(%&%& #⧖ & Pc & ↦vec) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_mt_vec. case d=>// ?.
-    iDestruct "↦vec" as (? len ex aπl Eq1) "(↦₀ & ↦₁ & ↦₂ & ↦tys & (%wl &%& ↦ex) & †)".
+    iDestruct "↦vec" as (? len ex aπl Eq1) "(↦ & ↦tys & (%wl &%& ↦ex) & †)".
+    rewrite !heap_mapsto_vec_cons shift_loc_assoc. iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)".
     wp_op. wp_read. wp_let. wp_op. wp_case. case len as [|].
     { iMod ("ToBor" with "[↦₀ ↦₁ ↦₂ ↦tys ↦ex † ⧖ Pc]") as "[Bor β]".
       { iNext. iExists _, _. iFrame "⧖ Pc". rewrite split_mt_vec. iExists _, _, _, _.
+        rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil shift_loc_assoc.
         iFrame "↦₀ ↦₁ ↦₂ ↦tys †". iSplit; [done|]. iExists _. by iFrame. }
       iMod ("ToL" with "β L") as "L".
       iApply (type_type +[#v' ◁ &uniq{α} (vec_ty ty)] -[vπ]
@@ -172,6 +180,7 @@ Section vec_pushpop.
     { iNext. iExists _, _. iFrame "⧖ Pc". rewrite split_mt_vec.
       have ->: ∀sz, sz + (len + ex) * sz = (len + S ex) * sz by lia.
       have ->: (ex + 1)%Z = S ex by lia. iExists _, _, _, _.
+      rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil shift_loc_assoc.
       iFrame "↦₀ ↦₁ ↦₂ ↦tys †". iSplit; [done|]. iExists (vl ++ wl).
       rewrite app_length heap_mapsto_vec_app shift_loc_assoc_nat plus_comm Eqvl.
       iSplit; [iPureIntro; lia|]. iFrame. }
