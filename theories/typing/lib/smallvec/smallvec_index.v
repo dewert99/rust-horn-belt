@@ -33,7 +33,8 @@ Section smallvec_index.
     iDestruct "i" as ([|]) "[_ i]"=>//. case i as [[|i|]|]=>//=.
     wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>% [†r ↦r]". wp_let.
     iDestruct "v" as "[(%vl & ↦v & svec) †v]". move: d=> [|d]//=.
-    case vl as [|[[]|][]]=>//. iDestruct "svec" as (?????->) "[Bor tys]".
+    case vl as [|[[]|][]]=>//. move: d=> [|d]//=.
+    iDestruct "svec" as (?????->) "[Bor tys]".
     iDestruct "i" as "[(%& ↦i & (%&->&->)) †i]"=>/=.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (frac_bor_acc with "LFT Bor α") as (?) "[>↦ Toα]"; [done|].
@@ -96,7 +97,8 @@ Section smallvec_index.
       (?) "((α & α₊ & α₊₊) & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as "[(%&%&_& Pc & ↦svec) ToBor]"; [done|].
     wp_let. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
-    rewrite split_mt_smallvec. iDestruct "↦svec" as (b ??? aπl Eq1) "[↦ big]".
+    rewrite split_mt_smallvec. case d' as [|d']; [done|].
+    iDestruct "↦svec" as (b ??? aπl Eq1) "[↦ big]".
     rewrite !heap_mapsto_vec_cons !shift_loc_assoc.
     iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ & ↦₃ &_)".
     have ->: vπ = λ π, (lapply aπl π: list _, π ξ).
@@ -106,7 +108,8 @@ Section smallvec_index.
       do 2 rewrite -{1}heap_mapsto_vec_singleton. rewrite !freeable_sz_full.
       wp_bind (delete _). iApply (wp_delete with "[$↦v $†v]"); [done|].
       iIntros "!>_". wp_seq. wp_bind (delete _).
-      iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!>_". wp_seq.
+      iApply (wp_cumulative_time_receipt with "TIME"); [done|].
+      iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!>_ ⧗". wp_seq.
       iMod (proph_obs_sat with "PROPH Obs") as %(?& Obs); [done|].
       move: Obs=> [inat[?[->[+ _]]]]. rewrite -vec_to_list_apply -vlookup_lookup'.
       move=> [In _]. rewrite -Nat2Z.inj_mul. set ifin := nat_to_fin In.
@@ -136,7 +139,7 @@ Section smallvec_index.
       iDestruct ("Toζξl" with "ζξl") as "[ζ ξl']". iSpecialize ("Pc'" with "ζ").
       iMod ("To↦tys" with "ξl") as "(↦tys & α₊)".
       iMod ("To↦tys'" with "ξl'") as "(↦tys' & α₊₊)".
-      iMod ("ToBor" with "[↦₀ ↦₁ ↦₂ ↦₃ ↦tl ↦tys ↦tys' ToPc] [Pc' ↦ty]")
+      iMod ("ToBor" with "[⧗ ↦₀ ↦₁ ↦₂ ↦₃ ↦tl ↦tys ↦tys' ToPc] [Pc' ↦ty]")
         as "[Bor α]"; last first.
       + rewrite cctx_interp_singleton.
         iMod ("ToL" with "[$α $α₊ $α₊₊] L") as "L".
@@ -150,7 +153,9 @@ Section smallvec_index.
           by rewrite Eqξ -vec_to_list_apply vapply_insert -vec_to_list_insert.
       + iNext. iExists _, _. rewrite -Eqi. iFrame "Pc' ↦ty".
         iApply persistent_time_receipt_mono; [|done]. lia.
-      + iIntros "!> (%&%& >⧖' & Pc' & ↦ty)". iCombine "⧖ ⧖'" as "⧖!". iIntros "/=!>!>".
+      + iIntros "!> (%&%& >⧖' & Pc' & ↦ty)". iCombine "⧖ ⧖'" as "⧖!".
+        iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖!")
+          as "⧖!"; [solve_ndisj|]. iIntros "/=!>!>".
         iExists _, _. iFrame "⧖!". iDestruct ("ToPc" with "[Pc']") as "$".
         { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
           rewrite -vec_to_list_apply. iApply proph_eqz_constr.
@@ -168,7 +173,8 @@ Section smallvec_index.
       rewrite !freeable_sz_full. wp_bind (delete _).
       iApply (wp_delete with "[$↦v $†v]"); [done|].
       iIntros "!>_". wp_seq. wp_bind (delete _).
-      iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!>_". wp_seq.
+      iApply (wp_cumulative_time_receipt with "TIME"); [done|].
+      iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!>_ ⧗". wp_seq.
       iMod (proph_obs_sat with "PROPH Obs") as %(?& Obs); [done|].
       move: Obs=> [inat[?[->[+ _]]]]. rewrite -vec_to_list_apply -vlookup_lookup'.
       move=> [In _]. rewrite -Nat2Z.inj_mul. set ifin := nat_to_fin In.
@@ -198,7 +204,7 @@ Section smallvec_index.
       iDestruct ("Toζξl" with "ζξl") as "[ζ ξl']". iSpecialize ("Pc'" with "ζ").
       iMod ("To↦tys" with "ξl") as "(↦tys & α₊)".
       iMod ("To↦tys'" with "ξl'") as "(↦tys' & α₊₊)".
-      iMod ("ToBor" with "[↦₀ ↦₁ ↦₂ ↦₃ ↦tl ex† ↦tys ↦tys' ToPc] [Pc' ↦ty]")
+      iMod ("ToBor" with "[⧗ ↦₀ ↦₁ ↦₂ ↦₃ ↦tl ex† ↦tys ↦tys' ToPc] [Pc' ↦ty]")
         as "[Bor α]"; last first.
       + rewrite cctx_interp_singleton.
         iMod ("ToL" with "[$α $α₊ $α₊₊] L") as "L".
@@ -212,7 +218,9 @@ Section smallvec_index.
           by rewrite Eqξ -vec_to_list_apply vapply_insert -vec_to_list_insert.
       + iNext. iExists _, _. rewrite -Eqi. iFrame "Pc' ↦ty".
         iApply persistent_time_receipt_mono; [|done]. lia.
-      + iIntros "!> (%&%& >⧖' & Pc' & ↦ty)". iCombine "⧖ ⧖'" as "⧖!". iIntros "/=!>!>".
+      + iIntros "!> (%&%& >⧖' & Pc' & ↦ty)". iCombine "⧖ ⧖'" as "⧖!".
+        iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖!")
+          as "⧖!"; [solve_ndisj|]. iIntros "/=!>!>".
         iExists _, _. iFrame "⧖!". iDestruct ("ToPc" with "[Pc']") as "$".
         { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
           rewrite -vec_to_list_apply. iApply proph_eqz_constr.
@@ -221,7 +229,7 @@ Section smallvec_index.
         rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
         iFrame "↦₀ ↦₁ ↦₂ ↦₃ ex†". iSplit; [by rewrite vec_to_list_apply|].
         iClear "#". iExists _. iFrame "↦tl". iSplit; [done|].
-        rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iSplitL "↦tys".
+        rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iNext. iSplitL "↦tys".
         { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
         setoid_rewrite shift_loc_assoc. iSplitL "↦ty".
         { iStopProof. do 3 f_equiv. iApply ty_own_depth_mono. lia. }

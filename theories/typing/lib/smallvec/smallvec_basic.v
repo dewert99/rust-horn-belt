@@ -14,24 +14,25 @@ Section smallvec_basic.
     split.
     - by apply type_lft_morphism_id_like.
     - by move=> ??/=->.
-    - move=>/= > ->*. by do 21 f_equiv; [f_equiv|].
-    - move=>/= > ->*. by do 16 f_equiv.
+    - move=>/= > ->*. by do 24 f_equiv.
+    - move=>/= > ->*. by do 18 f_equiv; [|f_equiv].
   Qed.
 
   Global Instance smallvec_send {𝔄} n (ty: type 𝔄) : Send ty → Send (smallvec n ty).
-  Proof. move=> ?>/=. by do 21 f_equiv; [f_equiv|]. Qed.
+  Proof. move=> ?>/=. by do 24 f_equiv. Qed.
 
   Global Instance smallvec_sync {𝔄} n (ty: type 𝔄) : Sync ty → Sync (smallvec n ty).
-  Proof. move=> ?>/=. by do 16 f_equiv. Qed.
+  Proof. move=> ?>/=. by do 18 f_equiv; [|f_equiv]. Qed.
 
   Lemma smallvec_resolve {𝔄} n (ty: type 𝔄) Φ E L :
     resolve E L ty Φ → resolve E L (smallvec n ty) (lforall Φ).
   Proof.
-    iIntros "%* LFT PROPH E L". iDestruct 1 as (b ?????(->&?&->)) "big". case b=>/=.
+    iIntros (????[|]???) "LFT PROPH E L svec/="; [done|].
+    iDestruct "svec" as (b ?????(->&?&->)) "big". case b=>/=.
     - iDestruct "big" as (???) "tys".
       by iMod (resolve_big_sepL_ty_own with "LFT PROPH E L tys").
-    - iDestruct "big" as "[↦tys _]". rewrite trans_big_sepL_mt_ty_own.
-      iDestruct "↦tys" as (?) "[↦ tys]".
+    - iDestruct "big" as "[↦tys _]". iIntros "!>!>!>".
+      rewrite trans_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦ tys]".
       iMod (resolve_big_sepL_ty_own with "LFT PROPH E L tys") as "Upd"; [done..|].
       iApply (step_fupdN_wand with "Upd"). by iIntros "!> ?".
   Qed.
@@ -43,23 +44,23 @@ Section smallvec_basic.
   Lemma smallvec_real {𝔄 𝔅} n (ty: type 𝔄) (f: 𝔄 → 𝔅) E L :
     real E L ty f → real (𝔅:=listₛ _) E L (smallvec n ty) (map f).
   Proof.
-    move=> Rl. split; iIntros "*% LFT E L svec".
+    move=> Rl. split; iIntros (???[|]) "*% LFT E L svec//=".
     - iDestruct "svec" as (b ?????(->&?&->)) "big". case b=>/=.
       + iDestruct "big" as (???) "tys".
         iMod (real_big_sepL_ty_own with "LFT E L tys") as "Upd"; [done..|].
-        iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%Eq&$&?) !>". iSplit.
+        iApply (step_fupdN_wand with "Upd"). iIntros "!>!>!>!> >(%Eq&$&?) !>". iSplit.
         { iPureIntro. move: Eq=> [bl Eq]. exists bl. fun_ext=>/= π.
           move: (equal_f Eq π)=>/= <-. by rewrite -vec_to_list_apply vec_to_list_map. }
         iExists true, _, _, _, _, _. iSplit; [done|]. iExists _, _. by iFrame.
-      + iDestruct "big" as "[↦tys ex†]".
+      + iDestruct "big" as "[↦tys ex†]". iIntros "!>!>!>".
         rewrite trans_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦ tys]".
         iMod (real_big_sepL_ty_own with "LFT E L tys") as "Upd"; [done..|].
         iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%Eq &$&?) !>". iSplit.
         { iPureIntro. move: Eq=> [bl Eq]. exists bl. fun_ext=>/= π.
           move: (equal_f Eq π)=>/= <-. by rewrite -vec_to_list_apply vec_to_list_map. }
-        iExists false, _, _, _, _, _. iFrame "ex†". iSplit; [done|].
+        iExists false, _, _, _, _, _. iFrame "ex†". iSplit; [done|]. iNext.
         rewrite trans_big_sepL_mt_ty_own. iExists _. iFrame.
-    - iDestruct "svec" as (b ????->) "[Bor tys]". case b=>/=.
+    - iDestruct "svec" as (b ????->) "[Bor tys]". case b=>/=; iIntros "!>!>!>".
       + iMod (real_big_sepL_ty_shr with "LFT E L tys") as "Upd"; [done..|].
         iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
         iIntros ">(%Eq &$&?) !>". iSplit.
@@ -82,14 +83,14 @@ Section smallvec_basic.
     have Eq: ∀(aπl: vec (proph 𝔄) _), map f ∘ lapply aπl = lapply (vmap (f ∘.) aπl).
     { move=> ?. elim; [done|]=> ??? IH. fun_ext=>/= ?. f_equal. apply (equal_f IH). }
     iSplit. { iPureIntro. rewrite/=. lia. } iSplit; [done|].
-    iSplit; iModIntro.
-    - iDestruct 1 as (b ?????(->&?&->)) "big". iExists b, _, _, _, _, _. case b=>/=.
+    iSplit; iIntros "!>" (?[|]) "* svec //=".
+    - iDestruct "svec" as (b ?????(->&?&->)) "big". iExists b, _, _, _, _, _. case b=>/=.
       + iDestruct "big" as (???) "?". rewrite Eq -EqSz. iSplit; [done|].
         iExists _, _. iSplit; [done|]. by iApply incl_big_sepL_ty_own.
       + iDestruct "big" as "[↦tys ex†]". rewrite !trans_big_sepL_mt_ty_own Eq -EqSz.
-        iSplit; [done|]. iFrame "ex†". iDestruct "↦tys" as (?) "[↦ ?]".
+        iSplit; [done|]. iFrame "ex†". iNext. iDestruct "↦tys" as (?) "[↦ ?]".
         iExists _. iFrame "↦". by iApply incl_big_sepL_ty_own.
-    - iDestruct 1 as (b ????->) "[↦ big]". iExists b, _, _, _, _. rewrite Eq.
+    - iDestruct "svec" as (b ????->) "[↦ big]". iExists b, _, _, _, _. rewrite Eq.
       iSplit; [done|]. iFrame "↦". case b=>/=; by iApply incl_big_sepL_ty_shr.
   Qed.
   Lemma smallvec_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g n ty ty' E L :
@@ -113,8 +114,9 @@ Section smallvec_basic.
     iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
     iApply wp_new; [done..|]. iIntros "!>" (r).
     rewrite !Nat2Z.id/= !heap_mapsto_vec_cons !shift_loc_assoc.
-    iIntros "[† (↦₀ & ↦₁ & ↦₂ & ↦₃ & ↦ex)] ⧖". wp_seq. wp_write.
-    do 3 (wp_op; wp_write). do 2 wp_seq. rewrite cctx_interp_singleton.
+    iIntros "[† (↦₀ & ↦₁ & ↦₂ & ↦₃ & ↦ex)] ⧖". wp_seq. wp_bind (_ <- _)%E.
+    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|]. wp_write. iIntros "⧖".
+    wp_seq. do 3 (wp_op; wp_write). do 2 wp_seq. rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[const []] with "Na L [-Obs] Obs"). iSplit; [|done].
     iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full.
     iFrame "†". iNext. iExists (_::_::_::_::_).
@@ -138,8 +140,9 @@ Section smallvec_basic.
   Proof.
     eapply type_fn; [apply _|]=> _ ??[v[]]. simpl_subst.
     iIntros (?[?[]]?) "_ TIME _ _ _ Na L C [v _] Obs".
-    rewrite tctx_hasty_val. iDestruct "v" as ([|?]) "[_ bsvec]"=>//.
+    rewrite tctx_hasty_val. iDestruct "v" as ([|d]) "[_ bsvec]"=>//.
     case v as [[]|]=>//=. rewrite split_mt_smallvec.
+    case d; [by iDestruct "bsvec" as "[>[] _]"|]=> ?.
     iDestruct "bsvec" as "[(%b &%&%&%& big) †]".
     iMod (bi.later_exist_except_0 with "big") as (?) "(>-> & >↦ & big)".
     rewrite !heap_mapsto_vec_cons !shift_loc_assoc.
@@ -192,10 +195,10 @@ Section smallvec_basic.
     rewrite tctx_hasty_val. iDestruct "bv" as ([|d]) "[⧖ box]"=>//.
     case bv as [[]|]=>//=. rewrite split_mt_ptr.
     case d as [|d]; first by iDestruct "box" as "[>[] _]".
-    iDestruct "box" as "[(%& >↦bv & svec) †bv]". wp_read.
-    iDestruct "svec" as (?????->) "[Bor _]". wp_let.
+    iDestruct "box" as "[(%& >↦bv & svec) †bv]". wp_read. wp_let.
     rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     wp_apply (wp_delete with "[$↦bv $†bv]"); [done|]. iIntros "_". wp_seq.
+    case d as [|]=>//. iDestruct "svec" as (?????->) "[Bor _]".
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (frac_bor_acc with "LFT Bor α") as (?) "[↦ Toα]"; [done|].
     rewrite !heap_mapsto_vec_cons !heap_mapsto_vec_nil shift_loc_assoc.
