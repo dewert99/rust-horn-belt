@@ -1,168 +1,140 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import array_util typing.
-From lrust.typing.lib.smallvec Require Import smallvec.
-From lrust.typing.lib.vec Require Import vec_pushpop vec.
+From lrust.typing.lib Require Import vec_util smallvec.smallvec.
 
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
 
-
 Section smallvec_push.
-    Context `{!typeG Σ}.
+  Context `{!typeG Σ}.
 
-    (* 
-        check the tag,
-        if its an array and there's room, store it there
-        otherwise, push to the vector
-    *)
-    Definition smallvec_push {𝔄} (ty: type 𝔄) (n : nat ) : val :=
-      fn: ["self"; "v"] :=    
-        let: "self'" := !"self" in delete [ #1; "self"];;
-        let: "tag" := !"self'" in 
-        withcont: "push":
-        if: "tag" then (* array mode *)
-          let: "len" := !("self'" +ₗ #2) in
-          if: ( "len" + #1)  ≤ #n then
-            "self'" +ₗ #4 +ₗ "len" * #ty.(ty_size) <-{ty_size ty} !"v";;
-            ("self'" +ₗ #2) <- "len" + #1;;
-            let: "r" := new [ #0] in return: ["r"]
-          else (* ruh-roh gotta allocate a vector and copy everything over*) 
-            let: "l'" := new [("len") * #ty.(ty_size)] in
-            memcpy ["l'"; "len" * #ty.(ty_size); "self'" +ₗ #4];;
-            ("self'" +ₗ #1) <- ("l'");;
-            ("self'" +ₗ #3) <- #0;;
-            "self'" <- #false;; "push" []
-        else 
-          "push" []
-        (* vector mode *)
-        cont: "push" [] := 
-          let: "vec_push" := vec_push ty in
-          let: "vec" := new [ #1] in
-          "vec" <- "self'" +ₗ #1;;
-          letcall: "r" := "vec_push" ["vec"; "v"]  in
-          return: ["r"] .
+  Definition smallvec_push_core {𝔄} (n: nat) (ty: type 𝔄) : val :=
+    rec: BAnon ["v"; "x"] :=
+      if: !"v" then (* array mode *)
+        let: "len" := !("v" +ₗ #2) in "v" +ₗ #2 <- "len" + #1;;
+        if: "len" + #1 ≤ #n then
+          "v" +ₗ #4 +ₗ "len" * #ty.(ty_size) <-{ty.(ty_size)} !"x"
+        else
+          let: "l" := new [("len" + #1) * #ty.(ty_size)] in
+          memcpy ["l"; "len" * #ty.(ty_size); "v" +ₗ #4];;
+          "l" +ₗ "len" * #ty.(ty_size) <-{ty.(ty_size)} !"x";;
+          "v" <- #false;; "v" +ₗ #1 <- "l";; "v" +ₗ #3 <- #0
+      else (* vector mode *)
+        vec_push_core ty ["v" +ₗ #1; "x"].
 
-(* useful to force type inverence to choose the correct type for vπ' *)
-Definition bor_cnts {𝔄} (ty: type 𝔄) (vπ: proph 𝔄) (ξi: positive) (d: nat)
-  (tid: thread_id) (l: loc) : iProp Σ :=
-  let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
-  (∃vπ' d', ⧖(S d') ∗ .PC[ξ] vπ' d' ∗ l ↦∗: ty.(ty_own) vπ' d' tid).
-
-Definition smallvec_push_type {𝔄} (ty: type 𝔄) (n : nat ) :
-  typed_val (smallvec_push ty n) (fn<α>(∅; &uniq{α} (smallvec n ty), ty) → ())
-    (λ post '-[(al, al'); a], al' = al ++ [a] → post ()).
+  Lemma wp_smallvec_push_core {𝔄} n (ty: type 𝔄) (v x: loc) alπ bπ du dx tid E :
+    {{{
+      v ↦∗: (smallvec n ty).(ty_own) alπ du tid ∗ x ↦∗: ty.(ty_own) bπ dx tid
+    }}} smallvec_push_core n ty [ #v; #x] @ E {{{ RET #☠;
+      v ↦∗: (smallvec n ty).(ty_own) (λ π, alπ π ++ [bπ π]) (du `max` dx) tid ∗
+      x ↦∗len ty.(ty_size)
+    }}}.
   Proof.
-    eapply type_fn; [apply _|]=> α ϝ k [v[x[]]]. simpl_subst.
-    iIntros (tid (vπ & aπ &[]) ?) "#LFT #TIME #PROPH #UNIQ #E Na L C /=(v & x &_) #Obs".
-    rewrite tctx_hasty_val. iDestruct "v" as ([|dv]) "[_ v]"=>//.
-    case v as [[|v|]|]=>//. iDestruct "v" as "[(%vl & >↦ & [#LftIn uniq]) †]".
+    iIntros (?) "[big (%& ↦x & ty)] ToΦ". iDestruct (ty_size_eq with "ty") as %?.
+    rewrite split_mt_smallvec. iDestruct "big" as (b ? len ??->) "(↦ & big)".
+    rewrite heap_mapsto_vec_cons. iDestruct "↦" as "[↦₀ ↦']". wp_rec. wp_read.
+    wp_if. case b=>/=; last first.
+    { iDestruct "big" as (??) "(↦tl & ↦tys & ↦ex & †)". wp_op.
+      iApply (wp_vec_push_core with "[↦' ↦tys ↦ex † ↦x ty]").
+      { iExists _, _. iFrame "↦' † ↦ex ↦tys". iExists _. iFrame. }
+      iIntros "!> (%&%& ↦' & ↦tys & ↦ex & † & ↦x)". iApply "ToΦ". iFrame "↦x".
+      rewrite split_mt_smallvec. iExists false, _, _, _, _. iFrame "↦tys ↦ex †".
+      iDestruct (heap_mapsto_vec_cons with "[$↦₀ $↦']") as "$".
+      iSplitR; last first. { iExists _. by iFrame. } iPureIntro. fun_ext=> ?.
+      by rewrite vec_to_list_snoc lapply_app. }
+    rewrite !heap_mapsto_vec_cons !shift_loc_assoc. iDestruct "↦'" as "(↦₁ & ↦₂ & ↦₃ &_)".
+    iDestruct "big" as "[↦tys (%wl & %EqLen & ↦tl)]".
+    wp_op. wp_read. wp_let. do 2 wp_op. wp_write. have ->: (len + 1)%Z = S len by lia.
+    do 2 wp_op. wp_if. case Cmp: (bool_decide _).
+    - move: Cmp=>/bool_decide_eq_true ?. do 3 wp_op. rewrite -Nat2Z.inj_mul.
+      have Lwl: length wl = ty.(ty_size) + (n - S len) * ty.(ty_size).
+      { rewrite Nat.mul_sub_distr_r Nat.add_sub_assoc; [lia|].
+        apply Nat.mul_le_mono_r. lia. }
+      move: (app_length_ex wl _ _ Lwl)=> [?[?[->[Lul ?]]]].
+      rewrite heap_mapsto_vec_app Lul !shift_loc_assoc. iDestruct "↦tl" as "[↦new ↦tl]".
+      iApply (wp_memcpy with "[$↦new $↦x]"); [lia..|]. iIntros "!> [↦new ↦x]".
+      iApply "ToΦ". iSplitR "↦x"; last first. { iExists _. by iFrame. }
+      rewrite split_mt_smallvec. iExists _, _, _, _, (vsnoc _ _).
+      rewrite !heap_mapsto_vec_cons !shift_loc_assoc heap_mapsto_vec_nil.
+      iFrame "↦₀ ↦₁ ↦₂ ↦₃"=>/=. iSplit.
+      { iPureIntro. fun_ext=> ?. by rewrite vec_to_list_snoc lapply_app. }
+      iSplitR "↦tl"; last first.
+      { have ->: ∀sz, (4 + (len * sz)%nat + sz = 4 + (sz + len * sz)%nat)%Z by lia.
+        iExists _. iFrame "↦tl". iPureIntro. lia. }
+      rewrite vec_to_list_snoc big_sepL_app big_sepL_singleton. iSplitL "↦tys".
+      + iStopProof. do 6 f_equiv. apply ty_own_depth_mono. lia.
+      + iExists _. iSplitL "↦new".
+        * rewrite vec_to_list_length Nat.add_0_r shift_loc_assoc. iFrame.
+        * iApply ty_own_depth_mono; [|done]. lia.
+    - do 2 wp_op. wp_bind (new _). iApply wp_new; [lia|done|]. iIntros "!>% [† ↦l]".
+      have ->: ∀sz: nat, ((len + 1) * sz)%Z = len * sz + sz by lia.
+      rewrite Nat2Z.id. wp_let. do 2 wp_op. wp_bind (memcpy _).
+      rewrite repeat_app heap_mapsto_vec_app. iDestruct "↦l" as "[↦l ↦new]".
+      rewrite repeat_length trans_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦o tys]".
+      iDestruct (big_sepL_ty_own_length with "tys") as %Lwll.
+      iApply (wp_memcpy with "[$↦l $↦o]"); [rewrite repeat_length; lia|lia|].
+      iIntros "!>[↦l ↦o]". wp_seq. do 2 wp_op. rewrite -Nat2Z.inj_mul. wp_bind (memcpy _).
+      iApply (wp_memcpy with "[$↦new $↦x]"); [by rewrite repeat_length|lia|].
+      iIntros "!>[↦new ↦x]". wp_seq. wp_write. do 2 (wp_op; wp_write). iApply "ToΦ".
+      iSplitR "↦x"; last first. { iExists _. by iFrame. }
+      rewrite split_mt_smallvec. iExists _, _, _, 0, (vsnoc _ _).
+      rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
+      iFrame "↦₀ ↦₁ ↦₂ ↦₃"=>/=. iSplit.
+      { iPureIntro. fun_ext=> ?. by rewrite vec_to_list_snoc lapply_app. }
+      iExists (_++_). rewrite EqLen app_length heap_mapsto_vec_app shift_loc_assoc.
+      iFrame "↦o". rewrite Lwll. iFrame "↦tl". rewrite Nat.add_comm Nat.add_0_r.
+      iFrame "†". iSplit; [done|]. iSplitL; last first.
+      { iExists []. by rewrite heap_mapsto_vec_nil. }
+      rewrite vec_to_list_snoc big_sepL_app big_sepL_singleton. iSplitL "tys ↦l".
+      + rewrite trans_big_sepL_mt_ty_own. iExists _. iFrame "↦l". iStopProof.
+        do 3 f_equiv. apply ty_own_depth_mono. lia.
+      + iExists _. rewrite Nat.add_0_r vec_to_list_length. iFrame "↦new".
+        iApply ty_own_depth_mono; [|done]. lia.
+  Qed.
+
+  Definition smallvec_push {𝔄} n (ty: type 𝔄) : val :=
+    fn: ["v"; "x"] :=
+      let: "v'" := !"v" in delete [ #1; "v"];;
+      smallvec_push_core n ty ["v'"; "x"];;
+      delete [ #ty.(ty_size); "x"];;
+      let: "r" := new [ #0] in return: ["r"].
+
+  Lemma smallvec_push_type {𝔄} n (ty: type 𝔄) :
+    typed_val (smallvec_push n ty) (fn<α>(∅; &uniq{α} (smallvec n ty), ty) → ())
+      (λ post '-[(al, al'); a], al' = al ++ [a] → post ()).
+Proof.
+    eapply type_fn; [apply _|]=> α ??[v[x[]]]. simpl_subst.
+    iIntros (?(pπ & bπ &[])?) "#LFT #TIME #PROPH #UNIQ #E Na L C /=(v & x &_) #Obs".
+    rewrite !tctx_hasty_val. iDestruct "v" as ([|dv]) "[_ v]"=>//.
+    case v as [[|v|]|]=>//. iDestruct "v" as "[(%vl & >↦v & [#LftIn uniq]) †v]".
     case vl as [|[[|v'|]|][]]; try by iDestruct "uniq" as ">[]".
-    rewrite heap_mapsto_vec_singleton.  wp_read. wp_let. wp_bind (delete _).
-    rewrite -heap_mapsto_vec_singleton freeable_sz_full.
-    iApply (wp_delete with "[$↦ $†]"); [done|]. iIntros "!>_".
-    iDestruct "uniq" as (du ξi [? Eq2]) "[Vo Bor]". move: Eq2. set ξ := PrVar _ ξi=> Eq2.
+    iDestruct "x" as ([|dx]) "[⧖x x]"=>//. case x as [[|x|]|]=>//=.
+    iDestruct "x" as "[↦ty †x]". rewrite heap_mapsto_vec_singleton. wp_read.
+    iDestruct "uniq" as (du ξi [? Eq2]) "[Vo Bor]".
+    move: Eq2. set ξ := PrVar _ ξi=> Eq2.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-    iMod (bor_acc_cons with "LFT Bor α") as "[(%&%& #⧖u & Pc & ↦vec) ToBor]"; [done|].
-    set bor_body := (∃ vπ' d', ⧖(S d') ∗ .PC[ξ] vπ' d' ∗ (∃ vl : list val, v' ↦∗ vl ∗ ty_own (smallvec n ty) vπ' d' tid vl))%I.
+    iMod (bor_acc with "LFT Bor α") as "[(%&%& ⧖u & Pc & ↦sv) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
-    rewrite split_mt_smallvec. case du as [|du]=>//.
-    iDestruct "↦vec" as (tag ? len ex aπl Eq1) "(↦ & ↦tys)".
-    rewrite !heap_mapsto_vec_cons shift_loc_assoc. iDestruct "↦" as "(↦₀ & ↦l & ↦len & ↦ex)".
-    wp_read. wp_let. set push := (rec: "push" _ := _)%E.
-    iAssert ( v' ↦ #false  -∗ (v' +ₗ 1) ↦∗: ty_own (vec_ty ty) (fst ∘ vπ) (S du) tid -∗ 
-      (∃ wl : list val, ⌜length wl = (n * ty_size ty)%nat⌝ ∗ (v' +ₗ 4) ↦∗ wl) -∗
-      .PC[ξ] (fst ∘ vπ) (S du) -∗ .VO[ξ] (fst ∘ vπ) (S du) -∗
-      (cctx_interp tid postπ [k ◁cont{[_], (λ v : vec val 1, +[vhd v ◁ box ()])} tr_ret]) -∗
-      na_own tid ⊤ -∗
-      (q'.[α] ={⊤}=∗ llctx_interp [ ϝ ⊑ₗ []] 1)%I -∗
-      tctx_elt_interp tid (x ◁ box ty) aπ -∗
-      (∀ Q : iPropI Σ, ▷ (▷ Q ={↑lft_userN}=∗ ▷ bor_body) -∗ ▷ Q ={⊤}=∗ &{α} Q ∗ q'.[α]) -∗
-      WP push [] {{ _, cont_postcondition }})%I with "[]" as "push".
-    { iIntros "↦₀ ↦vec ↦tl Pc Vo C Na ToL Tx ToBor". rewrite /push. wp_rec.
-      iMod ("ToBor" $! (bor_cnts (vec_ty ty) (fst ∘ vπ) ξi (S du) _ (v' +ₗ 1))
-        with "[↦₀ ↦tl] [↦vec Pc]") as "[o tok]".
-      { iIntros "!> Hvec !>". rewrite /bor_cnts. iDestruct "Hvec" as (vπ' d') "(? & ? & Hvals)". rewrite /bor_body.
-        iExists vπ', d'. iFrame. iDestruct "Hvals" as (vl) "(>v1 & Hvec)".
-        case d' as [|d]=>//=; [by iMod ("Hvec") as "?"|]. iNext.
-        iDestruct "Hvec" as (????) "([-> %] & ?)". iDestruct "↦tl" as (?) "(% & ↦tl)".
-        iCombine "↦₀ v1" as "↦v". iCombine "↦v ↦tl" as "↦v".
-        rewrite -heap_mapsto_vec_cons -heap_mapsto_vec_app.
-        iExists _. iFrame.   iExists false, _, _, _, _, _. by iFrame. } 
-      { iExists (fst ∘ vπ), (S du). iFrame "# Pc".
-        iDestruct "↦vec" as (vl) "(? & v)". iExists vl. iFrame. 
-        iDestruct "v" as (????) "(? & ? & ?)". iExists _, _, _, _. iFrame.  }
-      iMod ("ToL" with "tok") as "L".
-      iAssert (tctx_elt_interp tid (#v' +ₗ #1 ◁ &uniq{α} (vec_ty ty)) vπ ) with "[o Vo]" as "te".
-      { iExists _, _. iFrame "# ∗". iSplitR; [done|]. iExists _, ξi. by iFrame. }
-      iApply (type_type +[_; _] -[_; _] with "[] LFT TIME PROPH UNIQ E Na L C [$Tx $te]").
-      - iApply type_val; [apply vec_push_type|]. intro_subst.
-        iApply type_new; [done|]. intro_subst. iApply type_assign; [solve_typing..|].
-        iApply (type_letcall α); [solve_typing|solve_extract|solve_typing|]. intro_subst.
-        iApply type_jump; [solve_typing| solve_extract| solve_typing].
-      - by iApply (proph_obs_impl with "Obs").
-    }
-    rewrite /push. wp_let. wp_if. case tag.
-    { iDestruct "↦tys" as "(Z & ↦vec)". iDestruct "↦vec" as (tl) "(% & ↦tl)".
-      set vπ' := λ π, (lapply (vsnoc aπl aπ) π, π ξ).
-      wp_op. wp_read. wp_let. do 2 wp_op. wp_if. case_eq (bool_decide (len + 1 ≤ n)%Z) => LenN.
-      { iClear "push". assert (len + 1 ≤ n). { case_bool_decide; lia. }
-        rewrite tctx_hasty_val. iDestruct "x" as ([|dx]) "[⧖x x]"=>//. case x as [[|x|]|]=>//.
-        do 3 wp_op. wp_bind (_ <-{_} !_)%E. iApply (wp_persistent_time_receipt with "TIME ⧖x"); [done|].
-        assert (length tl = ty_size ty + (n - len - 1) * ty_size ty) as Len. 
-        { rewrite -Nat.sub_add_distr Nat.mul_sub_distr_r Nat.add_sub_assoc; [lia|]. by apply Nat.mul_le_mono_r. }
-        move: {Len}(app_length_ex tl _ _ Len)=> [vl'[z[->[Len K]]]].
-        rewrite heap_mapsto_vec_app shift_loc_assoc_nat Len -Nat2Z.inj_mul.
-        iDestruct "↦tl" as "[↦ ↦tl]". iDestruct "x" as "[(%& ↦x & ty) †x]". iDestruct (ty_size_eq with "ty") as %Sz.
-        iApply (wp_memcpy with "[$↦ $↦x]") ; [lia..|].
-        iIntros "!> [↦ ↦x] ⧖x". iCombine "⧖u ⧖x" as "#⧖"=>/=. set d := du `max` dx.
-        wp_seq. wp_op. wp_op. wp_write.
-        iAssert (∃ vl, (v' +ₗ 4 +ₗ[ty] (length aπl)) ↦∗ vl ∗ ty_own ty aπ d tid vl)%I with "[ty ↦]" as "ty_vec".
-        { iExists vl. rewrite vec_to_list_length. iFrame. iApply (ty_own_depth_mono with "[$]"); lia. }
-        iMod (uniq_update ξ (fst ∘ vπ') with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
-        iMod ("ToBor" $! bor_body with "[] [Pc ↦₀ ↦l ↦len ty_vec Z ↦tl ↦ex]") as "[? tok]".
-        { by iIntros "!> $". }
-        { iExists _, (S d). iFrame "# ∗". iCombine "↦₀ ↦l ↦len ↦ex" as "↦v" .
-          rewrite -shift_loc_assoc Nat2Z.inj_add Nat2Z.inj_mul -!shift_loc_assoc  -!heap_mapsto_vec_cons.
-          rewrite split_mt_smallvec. iExists true, l, _, ex, (aπl +++ [#aπ]). iFrame. iSplitR.
-          { iPureIntro. fun_ext. rewrite /vπ' /= => ?. rewrite vec_to_list_app vec_to_list_snoc lapply_app //=. }
-          iSplitL "↦v"; [by rewrite !Nat2Z.inj_add Nat2Z.inj_succ Nat2Z.inj_0 Z.one_succ|]. 
-          rewrite vec_to_list_app. iSplitL "ty_vec Z". 
-          { rewrite big_sepL_snoc Nat2Z.inj_mul. iFrame. iNext. iClear "#". iStopProof. do 6 f_equiv. apply ty_own_depth_mono. lia. }
-          iExists z. rewrite shift_loc_assoc !Nat2Z.inj_mul -Z.mul_succ_l -Z.add_1_r.
-          rewrite  Nat2Z.inj_add Nat2Z.inj_succ Nat2Z.inj_0 -Z.one_succ. iFrame.
-          iPureIntro. rewrite K -Nat.mul_add_distr_r -Nat.sub_add_distr Nat.add_sub_assoc; lia.                     
-        }
-        iMod ("ToL" with "tok L") as "L".
-        iApply (type_type +[#v' ◁ &uniq{α} (smallvec n ty)] -[vπ'] with "[] LFT TIME PROPH UNIQ E Na L C [-] []").
-        - iApply type_new; [done|]. intro_subst. iApply type_jump; [solve_typing|solve_extract|solve_typing].
-        - rewrite /= right_id (tctx_hasty_val #_). iExists _.
-          iFrame "⧖ LftIn". iExists (S d), ξi.
-          rewrite /uniq_body /bor_body /vπ' /ξ (proof_irrel (prval_to_inh (𝔄 := listₛ _) (fst ∘ vπ)) (prval_to_inh (𝔄 := listₛ _) (fst ∘ vπ'))).
-          iSplitR. iSplit; [done|]. iPureIntro. fun_ext => ? //=. iFrame.
-          - iApply proph_obs_impl;[|done] => π //=.
-        move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=. case (vπ π)=>/= ??->-> Imp Eq.
-        apply Imp. move: Eq. by rewrite vec_to_list_snoc lapply_app.
-      }
-      { wp_op. wp_bind (new _). iApply wp_new; [lia| done|].
-      iIntros "!>" (?) "[†' ↦']". wp_let. wp_op. wp_op.  wp_bind (memcpy _).
-      rewrite trans_big_sepL_mt_ty_own. iDestruct "Z" as (?) "[↦ tys]".  iDestruct (big_sepL_ty_own_length with "tys") as %Len.
-      iApply (wp_memcpy with "[$↦' $↦]"); [rewrite repeat_length; lia|lia|].
-      iIntros "!>[↦' ↦]". wp_seq. wp_op. rewrite -Nat2Z.inj_mul.
-      wp_write. wp_op. iDestruct "↦ex" as "(↦ex & ↦ε)". rewrite !shift_loc_assoc.  wp_write.
-      wp_write. iApply ( "push" with "[$]  [tys †' ↦' ↦l ↦ex ↦ε ↦len] [↦tl ↦] [$] [$] [$] [$] [ToL L] [$] ToBor").
-        { iExists [_; _; _]. iClear "push". rewrite !heap_mapsto_vec_cons -!shift_loc_assoc. iFrame.
-          iExists _, _, 0,_. iSplitR; [done|].  
-          rewrite trans_big_sepL_mt_ty_own Nat.add_0_r Nat2Z.id. iFrame. iSplitL. 
-          - iExists _. iFrame.
-          - iExists [].  rewrite heap_mapsto_vec_nil //=. }
-        { iExists (concat wll ++ tl). rewrite heap_mapsto_vec_app app_length Len -!shift_loc_assoc. by iFrame. } 
-        { iIntros. iApply ("ToL" with "[$] [$]"). } } }
-    { iDestruct "↦tys" as (wl) "(% & ↦tl & proph & a)".
-        iApply ( "push" with "[$] [↦l ↦len ↦ex proph a] [↦tl] [$] [$] [$] [$] [ToL L] [$] ToBor").    
-        { iExists [_; _; _]. rewrite !heap_mapsto_vec_cons -!shift_loc_assoc. iFrame. iExists _, _, _, _. by iFrame. }
-        { iExists wl. by iFrame. }
-        { iIntros "?". iApply ("ToL" with "[$] [$]"). }
-    }
+    wp_bind (delete _). rewrite -heap_mapsto_vec_singleton freeable_sz_full.
+    iApply (wp_delete with "[$↦v $†v]"); [done|]. iCombine "⧖u ⧖x" as "#⧖".
+    iIntros "!>_". wp_seq. wp_bind (smallvec_push_core _ _ _).
+    iApply (wp_smallvec_push_core with "[$↦sv $↦ty]").
+    iIntros "!>[↦sv (%& %Lvl & ↦x)]". wp_seq. rewrite freeable_sz_full.
+    wp_bind (delete _). iApply (wp_delete with "[$↦x †x]"); [lia|by rewrite Lvl|].
+    iIntros "!>_". wp_seq. set pπ' := λ π, ((pπ π).1 ++ [bπ π], π ξ).
+    iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
+    iMod ("ToBor" with "[Pc ↦sv]") as "[Bor α]". { iExists _, _. iFrame "⧖ Pc ↦sv". }
+    iMod ("ToL" with "α L") as "L".
+    iApply (type_type +[#v' ◁ &uniq{α} (smallvec n ty)] -[pπ']
+      with "[] LFT TIME PROPH UNIQ E Na L C [-] []").
+    - iApply type_new; [done|]. intro_subst.
+      iApply type_jump; [solve_typing|solve_extract|solve_typing].
+    - rewrite/= right_id (tctx_hasty_val #_). iExists _.
+      iFrame "⧖ LftIn". iExists _, _. rewrite /uniq_body.
+      rewrite (proof_irrel (@prval_to_inh (listₛ 𝔄) (fst ∘ pπ'))
+        (@prval_to_inh (listₛ 𝔄) (fst ∘ pπ))). by iFrame.
+    - iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq2 π)=>/=.
+      by case (pπ π)=>/= ??->.
   Qed.
 End smallvec_push.
