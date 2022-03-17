@@ -336,13 +336,11 @@ Section cell.
     iIntros (?[vπ[]]?) "LFT _ PROPH UNIQ E Na L C /=[x _] Obs".
     rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[_ box]"=>//.
     case x as [[|x|]|]=>//. iDestruct "box" as "[(%& ↦x & [_ uniq]) †x]".
-    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (?) "[†r ↦r]".
-    wp_seq. case vl as [|[[]|][]]=>//.
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]". wp_seq. case vl as [|[[]|][]]=>//.
     iDestruct "uniq" as (? i [? Eq']) "[Vo Bor]". set ξ := PrVar _ i.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
-    iMod (bor_acc with "LFT Bor α") as "[big Toα]"; [done|]. wp_bind (delete _).
-    rewrite freeable_sz_full. iApply (wp_delete with "[$↦x $†x]"); [done|].
-    iIntros "!> _". do 3 wp_seq.
+    iMod (bor_acc with "LFT Bor α") as "[big Toα]"; [done|]. rewrite freeable_sz_full.
+    wp_apply (wp_delete with "[$↦x $†x]"); [done|]. iIntros "_". do 3 wp_seq.
     iDestruct "big" as (??) "(_& Pc &%& ↦ &%&%&%&->& Obs' & #⧖ & ty)".
     iDestruct (uniq_agree with "Vo Pc") as %[Eq <-].
     iMod (uniq_update ξ (const Φ) with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].

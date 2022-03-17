@@ -36,9 +36,9 @@ Section smallvec_pop.
     rewrite tctx_hasty_val. iDestruct "v" as ([|]) "[_ v]"=>//.
     case v as [[|v|]|]=>//. iDestruct "v" as "[(%vl & >↦ & [#LftIn uniq]) †]".
     case vl as [|[[|v'|]|][]]; try by iDestruct "uniq" as ">[]".
-    rewrite heap_mapsto_vec_singleton. wp_read. wp_let. wp_bind (delete _).
+    rewrite heap_mapsto_vec_singleton. wp_read. wp_let.
     rewrite -heap_mapsto_vec_singleton freeable_sz_full.
-    iApply (wp_delete with "[$↦ $†]"); [done|]. iIntros "!>_".
+    wp_apply (wp_delete with "[$↦ $†]"); [done|]. iIntros "_".
     iDestruct "uniq" as (d ξi [? Eq2]) "[Vo Bor]". move: Eq2. set ξ := PrVar _ ξi=> Eq2.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc with "LFT Bor α") as "[(%&%& #⧖ & Pc & big) ToBor]"; [done|].

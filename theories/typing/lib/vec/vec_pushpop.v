@@ -37,11 +37,11 @@ Section vec_pushpop.
     wp_bind (delete _). rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     iApply (wp_persistent_time_receipt with "TIME ⧖x"); [done|].
     iApply (wp_delete with "[$↦v $†v]"); [done|]. iIntros "!>_ ⧖x".
-    iCombine "⧖u ⧖x" as "#⧖". wp_seq. wp_bind (vec_push_core _ _).
-    iApply (wp_vec_push_core with "[↦l ↦tys ↦ex † ↦ty]"). { iExists _, _. iFrame. }
-    iIntros "!>(%&%& ↦ & ↦tys & ↦ex & † & (%& %Len & ↦x))". wp_seq.
-    rewrite freeable_sz_full. wp_bind (delete _).
-    iApply (wp_delete with "[$↦x †x]"); [lia|by rewrite Len|]. iIntros "!>_".
+    iCombine "⧖u ⧖x" as "#⧖". wp_seq.
+    wp_apply (wp_vec_push_core with "[↦l ↦tys ↦ex † ↦ty]"). { iExists _, _. iFrame. }
+    iIntros "(%&%& ↦ & ↦tys & ↦ex & † & (%& %Len & ↦x))". wp_seq.
+    rewrite freeable_sz_full.
+    wp_apply (wp_delete with "[$↦x †x]"); [lia|by rewrite Len|]. iIntros "_".
     wp_seq. set vπ' := λ π, (lapply (vsnoc aπl bπ) π, π ξ).
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     iMod ("ToBor" with "[↦ ↦tys ↦ex † Pc]") as "[Bor α]".
@@ -112,7 +112,7 @@ Section vec_pushpop.
     iDestruct (big_sepL_vinitlast with "↦tys") as "[↦tys (%vl & ↦last & ty)]"=>/=.
     set vπ' := λ π, (lapply (vinit aπl) π, π ξ).
     wp_op. wp_let. wp_op. wp_write. do 2 wp_op. wp_read. wp_op. wp_write.
-    wp_bind (new _). iApply wp_new; [lia|done|]. iIntros "!>" (r) "[†r ↦r]". wp_let.
+    wp_apply wp_new; [lia|done|]. iIntros (r) "[†r ↦r]". wp_let.
     rewrite Nat2Z.id /= heap_mapsto_vec_cons. have ->: (S len - 1)%Z = len by lia.
     iDestruct "↦r" as "[↦r ↦r']". iDestruct (ty_size_eq with "ty") as %Eqvl.
     wp_write. wp_op. wp_read. do 2 wp_op. rewrite -Nat2Z.inj_mul.

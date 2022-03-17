@@ -30,9 +30,6 @@ Notation "if@ b 'then' P 'else' Q" := (choice b P Q) (at level 200,
 Section smallvec.
   Context `{!typeG Σ}.
 
-  Global Instance loc_inhabited : Inhabited loc := populate (inhabitant, inhabitant).
-  Definition any_loc: loc := inhabitant.
-
   Lemma split_mt_smallvec {𝔄} (ty: type 𝔄) k l' tid d alπ Φ :
     (l' ↦∗: (λ vl,
       ∃(b: bool) (l: loc) (len ex: nat) wl (aπl: vec (proph 𝔄) len),

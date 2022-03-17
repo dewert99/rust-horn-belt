@@ -169,15 +169,13 @@ Section mutex.
     iIntros (?[?[]]?) "_ _ _ _ _ Na L C /=[x _] #Obs".
     rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[#⧖ box]"=>//.
     case x as [[|x|]|]=>//=. iDestruct "box" as "[(%& >↦x & ty) †x]".
-    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!> % [†m ↦m]".
+    wp_apply wp_new; [done..|]. iIntros (?) "[†m ↦m]".
     iDestruct (ty_size_eq with "ty") as %Szvl.
-    rewrite Nat2Z.id /= heap_mapsto_vec_cons. iDestruct "↦m" as "[↦b ↦m]".
-    wp_let. wp_op. wp_bind (_ <-{_} !_)%E.
-    iApply (wp_memcpy with "[$↦m $↦x]"); [by rewrite repeat_length|lia|].
-    iIntros "!> [↦m ↦x]". wp_seq. wp_op. rewrite shift_loc_0. wp_rec. wp_write.
-    wp_bind (delete _). iApply (wp_delete with "[$↦x †x]"); [lia| |].
-    { by rewrite freeable_sz_full Szvl. }
-    iIntros "!>_". do 3 wp_seq. rewrite cctx_interp_singleton.
+    rewrite Nat2Z.id /= heap_mapsto_vec_cons. iDestruct "↦m" as "[↦b ↦m]". wp_let.
+    wp_op. wp_apply (wp_memcpy with "[$↦m $↦x]"); [by rewrite repeat_length|lia|].
+    iIntros "[↦m ↦x]". wp_seq. wp_op. rewrite shift_loc_0. wp_rec. wp_write.
+    wp_apply (wp_delete with "[$↦x †x]"); [lia| |]. { by rewrite freeable_sz_full Szvl. }
+    iIntros "_". do 3 wp_seq. rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[const Φ] with "Na L [-] []"); last first.
     { by iApply proph_obs_impl; [|done]=>/= ?[_ ?]. }
     rewrite/= right_id (tctx_hasty_val #_). iExists _. iFrame "⧖".
@@ -200,16 +198,14 @@ Section mutex.
     eapply type_fn; [apply _|]=>/= _ ??[m[]]. simpl_subst.
     iIntros (?[?[]]?) "_ _ _ _ _ Na L C /=[m _] Obs". rewrite tctx_hasty_val.
     iDestruct "m" as ([|]) "[_ box]"=>//. case m as [[|m|]|]=>//=.
-    rewrite split_mt_mutex. iDestruct "box" as "[↦mtx †m]". wp_bind (new _).
-    iApply wp_new; [lia|done|]. rewrite Nat2Z.id. iIntros "!>% [†x ↦x]". wp_let.
-    iDestruct "↦mtx" as (????->) "(↦b & Obs' & ⧖ &%& ↦m & ty)".
-    iCombine "Obs Obs'" as "#?". iDestruct (ty_size_eq with "ty") as %Szvl.
-    wp_op. wp_bind (_ <-{_} !_)%E.
-    iApply (wp_memcpy with "[$↦x $↦m]"); [|lia|]. { by rewrite repeat_length. }
-    iIntros "!> [↦x ↦m]". wp_seq. wp_bind (delete _).
-    iApply (wp_delete (_::_) with "[↦b ↦m †m]"); swap 1 2.
+    rewrite split_mt_mutex. iDestruct "box" as "[↦mtx †m]".
+    wp_apply wp_new; [lia|done|]. rewrite Nat2Z.id. iIntros (?) "[†x ↦x]".
+    wp_let. iDestruct "↦mtx" as (????->) "(↦b & Obs' & ⧖ &%& ↦m & ty)".
+    iCombine "Obs Obs'" as "#?". iDestruct (ty_size_eq with "ty") as %Szvl. wp_op.
+    wp_apply (wp_memcpy with "[$↦x $↦m]"); [|lia|]. { by rewrite repeat_length. }
+    iIntros "[↦x ↦m]". wp_seq. wp_apply (wp_delete (_::_) with "[↦b ↦m †m]"); swap 1 2.
     { rewrite heap_mapsto_vec_cons freeable_sz_full -Szvl. iFrame. } { simpl. lia. }
-    iIntros "!>_". do 3 wp_seq. rewrite cctx_interp_singleton.
+    iIntros "_". do 3 wp_seq. rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[_] with "Na L [-]"); last first.
     { iApply proph_obs_impl; [|done]=>/= ?[Imp ?]. by apply Imp. }
     rewrite/= right_id (tctx_hasty_val #_). iExists _. iFrame "⧖".

@@ -100,7 +100,7 @@ Section smallvec_basic.
   Definition smallvec_new {𝔄} n (ty: type 𝔄): val :=
     fn: [] :=
       let: "r" := new [ #((4 + n * ty.(ty_size))%nat)] in
-      "r" <- #true;; "r" +ₗ #1 <- #any_loc;;
+      "r" <- #true;; "r" +ₗ #1 <- #(inhabitant: loc);;
       "r" +ₗ #2 <- #0;; "r" +ₗ #3 <- #0;;
       return: ["r"].
 
@@ -117,10 +117,10 @@ Section smallvec_basic.
     do 3 (wp_op; wp_write). do 2 wp_seq. rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[const []] with "Na L [-Obs] Obs"). iSplit; [|done].
     iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full.
-    iFrame "†". iNext. iExists (_::_::_::_::_).
-    rewrite !heap_mapsto_vec_cons !shift_loc_assoc. iFrame "↦₀ ↦₁ ↦₂ ↦₃ ↦ex".
-    iExists true, _, 0, 0, (repeat _ _), [#]. rewrite/= repeat_length.
-    iSplit; [done|]. by iExists [#], _=>/=.
+    iFrame "†". iNext. rewrite split_mt_smallvec. iExists true, _, 0, 0, [#].
+    rewrite/= !heap_mapsto_vec_cons !shift_loc_assoc heap_mapsto_vec_nil.
+    iFrame "↦₀ ↦₁ ↦₂ ↦₃". do 2 (iSplit; [done|]). iExists _. iFrame.
+    by rewrite repeat_length.
   Qed.
 
   Definition smallvec_delete {𝔄} n (ty: type 𝔄) : val :=
@@ -147,14 +147,13 @@ Section smallvec_basic.
     - rewrite trans_big_sepL_mt_ty_own.
       iDestruct "big" as "[(%wll & ↦ar & tys) (%wl' & -> & ↦ex)]".
       iDestruct (big_sepL_ty_own_length with "tys") as %<-. rewrite -app_length.
-      wp_bind (delete _).
-      iApply (wp_delete (_::_::_::_::_) with "[↦₀ ↦₁ ↦₂ ↦₃ ↦ar ↦ex †]"); [done|..].
+      wp_apply (wp_delete (_::_::_::_::_) with "[↦₀ ↦₁ ↦₂ ↦₃ ↦ar ↦ex †]"); [done|..].
       { rewrite !heap_mapsto_vec_cons heap_mapsto_vec_app !shift_loc_assoc
           freeable_sz_full. iFrame. }
-      iIntros "!>_". wp_seq. iMod persistent_time_receipt_0 as "⧖".
+      iIntros "_". wp_seq. iMod persistent_time_receipt_0 as "⧖".
       wp_bind Skip. iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
-      wp_seq. iIntros "⧖". wp_seq. wp_bind (new _). iApply wp_new; [done..|].
-      iIntros "!>" (?) "[† ↦]". rewrite cctx_interp_singleton.
+      wp_seq. iIntros "⧖". wp_seq. wp_apply wp_new; [done..|].
+      iIntros (?) "[† ↦]". rewrite cctx_interp_singleton.
       iApply ("C" $! [# #_] -[const ()] with "Na L [-Obs] Obs"). iSplit; [|done].
       rewrite tctx_hasty_val. iExists _. iFrame "⧖". iSplit; [|done]. iNext.
       iExists _. iFrame "↦". by rewrite unit_ty_own.
@@ -163,15 +162,14 @@ Section smallvec_basic.
       iDestruct (big_sepL_ty_own_length with "tys") as %Eq'.
       do 2 (wp_op; wp_read). do 3 wp_op. wp_read.
       rewrite -Nat2Z.inj_add -Nat2Z.inj_mul !Nat.mul_add_distr_r -Eq -Eq' -app_length.
-      wp_bind (delete _). iApply (wp_delete (_++_) with "[↦ar ↦ex †']"); [done|..].
-      { rewrite heap_mapsto_vec_app. iFrame. }
-      iIntros "!>_". wp_seq. wp_bind (delete _).
-      iApply (wp_delete (_::_::_::_::_) with "[↦₀ ↦₁ ↦₂ ↦₃ ↦tl †]"); [done| |].
+      wp_apply (wp_delete (_++_) with "[↦ar ↦ex †']"); [done|..].
+      { rewrite heap_mapsto_vec_app. iFrame. } iIntros "_". wp_seq.
+      wp_apply (wp_delete (_::_::_::_::_) with "[↦₀ ↦₁ ↦₂ ↦₃ ↦tl †]"); [done| |].
       { rewrite !heap_mapsto_vec_cons !shift_loc_assoc freeable_sz_full. iFrame. }
-      iIntros "!>_". wp_seq. iMod persistent_time_receipt_0 as "⧖".
+      iIntros "_". wp_seq. iMod persistent_time_receipt_0 as "⧖".
       wp_bind Skip. iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
-      wp_seq. iIntros "⧖". wp_seq. wp_bind (new _). iApply wp_new; [done..|].
-      iIntros "!>" (?) "[† ↦]". rewrite cctx_interp_singleton.
+      wp_seq. iIntros "⧖". wp_seq. wp_apply wp_new; [done..|].
+      iIntros (?) "[† ↦]". rewrite cctx_interp_singleton.
       iApply ("C" $! [# #_] -[const ()] with "Na L [-Obs] Obs"). iSplit; [|done].
       rewrite tctx_hasty_val. iExists _. iFrame "⧖". iSplit; [|done]. iNext.
       iExists _. iFrame "↦". by rewrite unit_ty_own.

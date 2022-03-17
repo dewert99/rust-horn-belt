@@ -31,7 +31,7 @@ Section smallvec_index.
     rewrite !tctx_hasty_val.
     iDestruct "v" as ([|d]) "[⧖ v]"=>//. case v as [[|v|]|]=>//=.
     iDestruct "i" as ([|]) "[_ i]"=>//. case i as [[|i|]|]=>//=.
-    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>% [†r ↦r]". wp_let.
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]". wp_let.
     iDestruct "v" as "[(%vl & ↦v & svec) †v]". move: d=> [|d]//=.
     case vl as [|[[]|][]]=>//. iDestruct "svec" as (?????->) "[Bor tys]".
     iDestruct "i" as "[(%& ↦i & (%&->&->)) †i]"=>/=.
@@ -42,9 +42,8 @@ Section smallvec_index.
     - wp_read. wp_op. wp_read. do 2 wp_op. wp_write.
       iMod ("Toα" with "[$↦₀ $↦₁ $↦₂ $↦₃]") as "α". iMod ("ToL" with "α L") as "L".
       do 2 rewrite -heap_mapsto_vec_singleton freeable_sz_full.
-      wp_bind (delete _). iApply (wp_delete with "[$↦v $†v]"); [done|].
-      iIntros "!> _". wp_seq. wp_bind (delete _).
-      iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!> _". do 3 wp_seq.
+      wp_apply (wp_delete with "[$↦v $†v]"); [done|]. iIntros "_". wp_seq.
+      wp_apply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "_". do 3 wp_seq.
       iMod (proph_obs_sat with "PROPH Obs") as %(?& inat &?&->& Lkup &_); [done|].
       move: Lkup. rewrite -vec_to_list_apply -vlookup_lookup'. move=> [In _].
       set ifin := nat_to_fin In. have Eqi: inat = ifin by rewrite fin_to_nat_to_fin.
@@ -60,9 +59,8 @@ Section smallvec_index.
     - wp_read. wp_op. do 2 wp_read. do 2 wp_op. wp_write.
       iMod ("Toα" with "[$↦₀ $↦₁ $↦₂ $↦₃]") as "α". iMod ("ToL" with "α L") as "L".
       do 2 rewrite -heap_mapsto_vec_singleton freeable_sz_full.
-      wp_bind (delete _). iApply (wp_delete with "[$↦v $†v]"); [done|].
-      iIntros "!> _". wp_seq. wp_bind (delete _).
-      iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!> _". do 3 wp_seq.
+      wp_apply (wp_delete with "[$↦v $†v]"); [done|]. iIntros "_". wp_seq.
+      wp_apply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "_". do 3 wp_seq.
       iMod (proph_obs_sat with "PROPH Obs") as %(?& inat &?&->& Lkup &_); [done|].
       move: Lkup. rewrite -vec_to_list_apply -vlookup_lookup'. move=> [In _].
       set ifin := nat_to_fin In. have Eqi: inat = ifin by rewrite fin_to_nat_to_fin.
@@ -88,7 +86,7 @@ Section smallvec_index.
     rewrite !tctx_hasty_val.
     iDestruct "v" as ([|d]) "[#⧖ v]"=>//. case v as [[|v|]|]=>//=.
     iDestruct "i" as ([|]) "[_ i]"=>//. case i as [[|i|]|]=>//=.
-    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>% [†r ↦r]".
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]".
     iDestruct "v" as "[(%vl & ↦v & #In & uniq) †v]". case vl as [|[[]|][]]=>//=.
     iDestruct "i" as "[(%& ↦i & (%&->&->)) †i]". rewrite !heap_mapsto_vec_singleton.
     iDestruct "uniq" as (d' ξi [Le Eq2]) "[Vo Bor]". set ξ := PrVar _ ξi.
@@ -104,9 +102,8 @@ Section smallvec_index.
     do 2 wp_read. case b; wp_case.
     - iDestruct "big" as "[↦tys ↦tl]". wp_read. wp_op. wp_read. do 2 wp_op. wp_write.
       do 2 rewrite -{1}heap_mapsto_vec_singleton. rewrite !freeable_sz_full.
-      wp_bind (delete _). iApply (wp_delete with "[$↦v $†v]"); [done|].
-      iIntros "!>_". wp_seq. wp_bind (delete _).
-      iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!>_". wp_seq.
+      wp_apply (wp_delete with "[$↦v $†v]"); [done|]. iIntros "_". wp_seq.
+      wp_apply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "_". wp_seq.
       iMod (proph_obs_sat with "PROPH Obs") as %(?& Obs); [done|].
       move: Obs=> [inat[?[->[+ _]]]]. rewrite -vec_to_list_apply -vlookup_lookup'.
       move=> [In _]. rewrite -Nat2Z.inj_mul. set ifin := nat_to_fin In.
@@ -165,11 +162,9 @@ Section smallvec_index.
         iStopProof. do 6 f_equiv; [|iApply ty_own_depth_mono; lia]. do 2 f_equiv. lia.
     - iDestruct "big" as "(↦tl & ↦tys & ex†)". wp_read. wp_op. do 2 wp_read.
       do 2 wp_op. wp_write. do 2 rewrite -{1}heap_mapsto_vec_singleton.
-      rewrite !freeable_sz_full. wp_bind (delete _).
-      iApply (wp_delete with "[$↦v $†v]"); [done|].
-      iIntros "!>_". wp_seq. wp_bind (delete _).
-      iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!>_". wp_seq.
-      iMod (proph_obs_sat with "PROPH Obs") as %(?& Obs); [done|].
+      rewrite !freeable_sz_full. wp_apply (wp_delete with "[$↦v $†v]"); [done|].
+      iIntros "_". wp_seq. wp_apply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "_".
+      wp_seq. iMod (proph_obs_sat with "PROPH Obs") as %(?& Obs); [done|].
       move: Obs=> [inat[?[->[+ _]]]]. rewrite -vec_to_list_apply -vlookup_lookup'.
       move=> [In _]. rewrite -Nat2Z.inj_mul. set ifin := nat_to_fin In.
       have Eqi: inat = ifin by rewrite fin_to_nat_to_fin.

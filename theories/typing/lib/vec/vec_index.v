@@ -25,7 +25,7 @@ Section vec_index.
     rewrite !tctx_hasty_val.
     iDestruct "v" as ([|d]) "[⧖ v]"=>//. case v as [[|v|]|]=>//=.
     iDestruct "i" as ([|]) "[_ i]"=>//. case i as [[|i|]|]=>//=.
-    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>% [†r ↦r]".
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]".
     iDestruct "v" as "[(%vl & ↦v & vec) †v]". move: d=> [|d]//=.
     case vl as [|[[]|][]]=>//=. move: d=> [|d]//=.
     iDestruct "vec" as (??? aπl ->) "[Bor tys]".
@@ -36,9 +36,8 @@ Section vec_index.
     iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)". wp_let. do 3 wp_read. do 2 wp_op. wp_write.
     iMod ("Toα" with "[$↦₀ $↦₁ $↦₂]") as "α". iMod ("ToL" with "α L") as "L".
     do 2 rewrite -heap_mapsto_vec_singleton freeable_sz_full.
-    wp_bind (delete _). iApply (wp_delete with "[$↦v $†v]"); [done|].
-    iIntros "!> _". wp_seq. wp_bind (delete _).
-    iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!> _". do 3 wp_seq.
+    wp_apply (wp_delete with "[$↦v $†v]"); [done|]. iIntros "_". wp_seq.
+    wp_apply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "_". do 3 wp_seq.
     iMod (proph_obs_sat with "PROPH Obs") as %(?& inat &?&->& Lkup &_); [done|].
     move: Lkup. rewrite -vec_to_list_apply -vlookup_lookup'. move=> [In _].
     set ifin := nat_to_fin In. have Eqi: inat = ifin by rewrite fin_to_nat_to_fin.
@@ -64,7 +63,7 @@ Section vec_index.
     rewrite !tctx_hasty_val.
     iDestruct "v" as ([|d]) "[#⧖ v]"=>//. case v as [[|v|]|]=>//=.
     iDestruct "i" as ([|]) "[_ i]"=>//. case i as [[|i|]|]=>//=.
-    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>% [†r ↦r]".
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]".
     iDestruct "v" as "[(%vl & ↦v & #In & uniq) †v]". case vl as [|[[]|][]]=>//=.
     iDestruct "i" as "[(%& ↦i & (%&->&->)) †i]". rewrite !heap_mapsto_vec_singleton.
     iDestruct "uniq" as (d' ξi [Le Eq2]) "[Vo Bor]". set ξ := PrVar _ ξi.
@@ -78,8 +77,8 @@ Section vec_index.
     have ->: vπ = λ π, (lapply aπl π: list _, π ξ).
     { rewrite [vπ]surjective_pairing_fun. by rewrite Eq1 Eq2. }
     do 3 wp_read. do 2 wp_op. wp_write. do 2 rewrite -{1}heap_mapsto_vec_singleton.
-    rewrite !freeable_sz_full. wp_bind (delete _).
-    iApply (wp_delete with "[$↦v $†v]"); [done|]. iIntros "!>_". wp_seq.
+    rewrite !freeable_sz_full.
+    wp_apply (wp_delete with "[$↦v $†v]"); [done|]. iIntros "_". wp_seq.
     wp_bind (delete _). iApply (wp_cumulative_time_receipt with "TIME"); [done|].
     iApply (wp_delete with "[$↦i $†i]"); [done|]. iIntros "!>_ ⧗". wp_seq.
     iMod (proph_obs_sat with "PROPH Obs") as %(?& Obs); [done|].

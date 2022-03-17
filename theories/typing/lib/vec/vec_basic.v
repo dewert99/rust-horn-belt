@@ -87,7 +87,7 @@ Section vec_basic.
   Proof.
     eapply type_fn; [apply _|]=> _ ???. simpl_subst.
     iIntros (???) "_ #TIME _ _ _ Na L C _ Obs".
-    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>" (r).
+    wp_apply wp_new; [done..|]. iIntros (r).
     rewrite !heap_mapsto_vec_cons shift_loc_assoc. iIntros "[† (↦₀ & ↦₁ & ↦₂ &_)]".
     wp_seq. iMod persistent_time_receipt_0 as "⧖". wp_bind (new _).
     iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
@@ -124,16 +124,15 @@ Section vec_basic.
     iDestruct "big" as "((%& ↦old & tys) & (%& %Eq & ↦ex) & †')".
     iDestruct (big_sepL_ty_own_length with "tys") as %Eq'.
     rewrite -Nat2Z.inj_add -Nat2Z.inj_mul !Nat.mul_add_distr_r -Eq -Eq' -app_length.
-    wp_bind (delete _). iApply (wp_delete (_++_) with "[↦old ↦ex †']"); [done|..].
+    wp_apply (wp_delete (_++_) with "[↦old ↦ex †']"); [done|..].
     { rewrite heap_mapsto_vec_app app_length. iFrame. }
-    iIntros "!>_". wp_seq. wp_bind (delete _).
-    iApply (wp_delete [_;_;_] with "[↦₀ ↦₁ ↦₂ †]"); [done| |].
+    iIntros "_". wp_seq. wp_apply (wp_delete [_;_;_] with "[↦₀ ↦₁ ↦₂ †]"); [done| |].
     { rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil
         freeable_sz_full. iFrame. }
-    iIntros "!>_". wp_seq. iMod persistent_time_receipt_0 as "⧖".
+    iIntros "_". wp_seq. iMod persistent_time_receipt_0 as "⧖".
     wp_bind Skip. iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
-    wp_seq. iIntros "⧖". wp_seq. wp_bind (new _). iApply wp_new; [done..|].
-    iIntros "!>" (?) "[† ↦]". rewrite cctx_interp_singleton.
+    wp_seq. iIntros "⧖". wp_seq. wp_apply wp_new; [done..|].
+    iIntros (?) "[† ↦]". rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[const ()] with "Na L [-Obs] Obs"). iSplit; [|done].
     rewrite tctx_hasty_val. iExists _. iFrame "⧖". iSplit; [|done]. iNext.
     iExists _. iFrame "↦". by rewrite unit_ty_own.

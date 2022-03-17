@@ -205,10 +205,10 @@ Section mutexguard.
     iDestruct "↦mtx" as (?) "(↦m &%&%&>->& ? & ? & #At)". wp_read. wp_let.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     wp_apply (acquire_spec with "[] α"). { by iApply (mutex_acc with "LFT At"). }
-    iIntros "[Bor α]". wp_seq. wp_bind (new _). iApply wp_new; [done..|].
-    iIntros "!>% [†g ↦g]". wp_let. rewrite heap_mapsto_vec_singleton. wp_write.
-    wp_bind (delete _). rewrite -heap_mapsto_vec_singleton freeable_sz_full.
-    iApply (wp_delete with "[$↦m $†m]"); [done|]. iIntros "!>_". do 3 wp_seq.
+    iIntros "[Bor α]". wp_seq. wp_apply wp_new; [done..|]. iIntros (?) "[†g ↦g]".
+    wp_let. rewrite heap_mapsto_vec_singleton. wp_write.
+    rewrite -heap_mapsto_vec_singleton freeable_sz_full.
+    wp_apply (wp_delete with "[$↦m $†m]"); [done|]. iIntros "_". do 3 wp_seq.
     iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[_] with "Na L [-] Obs").
     rewrite/= right_id (tctx_hasty_val #_). iExists _. iSplit; [done|].
@@ -256,7 +256,7 @@ Section mutexguard.
     iMod (bor_sep_persistent with "LFT Bor α") as "(#β⊑κ & Bor & α)"; [done|].
     do 2 (iMod (bor_sep with "LFT Bor") as "[_ Bor]"; [done|]).
     iMod (bor_unnest with "LFT Bor") as "Bor"; [done|]. wp_let. iMod "Bor".
-    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>% [†r ↦r]".
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]".
     set κ' := _ ⊓ α. iAssert (α ⊑ κ')%I as "#α⊑κ'".
     { iApply lft_incl_glb; [|iApply lft_incl_refl]. iApply lft_incl_trans; [|done].
       iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_l. }
@@ -343,7 +343,7 @@ Section mutexguard.
     iIntros "α". wp_seq. iMod ("ToL" with "α L") as "L". wp_bind (delete _).
     rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     iApply (wp_delete with "[$↦g $†g]"); [done|]. iIntros "!>_". do 3 wp_seq.
-    wp_bind (new _). iApply wp_new; [done..|]. iIntros "!>% [†r ↦r]".
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]".
     rewrite cctx_interp_singleton. iApply ("C" $! [# #_] -[_] with "Na L [-] Obs").
     rewrite/= right_id (tctx_hasty_val #_). iExists _. iSplit; [done|].
     rewrite -freeable_sz_full. iFrame "†r". iNext. iExists _. iFrame "↦r".

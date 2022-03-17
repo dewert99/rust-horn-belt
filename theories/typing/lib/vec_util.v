@@ -62,15 +62,15 @@ Section vec_util.
         iStopProof. do 3 f_equiv. apply ty_own_depth_mono. lia.
       - rewrite big_sepL_singleton. iExists _. rewrite Nat.add_0_r vec_to_list_length.
         iFrame "↦new". iApply ty_own_depth_mono; [|done]. lia. }
-    rewrite plus_0_r. wp_op. wp_write. do 3 wp_op. wp_bind (new _).
-    iApply wp_new; [lia|done|]. iIntros "!> % [†' ↦l']". wp_let.
+    rewrite plus_0_r. wp_op. wp_write. do 3 wp_op.
+    wp_apply wp_new; [lia|done|]. iIntros (?) "[†' ↦l']". wp_let.
     have ->: ∀sz: nat, ((2 * len + 1) * sz)%Z = len * sz + (sz + len * sz) by lia.
     rewrite Nat2Z.id !repeat_app !heap_mapsto_vec_app !repeat_length shift_loc_assoc_nat.
     iDestruct "↦l'" as "(↦l' & ↦new & ↦ex')".
-    iDestruct (big_sepL_ty_own_length with "tys") as %Lwll. wp_op. wp_bind (memcpy _).
-    iApply (wp_memcpy with "[$↦l' $↦l]"); [rewrite repeat_length; lia|lia|].
-    iIntros "!>[↦l' ↦l]". wp_seq. wp_op. rewrite -Nat2Z.inj_mul. wp_bind (delete _).
-    iApply (wp_delete with "[$↦l †]"); [lia|by rewrite Lwll|]. iIntros "!>_".
+    iDestruct (big_sepL_ty_own_length with "tys") as %Lwll. wp_op.
+    wp_apply (wp_memcpy with "[$↦l' $↦l]"); [rewrite repeat_length; lia|lia|].
+    iIntros "[↦l' ↦l]". wp_seq. wp_op. rewrite -Nat2Z.inj_mul.
+    wp_apply (wp_delete with "[$↦l †]"); [lia|by rewrite Lwll|]. iIntros "_".
     wp_seq. wp_write. do 2 wp_op. rewrite -Nat2Z.inj_mul.
     iApply (wp_memcpy with "[$↦new $↦x]"); [by rewrite repeat_length|lia|].
     iIntros "!> [↦new ↦x]". iApply "ToΦ". iExists _, _.

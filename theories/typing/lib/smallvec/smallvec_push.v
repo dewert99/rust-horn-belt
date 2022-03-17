@@ -67,16 +67,16 @@ Section smallvec_push.
       + iExists _. iSplitL "↦new".
         * rewrite vec_to_list_length Nat.add_0_r shift_loc_assoc. iFrame.
         * iApply ty_own_depth_mono; [|done]. lia.
-    - do 2 wp_op. wp_bind (new _). iApply wp_new; [lia|done|]. iIntros "!>% [† ↦l]".
+    - do 2 wp_op. wp_apply wp_new; [lia|done|]. iIntros (?) "[† ↦l]".
       have ->: ∀sz: nat, ((len + 1) * sz)%Z = len * sz + sz by lia.
-      rewrite Nat2Z.id. wp_let. do 2 wp_op. wp_bind (memcpy _).
+      rewrite Nat2Z.id. wp_let. do 2 wp_op.
       rewrite repeat_app heap_mapsto_vec_app. iDestruct "↦l" as "[↦l ↦new]".
       rewrite repeat_length trans_big_sepL_mt_ty_own. iDestruct "↦tys" as (?) "[↦o tys]".
       iDestruct (big_sepL_ty_own_length with "tys") as %Lwll.
-      iApply (wp_memcpy with "[$↦l $↦o]"); [rewrite repeat_length; lia|lia|].
-      iIntros "!>[↦l ↦o]". wp_seq. do 2 wp_op. rewrite -Nat2Z.inj_mul. wp_bind (memcpy _).
-      iApply (wp_memcpy with "[$↦new $↦x]"); [by rewrite repeat_length|lia|].
-      iIntros "!>[↦new ↦x]". wp_seq. wp_write. do 2 (wp_op; wp_write).
+      wp_apply (wp_memcpy with "[$↦l $↦o]"); [rewrite repeat_length; lia|lia|].
+      iIntros "[↦l ↦o]". wp_seq. do 2 wp_op. rewrite -Nat2Z.inj_mul.
+      wp_apply (wp_memcpy with "[$↦new $↦x]"); [by rewrite repeat_length|lia|].
+      iIntros "[↦new ↦x]". wp_seq. wp_write. do 2 (wp_op; wp_write).
       iApply "ToΦ". iSplitR "↦x"; last first. { iExists _. by iFrame. }
       rewrite split_mt_smallvec. iExists _, _, _, 0, (vsnoc _ _).
       rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
@@ -116,13 +116,13 @@ Proof.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc with "LFT Bor α") as "[(%&%& ⧖u & Pc & ↦sv) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
-    wp_bind (delete _). rewrite -heap_mapsto_vec_singleton freeable_sz_full.
-    iApply (wp_delete with "[$↦v $†v]"); [done|]. iCombine "⧖u ⧖x" as "#⧖".
-    iIntros "!>_". wp_seq. wp_bind (smallvec_push_core _ _ _).
-    iApply (wp_smallvec_push_core with "[$↦sv $↦ty]").
-    iIntros "!>[↦sv (%& %Lvl & ↦x)]". wp_seq. rewrite freeable_sz_full.
-    wp_bind (delete _). iApply (wp_delete with "[$↦x †x]"); [lia|by rewrite Lvl|].
-    iIntros "!>_". wp_seq. set pπ' := λ π, ((pπ π).1 ++ [bπ π], π ξ).
+    rewrite -heap_mapsto_vec_singleton freeable_sz_full.
+    wp_apply (wp_delete with "[$↦v $†v]"); [done|]. iIntros "_".
+    iCombine "⧖u ⧖x" as "#⧖". wp_seq.
+    wp_apply (wp_smallvec_push_core with "[$↦sv $↦ty]").
+    iIntros "[↦sv (%& %Lvl & ↦x)]". wp_seq. rewrite freeable_sz_full.
+    wp_apply (wp_delete with "[$↦x †x]"); [lia|by rewrite Lvl|]. iIntros "_".
+    wp_seq. set pπ' := λ π, ((pπ π).1 ++ [bπ π], π ξ).
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     iMod ("ToBor" with "[Pc ↦sv]") as "[Bor α]". { iExists _, _. iFrame "⧖ Pc ↦sv". }
     iMod ("ToL" with "α L") as "L".
