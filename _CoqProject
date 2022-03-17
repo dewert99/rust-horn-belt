@@ -94,6 +94,7 @@ theories/typing/lib/smallvec/smallvec_basic.v
 theories/typing/lib/smallvec/smallvec_slice.v
 theories/typing/lib/smallvec/smallvec_index.v
 theories/typing/lib/smallvec/smallvec_push.v
+theories/typing/lib/smallvec/smallvec_pop.v
 # theories/typing/lib/fake_shared.v
 theories/typing/lib/cell.v
 theories/typing/lib/spawn.v
