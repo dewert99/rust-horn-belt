@@ -163,7 +163,7 @@ Section smallvec_index.
         setoid_rewrite shift_loc_assoc. iSplitL "↦ty".
         { iStopProof. do 3 f_equiv. iApply ty_own_depth_mono. lia. }
         iStopProof. do 6 f_equiv; [|iApply ty_own_depth_mono; lia]. do 2 f_equiv. lia.
-    - iDestruct "big" as (??) "(↦tl & ↦tys & ex†)". wp_read. wp_op. do 2 wp_read.
+    - iDestruct "big" as "(↦tl & ↦tys & ex†)". wp_read. wp_op. do 2 wp_read.
       do 2 wp_op. wp_write. do 2 rewrite -{1}heap_mapsto_vec_singleton.
       rewrite !freeable_sz_full. wp_bind (delete _).
       iApply (wp_delete with "[$↦v $†v]"); [done|].
@@ -219,9 +219,8 @@ Section smallvec_index.
           by iApply proph_eqz_vinsert. }
         rewrite split_mt_smallvec. iExists false, _, _, _, _=>/=.
         rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
-        iFrame "↦₀ ↦₁ ↦₂ ↦₃ ex†". iSplit; [by rewrite vec_to_list_apply|].
-        iClear "#". iExists _. iFrame "↦tl". iSplit; [done|].
-        rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iSplitL "↦tys".
+        iFrame "↦₀ ↦₁ ↦₂ ↦₃ ↦tl ex†". iSplit; [by rewrite vec_to_list_apply|].
+        iClear "#". rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iSplitL "↦tys".
         { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
         setoid_rewrite shift_loc_assoc. iSplitL "↦ty".
         { iStopProof. do 3 f_equiv. iApply ty_own_depth_mono. lia. }

@@ -47,19 +47,19 @@ Section smallvec.
         ([∗ list] i ↦ aπ ∈ aπl, (l' +ₗ 4 +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) ∗
         ∃wl', ⌜k = (len * ty.(ty_size) + length wl')%nat⌝ ∗ (l' +ₗ 4 +ₗ[ty] len) ↦∗ wl'
       else (* vector mode *)
-        ∃wl, ⌜length wl = k⌝ ∗ (l' +ₗ 4) ↦∗ wl ∗ Φ l len ex aπl.
+        (∃wl, ⌜length wl = k⌝ ∗ (l' +ₗ 4) ↦∗ wl) ∗ Φ l len ex aπl.
   Proof.
     iSplit.
     - iIntros "(%& ↦ & big)". iDestruct "big" as (b ?????(->&?&?)) "big".
       iExists _, _, _, _, _. iSplit; [done|].
       rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
-      iDestruct "↦" as "($&$&$&$& ↦)". case b; [|iExists _; by iFrame].
-      iDestruct "big" as (??->) "tys/=".
+      iDestruct "↦" as "($&$&$&$& ↦)". case b=>/=; last first.
+      { iFrame "big". iExists _. by iFrame. } iDestruct "big" as (??->) "tys/=".
       iDestruct (big_sepL_ty_own_length with "tys") as %<-.
       rewrite heap_mapsto_vec_app trans_big_sepL_mt_ty_own shift_loc_assoc.
       iDestruct "↦" as "[? ↦ex]". iSplitR "↦ex"; iExists _; iFrame.
       by rewrite -app_length.
-    - iDestruct 1 as (b ?????) "(↦hd & big)". case b.
+    - iDestruct 1 as (b ?????) "(↦hd & big)". case b=>/=.
       + rewrite trans_big_sepL_mt_ty_own.
         iDestruct "big" as "[(%wll & ↦ar & tys) (%wl' &->& ↦ex)]".
         iDestruct (big_sepL_ty_own_length with "tys") as %Eqsz.
@@ -68,10 +68,10 @@ Section smallvec.
         iDestruct "↦hd" as "($&$&$&$&_)". iFrame "↦ar ↦ex".
         iExists true, _, _, _, _, _. iSplit; [by rewrite -app_length|].
         iExists _, _. by iFrame.
-      + iDestruct "big" as (?<-) "[↦tl ?]". iExists ([_;_;_;_]++_).
+      + iDestruct "big" as "[(%&%&↦tl) ?]". iExists ([_;_;_;_]++_).
         rewrite !heap_mapsto_vec_cons !shift_loc_assoc.
         iDestruct "↦hd" as "($&$&$&$&_)". iFrame "↦tl".
-        iExists false, _, _, _, _, _. by iFrame.
+        iExists false, _, _, _, _, _=>/=. by iFrame.
   Qed.
 
   (* For simplicity, it always has the location and capacity *)
@@ -123,9 +123,7 @@ Section smallvec.
       iMod (ty_share_big_sepL with "LFT In Bor κ") as "Toshrs"; [done|].
       iApply (step_fupdN_wand with "Toshrs"). iIntros "!> >[?$] !>".
       iExists true, _, _, _, _. by iFrame.
-    - iMod (bor_exists with "LFT Bor") as (?) "Bor"; [done|].
-      iMod (bor_sep_persistent with "LFT Bor κ") as "(_ & Bor & κ)"; [done|].
-      iMod (bor_sep with "LFT Bor") as "[_ Bor]"; [done|].
+    - iMod (bor_sep with "LFT Bor") as "[_ Bor]"; [done|].
       iMod (bor_sep with "LFT Bor") as "[Bor _]"; [done|].
       iMod (ty_share_big_sepL with "LFT In Bor κ") as "Toshrs"; [done|].
       iApply (step_fupdN_wand with "Toshrs"). iIntros "!> >[?$] !>".
@@ -165,5 +163,4 @@ Section smallvec.
 
   Global Instance smallvec_ne {𝔄} n : NonExpansive (@smallvec 𝔄 n).
   Proof. solve_ne_type. Qed.
-
 End smallvec.

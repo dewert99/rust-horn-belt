@@ -158,8 +158,8 @@ Section smallvec_basic.
       iApply ("C" $! [# #_] -[const ()] with "Na L [-Obs] Obs"). iSplit; [|done].
       rewrite tctx_hasty_val. iExists _. iFrame "⧖". iSplit; [|done]. iNext.
       iExists _. iFrame "↦". by rewrite unit_ty_own.
-    - iDestruct "big" as (? <-) "big". rewrite trans_big_sepL_mt_ty_own.
-      iDestruct "big" as "(↦tl & (%& ↦ar & tys) & (%& %Eq & ↦ex) & †')".
+    - rewrite trans_big_sepL_mt_ty_own.
+      iDestruct "big" as "((%&<-& ↦tl) & (%& ↦ar & tys) & (%& %Eq & ↦ex) & †')".
       iDestruct (big_sepL_ty_own_length with "tys") as %Eq'.
       do 2 (wp_op; wp_read). do 3 wp_op. wp_read.
       rewrite -Nat2Z.inj_add -Nat2Z.inj_mul !Nat.mul_add_distr_r -Eq -Eq' -app_length.

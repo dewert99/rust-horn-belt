@@ -76,7 +76,7 @@ Section smallvec_slice.
           iApply proph_eqz_constr. iApply (proph_eqz_prvars with "Eqzs"). }
         rewrite split_mt_smallvec. iExists true, _, _, _, _=>/=.
         rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc. by iFrame.
-    - iDestruct "big" as (??) "(↦tl & ↦tys & †)". wp_op. wp_read. wp_write. do 2 wp_seq.
+    - iDestruct "big" as "(↦tl & ↦tys & †)". wp_op. wp_read. wp_write. do 2 wp_seq.
       iMod ("ToBor" $! (big_sepL _ _) with "[↦₀ ↦₁ ↦₂ ↦₃ ↦tl † ToPc] [↦tys Pcs]")
         as "[Bor α]"; last first.
       + iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
@@ -99,7 +99,6 @@ Section smallvec_slice.
         { iApply "ToPc". rewrite -!vec_to_list_apply.
           iApply proph_eqz_constr. iApply (proph_eqz_prvars with "Eqzs"). }
         rewrite split_mt_smallvec. iExists false, _, _, _, _=>/=.
-        rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
-        iFrame "↦₀ ↦₁ ↦₂ ↦₃ †". iSplit; [done|]. iExists _. by iFrame.
+        rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc. by iFrame.
   Qed.
 End smallvec_slice.

@@ -42,8 +42,7 @@ Section smallvec_pop.
     iDestruct "uniq" as (d ξi [? Eq2]) "[Vo Bor]". move: Eq2. set ξ := PrVar _ ξi=> Eq2.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc with "LFT Bor α") as "[(%&%& #⧖ & Pc & big) ToBor]"; [done|].
-    wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
-    rewrite split_mt_smallvec.
+    wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-]. rewrite split_mt_smallvec.
     iDestruct "big" as (?? len ex aπl Eq1) "(↦ & big)".
     rewrite !heap_mapsto_vec_cons !shift_loc_assoc.
     iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ & ↦₃ &_)". wp_op. wp_read. wp_let.
@@ -106,7 +105,7 @@ Section smallvec_pop.
         { inv_vec aπl=> + aπl'. by elim aπl'=>/= *. }
         have ->: removelast (lapply aπl π) = lapply (vinit aπl) π.
         { inv_vec aπl=> + aπl'. elim aπl'; [done|]=>/= *. by f_equal. } done.
-    - iDestruct "big" as (??) "(↦tl & ↦tys & (%&% & ↦ex) & †)".
+    - iDestruct "big" as "(↦tl & ↦tys & (%&% & ↦ex) & †)".
       iDestruct (big_sepL_vinitlast with "↦tys") as "[↦tys (%& ↦last & ty)]"=>/=.
       iDestruct (ty_size_eq with "ty") as %Lvl. do 2 wp_op. wp_read. wp_op.
       wp_write. have ->: (ex + 1)%Z = S ex by lia. do 2 wp_op. wp_read.
@@ -117,10 +116,9 @@ Section smallvec_pop.
       { iNext. iExists _, _. iFrame "⧖ Pc". rewrite split_mt_smallvec.
         iExists _, _, _, _, _.
         rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
-        iFrame "↦₀ ↦₁ ↦₂ ↦₃ ↦tys". iSplit; [done|]. iExists _. iFrame "↦tl".
-        iSplit; [done|]. have ->: len + S ex = S (len + ex) by lia. iFrame "†".
-        iExists (_++_). rewrite heap_mapsto_vec_app. iFrame "↦last".
-        rewrite shift_loc_assoc_nat app_length Nat.add_comm Lvl.
+        iFrame "↦₀ ↦₁ ↦₂ ↦₃ ↦tl ↦tys". have ->: len + S ex = S (len + ex) by lia.
+        iFrame "†". iSplit; [done|]. iExists (_++_). rewrite heap_mapsto_vec_app.
+        iFrame "↦last". rewrite shift_loc_assoc_nat app_length Nat.add_comm Lvl.
         iFrame. iPureIntro=>/=. lia. }
       iMod ("ToL" with "α L") as "L".
       iApply (type_type +[#v' ◁ &uniq{α} (smallvec n ty); #r ◁ box (option_ty ty)]

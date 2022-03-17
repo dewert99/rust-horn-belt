@@ -35,7 +35,7 @@ Section smallvec_push.
     rewrite split_mt_smallvec. iDestruct "big" as (b ? len ??->) "(↦ & big)".
     rewrite heap_mapsto_vec_cons. iDestruct "↦" as "[↦₀ ↦']". wp_rec. wp_read.
     wp_if. case b=>/=; last first.
-    { iDestruct "big" as (??) "(↦tl & ↦tys & ↦ex & †)". wp_op.
+    { iDestruct "big" as "((%&%& ↦tl) & ↦tys & ↦ex & †)". wp_op.
       iApply (wp_vec_push_core with "[↦' ↦tys ↦ex † ↦x ty]").
       { iExists _, _. iFrame "↦' † ↦ex ↦tys". iExists _. iFrame. }
       iIntros "!> (%&%& ↦' & ↦tys & ↦ex & † & ↦x)". iApply "ToΦ". iFrame "↦x".
@@ -82,10 +82,10 @@ Section smallvec_push.
       rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
       iFrame "↦₀ ↦₁ ↦₂ ↦₃"=>/=. iSplit.
       { iPureIntro. fun_ext=> ?. by rewrite vec_to_list_snoc lapply_app. }
-      iExists (_++_). rewrite EqLen app_length heap_mapsto_vec_app shift_loc_assoc.
-      iFrame "↦o". rewrite Lwll. iFrame "↦tl". rewrite Nat.add_comm Nat.add_0_r.
-      iFrame "†". iSplit; [done|]. iSplitL; last first.
-      { iExists []. by rewrite heap_mapsto_vec_nil. }
+      rewrite Nat.add_comm Nat.add_0_r. iFrame "†". iSplitL "↦o ↦tl".
+      { iExists (_++_). rewrite EqLen app_length heap_mapsto_vec_app shift_loc_assoc.
+        iFrame "↦o". rewrite Lwll. by iFrame "↦tl". }
+      iSplitL; last first. { iExists []. by rewrite heap_mapsto_vec_nil. }
       rewrite vec_to_list_snoc big_sepL_app big_sepL_singleton. iSplitL "tys ↦l".
       + rewrite trans_big_sepL_mt_ty_own. iExists _. iFrame "↦l". iStopProof.
         do 3 f_equiv. apply ty_own_depth_mono. lia.
