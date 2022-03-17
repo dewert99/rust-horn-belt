@@ -12,8 +12,7 @@ Section vec_pushpop.
   Definition vec_push {𝔄} (ty: type 𝔄) : val :=
     fn: ["v"; "x"] :=
       let: "v'" := !"v" in delete [ #1; "v"];;
-      vec_push_core ty ["v'"; "x"];;
-      delete [ #ty.(ty_size); "x"];;
+      vec_push_core ty ["v'"; "x"];; delete [ #ty.(ty_size); "x"];;
       let: "r" := new [ #0] in return: ["r"].
 
   Lemma vec_push_type {𝔄} (ty: type 𝔄) :
@@ -40,9 +39,8 @@ Section vec_pushpop.
     iCombine "⧖u ⧖x" as "#⧖". wp_seq.
     wp_apply (wp_vec_push_core with "[↦l ↦tys ↦ex † ↦ty]"). { iExists _, _. iFrame. }
     iIntros "(%&%& ↦ & ↦tys & ↦ex & † & (%& %Len & ↦x))". wp_seq.
-    rewrite freeable_sz_full.
-    wp_apply (wp_delete with "[$↦x †x]"); [lia|by rewrite Len|]. iIntros "_".
-    wp_seq. set vπ' := λ π, (lapply (vsnoc aπl bπ) π, π ξ).
+    rewrite freeable_sz_full. wp_apply (wp_delete with "[$↦x †x]"); [lia|by rewrite Len|].
+    iIntros "_". wp_seq. set vπ' := λ π, (lapply (vsnoc aπl bπ) π, π ξ).
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
     iMod ("ToBor" with "[↦ ↦tys ↦ex † Pc]") as "[Bor α]".
     { iNext. iExists _, _. rewrite split_mt_vec. iFrame "⧖ Pc".
@@ -146,7 +144,6 @@ Section vec_pushpop.
       have ->: last_error (lapply aπl π) = Some (vlast aπl π).
       { inv_vec aπl=> + aπl'. by elim aπl'=>/= *. }
       have ->: removelast (lapply aπl π) = lapply (vinit aπl) π.
-      { inv_vec aπl=> + aπl'. elim aπl'; [done|]=>/= *. by f_equal. }
-      done.
+      { inv_vec aπl=> + aπl'. elim aπl'; [done|]=>/= *. by f_equal. } done.
   Qed.
 End vec_pushpop.
