@@ -133,7 +133,7 @@ End fix_defs.
 Import fix_defs.
 Global Notation fix_ty := fix_ty.
 
-Section lemmas.
+Section fix_ty.
   Context `{!typeG Σ}.
 
   Lemma fix_unfold_fold {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T} E L :
@@ -244,9 +244,9 @@ Section lemmas.
     - move=> *. etrans; [apply conv_compl|].
       etrans; [|symmetry; apply conv_compl]. by apply Hne.
   Qed.
-End lemmas.
+End fix_ty.
 
-Section lemmas.
+Section fix_ty.
   Context `{!typeG Σ} {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T}.
 
   Global Instance fix_copy :
@@ -302,9 +302,9 @@ Section lemmas.
       apply limit_preserving_entails; [done|]=> ??? Eq;
       do 3 f_equiv; [apply Eq|]; do 5 f_equiv); [|do 2 f_equiv]; apply Eq.
   Qed.
-End lemmas.
+End fix_ty.
 
-Section subtyping.
+Section fix_subtyping.
   Context `{!typeG Σ}.
 
   Local Lemma wand_forall P (Φ: nat → iProp Σ) : (∀n, P -∗ Φ n) ⊢ (P -∗ ∀n, Φ n).
@@ -390,7 +390,7 @@ Section subtyping.
   Proof.
     move=> ?. eapply (eqtype_trans _ _ _ id id); [|done]. apply fix_unfold_fold.
   Qed.
-End subtyping.
+End fix_subtyping.
 
 Global Hint Resolve fix_subtype_l fix_subtype_r fix_eqtype_l fix_eqtype_r | 100
   : lrust_typing.

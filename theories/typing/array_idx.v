@@ -5,7 +5,7 @@ Set Default Proof Using "Type".
 
 Implicit Type 𝔄: syn_type.
 
-Section lemmas.
+Section array_idx.
   Context `{!typeG Σ}.
 
   (** * Owning Pointers *)
@@ -267,7 +267,7 @@ Section lemmas.
     iApply type_let; [by apply type_idx_uniq_array_instr|solve_typing| |done].
     move: Ex=> [Htrx _]?. apply Htrx. by case=> [?[??]].
   Qed.
-End lemmas.
+End array_idx.
 
 Global Hint Resolve tctx_extract_split_own_array
   tctx_extract_idx_shr_array tctx_extract_split_uniq_array | 5 : lrust_typing.

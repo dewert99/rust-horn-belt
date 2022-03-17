@@ -230,7 +230,7 @@ Notation "⟨ π , φ ⟩" := (proph_obs (λ π, φ%type%stdpp))
 
 (** * Iris Lemmas *)
 
-Section lemmas.
+Section proph.
 Context `{!invG Σ, !prophG Σ}.
 
 (** Instances *)
@@ -419,7 +419,7 @@ Proof.
   iMod (proph_obs_sat with "PROPH Obs") as %[? Ex]; [done|]. by apply Neg in Ex.
 Qed.
 
-End lemmas.
+End proph.
 
 Global Opaque proph_ctx proph_tok proph_obs.
 
@@ -430,7 +430,7 @@ Definition proph_eqz `{!invG Σ, !prophG Σ} {A} (uπ vπ: proph A) : iProp Σ :
 
 Notation "uπ :== vπ" := (proph_eqz uπ vπ) (at level 70, format "uπ  :==  vπ") : bi_scope.
 
-Section lemmas.
+Section proph_eqz.
 Context `{!invG Σ, !prophG Σ}.
 
 (** ** Constructing Prophecy Equalizers *)
@@ -499,4 +499,4 @@ Proof.
   iIntros "Eqz". rewrite !vapply_insert_backmid.
   iApply (proph_eqz_constr3 with "[] Eqz []"); iApply proph_eqz_refl.
 Qed.
-End lemmas.
+End proph_eqz.
