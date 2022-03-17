@@ -21,7 +21,7 @@ Section vec_pushpop.
       (λ post '-[(al, al'); a], al' = al ++ [a] → post ()).
   Proof.
     eapply type_fn; [apply _|]=> α ??[v[x[]]]. simpl_subst.
-    iIntros (tid (vπ & bπ &[]) ?) "#LFT #TIME #PROPH #UNIQ #E Na L C /=(v & x &_) #Obs".
+    iIntros (?(vπ & bπ &[]) ?) "#LFT #TIME #PROPH #UNIQ #E Na L C /=(v & x &_) #Obs".
     rewrite !tctx_hasty_val. iDestruct "v" as ([|dv]) "[_ v]"=>//.
     case v as [[|v|]|]=>//. iDestruct "v" as "[(%vl & >↦v & [#LftIn uniq]) †v]".
     case vl as [|[[|v'|]|][]]; try by iDestruct "uniq" as ">[]".
@@ -33,7 +33,7 @@ Section vec_pushpop.
     iMod (bor_acc with "LFT Bor α") as "[(%&%& ⧖u & Pc & ↦vec) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_mt_vec. case du as [|du]=>//=.
-    iDestruct "↦vec" as (? len ex aπl Eq1) "(↦l & ↦tys & ↦ex & †)".
+    iDestruct "↦vec" as (??? aπl Eq1) "(↦l & ↦tys & ↦ex & †)".
     wp_bind (delete _). rewrite -heap_mapsto_vec_singleton freeable_sz_full.
     iApply (wp_persistent_time_receipt with "TIME ⧖x"); [done|].
     iApply (wp_delete with "[$↦v $†v]"); [done|]. iIntros "!>_ ⧖x".

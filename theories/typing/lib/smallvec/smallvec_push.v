@@ -45,8 +45,8 @@ Section smallvec_push.
       by rewrite vec_to_list_snoc lapply_app. }
     rewrite !heap_mapsto_vec_cons !shift_loc_assoc. iDestruct "↦'" as "(↦₁ & ↦₂ & ↦₃ &_)".
     iDestruct "big" as "[↦tys (%wl & %EqLen & ↦tl)]".
-    wp_op. wp_read. wp_let. do 2 wp_op. wp_write. have ->: (len + 1)%Z = S len by lia.
-    do 2 wp_op. wp_if. case Cmp: (bool_decide _).
+    wp_op. wp_read. wp_let. do 2 wp_op. wp_write.
+    have ->: (len + 1)%Z = S len by lia. do 2 wp_op. wp_if. case Cmp: (bool_decide _).
     - move: Cmp=>/bool_decide_eq_true ?. do 3 wp_op. rewrite -Nat2Z.inj_mul.
       have Lwl: length wl = ty.(ty_size) + (n - S len) * ty.(ty_size).
       { rewrite Nat.mul_sub_distr_r Nat.add_sub_assoc; [lia|].
@@ -76,8 +76,8 @@ Section smallvec_push.
       iApply (wp_memcpy with "[$↦l $↦o]"); [rewrite repeat_length; lia|lia|].
       iIntros "!>[↦l ↦o]". wp_seq. do 2 wp_op. rewrite -Nat2Z.inj_mul. wp_bind (memcpy _).
       iApply (wp_memcpy with "[$↦new $↦x]"); [by rewrite repeat_length|lia|].
-      iIntros "!>[↦new ↦x]". wp_seq. wp_write. do 2 (wp_op; wp_write). iApply "ToΦ".
-      iSplitR "↦x"; last first. { iExists _. by iFrame. }
+      iIntros "!>[↦new ↦x]". wp_seq. wp_write. do 2 (wp_op; wp_write).
+      iApply "ToΦ". iSplitR "↦x"; last first. { iExists _. by iFrame. }
       rewrite split_mt_smallvec. iExists _, _, _, 0, (vsnoc _ _).
       rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
       iFrame "↦₀ ↦₁ ↦₂ ↦₃"=>/=. iSplit.
@@ -111,8 +111,8 @@ Proof.
     case vl as [|[[|v'|]|][]]; try by iDestruct "uniq" as ">[]".
     iDestruct "x" as ([|dx]) "[⧖x x]"=>//. case x as [[|x|]|]=>//=.
     iDestruct "x" as "[↦ty †x]". rewrite heap_mapsto_vec_singleton. wp_read.
-    iDestruct "uniq" as (du ξi [? Eq2]) "[Vo Bor]".
-    move: Eq2. set ξ := PrVar _ ξi=> Eq2.
+    iDestruct "uniq" as (du ξi [? Eq]) "[Vo Bor]".
+    move: Eq. set ξ := PrVar _ ξi=> Eq.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc with "LFT Bor α") as "[(%&%& ⧖u & Pc & ↦sv) ToBor]"; [done|].
     wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
@@ -134,7 +134,7 @@ Proof.
       iFrame "⧖ LftIn". iExists _, _. rewrite /uniq_body.
       rewrite (proof_irrel (@prval_to_inh (listₛ 𝔄) (fst ∘ pπ'))
         (@prval_to_inh (listₛ 𝔄) (fst ∘ pπ))). by iFrame.
-    - iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq2 π)=>/=.
+    - iApply proph_obs_impl; [|done]=>/= π. move: (equal_f Eq π)=>/=.
       by case (pπ π)=>/= ??->.
   Qed.
 End smallvec_push.
