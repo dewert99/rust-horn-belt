@@ -103,7 +103,7 @@ Section smallvec_push.
   Lemma smallvec_push_type {𝔄} n (ty: type 𝔄) :
     typed_val (smallvec_push n ty) (fn<α>(∅; &uniq{α} (smallvec n ty), ty) → ())
       (λ post '-[(al, al'); a], al' = al ++ [a] → post ()).
-Proof.
+  Proof.
     eapply type_fn; [apply _|]=> α ??[v[x[]]]. simpl_subst.
     iIntros (?(pπ & bπ &[])?) "#LFT #TIME #PROPH #UNIQ #E Na L C /=(v & x &_) #Obs".
     rewrite !tctx_hasty_val. iDestruct "v" as ([|dv]) "[_ v]"=>//.
