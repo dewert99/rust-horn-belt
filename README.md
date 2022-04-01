@@ -62,7 +62,50 @@ followed by `make build-dep`.
 
 The derived rules mentioned in the paper can be found [here](theories/typing/examples/derived_rules.v).
 
-### Type System Rules --- from the RustBelt Paper
+### Key Type-Spec Rules --- from the RustHornBelt Paper
+
+The following table contains the location of every rule mentioned in the RustHornBelt paper.
+The filenames are spread across `theories/typing/examples`, `theories/typing`, `theories/typing/lib` (and its subfolders), and `theories/prophecy`.
+
+| Proof Rule          | File              | Lemma                    |
+| ------------------- | ----------------- | ------------------------ |
+| Adequacy            | `soundness.v`     | `type_soundness`         |
+| **Basic**           |                   |                          |
+| MUTBOR              | `derived_rules.v` | `ty_borrow`              |
+| MUTREF-WRITE        | `derived_rules.v` | `ty_assgn_bor_mut`       |
+| MUTREF-BYE          | `derived_rules.v` | `ty_resolve`             |
+| ENDLFT              | `programs.v`      | `type_endlft`            |
+| **Prophecies**      |                   |                          |
+| PROPH-INTRO         | `prophecy.v`      | `proph_intro`            |
+| PROPH-FRACT         | `prophecy.v`      | `proph_tok_fractional`   |
+| PROPH-IMPL          | `prophecy.v`      | `proph_obs_impl`         |
+| PROPH-MERGE         | `prophecy.v`      | `proph_obs_and`          |
+| PROPH-TRUE          | `prophecy.v`      | `proph_obs_true`         |
+| PROPH-RESOLVE       | `prophecy.v`      | `proph_resolve`          |
+| PROPH-SAT           | `prophecy.v`      | `proph_obs_sat`          |
+| **Mutable Borrows** |                   |                          |
+| MUT-AGREE           | `uniq_cmra.v`     | `uniq_agree`             |
+| MUT-UPDATE          | `uniq_cmra.v`     | `uniq_update`            |
+| MUT-INTRO           | `uniq_cmra.v`     | `uniq_intro`             |
+| MUT-RESOLVE         | `uniq_cmra.v`     | `uniq_resolve`           |
+| **`Vec`**           |                   |                          |
+| `push`              | `vec_pushpop.v`   | `vec_push_type`          |
+| `pop`               | `vec_pushpop.v`   | `vec_pop_type`           |
+| `index_mut`         | `vec_index.v`     | `vec_index_uniq_type`    |
+| **`IterMut`**       |                   |                          |
+| `iter_mut`          | `vec_slice.v`     | `vec_to_uniq_slice_type` |
+| `next`              | `iter.v`          | `iter_uniq_next_type`    |
+| `inc_vec`           | `inc_vec.v`       | `inc_vec_type`           |
+| **`Cell`**          |                   |                          |
+| `new`               | `cell.v`          | `cell_new_type`          |
+| `get`               | `cell.v`          | `cell_get_type`          |
+| `set`               | `cell.v`          | `cell_set_type`          |
+| `inc_cell`          | `inc_cell.v`      | `inc_cell_type`          |
+| **`Mutex`**         |                   |                          |
+| `new`               | `mutex.v`         | `mutex_new_type`         |
+| `get_mut`           | `mutex.v`         | `mutex_get_mut`          |
+
+### Key Type(-Spec) Rules --- from the RustBelt Paper
 
 The files in [typing](theories/typing) prove semantic versions of the proof
 rules given in the *RustBelt* paper.  Notice that mutable borrows are called
