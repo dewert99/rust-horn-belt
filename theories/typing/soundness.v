@@ -28,6 +28,8 @@ Section type_soundness.
 
   Definition main_transformer : predl_trans'ₛ [] () := (λ post '-[], post ()).
 
+  (* Intuitively, it says that execution of a closed, semantically well-typed
+    program, without any special precondition, does not get stuck *)
   Theorem type_soundness `{!typePreG Σ} (main : val) σ t :
     (∀ `{!typeG Σ}, typed_val main main_type main_transformer) →
     rtc erased_step ([main [exit_cont]%E], ∅) (t, σ) →
