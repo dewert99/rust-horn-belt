@@ -103,7 +103,7 @@ The filenames are spread across `theories/typing/examples`, `theories/typing`, `
 | `inc_cell`          | `inc_cell.v`      | `inc_cell_type`          |
 | **`Mutex`**         |                   |                          |
 | `new`               | `mutex.v`         | `mutex_new_type`         |
-| `get_mut`           | `mutex.v`         | `mutex_get_uniq`          |
+| `get_mut`           | `mutex.v`         | `mutex_get_uniq`         |
 
 ### Key Type(-Spec) Rules --- from the RustBelt Paper
 
