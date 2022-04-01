@@ -15,6 +15,7 @@ Section vec_pushpop.
       vec_push_core ty ["v'"; "x"];; delete [ #ty.(ty_size); "x"];;
       let: "r" := new [ #0] in return: ["r"].
 
+  (* Rust's Vec::push *)
   Lemma vec_push_type {𝔄} (ty: type 𝔄) :
     typed_val (vec_push ty) (fn<α>(∅; &uniq{α} (vec_ty ty), ty) → ())
       (λ post '-[(al, al'); a], al' = al ++ [a] → post ()).
@@ -73,6 +74,7 @@ Section vec_pushpop.
         "r" <- #1;; "r" +ₗ #1 <-{ty.(ty_size)} ! (!"v'" +ₗ "len'" * #ty.(ty_size));;
         return: ["r"].
 
+  (* Rust's Vec::pop *)
   Lemma vec_pop_type {𝔄} (ty: type 𝔄) :
     typed_val (vec_pop ty) (fn<α>(∅; &uniq{α} (vec_ty ty)) → option_ty ty)
       (λ post '-[(al, al')], al' = removelast al → post (last_error al)).

@@ -8,7 +8,7 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section smallvec_slice.
   Context `{!typeG Σ}.
 
-  Definition smallvec_to_slice: val :=
+  Definition smallvec_as_slice: val :=
     fn: ["bv"] :=
       let: "v" := !"bv" in delete [ #1; "bv"];;
       let: "r" := new [ #2] in "r" +ₗ #1 <- !("v" +ₗ #2);;
@@ -17,8 +17,8 @@ Section smallvec_slice.
       else
         "r" <- !("v" +ₗ #1);; return: ["r"].
 
-  Lemma smallvec_to_uniq_slice_type {𝔄} n (ty: type 𝔄) :
-    typed_val smallvec_to_slice (fn<α>(∅; &uniq{α} (smallvec n ty)) → uniq_slice α ty)
+  Lemma smallvec_as_slice_uniq_type {𝔄} n (ty: type 𝔄) :
+    typed_val smallvec_as_slice (fn<α>(∅; &uniq{α} (smallvec n ty)) → uniq_slice α ty)
       (λ post '-[(al, al')], length al' = length al → post (zip al al')).
   Proof.
     eapply type_fn; [apply _|]=>/= α ??[bv[]]. simpl_subst.

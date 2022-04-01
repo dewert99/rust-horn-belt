@@ -76,6 +76,7 @@ Section vec_basic.
     eqtype E L ty ty' f g → eqtype E L (vec_ty ty) (vec_ty ty') (map f) (map g).
   Proof. move=> [??]. split; by apply vec_subtype. Qed.
 
+  (* Rust's Vec::new *)
   Definition vec_new: val :=
     fn: [] :=
       let: "r" := new [ #3] in
@@ -103,14 +104,16 @@ Section vec_basic.
     iSplit; [by iNext|]. iExists []. by rewrite heap_mapsto_vec_nil.
   Qed.
 
-  Definition vec_delete {𝔄} (ty: type 𝔄) : val :=
+  Definition vec_drop {𝔄} (ty: type 𝔄) : val :=
     fn: ["v"] :=
       delete [(!("v" +ₗ #1) + !("v" +ₗ #2)) * #ty.(ty_size); !"v"];;
       delete [ #3; "v"];;
       return: [new [ #0]].
 
-  Lemma vec_delete_type {𝔄} (ty: type 𝔄) :
-    typed_val (vec_delete ty) (fn(∅; vec_ty ty) → ()) (λ post _, post ()).
+  (* Rust's Vec::drop
+    For simplicity, we skip drop of the elements *)
+  Lemma vec_drop_type {𝔄} (ty: type 𝔄) :
+    typed_val (vec_drop ty) (fn(∅; vec_ty ty) → ()) (λ post _, post ()).
   Proof.
     eapply type_fn; [apply _|]=> _ ??[v[]]. simpl_subst.
     iIntros (?[?[]]?) "_ TIME _ _ _ Na L C [v _] Obs".
@@ -144,6 +147,7 @@ Section vec_basic.
       letalloc: "r" <- !("v" +ₗ #1) in
       return: ["r"].
 
+  (* Rust's Vec::len *)
   Lemma vec_len_type {𝔄} (ty: type 𝔄) :
     typed_val vec_len (fn<α>(∅; &shr{α} (vec_ty ty)) → int)
       (λ post '-[v], post (length v)).

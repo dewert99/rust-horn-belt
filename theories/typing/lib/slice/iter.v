@@ -9,6 +9,7 @@ Section iter.
   Context `{!typeG Σ}.
 
   (** We model the unique iterator the same as the unique slice *)
+  (* Rust's IterMut<'a, T> *)
   Definition iter_uniq {𝔄} (κ: lft) (ty: type 𝔄) : type (listₛ (𝔄 * 𝔄)) :=
     uniq_slice κ ty.
 
@@ -23,6 +24,7 @@ Section iter.
         "it" <- "l" +ₗ #ty.(ty_size);; "it" +ₗ #1 <- "len" - #1;;
         let: "r" := new [ #2] in "r" <-{Σ 1} "l";; return: ["r"].
 
+  (* Rust's IterMut::next *)
   Lemma iter_uniq_next_type {𝔄} (ty: type 𝔄) :
     typed_val (iter_next ty)
       (fn<(α, β)>(∅; &uniq{β} (iter_uniq α ty)) → option_ty (&uniq{α} ty))
@@ -97,6 +99,7 @@ Section iter.
         let: "l'" := !"it" +ₗ "len'" * #ty.(ty_size) in
         let: "r" := new [ #2] in "r" <-{Σ 1} "l'";; return: ["r"].
 
+  (* Rust's IterMut::next_back *)
   Lemma iter_uniq_next_back_type {𝔄} (ty: type 𝔄) :
     typed_val (iter_next_back ty)
       (fn<(α, β)>(∅; &uniq{β} (iter_uniq α ty)) → option_ty (&uniq{α} ty))

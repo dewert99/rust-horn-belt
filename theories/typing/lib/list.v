@@ -19,6 +19,9 @@ Section list.
     <{psum_to_list: (Σ! [(); (𝔄 * listₛ 𝔄)])%ST → listₛ 𝔄}> (Σ! +[(); ty * box ty'])%T.
 End list.
 
+(* In Rust:
+  enum List<T> { Nil, Cons(T, Box<List<T>>) }
+*)
 Notation list_ty ty := (fix_ty (list_map ty)).
 Notation list_cons_ty ty := (ty * box (list_ty ty))%T.
 Notation list_xsum_ty ty := (Σ! +[(); list_cons_ty ty])%T.

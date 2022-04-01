@@ -27,6 +27,7 @@ Section smallvec_pop.
           "r" +ₗ #1 <-{ty.(ty_size)} !(!("v'" +ₗ #1) +ₗ "len'" * #ty.(ty_size));;
           return: ["r"].
 
+  (* Rust's SmallVec::pop *)
   Lemma smallvec_pop_type {𝔄} n (ty: type 𝔄) :
     typed_val (smallvec_pop ty) (fn<α>(∅; &uniq{α} (smallvec n ty)) → option_ty ty)
       (λ post '-[(al, al')], al' = removelast al → post (last_error al)).

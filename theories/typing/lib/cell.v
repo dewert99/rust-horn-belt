@@ -9,6 +9,7 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section cell.
   Context `{!typeG Σ}.
 
+  (* Rust's cell::Cell<T> *)
   Program Definition cell {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own Φπ _ tid vl := ∃Φ (vπ: proph 𝔄) d, ⌜Φπ = const Φ⌝ ∗
@@ -139,6 +140,7 @@ Section cell.
 
   Definition cell_new: val := fn: ["x"] := return: ["x"].
 
+  (* Rust's Cell::new *)
   Lemma cell_new_type {𝔄} (ty: type 𝔄) Φ :
     typed_val cell_new (fn(∅; ty) → cell ty) (λ post '-[a], Φ a ∧ post Φ).
   Proof.
@@ -167,6 +169,7 @@ Section cell.
 
   Definition cell_into_inner: val := fn: ["x"] := return: ["x"].
 
+  (* Rust's Cell::into_inner *)
   Lemma cell_into_inner_type {𝔄} (ty: type 𝔄) :
     typed_val cell_into_inner (fn(∅; cell ty) → ty)
       (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
@@ -238,6 +241,7 @@ Section cell.
 
   Definition cell_from_uniq: val := fn: ["x"] := Skip;; return: ["x"].
 
+  (* Rust's Cell::from_mut *)
   (* In this rule, we lose the prophecy information of the input.
     We need a stronger model of prophecy to know that
     the prophetic value of the input satisfies [Φ']. *)
@@ -274,6 +278,7 @@ Section cell.
 
   Definition cell_get_uniq: val := fn: ["x"] := Skip;; return: ["x"].
 
+  (* Rust's Cell::get_mut *)
   Lemma cell_get_uniq_type {𝔄} Ψ (ty: type 𝔄) :
     typed_val cell_get_uniq (fn<α>(∅; &uniq{α} (cell ty)) → &uniq{α} (!{Ψ} ty))
       (λ post '-[(Φ, Φ')], ∀a a': 𝔄, Φ a → Φ' = Ψ → Ψ a ∧ post (a, a')).
@@ -368,6 +373,7 @@ Section cell.
 
   (* Interestingly, this is syntactically well-typed: we do not need
      to enter the model. *)
+  (* Rust's Cell::get *)
   Lemma cell_get_type {𝔄} (ty: type 𝔄) `{!Copy ty} :
     typed_val (cell_get ty) (fn<α>(∅; &shr{α} (cell ty)) → ty)
       (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
@@ -389,6 +395,7 @@ Section cell.
       "c'" <-{ty.(ty_size)} !"x";; delete [ #ty.(ty_size); "x"];;
       return: [new [ #0]].
 
+  (* Rust's Cell::set *)
   Lemma cell_set_type {𝔄} (ty: type 𝔄) :
     typed_val (cell_set ty) (fn<α>(∅; &shr{α} (cell ty), ty) → ())
       (λ post '-[Φ; a], Φ a ∧ post ()).
@@ -429,6 +436,7 @@ Section cell.
       "c'" <-{ty.(ty_size)} !"x";;
       delete [ #ty.(ty_size); "x"];; return: ["r"].
 
+  (* Rust's Cell::replace *)
   Lemma cell_replace_type {𝔄} (ty: type 𝔄) :
     typed_val (cell_replace ty) (fn<α>(∅; &shr{α} (cell ty), ty) → ty)
       (λ post '-[Φ; a], Φ a ∧ ∀a': 𝔄, Φ a' → post a').

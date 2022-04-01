@@ -104,6 +104,7 @@ Section smallvec_basic.
       "r" +ₗ #2 <- #0;; "r" +ₗ #3 <- #0;;
       return: ["r"].
 
+  (* Rust's SmallVec::new *)
   Lemma smallvec_new_type {𝔄} n (ty: type 𝔄) :
     typed_val (smallvec_new n ty) (fn(∅) → smallvec n ty) (λ post _, post []).
   Proof.
@@ -123,7 +124,7 @@ Section smallvec_basic.
     by rewrite repeat_length.
   Qed.
 
-  Definition smallvec_delete {𝔄} n (ty: type 𝔄) : val :=
+  Definition smallvec_drop {𝔄} n (ty: type 𝔄) : val :=
     fn: ["v"] :=
       if: !"v" then
         delete [ #((4 + n * ty.(ty_size))%nat); "v"];;
@@ -133,8 +134,10 @@ Section smallvec_basic.
         delete [ #((4 + n * ty.(ty_size))%nat); "v"];;
         return: [new [ #0]].
 
-  Lemma smallvec_delete_type {𝔄} n (ty: type 𝔄) :
-    typed_val (smallvec_delete n ty) (fn(∅; smallvec n ty) → ()) (λ post _, post ()).
+  (* Rust's SmallVec::drop
+    For simplicity, we skip drop of the elements *)
+  Lemma smallvec_drop_type {𝔄} n (ty: type 𝔄) :
+    typed_val (smallvec_drop n ty) (fn(∅; smallvec n ty) → ()) (λ post _, post ()).
   Proof.
     eapply type_fn; [apply _|]=> _ ??[v[]]. simpl_subst.
     iIntros (?[?[]]?) "_ TIME _ _ _ Na L C [v _] Obs".
@@ -181,6 +184,7 @@ Section smallvec_basic.
       letalloc: "r" <- !("v" +ₗ #2) in
       return: ["r"].
 
+  (* Rust's SmallVec::len *)
   Lemma smallvec_len_type {𝔄} n (ty: type 𝔄) :
     typed_val smallvec_len (fn<α>(∅; &shr{α} (smallvec n ty)) → int)
       (λ post '-[v], post (length v)).

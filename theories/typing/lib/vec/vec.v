@@ -21,6 +21,7 @@ Section vec.
       iExists [_;_;_]. iFrame "↦". iExists _, _, _, _. by iFrame.
   Qed.
 
+  (* Rust's Vec<T> *)
   Program Definition vec_ty {𝔄} (ty: type 𝔄) : type (listₛ 𝔄) := {|
     ty_size := 3;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own alπ d tid vl :=

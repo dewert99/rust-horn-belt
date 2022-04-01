@@ -8,15 +8,16 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section array_slice.
   Context `{!typeG Σ}.
 
-  Definition array_to_slice (n: nat) : val :=
+  Definition array_as_slice (n: nat) : val :=
     fn: ["ba"] :=
       let: "a" := !"ba" in delete [ #1; "ba"];;
       let: "r" := new [ #2] in
       "r" <- "a";; "r" +ₗ #1 <- #n;;
       return: ["r"].
 
-  Lemma array_to_uniq_slice_type {𝔄} n (ty: type 𝔄) :
-    typed_val (array_to_slice n) (fn<α>(∅; &uniq{α} [ty;^ n]) → uniq_slice α ty)
+  (* Rust's [T; n]::as_mut_slice *)
+  Lemma array_as_slice_uniq_type {𝔄} n (ty: type 𝔄) :
+    typed_val (array_as_slice n) (fn<α>(∅; &uniq{α} [ty;^ n]) → uniq_slice α ty)
       (λ post '-[(al, al')], length al' = length al → post (zip al al')).
   Proof.
     eapply type_fn; [apply _|]=>/= α ??[ba[]]. simpl_subst.

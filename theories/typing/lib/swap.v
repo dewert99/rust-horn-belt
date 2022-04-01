@@ -14,6 +14,7 @@ Section swap.
       let: "r" := new [ #0] in
       return: ["r"].
 
+  (* Rust's mem::swap *)
   Lemma swap_type {𝔄} (ty: type 𝔄) :
     typed_val (swap ty) (fn<α>(∅; &uniq{α} ty, &uniq{α} ty) → ())
       (λ post '-[(a, a'); (b, b')], a' = b → b' = a → post ()).

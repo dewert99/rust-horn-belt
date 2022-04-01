@@ -22,6 +22,7 @@ Section uniq_slice.
       iExists _, _, _, _. by iFrame.
   Qed.
 
+  (* Rust's &'a mut [T] *)
   Program Definition uniq_slice {𝔄} (κ: lft) (ty: type 𝔄) : type (listₛ (𝔄 * 𝔄)) := {|
     ty_size := 2;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
     ty_own vπ d tid vl := κ ⊑ ty.(ty_lft) ∗

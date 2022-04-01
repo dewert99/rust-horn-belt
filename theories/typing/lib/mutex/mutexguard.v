@@ -41,6 +41,7 @@ Section mutexguard.
       rewrite heap_mapsto_vec_singleton. iFrame "↦". iExists _, _. by iFrame.
   Qed.
 
+  (* Rust's sync::MutexGuard<'a, T> *)
   Program Definition mutexguard {𝔄} (κ: lft) (ty: type 𝔄) : type (predₛ 𝔄) := {|
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
     (* One logical step is required for [ty_share] *)
@@ -193,6 +194,7 @@ Section mutexguard.
       letalloc: "g" <- "m" in
       delete [ #1; "bm"];; return: ["g"].
 
+  (* Rust's Mutex::lock *)
   Lemma mutex_lock_type {𝔄} (ty: type 𝔄) :
     typed_val mutex_lock (fn<α>(∅; &shr{α} (mutex ty)) → mutexguard α ty)
       (λ post '-[Φ], post Φ).
@@ -222,6 +224,7 @@ Section mutexguard.
       letalloc: "r" <- "m" +ₗ #1 in
       delete [ #1; "g"];; return: ["r"].
 
+  (* Rust's MutexGuard::deref_mut *)
   Lemma mutexguard_deref_uniq_type {𝔄} Ψ (ty: type 𝔄) :
     typed_val mutexguard_deref
       (fn<(α, β)>(∅; &uniq{α} (mutexguard β ty)) → &uniq{α} (!{Ψ} ty))
@@ -286,6 +289,7 @@ Section mutexguard.
       iApply proph_obs_impl; [|done]=>/= ?[[[_[Eqv _]]_]?]. by apply Eqv.
   Qed.
 
+  (* Rust's MutexGuard::deref *)
   Lemma mutexguard_deref_shr_type {𝔄} (ty: type 𝔄) :
     typed_val mutexguard_deref
       (fn<(α, β)>(∅; &shr{α} (mutexguard β ty)) → &shr{α} ty)
@@ -328,6 +332,7 @@ Section mutexguard.
       release [!"g"];; delete [ #1; "g"];;
       return: [new [ #0]].
 
+  (* Rust's MutexGuard::drop *)
   Lemma mutexguard_drop_type {𝔄} (ty: type 𝔄) :
     typed_val mutexguard_drop (fn<α>(∅; mutexguard α ty) → ())
       (λ post '-[_], post ()).

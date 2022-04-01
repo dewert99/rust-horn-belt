@@ -8,15 +8,16 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section vec_slice.
   Context `{!typeG Σ}.
 
-  Definition vec_to_slice: val :=
+  Definition vec_as_slice: val :=
     fn: ["bv"] :=
       let: "v" := !"bv" in delete [ #1; "bv"];;
       let: "r" := new [ #2] in
       "r" <- !"v";; "r" +ₗ #1 <- !("v" +ₗ #1);;
       return: ["r"].
 
-  Lemma vec_to_uniq_slice_type {𝔄} (ty: type 𝔄) :
-    typed_val vec_to_slice (fn<α>(∅; &uniq{α} (vec_ty ty)) → uniq_slice α ty)
+  (* Rust's Vec::as_slice_mut *)
+  Lemma vec_as_slice_uniq_type {𝔄} (ty: type 𝔄) :
+    typed_val vec_as_slice (fn<α>(∅; &uniq{α} (vec_ty ty)) → uniq_slice α ty)
       (λ post '-[(al, al')], length al' = length al → post (zip al al')).
   Proof.
     eapply type_fn; [apply _|]=>/= α ??[bv[]]. simpl_subst.

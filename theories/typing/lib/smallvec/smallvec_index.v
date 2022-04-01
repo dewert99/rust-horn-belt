@@ -21,6 +21,7 @@ Section smallvec_index.
         delete [ #1; "v"];; delete [ #1; "i"];;
         return: ["r"].
 
+  (* Rust's SmallVec::index *)
   (* The precondition requires that the index is within bounds of the list *)
   Lemma smallvec_index_shr_type {𝔄} n (ty: type 𝔄) :
     typed_val (smallvec_index ty) (fn<α>(∅; &shr{α} (smallvec n ty), int) → &shr{α} ty)
@@ -75,6 +76,7 @@ Section smallvec_index.
         by rewrite Eqi -vlookup_lookup -vapply_lookup=> <-.
   Qed.
 
+  (* Rust's SmallVec::index_mut *)
   (* The precondition requires that the index is within bounds of the list *)
   Lemma smallvec_index_uniq_type {𝔄} n (ty: type 𝔄) :
     typed_val (smallvec_index ty) (fn<α>(∅; &uniq{α} (smallvec n ty), int) → &uniq{α} ty)

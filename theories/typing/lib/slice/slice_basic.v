@@ -87,6 +87,7 @@ Section slice_basic.
       letalloc: "r" <- !("s" +ₗ #1) in
       return: ["r"].
 
+  (* Rust's [T]::len *)
   Lemma uniq_slice_len_type {𝔄} (ty: type 𝔄) :
     typed_val slice_len (fn<(α, β)>(∅; &shr{β} (uniq_slice α ty)) → int)
       (λ post '-[aal], post (length aal)).

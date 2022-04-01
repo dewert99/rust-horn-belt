@@ -14,6 +14,7 @@ Section spawn.
   Definition join_future {𝔄} (ty: type 𝔄) (Φ: pred' 𝔄) (v: val) : iProp Σ :=
     ∀tid, ∃vπ d, ⟨π, Φ (vπ π)⟩ ∗ ⧖d ∗ (box ty).(ty_own) vπ d tid [v].
 
+  (* Rust's thread::JoinHandle<T> *)
   Program Definition join_handle {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
     ty_size := 1;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own Φπ _ _ vl := [loc[l] := vl] ∃Φ, ⌜Φπ = const Φ⌝ ∗
@@ -102,6 +103,7 @@ Section spawn.
       letalloc: "r" <- "j" in
       return: ["r"].
 
+  (* Rust's thread::spawn *)
   Lemma spawn_type {𝔄 𝔅} (Φ: pred' 𝔅) tr (fty: type 𝔄) (retty: type 𝔅)
       call_once `{!Send fty, !Send retty} :
     typed_val call_once (fn(∅; fty) → retty) tr →
@@ -142,6 +144,7 @@ Section spawn.
       let: "r" := spawn.join ["j"] in
       return: ["r"].
 
+  (* Rust's JoinHandle::join *)
   Lemma join_type {𝔄} (retty: type 𝔄) :
     typed_val join (fn(∅; join_handle retty) → retty)
       (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).

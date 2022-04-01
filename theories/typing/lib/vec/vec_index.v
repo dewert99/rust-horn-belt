@@ -15,6 +15,7 @@ Section vec_index.
       delete [ #1; "v"];; delete [ #1; "i"];;
       return: ["r"].
 
+  (* Rust's Vec::index *)
   (* The precondition requires that the index is within bounds of the list *)
   Lemma vec_index_shr_type {𝔄} (ty: type 𝔄) :
     typed_val (vec_index ty) (fn<α>(∅; &shr{α} (vec_ty ty), int) → &shr{α} ty)
@@ -52,6 +53,7 @@ Section vec_index.
       by rewrite Eqi -vlookup_lookup -vapply_lookup=> <-.
   Qed.
 
+  (* Rust's Vec::index_mut *)
   (* The precondition requires that the index is within bounds of the list *)
   Lemma vec_index_uniq_type {𝔄} (ty: type 𝔄) :
     typed_val (vec_index ty) (fn<α>(∅; &uniq{α} (vec_ty ty), int) → &uniq{α} ty)

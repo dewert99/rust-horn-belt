@@ -18,6 +18,7 @@ Section panic.
   Definition panic: val :=
     fn: [] := stuck_term.
 
+  (* Rust's panic! *)
   Lemma panic_type: typed_val panic (fn(∅) → ∅) (λ _ _, False).
   Proof.
     eapply type_fn; [apply _|]=>/= *.
@@ -25,6 +26,7 @@ Section panic.
     iMod (proph_obs_false with "PROPH Obs") as "[]"; [done|move=> ?[]].
   Qed.
 
+  (* Rust's assert! *)
   Lemma type_assert_instr E L p :
     typed_instr E L +[p ◁ bool_ty] (assert: p) (const +[])
       (λ post '-[b], if b then post -[] else False).

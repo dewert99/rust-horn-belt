@@ -19,7 +19,8 @@ Section slice_split.
       "r" +ₗ #2 <- "l" +ₗ "i" * #ty.(ty_size);; "r" +ₗ #3 <- "len" - "i";;
       return: ["r"].
 
-  Lemma uniq_slice_split_at_type {𝔄} (ty: type 𝔄) :
+  (* Rust's split_at_mut *)
+  Lemma slice_split_at_uniq_type {𝔄} (ty: type 𝔄) :
     typed_val (slice_split_at ty)
       (fn<α>(∅; uniq_slice α ty, int) → uniq_slice α ty * uniq_slice α ty)
       (λ post '-[aal; z],

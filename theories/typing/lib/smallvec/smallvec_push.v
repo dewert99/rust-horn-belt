@@ -100,6 +100,7 @@ Section smallvec_push.
       delete [ #ty.(ty_size); "x"];;
       let: "r" := new [ #0] in return: ["r"].
 
+  (* Rust's SmallVec::push *)
   Lemma smallvec_push_type {𝔄} n (ty: type 𝔄) :
     typed_val (smallvec_push n ty) (fn<α>(∅; &uniq{α} (smallvec n ty), ty) → ())
       (λ post '-[(al, al'); a], al' = al ++ [a] → post ()).

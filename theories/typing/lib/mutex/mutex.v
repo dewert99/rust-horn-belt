@@ -57,6 +57,7 @@ Section mutex.
       rewrite heap_mapsto_vec_cons. iFrame "↦b ↦". iExists _, _, _, _, _. by iFrame.
   Qed.
 
+  (* Rust's sync::Mutex<T> *)
   Program Definition mutex {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
       ty_size := 1 + ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
       ty_own Φπ _ tid vl := ∃Φ (b: bool) vl' (vπ: proph 𝔄) d,
@@ -154,6 +155,7 @@ Section mutex.
     eqtype E L ty ty' f g → eqtype E L (mutex ty) (mutex ty') (.∘ g) (.∘ f).
   Proof. move=> [??]. split; by (eapply mutex_subtype; [split; apply _|]). Qed.
 
+  (* Rust's Mutex::new *)
   Definition mutex_new {𝔄} (ty: type 𝔄) : val :=
     fn: ["x"] :=
       let: "m" := new [ #(mutex ty).(ty_size)] in
@@ -185,6 +187,7 @@ Section mutex.
     by iApply proph_obs_impl; [|done]=>/= ?[? _].
   Qed.
 
+  (* Rust's Mutex::into_inner *)
   Definition mutex_into_inner {𝔄} (ty: type 𝔄) : val :=
     fn: ["m"] :=
       let: "x" := new [ #ty.(ty_size)] in
@@ -212,7 +215,8 @@ Section mutex.
     rewrite/= freeable_sz_full. iFrame "†x". iNext. iExists _. iFrame.
   Qed.
 
-  Definition mutex_get_mut: val :=
+  (* Rust's Mutex::get_mut *)
+  Definition mutex_get_uniq: val :=
     fn: ["m"] :=
       let: "m'" := !"m" in
       "m" <- ("m'" +ₗ #1);;
@@ -220,8 +224,8 @@ Section mutex.
 
   (* The final invariant of [&uniq{α} (mutex ty)] should be trivial,
     because [&uniq{α} ty] does not restrict the target value *)
-  Lemma mutex_get_mut_type {𝔄} (ty: type 𝔄) :
-    typed_val mutex_get_mut (fn<α>(∅; &uniq{α} (mutex ty)) → &uniq{α} ty)
+  Lemma mutex_get_uniq_type {𝔄} (ty: type 𝔄) :
+    typed_val mutex_get_uniq (fn<α>(∅; &uniq{α} (mutex ty)) → &uniq{α} ty)
       (λ post '-[(Φ, Φ')], ∀a a': 𝔄, Φ a → Φ' = const True → post (a, a')).
   Proof.
     eapply type_fn; [apply _|]=>/= α ??[m[]]. simpl_subst.

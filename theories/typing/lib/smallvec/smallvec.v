@@ -71,6 +71,7 @@ Section smallvec.
         iExists false, _, _, _, _, _=>/=. by iFrame.
   Qed.
 
+  (* Rust's SmallVec<[T; n]> *)
   (* For simplicity, it always has the location and capacity *)
   Program Definition smallvec {𝔄} (n: nat) (ty: type 𝔄) : type (listₛ 𝔄) := {|
     ty_size := 4 + n * ty.(ty_size);

@@ -22,6 +22,7 @@ Section maybe_uninit.
       iRight. iExists vπ'. by iSplit.
   Qed.
 
+  (* Rust's mem::MaybeUninit<T> *)
   Program Definition maybe_uninit {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) := {|
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
     ty_own vπ d tid vl :=
@@ -162,6 +163,7 @@ Section typing.
     eqtype E L ty ty' f g → eqtype E L (? ty) (? ty') (option_map f) (option_map g).
   Proof. move=> [??]. split; by apply maybe_uninit_subtype. Qed.
 
+  (* Rust's MaybeUninit::new *)
   Lemma uninit_to_maybe_uninit {𝔄} (ty: type 𝔄) E L :
     subtype E L (↯ ty.(ty_size)) (? ty) (const None).
   Proof.
@@ -169,6 +171,7 @@ Section typing.
     iSplit; iIntros "!>** /="; iLeft; by iSplit.
   Qed.
 
+  (* Rust's MaybeUninit::uninit *)
   Lemma into_maybe_uninit {𝔄} (ty: type 𝔄) E L : subtype E L ty (? ty) Some.
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
@@ -186,6 +189,7 @@ Section typing.
       iRight. iExists vπ''. by iFrame.
   Qed.
 
+  (* Rust's MaybeUninit::assume_uninit *)
   Lemma tctx_unwrap_maybe_uninit {𝔄 𝔅l} (ty: type 𝔄) E L (T: tctx 𝔅l) p :
     tctx_incl E L (p ◁ ? ty +:: T) (p ◁ ty +:: T)
       (λ post '(o -:: bl), match o with
@@ -213,6 +217,7 @@ Section typing.
     iFrame "⧖ †". iNext. iExists _. iFrame.
   Qed.
 
+  (* Rust's MaybeUninit::assume_uninit_ref *)
   Lemma tctx_unwrap_shr_maybe_uninit {𝔄 𝔅l} (ty: type 𝔄) κ E L (T: tctx 𝔅l) p :
     tctx_incl E L (p ◁ &shr{κ} (? ty) +:: T) (p ◁ &shr{κ} ty +:: T)
       (λ post '(o -:: bl), match o with
@@ -226,6 +231,7 @@ Section typing.
     iExists _, _. iSplit; [done|]. by iFrame "⧖".
   Qed.
 
+  (* Rust's MaybeUninit::assume_uninit_mut *)
   Lemma tctx_unwrap_uniq_maybe_uninit {𝔄 𝔅l} (ty: type 𝔄) κ E L (T: tctx 𝔅l) p :
     lctx_lft_alive E L κ →
     tctx_incl E L (p ◁ &uniq{κ} (? ty) +:: T) (p ◁ &uniq{κ} ty +:: T)

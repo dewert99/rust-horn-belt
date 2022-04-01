@@ -15,6 +15,7 @@ Proof. split; fun_ext; case=>//; by case. Qed.
 Section option.
   Context `{!typeG Σ}.
 
+  (* Rust's Option<T> *)
   Definition option_ty {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
     <{psum_to_option: (Σ! [(); 𝔄])%ST → optionₛ 𝔄}> (Σ! +[(); ty])%T.
 
@@ -50,7 +51,7 @@ Section option.
   Definition none := 0%nat.
   Definition some := 1%nat.
 
-  Definition option_as_mut : val :=
+  Definition option_as_uniq : val :=
     fn: ["o"] :=
       let: "o'" := !"o" in let: "r" := new [ #2] in
     withcont: "k":
@@ -60,8 +61,9 @@ Section option.
     cont: "k" [] :=
       delete [ #1; "o"];; return: ["r"].
 
-  Lemma option_as_mut_type {𝔄} (ty: type 𝔄) :
-    typed_val option_as_mut
+  (* Rust's Option::as_mut *)
+  Lemma option_as_uniq_type {𝔄} (ty: type 𝔄) :
+    typed_val option_as_uniq
       (fn<α>(∅; &uniq{α} (option_ty ty)) → option_ty (&uniq{α} ty))
       (λ (post: pred' (optionₛ (_*_))) '-[a], match a with
         | (Some a, Some a') => post (Some (a, a'))
@@ -97,6 +99,7 @@ Section option.
         delete [ #(S ty.(ty_size)); "o"];; delete [ #ty.(ty_size); "def"];;
         return: ["r"]].
 
+  (* Rust's Option::unwrap_or *)
   Lemma option_unwrap_or_type {𝔄} (ty: type 𝔄) :
     typed_val (option_unwrap_or ty) (fn(∅; option_ty ty, ty) → ty)
       (λ post '-[o; d], match o with Some a => post a | None => post d end).
@@ -121,6 +124,7 @@ Section option.
       ; letalloc: "r" <-{ty.(ty_size)} !("o" +ₗ #1) in
         delete [ #(S ty.(ty_size)); "o"];; return: ["r"]].
 
+  (* Rust's Option::unwrap *)
   Lemma option_unwrap_type {𝔄} (ty: type 𝔄) :
     typed_val (option_unwrap ty) (fn(∅; option_ty ty) → ty)
       (λ post '-[o], match o with Some a => post a | None => False end).
