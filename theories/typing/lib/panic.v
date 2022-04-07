@@ -15,8 +15,7 @@ Notation "assert: e" := (if: e then #☠ else stuck_term)%E (at level 9) : expr_
 Section panic.
   Context `{!typeG Σ}.
 
-  Definition panic: val :=
-    fn: [] := stuck_term.
+  Definition panic: val := fn: [] := stuck_term.
 
   (* Rust's panic! *)
   Lemma panic_type: typed_val panic (fn(∅) → ∅) (λ _ _, False).
@@ -26,7 +25,6 @@ Section panic.
     iMod (proph_obs_false with "PROPH Obs") as "[]"; [done|move=> ?[]].
   Qed.
 
-  (* Rust's assert! *)
   Lemma type_assert_instr E L p :
     typed_instr E L +[p ◁ bool_ty] (assert: p) (const +[])
       (λ post '-[b], if b then post -[] else False).
@@ -47,5 +45,24 @@ Section panic.
     iIntros (? Extr) "?".
     iApply type_seq; [by apply type_assert_instr|solve_typing| |done].
     destruct Extr as [Htrx _]=>?? /=. apply Htrx. by case.
+  Qed.
+
+  Definition assert : val :=
+    fn: ["bb"] :=
+      let: "b" := !"bb" in delete [ #1; "bb"];;
+      assert: "b";;
+      let: "r" := new [ #0] in return: ["r"].
+
+  (* Rust's assert! *)
+  Lemma assert_type:
+    typed_val assert (fn(∅; bool_ty) → ())
+      (λ post '-[b], if b then post () else False).
+  Proof.
+    eapply type_fn; [apply _|]=> ???[?[]]. simpl_subst. via_tr_impl.
+    { iApply type_deref; [solve_extract|solve_typing|done|]. intro_subst.
+      iApply type_delete; [solve_extract|done..|].
+      iApply type_assert; [solve_extract|]. iApply type_new; [done|].
+      intro_subst. iApply type_jump; [solve_typing|solve_extract|solve_typing]. }
+    by move=> ?[?[]].
   Qed.
 End panic.
