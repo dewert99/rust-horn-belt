@@ -163,7 +163,6 @@ Section typing.
     eqtype E L ty ty' f g → eqtype E L (? ty) (? ty') (option_map f) (option_map g).
   Proof. move=> [??]. split; by apply maybe_uninit_subtype. Qed.
 
-  (* Rust's MaybeUninit::new *)
   Lemma uninit_to_maybe_uninit {𝔄} (ty: type 𝔄) E L :
     subtype E L (↯ ty.(ty_size)) (? ty) (const None).
   Proof.
@@ -171,11 +170,40 @@ Section typing.
     iSplit; iIntros "!>** /="; iLeft; by iSplit.
   Qed.
 
-  (* Rust's MaybeUninit::uninit *)
+  Definition maybe_uninit_new {𝔄} (ty: type 𝔄): val :=
+    fn: [] :=
+      let: "r" := new [ #ty.(ty_size)] in
+      return: ["r"].
+
+  (* Rust's MaybeUninit::new *)
+  Lemma maybe_uninit_new_type {𝔄} (ty: type 𝔄) :
+    typed_val (maybe_uninit_new ty) (fn(∅) → ? ty) (λ post '-[], post None).
+  Proof.
+    eapply type_fn; [apply _|]=> _ ??[]. simpl_subst. via_tr_impl.
+    { iApply type_new; [lia|]. intro_subst. rewrite Nat2Z.id.
+      iApply type_jump; [solve_typing| |solve_typing].
+      eapply tctx_extract_ctx_elt; [|solve_typing].
+      apply tctx_extract_elt_here, own_subtype, uninit_to_maybe_uninit. }
+    by move=>/= ?[].
+  Qed.
+
   Lemma into_maybe_uninit {𝔄} (ty: type 𝔄) E L : subtype E L ty (? ty) Some.
   Proof.
     iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*?/="; iRight; iExists vπ; by iFrame.
+  Qed.
+
+  Definition maybe_uninit_uninit: val := fn: ["x"] := return: ["x"].
+
+  (* Rust's MaybeUninit::uninit *)
+  Lemma maybe_uninit_uninit_type {𝔄} (ty: type 𝔄) :
+    typed_val maybe_uninit_uninit (fn(∅; ty) → ? ty) (λ post '-[a], post (Some a)).
+  Proof.
+    eapply type_fn; [apply _|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
+    { iApply type_jump; [solve_typing| |solve_typing].
+      eapply tctx_extract_ctx_elt; [|solve_typing].
+      apply tctx_extract_elt_here, own_subtype, into_maybe_uninit. }
+    by move=>/= ?[?[]].
   Qed.
 
   Lemma maybe_uninit_join {𝔄} (ty: type 𝔄) E L :
@@ -189,7 +217,6 @@ Section typing.
       iRight. iExists vπ''. by iFrame.
   Qed.
 
-  (* Rust's MaybeUninit::assume_uninit *)
   Lemma tctx_unwrap_maybe_uninit {𝔄 𝔅l} (ty: type 𝔄) E L (T: tctx 𝔅l) p :
     tctx_incl E L (p ◁ ? ty +:: T) (p ◁ ty +:: T)
       (λ post '(o -:: bl), match o with
@@ -211,13 +238,25 @@ Section typing.
     iIntros (??[oπ ?]?) "_ PROPH _ _ $ /=[p T] #Obs".
     iMod (proph_obs_sat with "PROPH Obs") as %[??]; [done|].
     iDestruct "p" as ([[]|][|]?) "[⧖ own]"=>//.
-    iDestruct "own" as "[(%& ↦ & [[>->_]|big]) †]"=>//.
+    iDestruct "own" as "[(%& ↦ & [[>->_]|big]) †]"; [done|].
     iMod (bi.later_exist_except_0 with "big") as (?) "[>-> ty]". iModIntro.
     iExists (_-::_). iFrame "T Obs". iExists _, _. iSplit; [done|].
     iFrame "⧖ †". iNext. iExists _. iFrame.
   Qed.
 
-  (* Rust's MaybeUninit::assume_uninit_ref *)
+  Definition maybe_assume_uninit: val := fn: ["x"] := return: ["x"].
+
+  (* Rust's MaybeUninit::assume_uninit *)
+  Lemma maybe_assume_uninit_type {𝔄} (ty: type 𝔄) :
+    typed_val maybe_assume_uninit (fn(∅; ? ty) → ty)
+      (λ post '-[o], match o with Some a => post a | None => False end).
+  Proof.
+    eapply type_fn; [apply _|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
+    { iApply type_jump; [solve_typing| |solve_typing].
+      eapply tctx_extract_ctx_elt; [apply tctx_unwrap_own_maybe_uninit|solve_typing]. }
+    by move=>/= ?[?[]].
+  Qed.
+
   Lemma tctx_unwrap_shr_maybe_uninit {𝔄 𝔅l} (ty: type 𝔄) κ E L (T: tctx 𝔅l) p :
     tctx_incl E L (p ◁ &shr{κ} (? ty) +:: T) (p ◁ &shr{κ} ty +:: T)
       (λ post '(o -:: bl), match o with
@@ -226,12 +265,30 @@ Section typing.
     split. { by move=> ???[[?|]?]. }
     iIntros (??[oπ ?]?) "_ PROPH _ _ $ /=[p T] #Obs".
     iMod (proph_obs_sat with "PROPH Obs") as %[??]; [done|]. iModIntro.
-    iDestruct "p" as ([[]|][|]?) "[⧖ ty]"=>//.
-    iDestruct "ty" as "[[-> _]|(%&->&?)]"=>//. iExists (_-::_). iFrame "T Obs".
-    iExists _, _. iSplit; [done|]. by iFrame "⧖".
+    iDestruct "p" as ([[]|][|]?) "[⧖ mty]"=>//.
+    iDestruct "mty" as "[[-> _]|(%&->&?)]"; [done|]. iExists (_-::_).
+    iFrame "T Obs". iExists _, _. iSplit; [done|]. by iFrame "⧖".
   Qed.
 
-  (* Rust's MaybeUninit::assume_uninit_mut *)
+  Definition maybe_assume_uninit_shr: val := fn: ["x"] := return: ["x"].
+
+  (* Rust's MaybeUninit::assume_uninit_ref *)
+  Lemma maybe_assume_uninit_shr_type {𝔄} (ty: type 𝔄) :
+    typed_val maybe_assume_uninit_shr (fn<α>(∅; &shr{α} (? ty)) → &shr{α} ty)
+      (λ post '-[o], match o with Some a => post a | None => False end).
+  Proof.
+    eapply type_fn; [apply _|]=> ???[x[]]. simpl_subst.
+    iIntros (?[?[]]?) "LFT #TIME #PROPH UNIQ E Na L C /=[p _] #Obs".
+    iMod (proph_obs_sat with "PROPH Obs") as %[??]; [done|].
+    rewrite tctx_hasty_val. iDestruct "p" as ([|d]) "[⧖ bmty]"=>//.
+    case x as [[|l|]|]=>//=. rewrite split_mt_ptr. iDestruct "bmty" as "[↦mty †]".
+    case d as [|]; [by iDestruct "↦mty" as ">[]"|]=>/=. wp_seq.
+    iDestruct "↦mty" as (?) "[↦ [[-> _]|(%&->& ty)]]"; [done|]. wp_seq.
+    rewrite cctx_interp_singleton. iApply ("C" $! [# #l] -[_] with "Na L [-] [//]").
+    iSplit; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖ †". iNext.
+    rewrite split_mt_ptr. iExists _. iFrame.
+  Qed.
+
   Lemma tctx_unwrap_uniq_maybe_uninit {𝔄 𝔅l} (ty: type 𝔄) κ E L (T: tctx 𝔅l) p :
     lctx_lft_alive E L κ →
     tctx_incl E L (p ◁ &uniq{κ} (? ty) +:: T) (p ◁ &uniq{κ} ty +:: T)
@@ -247,11 +304,11 @@ Section typing.
     iDestruct "uniq" as (? ξi [? Eq]) "[Vo Bor]". move: Eq. set ξ := PrVar _ ξi=> Eq.
     iMod (lctx_lft_alive_tok with "E L") as (?) "(κ & L & ToL)"; [done..|].
     iMod (bor_acc_cons with "LFT Bor κ") as "[big ToBor]"; [done|].
-    iMod (bi.later_exist_except_0 with "big") as (oπ ?) "(>#⧖ & Pc &%& >↦ & uty)".
+    iMod (bi.later_exist_except_0 with "big") as (oπ ?) "(>#⧖ & Pc &%& >↦ & mty)".
     iMod (uniq_strip_later with "Vo Pc") as (Eq' <-) "[Vo Pc]".
     have ->: vπ = λ π, (oπ π, π ξ). { by rewrite [vπ]surjective_pairing_fun Eq Eq'. }
     iMod (proph_obs_sat with "PROPH Obs") as %[??]; [done|].
-    iDestruct "uty" as "[[>-> _]|big]"=>//.
+    iDestruct "mty" as "[[>-> _]|big]"=>//.
     iMod (bi.later_exist_except_0 with "big") as (aπ) "[>-> ty]"=>/=.
     iMod (uniq_intro aπ with "PROPH UNIQ") as (ζj) "[Vo' Pc']" ; [done|].
     set ζ := PrVar _ ζj. iDestruct (uniq_proph_tok with "Vo' Pc'") as "(Vo' & ζ & Pc')".
@@ -265,6 +322,50 @@ Section typing.
       iExists _, _. iSplit; [done|]. iFrame "⧖". iSplit; [done|]. iExists _, _.
       by iFrame.
     - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame.
+    - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' &%& ↦ & ty)".
+      iExists _, _. iFrame "⧖'".
+      iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
+      iSplitL "Eqz ToPc". { iApply "ToPc". by iApply proph_eqz_constr. }
+      iExists _. iFrame "↦". iRight. iExists _. by iFrame.
+  Qed.
+
+  Definition maybe_assume_uninit_uniq: val := fn: ["x"] := return: ["x"].
+
+  (* Rust's MaybeUninit::assume_uninit_mut *)
+  Lemma maybe_assume_uninit_uniq_type {𝔄} (ty: type 𝔄) :
+    typed_val maybe_assume_uninit_uniq (fn<α>(∅; &uniq{α} (? ty)) → &uniq{α} ty)
+      (λ post '-[(o, o')], match o with
+      | Some a => ∀a': 𝔄, o' = Some a' → post (a, a')
+      | None => False
+      end).
+  Proof.
+    eapply type_fn; [apply _|]=> α ??[x[]]. simpl_subst.
+    iIntros (?[vπ[]]?) "LFT #TIME #PROPH UNIQ E Na L C /=[x _] #Obs".
+    rewrite tctx_hasty_val. iDestruct "x" as ([|]) "[⧖ box]"=>//.
+    case x as [[|x|]|]=>//=. rewrite split_mt_uniq_bor.
+    iDestruct "box" as "[[#In ↦uniq] †]". wp_seq.
+    iDestruct "↦uniq" as (?? ξi [? Eq]) "(↦ & Vo & Bor)".
+    move: Eq. set ξ := PrVar _ ξi=> Eq.
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (bor_acc_cons with "LFT Bor α") as
+      "[(%&%& ⧖' & Pc &%& >↦' & uty) ToBor]"; [done|]. wp_seq.
+    iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
+    set oπ := fst ∘ vπ. have ->: vπ = pair ∘ oπ ⊛ (.$ ξ)=>/=.
+    { by rewrite (surjective_pairing_fun vπ) Eq. }
+    iMod (proph_obs_sat with "PROPH Obs") as %[??]; [done|].
+    iDestruct "uty" as "[[-> _]|(%aπ &->& ty)]"; [done|].
+    iMod (uniq_intro aπ with "PROPH UNIQ") as (ζj) "[Vo' Pc']" ; [done|].
+    set ζ := PrVar _ ζj. iDestruct (uniq_proph_tok with "Vo' Pc'") as "(Vo' & ζ & Pc')".
+    iMod (uniq_preresolve ξ [ζ] (Some ∘ (.$ ζ)) with "PROPH Vo Pc [$ζ //]")
+      as "(Obs' & [ζ _] & ToPc)"; [done|apply proph_dep_constr, proph_dep_one|].
+    iSpecialize ("Pc'" with "ζ"). iCombine "Obs' Obs" as "#?". iClear "Obs".
+    iMod ("ToBor" with "[ToPc] [⧖' ↦' ty Pc']") as "[Bor α]"; last first.
+    - iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
+      iApply ("C" $! [# #x] -[λ π, (_, π ζ)] with "Na L [-] []"); last first.
+      { iApply proph_obs_impl; [|done]=>/= ?[? Imp]. by apply Imp. }
+      iSplit; [|done]. rewrite tctx_hasty_val. iExists _. iFrame "⧖ †". iNext.
+      rewrite split_mt_uniq_bor. iFrame "In". iExists _, _, _. by iFrame.
+    - iNext. iExists _, _. iFrame "⧖' Pc'". iExists _. by iFrame.
     - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' &%& ↦ & ty)".
       iExists _, _. iFrame "⧖'".
       iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
