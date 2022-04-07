@@ -145,9 +145,8 @@ Section cell.
     typed_val cell_new (fn(∅; ty) → cell ty) (λ post '-[a], Φ a ∧ post Φ).
   Proof.
     eapply type_fn; [apply _|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
-    { iApply type_jump; [solve_typing| |].
-      { eapply tctx_extract_ctx_elt; [apply tctx_cell_new|solve_typing]. }
-      solve_typing. }
+    { iApply type_jump; [solve_typing| |solve_typing].
+      eapply tctx_extract_ctx_elt; [apply tctx_cell_new|solve_typing]. }
     by move=> ?[?[]]?/=.
   Qed.
 
@@ -175,9 +174,8 @@ Section cell.
       (λ post '-[Φ], ∀a: 𝔄, Φ a → post a).
   Proof.
     eapply type_fn; [apply _|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
-    { iApply type_jump; [solve_typing| |].
-      { eapply tctx_extract_ctx_elt; [apply tctx_cell_into_inner|solve_typing]. }
-      solve_typing. }
+    { iApply type_jump; [solve_typing| |solve_typing].
+      eapply tctx_extract_ctx_elt; [apply tctx_cell_into_inner|solve_typing]. }
     by move=> ?[?[]]?/=.
   Qed.
 
@@ -206,9 +204,8 @@ Section cell.
       (λ post '-[a], Φ a ∧ post Φ).
   Proof.
     eapply type_fn; [apply _|]=> _ ??[?[]]. simpl_subst. via_tr_impl.
-    { iApply type_jump; [solve_typing| |].
-      { eapply tctx_extract_ctx_elt; [apply tctx_cell_from_box|solve_typing]. }
-      solve_typing. }
+    { iApply type_jump; [solve_typing| |solve_typing].
+      eapply tctx_extract_ctx_elt; [apply tctx_cell_from_box|solve_typing]. }
     by move=> ?[?[]]?/=.
   Qed.
 
