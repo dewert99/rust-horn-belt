@@ -286,13 +286,12 @@ Section cell.
     case x as [[|x|]|]=>//=. rewrite split_mt_uniq_bor.
     iDestruct "box" as "[[#In ↦uniq] †]". wp_bind Skip.
     iApply (wp_cumulative_time_receipt with "TIME"); [done|]. wp_seq.
-    iIntros "⧗". wp_seq. iDestruct "↦uniq" as (?? ξi [? Eq]) "(↦ & Vo & Bor)".
+    iIntros "⧗". iDestruct "↦uniq" as (?? ξi [? Eq]) "(↦ & Vo & Bor)".
     move: Eq. set ξ := PrVar _ ξi=> Eq.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as
-      "[(%&%&_& Pc &%& >↦' & %Φ & big) ToBor]"; [done|].
-    iMod (bi.later_exist_except_0 with "big") as (aπ ?) "(>->& >Obs' & >#⧖ & ty)".
-    iCombine "Obs Obs'" as "Obs".
+      "[(%&%&_& Pc &%& >↦' & %Φ & big) ToBor]"; [done|]. wp_seq.
+    iDestruct "big" as (aπ ?->) "(Obs' & #⧖ & ty)". iCombine "Obs Obs'" as "Obs".
     iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖") as "#⧖S"; [done|].
     iMod (uniq_strip_later with "Vo Pc") as (Eq' <-) "[Vo Pc]".
     have ->: vπ = λ π, (Φ, π ξ). { by rewrite [vπ]surjective_pairing_fun Eq Eq'. }
