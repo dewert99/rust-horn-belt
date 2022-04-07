@@ -217,7 +217,7 @@ Section cell.
   Proof.
     eapply type_fn; [apply _|]=> _ ??[x[]]. simpl_subst.
     iIntros (?[?[]]?) "LFT #TIME PROPH UNIQ E Na L C /=[p _] Obs".
-    rewrite tctx_hasty_val.  iDestruct "p" as ([|d]) "[_ bbox]"=>//.
+    rewrite tctx_hasty_val. iDestruct "p" as ([|d]) "[_ bbox]"=>//.
     case x as [[|l|]|]=>//=. rewrite split_mt_ptr. iDestruct "bbox" as "[↦box †]".
     wp_bind Skip. iApply (wp_cumulative_time_receipt with "TIME"); [done|].
     wp_seq. iIntros "⧗". wp_seq. case d=>// ?.
