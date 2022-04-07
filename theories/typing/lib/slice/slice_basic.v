@@ -1,12 +1,65 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import typing uniq_array_util.
-From lrust.typing.lib.slice Require Import uniq_slice.
+From lrust.typing.lib.slice Require Import slice.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
 
 Section slice_basic.
   Context `{!typeG Σ}.
+
+  (* shr_slice *)
+
+  Global Instance shr_slice_type_contractive {𝔄} κ :
+    TypeContractive (shr_slice (𝔄:=𝔄) κ).
+  Proof.
+    split; [by apply (type_lft_morphism_add_one κ)|done| |].
+    - move=> > EqSz */=. rewrite EqSz. by do 12 f_equiv.
+    - move=> > EqSz */=. rewrite EqSz. do 16 (f_contractive || f_equiv). by simpl in *.
+  Qed.
+
+  Global Instance shr_slice_send {𝔄} κ (ty: type 𝔄) : Sync ty → Send (shr_slice κ ty).
+  Proof. move=> >/=. by do 12 f_equiv. Qed.
+
+  Lemma shr_slice_resolve {𝔄} κ (ty: type 𝔄) E L : resolve E L (shr_slice κ ty) (const True).
+  Proof. apply resolve_just. Qed.
+
+  Lemma shr_slice_real {𝔄 𝔅} κ (ty: type 𝔄) E L (f: _ → 𝔅) :
+    lctx_lft_alive E L κ → real E L ty f →
+    real (𝔅:=listₛ _) E L (shr_slice κ ty) (map f).
+  Proof.
+    move=> ??. apply simple_type_real=>/=.
+    iIntros (???[|]???) "LFT E L big"; [done|]=>/=.
+    iDestruct "big" as (???[->->]) "tys".
+    iMod (real_big_sepL_ty_shr with "LFT E L tys") as "Upd"; [done..|].
+    iIntros "!>!>!>". iApply (step_fupdN_wand with "Upd").
+    iIntros ">((%bl & %Eq)&$& tys) !>". iSplit.
+    { iPureIntro. exists bl. fun_ext=> π. move: (equal_f Eq π)=>/= <-.
+      by rewrite -vec_to_list_apply vec_to_list_map. }
+    iExists _, _, _. by iSplit.
+  Qed.
+
+  Lemma shr_slice_subtype {𝔄 𝔅} κ κ' ty ty' (f: 𝔄 → 𝔅) E L :
+    lctx_lft_incl E L κ' κ → subtype E L ty ty' f →
+    subtype E L (shr_slice κ ty) (shr_slice κ' ty') (map f).
+  Proof.
+    move=> Lft Sub. apply subtype_simple_type=>/=. iIntros (?) "L".
+    iDestruct (Lft with "L") as "#Lft". iDestruct (Sub with "L") as "#Sub".
+    iIntros "!> E". iDestruct ("Lft" with "E") as "#?".
+    iDestruct ("Sub" with "E") as "#(%&?&_& #?)". iSplit; [done|].
+    iSplit; [by iApply lft_intersect_mono|]. iIntros (?[|]??) "big /="; [done|].
+    iDestruct "big" as (?? aπl[->->]) "tys". iExists _, _, _.
+    have ?: ∀(aπl: vec (proph 𝔄) _), map f ∘ lapply aπl = lapply (vmap (f ∘.) aπl).
+    { move=> ?. elim; [done|]=> ??? IH. fun_ext=>/= ?. f_equal. apply (equal_f IH). }
+    iSplit; [done|]. iApply incl_big_sepL_ty_shr; [done..|].
+    by iApply big_sepL_ty_shr_lft_mono.
+  Qed.
+  Lemma shr_slice_eqtype {𝔄 𝔅} κ κ' ty ty' (f: 𝔄 → 𝔅) g E L :
+    lctx_lft_eq E L κ' κ → eqtype E L ty ty' f g →
+    eqtype E L (shr_slice κ ty) (shr_slice κ' ty') (map f) (map g).
+  Proof. move=> [??][??]. split; (apply shr_slice_subtype; by [|split]). Qed.
+
+  (* uniq_slice *)
 
   Global Instance uniq_slice_type_contractive {𝔄} κ :
     TypeContractive (uniq_slice (𝔄:=𝔄) κ).
@@ -81,40 +134,37 @@ Section slice_basic.
     eqtype E L (uniq_slice κ ty) (uniq_slice κ' ty') id id.
   Proof. move=> [??][??]. split; (apply uniq_slice_subtype; by [|split]). Qed.
 
+  (* methods *)
+
   Definition slice_len: val :=
-    fn: ["bs"] :=
-      let: "s" := !"bs" in delete [ #1; "bs"];;
-      letalloc: "r" <- !("s" +ₗ #1) in
-      return: ["r"].
+    fn: ["s"] :=
+      let: "l" := !("s" +ₗ #1) in delete [ #2; "s"];;
+      letalloc: "r" <- "l" in return: ["r"].
 
   (* Rust's [T]::len *)
-  Lemma uniq_slice_len_type {𝔄} (ty: type 𝔄) :
-    typed_val slice_len (fn<(α, β)>(∅; &shr{β} (uniq_slice α ty)) → int)
-      (λ post '-[aal], post (length aal)).
+  Lemma shr_slice_len_type {𝔄} (ty: type 𝔄) :
+    typed_val slice_len (fn<α>(∅; shr_slice α ty) → int)
+      (λ post '-[al], post (length al)).
   Proof.
-    eapply type_fn; [apply _|]. move=>/= [α β]??[b[]]. simpl_subst.
-    iIntros (?[?[]]?) "LFT _ _ _ E Na L C /=[bs _] #Obs".
-    rewrite tctx_hasty_val. iDestruct "bs" as ([|d]) "[⧖ box]"=>//.
-    case b as [[]|]=>//=. rewrite split_mt_ptr.
-    case d as [|d]; first by iDestruct "box" as "[>[] _]".
-    iDestruct "box" as "[(%& >↦bs  & slice) †bs]". wp_read. wp_let.
-    rewrite -heap_mapsto_vec_singleton freeable_sz_full.
-    wp_apply (wp_delete with "[$↦bs $†bs]"); [done|]. iIntros "_". wp_seq.
-    case d as [|]=>//. iDestruct "slice" as (???? [Eq1 ?]) "[Bor _]".
-    iMod (lctx_lft_alive_tok β with "E L") as (?) "(β & L & ToL)"; [solve_typing..|].
-    iMod (frac_bor_acc with "LFT Bor β") as (?) "[(↦₀ & ↦₁ & ↦₂) Toα]"; [done|].
-    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]". wp_let. wp_op. wp_read.
-    rewrite heap_mapsto_vec_singleton. wp_write. do 2 wp_seq.
-    iMod ("Toα" with "[$↦₀ $↦₁ $↦₂]") as "β". iMod ("ToL" with "β L") as "L".
-    rewrite cctx_interp_singleton. iApply ("C" $! [# #_] -[_] with "Na L [-] []").
-    - rewrite/= right_id (tctx_hasty_val #_) -freeable_sz_full. iExists _.
-      iFrame "⧖ †r". iNext. iExists [_]. rewrite heap_mapsto_vec_singleton.
-      iFrame "↦r". by iExists _.
+    eapply type_fn; [apply _|]. move=>/= α ??[b[]]. simpl_subst.
+    iIntros (?[?[]]?) "LFT TIME PROPH UNIQ E Na L C /=[bs _] #Obs".
+    rewrite tctx_hasty_val. iDestruct "bs" as ([|d]) "[#⧖ box]"=>//.
+    case b as [[]|]=>//=. iDestruct "box" as "[sl †]". rewrite split_mt_shr_slice.
+    case d as [|d]; first by iDestruct "sl" as ">[]". wp_op.
+    iDestruct "sl" as (? n ?->) "(↦ & ↦' &_)". wp_read. wp_let.
+    rewrite freeable_sz_full. wp_apply (wp_delete [_;_] with "[$† ↦ ↦']"); [done| |].
+    { rewrite heap_mapsto_vec_cons heap_mapsto_vec_singleton. iFrame. }
+    iIntros "_". wp_seq.
+    iApply (type_type +[#n ◁ int] -[const (n: Zₛ)]
+      with "[] LFT TIME PROPH UNIQ E Na L C [] []").
+    - iApply type_letalloc_1; [solve_extract|done|]. intro_subst.
+      iApply type_jump; [solve_typing|solve_extract|solve_typing].
+    - iSplit; [|done]. rewrite (tctx_hasty_val #n)/=. iExists _.
+      iFrame "⧖". by iExists n.
     - iApply proph_obs_eq; [|done]=>/= π. f_equal.
-      rewrite -(map_length fst). move: (equal_f Eq1 π)=> /= ->.
       by rewrite -vec_to_list_apply vec_to_list_length.
   Qed.
 End slice_basic.
 
-Global Hint Resolve uniq_slice_resolve uniq_slice_real
-  uniq_slice_subtype uniq_slice_eqtype : lrust_typing.
+Global Hint Resolve shr_slice_resolve shr_slice_real shr_slice_subtype shr_slice_eqtype
+  uniq_slice_resolve uniq_slice_real uniq_slice_subtype uniq_slice_eqtype : lrust_typing.

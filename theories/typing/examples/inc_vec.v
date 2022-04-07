@@ -2,7 +2,7 @@ From iris.proofmode Require Import tactics.
 From lrust.typing Require Export type.
 From lrust.typing Require Import typing.
 From lrust.typing.lib.vec Require Import vec vec_slice.
-From lrust.typing.lib.slice Require Import uniq_slice iter.
+From lrust.typing.lib.slice Require Import slice iter.
 Set Default Proof Using "Type".
 
 Section code.

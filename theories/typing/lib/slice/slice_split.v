@@ -1,6 +1,6 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import uniq_array_util typing.
-From lrust.typing.lib Require Import slice.uniq_slice.
+From lrust.typing.lib Require Import slice.slice.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.

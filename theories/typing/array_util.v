@@ -192,4 +192,13 @@ Section array_util.
     iDestruct "tys" as "[ty tys]". setoid_rewrite <-shift_loc_assoc_nat.
     iSplitL "ty"; by [iApply "In"|iApply "IH"].
   Qed.
+
+  Lemma big_sepL_ty_shr_lft_mono {𝔄} (ty: type 𝔄) aπl d κ κ' tid l :
+    κ' ⊑ κ -∗ ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i)) -∗
+    [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ' tid (l +ₗ[ty] i).
+  Proof.
+    iIntros "#? tys". iInduction aπl as [|] "IH" forall (l); [done|]=>/=.
+    iDestruct "tys" as "[ty tys]". setoid_rewrite <-shift_loc_assoc_nat.
+    iSplitL "ty"; by [iApply ty_shr_lft_mono|iApply "IH"].
+  Qed.
 End array_util.

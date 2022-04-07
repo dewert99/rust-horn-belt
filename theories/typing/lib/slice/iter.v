@@ -1,6 +1,6 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import typing uniq_array_util lib.option.
-From lrust.typing.lib.slice Require Import uniq_slice.
+From lrust.typing.lib.slice Require Import slice.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄: syn_type.
@@ -8,7 +8,13 @@ Implicit Type 𝔄: syn_type.
 Section iter.
   Context `{!typeG Σ}.
 
-  (** We model the unique iterator the same as the unique slice *)
+  (** For simplicity, we model the shared and unique iterators
+    the same as the shared and unique slices *)
+
+  (* Rust's Iter<'a, T> *)
+  Definition iter_shr {𝔄} (κ: lft) (ty: type 𝔄) : type (listₛ 𝔄) :=
+    shr_slice κ ty.
+
   (* Rust's IterMut<'a, T> *)
   Definition iter_uniq {𝔄} (κ: lft) (ty: type 𝔄) : type (listₛ (𝔄 * 𝔄)) :=
     uniq_slice κ ty.

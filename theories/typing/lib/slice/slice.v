@@ -4,8 +4,56 @@ Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
 
-Section uniq_slice.
+Section slice.
   Context `{!typeG Σ}.
+
+  Lemma split_mt_shr_slice {A} φ Φ l' d q :
+    (l' ↦∗{q}: (λ vl, [S(d') := d]
+      ∃(l: loc) (n: nat) (aπl: A n),
+        ⌜vl = [ #l; #n] ∧ φ n aπl⌝ ∗ Φ l n d' aπl)) ⊣⊢
+    [S(d') := d] ∃(l: loc) (n: nat) (aπl: A n),
+      ⌜φ n aπl⌝ ∗ l' ↦{q} #l ∗ (l' +ₗ 1) ↦{q} #n ∗ Φ l n d' aπl.
+  Proof.
+    iSplit.
+    - iIntros "(%& ↦ & big)". case d; [done|]=>/= ?.
+      iDestruct "big" as (???[->?]) "?". iExists _, _, _.
+      rewrite !heap_mapsto_vec_cons. iDestruct "↦" as "($&$&_)". by iFrame.
+    - iIntros "big". case d; [done|]=>/= ?.
+      iDestruct "big" as (????) "(↦ & ↦' & ?)". iExists [_;_].
+      rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil. iFrame "↦ ↦'".
+      iExists _, _, _. by iFrame.
+  Qed.
+
+  (* Rust's &'a [T] *)
+  Program Definition shr_slice {𝔄} (κ: lft) (ty: type 𝔄) : type (listₛ 𝔄) := {|
+    st_size := 2;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    st_own (alπ: proph (listₛ 𝔄)) d tid vl := [S(d') := d]
+      ∃(l: loc) (n: nat) (aπl: vec (proph 𝔄) n),
+        ⌜vl = [ #l; #n] ∧ alπ = lapply aπl⌝ ∗
+        [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d' κ tid (l +ₗ[ty] i);
+  |}%I.
+  Next Obligation.
+    iIntros (????[|]??) "big"; [done|]. by iDestruct "big" as (???[->_]) "_".
+  Qed.
+  Next Obligation.
+    move=> ???[|?][|?]*/=; try (by iIntros); [lia|]=>/=. do 10 f_equiv.
+    apply ty_shr_depth_mono. lia.
+  Qed.
+  Next Obligation.
+    move=> ?????[|?]*/=; [by iIntros|].
+    iIntros "#LFT #? (%&%&%&[->->]& #tys) κ' !>/=".
+    iDestruct (ty_shr_proph_big_sepL with "LFT [] [] tys κ'") as "Upd"; first done.
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
+    { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
+    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξl q ?) "[ξl Upd]".
+    iModIntro. iExists ξl, q. iSplit.
+    { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+    iIntros "{$ξl}ξl". iMod ("Upd" with "ξl") as "$". iModIntro.
+    iExists _, _, _. by iSplit.
+  Qed.
+
+  Global Instance shr_slice_ne {𝔄} κ : NonExpansive (@shr_slice 𝔄 κ).
+  Proof. rewrite /shr_slice. solve_ne_type. Qed.
 
   Lemma split_mt_uniq_slice {A} P Ψ Φ l' q :
     (l' ↦∗{q}: (λ vl, P ∗
@@ -106,4 +154,4 @@ Section uniq_slice.
 
   Global Instance uniq_slice_ne {𝔄} κ : NonExpansive (@uniq_slice 𝔄 κ).
   Proof. rewrite /uniq_slice /uniq_body. solve_ne_type. Qed.
-End uniq_slice.
+End slice.

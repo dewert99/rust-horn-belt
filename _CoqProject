@@ -79,7 +79,7 @@ theories/typing/lib/option.v
 theories/typing/lib/list.v
 theories/typing/lib/maybe_uninit.v
 theories/typing/lib/vec_util.v
-theories/typing/lib/slice/uniq_slice.v
+theories/typing/lib/slice/slice.v
 theories/typing/lib/slice/slice_basic.v
 theories/typing/lib/slice/array_slice.v
 theories/typing/lib/slice/slice_split.v
