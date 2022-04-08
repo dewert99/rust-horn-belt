@@ -87,11 +87,10 @@ Section vec_basic.
     typed_val vec_new (fn(∅) → vec_ty ty) (λ post _, post []).
   Proof.
     eapply type_fn; [apply _|]=> _ ???. simpl_subst.
-    iIntros (???) "_ #TIME _ _ _ Na L C _ Obs".
-    wp_apply wp_new; [done..|]. iIntros (r).
-    rewrite !heap_mapsto_vec_cons shift_loc_assoc. iIntros "[† (↦₀ & ↦₁ & ↦₂ &_)]".
-    wp_seq. iMod persistent_time_receipt_0 as "⧖". wp_bind (new _).
-    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
+    iIntros (???) "_ #TIME _ _ _ Na L C _ Obs". wp_apply wp_new; [done..|].
+    iIntros (r). rewrite !heap_mapsto_vec_cons shift_loc_assoc.
+    iIntros "[† (↦₀ & ↦₁ & ↦₂ &_)]". wp_seq. iMod persistent_time_receipt_0 as "⧖".
+    wp_bind (new _). iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
     iApply wp_new; [done..|]. iIntros "!>" (l) "[†' _] ⧖". wp_bind (_ <- _)%E.
     iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|]. wp_write.
     iIntros "⧖". wp_seq. wp_op. wp_write. wp_op. wp_write. do 2 wp_seq.
@@ -100,7 +99,7 @@ Section vec_basic.
     iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full split_mt_vec'.
     iFrame "†". iNext. iExists _, 0, 0, [#]=>/=. iSplit; [done|].
     rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil shift_loc_assoc.
-    iFrame "↦₀ ↦₁ ↦₂ †'". iSplit; [by iNext|]. iExists []. by rewrite heap_mapsto_vec_nil.
+    iFrame "↦₀ ↦₁ ↦₂ †'". iSplit; [done|]. iExists []. by rewrite heap_mapsto_vec_nil.
   Qed.
 
   Definition vec_drop {𝔄} (ty: type 𝔄) : val :=

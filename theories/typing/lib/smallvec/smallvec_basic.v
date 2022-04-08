@@ -109,9 +109,8 @@ Section smallvec_basic.
     typed_val (smallvec_new n ty) (fn(∅) → smallvec n ty) (λ post _, post []).
   Proof.
     eapply type_fn; [apply _|]=> _ ???. simpl_subst.
-    iIntros (???) "_ #TIME _ _ _ Na L C _ Obs".
-    iMod persistent_time_receipt_0 as "⧖". wp_bind (new _).
-    iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
+    iIntros (???) "_ #TIME _ _ _ Na L C _ Obs". iMod persistent_time_receipt_0 as "⧖".
+    wp_bind (new _). iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
     iApply wp_new; [done..|]. iIntros "!>" (r).
     rewrite !Nat2Z.id/= !heap_mapsto_vec_cons !shift_loc_assoc.
     iIntros "[† (↦₀ & ↦₁ & ↦₂ & ↦₃ & ↦ex)] ⧖". wp_seq. wp_write.
@@ -120,7 +119,7 @@ Section smallvec_basic.
     iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full.
     iFrame "†". iNext. rewrite split_mt_smallvec. iExists true, _, 0, 0, [#].
     rewrite/= !heap_mapsto_vec_cons !shift_loc_assoc heap_mapsto_vec_nil.
-    iFrame "↦₀ ↦₁ ↦₂ ↦₃". do 2 (iSplit; [done|]). iExists _. iFrame.
+    iFrame "↦₀ ↦₁ ↦₂ ↦₃". do 2 (iSplit; [done|]). iExists _. iFrame "↦ex".
     by rewrite repeat_length.
   Qed.
 
