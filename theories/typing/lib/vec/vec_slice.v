@@ -15,8 +15,37 @@ Section vec_slice.
       "r" <- !"v";; "r" +ₗ #1 <- !("v" +ₗ #1);;
       return: ["r"].
 
-  (* Rust's Vec::as_slice_mut *)
-  Lemma vec_as_slice_uniq_type {𝔄} (ty: type 𝔄) :
+  (* Rust's Vec::as_slice *)
+  Lemma vec_as_shr_slice_type {𝔄} (ty: type 𝔄) :
+    typed_val vec_as_slice (fn<α>(∅; &shr{α} (vec_ty ty)) → shr_slice α ty)
+      (λ post '-[al], post al).
+  Proof.
+    eapply type_fn; [apply _|]=>/= α ??[bv[]]. simpl_subst.
+    iIntros (?(vπ &[])?) "#LFT #TIME #PROPH #UNIQ E Na L C /=[bv _] #Obs".
+    rewrite tctx_hasty_val. iDestruct "bv" as ([|d]) "[⧖ box]"=>//.
+    case bv as [[|bv|]|]=>//=. rewrite split_mt_ptr.
+    case d as [|d]; [by iDestruct "box" as "[>[] _]"|]=>/=.
+    iDestruct "box" as "[(%& ↦ & big) †]". wp_read. wp_let.
+    case d as [|d]; [done|]. iDestruct "big" as (????->) "[Bor tys]".
+    rewrite freeable_sz_full -heap_mapsto_vec_singleton.
+    wp_apply (wp_delete with "[$↦ $†]"); [done|]. iIntros "_". wp_seq.
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]". wp_let.
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (frac_bor_acc with "LFT Bor α") as (?) "[>↦ Cls]"; [done|].
+    rewrite !heap_mapsto_vec_cons !heap_mapsto_vec_nil.
+    iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ &_)". iDestruct "↦r" as "(↦r & ↦r' &_)".
+    wp_read. wp_write. do 2 wp_op. wp_read. wp_write. do 2 wp_seq.
+    iMod ("Cls" with "[$↦₀ $↦₁ $↦₂]") as "α".
+    iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
+    iApply ("C" $! [# #_] -[_] with "Na L [-] Obs"). iSplit; [|done].
+    rewrite tctx_hasty_val. iExists (S _). rewrite/= split_mt_shr_slice.
+    rewrite freeable_sz_full. iFrame "⧖ †r". iNext. iExists _, _, _.
+    iSplit; [done|]. iFrame "↦r ↦r'". iClear "#". iStopProof.
+    do 3 f_equiv. apply ty_shr_depth_mono. lia.
+  Qed.
+
+  (* Rust's Vec::as_mut_slice *)
+  Lemma vec_as_uniq_slice_type {𝔄} (ty: type 𝔄) :
     typed_val vec_as_slice (fn<α>(∅; &uniq{α} (vec_ty ty)) → uniq_slice α ty)
       (λ post '-[(al, al')], length al' = length al → post (zip al al')).
   Proof.

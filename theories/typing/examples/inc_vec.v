@@ -40,7 +40,7 @@ Section code.
       (λ post '-[(v, v')], v' = map (λ e, e + 5) v → post ()).
   Proof.
     eapply type_fn; [apply _|]=>/= α ϝ ret [v[]]. simpl_subst. via_tr_impl.
-    { iApply type_val; [apply (vec_as_slice_uniq_type int)|]. intro_subst.
+    { iApply type_val; [apply (vec_as_uniq_slice_type int)|]. intro_subst.
       iApply type_letcall; [solve_typing|solve_extract|solve_typing|..].
       iIntros (iter). simpl_subst.
       iApply (type_cont [] (λ _, +[iter ◁ _]) (λ (post : ()%ST → _) _, post ())).

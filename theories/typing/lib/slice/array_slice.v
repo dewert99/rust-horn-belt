@@ -15,8 +15,31 @@ Section array_slice.
       "r" <- "a";; "r" +ₗ #1 <- #n;;
       return: ["r"].
 
+  (* Rust's [T; n]::as_slice *)
+  Lemma array_as_shr_slice_type {𝔄} n (ty: type 𝔄) :
+    typed_val (array_as_slice n) (fn<α>(∅; &shr{α} [ty;^ n]) → shr_slice α ty)
+      (λ post '-[al], post al).
+  Proof.
+    eapply type_fn; [apply _|]=>/= α ??[ba[]]. simpl_subst.
+    iIntros (?(vπ &[])?) "#LFT #TIME #PROPH UNIQ E Na L C /=[ba _] #Obs".
+    rewrite tctx_hasty_val. iDestruct "ba" as ([|d]) "[#⧖ box]"=>//.
+    case ba as [[|ba|]|]=>//=. rewrite split_mt_ptr.
+    case d as [|]; [by iDestruct "box" as "[>[] _]"|]=>/=.
+    iDestruct "box" as "[(%& ↦ & tys) †]". wp_read. wp_let.
+    rewrite freeable_sz_full -heap_mapsto_vec_singleton.
+    wp_apply (wp_delete with "[$↦ $†]"); [done|]. iIntros "_". wp_seq.
+    wp_apply wp_new; [done..|]. iIntros (?) "[† ↦]". wp_let.
+    rewrite heap_mapsto_vec_cons heap_mapsto_vec_singleton.
+    iDestruct "↦" as "[↦ ↦']". wp_write. wp_op. wp_write. do 2 wp_seq.
+    rewrite cctx_interp_singleton.
+    iApply ("C" $! [# #_] -[_] with "Na L [-] Obs"). iSplit; [|done].
+    rewrite tctx_hasty_val. iExists (S _). rewrite/= split_mt_shr_slice.
+    rewrite freeable_sz_full. iFrame "⧖ †". iNext. iExists _, _, _. iFrame.
+    iPureIntro. by rewrite -vec_to_list_apply vapply_funsep.
+  Qed.
+
   (* Rust's [T; n]::as_mut_slice *)
-  Lemma array_as_slice_uniq_type {𝔄} n (ty: type 𝔄) :
+  Lemma array_as_uniq_slice_type {𝔄} n (ty: type 𝔄) :
     typed_val (array_as_slice n) (fn<α>(∅; &uniq{α} [ty;^ n]) → uniq_slice α ty)
       (λ post '-[(al, al')], length al' = length al → post (zip al al')).
   Proof.
@@ -25,7 +48,7 @@ Section array_slice.
     rewrite tctx_hasty_val. iDestruct "ba" as ([|]) "[#⧖ box]"=>//.
     case ba as [[|ba|]|]=>//=. rewrite split_mt_uniq_bor.
     iDestruct "box" as "[(#In &%&%& %ξi &>[% %Eq2]& ↦ba & Vo & Bor) †ba]".
-    wp_read. wp_seq. rewrite freeable_sz_full -heap_mapsto_vec_singleton.
+    wp_read. wp_let. rewrite freeable_sz_full -heap_mapsto_vec_singleton.
     wp_apply (wp_delete with "[$↦ba $†ba]"); [done|]. iIntros "_".
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc_cons with "LFT Bor α") as "[big ToBor]"; [done|]. wp_seq.

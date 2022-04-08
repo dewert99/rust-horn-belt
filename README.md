@@ -93,7 +93,7 @@ The filenames are spread across `theories/typing/examples`, `theories/typing`, `
 | `pop`               | `vec_pushpop.v`   | `vec_pop_type`           |
 | `index_mut`         | `vec_index.v`     | `vec_index_uniq_type`    |
 | **`IterMut`**       |                   |                          |
-| `iter_mut`          | `vec_slice.v`     | `vec_as_slice_uniq_type` |
+| `iter_mut`          | `vec_slice.v`     | `vec_as_uniq_slice_type` |
 | `next`              | `iter.v`          | `iter_uniq_next_type`    |
 | `inc_vec`           | `inc_vec.v`       | `inc_vec_type`           |
 | **`Cell`**          |                   |                          |

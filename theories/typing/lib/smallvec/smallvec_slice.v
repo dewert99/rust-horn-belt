@@ -17,7 +17,42 @@ Section smallvec_slice.
       else
         "r" <- !("v" +ₗ #1);; return: ["r"].
 
-  Lemma smallvec_as_slice_uniq_type {𝔄} n (ty: type 𝔄) :
+  (* Rust's SmallVec::as_slice *)
+  Lemma smallvec_as_shr_slice_type {𝔄} n (ty: type 𝔄) :
+    typed_val smallvec_as_slice (fn<α>(∅; &shr{α} (smallvec n ty)) → shr_slice α ty)
+      (λ post '-[al], post al).
+  Proof.
+    eapply type_fn; [apply _|]=>/= α ??[bv[]]. simpl_subst.
+    iIntros (?(vπ &[])?) "#LFT #TIME #PROPH #UNIQ E Na L C /=[bv _] #Obs".
+    rewrite tctx_hasty_val. iDestruct "bv" as ([|d]) "[⧖ box]"=>//.
+    case bv as [[|bv|]|]=>//=. rewrite split_mt_ptr.
+    case d as [|d]; [by iDestruct "box" as "[>[] _]"|]=>/=.
+    iDestruct "box" as "[(%& ↦ & big) †]". wp_read. wp_let.
+    rewrite freeable_sz_full -heap_mapsto_vec_singleton.
+    wp_apply (wp_delete with "[$↦ $†]"); [done|]. iIntros "_". wp_seq.
+    wp_apply wp_new; [done..|]. iIntros (?) "[†r ↦r]". wp_let.
+    iDestruct "big" as (b ????->) "[Bor tys]".
+    iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
+    iMod (frac_bor_acc with "LFT Bor α") as (?) "[>↦ Cls]"; [done|].
+    rewrite !heap_mapsto_vec_cons !heap_mapsto_vec_nil shift_loc_assoc.
+    iDestruct "↦" as "(↦₀ & ↦₁ & ↦₂ & ↦₃ &_)". iDestruct "↦r" as "(↦r & ↦r' &_)".
+    do 2 wp_op. wp_read. wp_write. wp_read. wp_if. case b; wp_op.
+    - wp_write. do 2 wp_seq. iMod ("Cls" with "[$↦₀ $↦₁ $↦₂ $↦₃]") as "α".
+      iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
+      iApply ("C" $! [# #_] -[_] with "Na L [-] Obs"). iSplit; [|done].
+      rewrite tctx_hasty_val. iExists (S _). rewrite/= split_mt_shr_slice.
+      rewrite freeable_sz_full. iFrame "⧖ †r". iNext. iExists _, _, _.
+      iSplit; [done|]. by iFrame.
+    - wp_read. wp_write. do 2 wp_seq. iMod ("Cls" with "[$↦₀ $↦₁ $↦₂ $↦₃]") as "α".
+      iMod ("ToL" with "α L") as "L". rewrite cctx_interp_singleton.
+      iApply ("C" $! [# #_] -[_] with "Na L [-] Obs"). iSplit; [|done].
+      rewrite tctx_hasty_val. iExists (S _). rewrite/= split_mt_shr_slice.
+      rewrite freeable_sz_full. iFrame "⧖ †r". iNext. iExists _, _, _.
+      iSplit; [done|]. by iFrame.
+  Qed.
+
+  (* Rust's SmallVec::as_mut_slice *)
+  Lemma smallvec_as_uniq_slice_type {𝔄} n (ty: type 𝔄) :
     typed_val smallvec_as_slice (fn<α>(∅; &uniq{α} (smallvec n ty)) → uniq_slice α ty)
       (λ post '-[(al, al')], length al' = length al → post (zip al al')).
   Proof.
