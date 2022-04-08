@@ -52,9 +52,9 @@ Section smallvec_index.
       iApply ("C" $! [# #_] -[aπl !!! ifin] with "Na L [-] []").
       + iSplit; [|done]. rewrite tctx_hasty_val. iExists (S (S d)).
         iSplit. { iApply persistent_time_receipt_mono; [|done]. lia. }
-        rewrite/= freeable_sz_full. iFrame "†r". iNext. iExists [_].
-        rewrite heap_mapsto_vec_singleton. iFrame "↦r".
-        rewrite/= -Nat2Z.inj_mul Eqi. iApply (big_sepL_vlookup with "tys").
+        rewrite/= freeable_sz_full. iFrame "†r". iNext. rewrite split_mt_ptr'.
+        iExists _. iFrame "↦r". rewrite/= -Nat2Z.inj_mul Eqi.
+        iApply (big_sepL_vlookup with "tys").
       + iApply proph_obs_impl; [|done]=>/= ?[?[?[/Nat2Z.inj <-[++]]]].
         by rewrite Eqi -vlookup_lookup -vapply_lookup=> <-.
     - wp_read. wp_op. do 2 wp_read. do 2 wp_op. wp_write.
@@ -69,9 +69,9 @@ Section smallvec_index.
       iApply ("C" $! [# #_] -[aπl !!! ifin] with "Na L [-] []").
       + iSplit; [|done]. rewrite tctx_hasty_val. iExists (S (S d)).
         iSplit. { iApply persistent_time_receipt_mono; [|done]. lia. }
-        rewrite/= freeable_sz_full. iFrame "†r". iNext. iExists [_].
-        rewrite heap_mapsto_vec_singleton. iFrame "↦r".
-        rewrite/= -Nat2Z.inj_mul Eqi. iApply (big_sepL_vlookup with "tys").
+        rewrite/= freeable_sz_full. iFrame "†r". iNext. rewrite split_mt_ptr'.
+        iExists _. iFrame "↦r". rewrite/= -Nat2Z.inj_mul Eqi.
+        iApply (big_sepL_vlookup with "tys").
       + iApply proph_obs_impl; [|done]=>/= ?[?[?[/Nat2Z.inj <-[++]]]].
         by rewrite Eqi -vlookup_lookup -vapply_lookup=> <-.
   Qed.
@@ -140,10 +140,9 @@ Section smallvec_index.
       + rewrite cctx_interp_singleton.
         iMod ("ToL" with "[$α $α₊ $α₊₊] L") as "L".
         iApply ("C" $! [# #_] -[λ π, ((aπl !!! ifin) π, π ζ)] with "Na L [-] []").
-        * iSplitL; [|done]. rewrite tctx_hasty_val. iExists _.
-          rewrite -freeable_sz_full. iFrame "⧖ †r". iNext. iExists [_].
-          rewrite heap_mapsto_vec_singleton. iFrame "↦r In". iExists d', _.
-          iFrame "Vo' Bor". iPureIntro. split; [lia|done].
+        * iSplitL; [|done]. rewrite tctx_hasty_val. iExists (S _).
+          rewrite/= -freeable_sz_full split_mt_uniq_bor. iFrame "⧖ †r In". iNext.
+          iExists _, d', _. iFrame "↦r Vo' Bor". iPureIntro. split; [lia|done].
         * iApply proph_obs_impl; [|done]=>/= ?[[?[?[/Nat2Z.inj <-[++]]]]Eqξ].
           rewrite Eqi -vlookup_lookup=> <- Imp. rewrite -vapply_lookup. apply Imp.
           by rewrite Eqξ -vec_to_list_apply vapply_insert -vec_to_list_insert.

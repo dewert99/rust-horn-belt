@@ -7,12 +7,11 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section slice.
   Context `{!typeG Σ}.
 
-  Lemma split_mt_shr_slice {A} φ Φ l' d q :
-    (l' ↦∗{q}: (λ vl, [S(d') := d]
-      ∃(l: loc) (n: nat) (aπl: A n),
-        ⌜vl = [ #l; #n] ∧ φ n aπl⌝ ∗ Φ l n d' aπl)) ⊣⊢
+  Lemma split_mt_shr_slice {A} d φ Φ l' q :
+    (l' ↦∗{q}: (λ vl, [S(d') := d] ∃(l: loc) (n: nat) (aπl: A n),
+      ⌜vl = [ #l; #n] ∧ φ n aπl⌝ ∗ Φ d' l n aπl)) ⊣⊢
     [S(d') := d] ∃(l: loc) (n: nat) (aπl: A n),
-      ⌜φ n aπl⌝ ∗ l' ↦{q} #l ∗ (l' +ₗ 1) ↦{q} #n ∗ Φ l n d' aπl.
+      ⌜φ n aπl⌝ ∗ l' ↦{q} #l ∗ (l' +ₗ 1) ↦{q} #n ∗ Φ d' l n aπl.
   Proof.
     iSplit.
     - iIntros "(%& ↦ & big)". case d; [done|]=>/= ?.
@@ -22,6 +21,16 @@ Section slice.
       iDestruct "big" as (????) "(↦ & ↦' & ?)". iExists [_;_].
       rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil. iFrame "↦ ↦'".
       iExists _, _, _. by iFrame.
+  Qed.
+
+  Lemma split_mt_shr_slice' {A} φ Φ l' q :
+    (l' ↦∗{q}: (λ vl, ∃(l: loc) (n: nat) (aπl: A n),
+      ⌜vl = [ #l; #n] ∧ φ n aπl⌝ ∗ Φ l n aπl)) ⊣⊢
+    ∃(l: loc) (n: nat) (aπl: A n),
+      ⌜φ n aπl⌝ ∗ l' ↦{q} #l ∗ (l' +ₗ 1) ↦{q} #n ∗ Φ l n aπl.
+  Proof.
+    set Φ' := λ _: nat, Φ. have ->: Φ = Φ' 0%nat by done.
+    by apply (split_mt_shr_slice (S _)).
   Qed.
 
   (* Rust's &'a [T] *)

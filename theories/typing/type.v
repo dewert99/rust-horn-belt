@@ -1169,7 +1169,7 @@ Section type_util.
   Context `{!typeG Σ}.
 
   (* Splitting for a standard pointer *)
-  Lemma split_mt_ptr Φ d l' :
+  Lemma split_mt_ptr d Φ l' :
     (l' ↦∗: λ vl, [S(d') := d] [loc[l] := vl] Φ d' l) ⊣⊢
     [S(d') := d] ∃l: loc, l' ↦ #l ∗ Φ d' l.
   Proof.
@@ -1178,6 +1178,13 @@ Section type_util.
       rewrite heap_mapsto_vec_singleton. iExists _. iFrame.
     - iIntros "big". case d as [|]=>//. iDestruct "big" as (?) "[??]".
       iExists [_]. rewrite heap_mapsto_vec_singleton. by iFrame.
+  Qed.
+
+  Lemma split_mt_ptr' Φ l' :
+    (l' ↦∗: λ vl, [loc[l] := vl] Φ l) ⊣⊢ ∃l: loc, l' ↦ #l ∗ Φ l.
+  Proof.
+    set Φ' := λ _: nat, Φ. have ->: Φ = Φ' 0%nat by done.
+    by apply (split_mt_ptr (S _)).
   Qed.
 
   Lemma heap_mapsto_ty_own {𝔄} l (ty: type 𝔄) vπ d tid :

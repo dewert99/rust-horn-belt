@@ -8,7 +8,7 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section vec.
   Context `{!typeG Σ}.
 
-  Lemma split_mt_vec {𝔄} l' d alπ Φ :
+  Lemma split_mt_vec {𝔄} d l' alπ Φ :
     (l' ↦∗: (λ vl, [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
       ⌜vl = [ #l; #len; #ex] ∧ alπ = lapply aπl⌝ ∗ Φ d' l len ex aπl)) ⊣⊢
     [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
@@ -19,6 +19,16 @@ Section vec.
       iExists _, _, _, _. iSplit; [done|iFrame].
     - iIntros "big". case d=>// ?. iDestruct "big" as (????->) "(↦ & ?)".
       iExists [_;_;_]. iFrame "↦". iExists _, _, _, _. by iFrame.
+  Qed.
+
+  Lemma split_mt_vec' {𝔄} l' alπ Φ :
+    (l' ↦∗: (λ vl, ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
+      ⌜vl = [ #l; #len; #ex] ∧ alπ = lapply aπl⌝ ∗ Φ l len ex aπl)) ⊣⊢
+    ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
+      ⌜alπ = lapply aπl⌝ ∗ l' ↦∗ [ #l; #len; #ex] ∗ Φ l len ex aπl.
+  Proof.
+    set Φ' := λ _: nat, Φ. have ->: Φ = Φ' 0 by done.
+    by apply (split_mt_vec (S _)).
   Qed.
 
   (* Rust's Vec<T> *)

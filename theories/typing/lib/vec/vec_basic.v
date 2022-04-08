@@ -97,11 +97,10 @@ Section vec_basic.
     iIntros "⧖". wp_seq. wp_op. wp_write. wp_op. wp_write. do 2 wp_seq.
     rewrite cctx_interp_singleton.
     iApply ("C" $! [# #_] -[const []] with "Na L [-Obs] Obs"). iSplit; [|done].
-    iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full.
-    iFrame "†". iNext. iExists [_; _; _].
-    rewrite !heap_mapsto_vec_cons shift_loc_assoc heap_mapsto_vec_nil.
-    iFrame "↦₀ ↦₁ ↦₂". iExists l, 0, 0, [#]. iSplit; [done|]. iFrame "†'".
-    iSplit; [by iNext|]. iExists []. by rewrite heap_mapsto_vec_nil.
+    iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full split_mt_vec'.
+    iFrame "†". iNext. iExists _, 0, 0, [#]=>/=. iSplit; [done|].
+    rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil shift_loc_assoc.
+    iFrame "↦₀ ↦₁ ↦₂ †'". iSplit; [by iNext|]. iExists []. by rewrite heap_mapsto_vec_nil.
   Qed.
 
   Definition vec_drop {𝔄} (ty: type 𝔄) : val :=
