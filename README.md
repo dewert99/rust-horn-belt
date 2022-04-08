@@ -71,9 +71,9 @@ The filenames are spread across `theories/typing/examples`, `theories/typing`, `
 | ------------------- | ----------------- | ------------------------ |
 | Adequacy            | `soundness.v`     | `type_soundness`         |
 | **Basic**           |                   |                          |
-| MUTBOR              | `derived_rules.v` | `ty_borrow`              |
-| MUTREF-WRITE        | `derived_rules.v` | `ty_assgn_bor_mut`       |
-| MUTREF-BYE          | `derived_rules.v` | `ty_resolve`             |
+| MUTBOR              | `derived_rules.v` | `ty_uniq_bor`            |
+| MUTREF-WRITE        | `derived_rules.v` | `ty_uniq_ref_write`      |
+| MUTREF-BYE          | `derived_rules.v` | `ty_uniq_ref_bye`        |
 | ENDLFT              | `programs.v`      | `type_endlft`            |
 | **Prophecies**      |                   |                          |
 | PROPH-INTRO         | `prophecy.v`      | `proph_intro`            |
