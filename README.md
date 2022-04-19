@@ -1,6 +1,7 @@
 # RustHornBelt COQ DEVELOPMENT
 
-This is the Coq development for "RustHornBelt: A Semantic Foundation for Functional Verification of Rust Programs with Unsafe Code".
+This is the Coq development for "RustHornBelt: A Semantic Foundation for
+Functional Verification of Rust Programs with Unsafe Code".
 
 ## Prerequisites
 
@@ -27,6 +28,14 @@ CPU cores.
 To update, do `git pull`. After an update, the development may fail to compile
 because of outdated dependencies. To fix that, please run `opam update`
 followed by `make build-dep`.
+
+## Walkthrough
+
+We have a [walkthrough](walkthrough.md) of RustHornBelt's Coq mechanization.
+
+It explains in detail how to verify integer addition, model `Vec`, verify
+`Vec::new`, and verify `mem::swap` (featuring mutable borrows).
+It focuses on the things you need to know to extend our Coq mechanization.
 
 ## Structure
 
@@ -58,14 +67,12 @@ followed by `make build-dep`.
     with unsafe code from the Rust standard library and some user crates.
     Some libraries are not yet verified, being commented out in `_CoqProject`.
 
-## Where to Find the Proof Rules From the Paper
-
-The derived rules mentioned in the paper can be found [here](theories/typing/examples/derived_rules.v).
-
 ### Key Type-Spec Rules --- from the RustHornBelt Paper
 
-The following table contains the location of every rule mentioned in the RustHornBelt paper.
-The filenames are spread across `theories/typing/examples`, `theories/typing`, `theories/typing/lib` (and its subfolders), and `theories/prophecy`.
+The following table contains the location of every rule mentioned in the
+RustHornBelt paper.
+The filenames are spread across `theories/typing/examples`, `theories/typing`,
+`theories/typing/lib` (and its subfolders), and `theories/prophecy`.
 
 | Proof Rule          | File              | Lemma                    |
 | ------------------- | ----------------- | ------------------------ |
