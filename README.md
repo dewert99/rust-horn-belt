@@ -31,14 +31,20 @@ followed by `make build-dep`.
 
 ## Walkthrough
 
-We have a [walkthrough](walkthrough.md) of RustHornBelt's Coq mechanization.
+We have a walkthrough ([walkthrough.md](walkthrough.md)) of RustHornBelt's Coq
+development.
 
 It explains in detail how to verify integer addition, model `Vec`, verify
 `Vec::new`, and verify `mem::swap` (featuring mutable borrows).
-It focuses on the things you need to know to extend our Coq mechanization.
+
+It is intended as a hands-on guide to our (huge) Coq development.
+In particular, it focuses on the things you need to know to reuse and extend
+the Coq development.
 
 ## Structure
 
+The [theories](theories) folder, which contains the Coq mechanization,
+is structured as follows.
 - The folder [util](theories/util) contains utility for basic concepts.
   - [fancy_lists.v](theories/util/fancy_lists.v) contains definitions, notation
     and lemmas for heterogeneous lists and related data types.
