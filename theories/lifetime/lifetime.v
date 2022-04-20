@@ -26,7 +26,7 @@ Proof.
   - by rewrite /= IH assoc.
 Qed.
 
-Instance lft_inhabited : Inhabited lft := populate static.
+Global Instance lft_inhabited : Inhabited lft := populate static.
 
 Canonical lftO := leibnizO lft.
 

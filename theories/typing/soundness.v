@@ -18,7 +18,7 @@ Class typePreG Σ := PreTypeG {
 Definition typeΣ : gFunctors :=
   #[lrustΣ; lftΣ; na_invΣ;
     GFunctor (constRF fracR); uniqΣ; prophΣ].
-Instance subG_typePreG {Σ} : subG typeΣ Σ → typePreG Σ.
+Global Instance subG_typePreG {Σ} : subG typeΣ Σ → typePreG Σ.
 Proof. solve_inG. Qed.
 
 Section type_soundness.

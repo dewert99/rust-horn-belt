@@ -23,10 +23,10 @@ Notation predl 𝔄l := (pred' (plist of_syn_type 𝔄l)).
 Notation predl_trans 𝔄l 𝔅l := (predl 𝔅l → predl 𝔄l).
 Notation predl_trans' 𝔄l 𝔅 := (pred' 𝔅 → predl 𝔄l).
 
-Instance pred'_equiv A : Equiv (pred' A) := pointwise_relation _ (↔).
-Instance predl_trans_equiv 𝔄l 𝔅l : Equiv (predl_trans 𝔄l 𝔅l) :=
+Global Instance pred'_equiv A : Equiv (pred' A) := pointwise_relation _ (↔).
+Global Instance predl_trans_equiv 𝔄l 𝔅l : Equiv (predl_trans 𝔄l 𝔅l) :=
   pointwise_relation _ (pointwise_relation _ (↔)).
-Instance predl_trans'_equiv 𝔄l 𝔅 : Equiv (predl_trans' 𝔄l 𝔅) :=
+Global Instance predl_trans'_equiv 𝔄l 𝔅 : Equiv (predl_trans' 𝔄l 𝔅) :=
   pointwise_relation _ (pointwise_relation _ (↔)).
 
 Notation predₛ 𝔄 := (𝔄 → Propₛ)%ST.
@@ -37,7 +37,7 @@ Definition trans_app {𝔄l 𝔅l ℭl 𝔇l} (tr: predl_trans 𝔄l 𝔅l) (tr'
   : predl_trans (𝔄l ++ ℭl) (𝔅l ++ 𝔇l) := λ post acl,
   let '(al, cl) := psep acl in tr (λ bl, tr' (λ dl, post (bl -++ dl)) cl) al.
 
-Instance trans_app_proper {𝔄l 𝔅l ℭl 𝔇l} tr tr' :
+Global Instance trans_app_proper {𝔄l 𝔅l ℭl 𝔇l} tr tr' :
   Proper ((≡) ==> (≡)) tr →
   Proper ((≡) ==> (≡)) tr' →
   Proper ((≡) ==> (≡)) (@trans_app 𝔄l 𝔅l ℭl 𝔇l tr tr').

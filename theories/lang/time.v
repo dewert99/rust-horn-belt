@@ -21,7 +21,7 @@ Class timePreG Σ := TimePreG {
 
 Definition timeΣ : gFunctors :=
   #[GFunctor (constRF mono_natR); GFunctor (constRF (authR natUR))].
-Instance subG_timePreG Σ : subG timeΣ Σ → timePreG Σ.
+Global Instance subG_timePreG Σ : subG timeΣ Σ → timePreG Σ.
 Proof. solve_inG. Qed.
 
 Definition timeN : namespace := nroot .@ "lft_usr" .@ "time".

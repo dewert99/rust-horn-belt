@@ -538,13 +538,13 @@ End Forall.
 Section HForallTwo.
 Context {A} {F: A → Type} {Xl: list A} (R: ∀X, F X → F X → Prop).
 
-Instance HForallTwo_reflexive :
+Global Instance HForallTwo_reflexive :
   (∀X, Reflexive (R X)) → Reflexive (HForallTwo R (Xl:=Xl)).
 Proof. move=> ?. elim; by constructor. Qed.
-Instance HForallTwo_symmetric :
+Global Instance HForallTwo_symmetric :
   (∀X, Symmetric (R X)) → Symmetric (HForallTwo R (Xl:=Xl)).
 Proof. move=> >. elim; by constructor. Qed.
-Instance HForallTwo_transitive :
+Global Instance HForallTwo_transitive :
   (∀X, Transitive (R X)) → Transitive (HForallTwo R (Xl:=Xl)).
 Proof.
   move=> ??? zl All. move: zl. elim: All; [done|]=> > ?? IH ? All.
@@ -561,8 +561,8 @@ End HForallTwo.
 Section hlist_ofe.
 Context {A} {F: A → ofe} {Xl: list A}.
 
-Instance hlist_equiv : Equiv (hlist F Xl) := HForallTwo (λ _, (≡)).
-Instance hlist_dist : Dist (hlist F Xl) := λ n, HForallTwo (λ _, dist n).
+Global Instance hlist_equiv : Equiv (hlist F Xl) := HForallTwo (λ _, (≡)).
+Global Instance hlist_dist : Dist (hlist F Xl) := λ n, HForallTwo (λ _, dist n).
 
 Definition hlist_ofe_mixin : OfeMixin (hlist F Xl).
 Proof.

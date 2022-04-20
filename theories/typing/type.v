@@ -67,12 +67,12 @@ Record type `{!typeG Σ} 𝔄 := {
     ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vπ ./ ξl⌝ ∗
       q':+[ξl] ∗ (q':+[ξl] ={E}=∗ q.[κ']);
 }.
-Existing Instance ty_shr_persistent.
-Instance: Params (@ty_size) 3 := {}.
-Instance: Params (@ty_lfts) 3 := {}.
-Instance: Params (@ty_E) 3 := {}.
-Instance: Params (@ty_own) 3 := {}.
-Instance: Params (@ty_shr) 3 := {}.
+Global Existing Instance ty_shr_persistent.
+Global Instance: Params (@ty_size) 3 := {}.
+Global Instance: Params (@ty_lfts) 3 := {}.
+Global Instance: Params (@ty_E) 3 := {}.
+Global Instance: Params (@ty_own) 3 := {}.
+Global Instance: Params (@ty_shr) 3 := {}.
 Arguments ty_size {_ _ _} _ / : simpl nomatch.
 Arguments ty_lfts {_ _ _} _ / : simpl nomatch.
 Arguments ty_E {_ _ _} _ / : simpl nomatch.
@@ -175,11 +175,11 @@ Record simple_type `{!typeG Σ} 𝔄 := {
     ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vπ ./ ξl⌝ ∗
       q':+[ξl] ∗ (q':+[ξl] ={E}=∗ st_own vπ d tid vl ∗ q.[κ]);
 }.
-Existing Instance st_own_persistent.
-Instance: Params (@st_size) 3 := {}.
-Instance: Params (@st_lfts) 3 := {}.
-Instance: Params (@st_E) 3 := {}.
-Instance: Params (@st_own) 3 := {}.
+Global Existing Instance st_own_persistent.
+Global Instance: Params (@st_size) 3 := {}.
+Global Instance: Params (@st_lfts) 3 := {}.
+Global Instance: Params (@st_E) 3 := {}.
+Global Instance: Params (@st_own) 3 := {}.
 Arguments st_size {_ _ _} _ / : simpl nomatch.
 Arguments st_lfts {_ _ _} _ / : simpl nomatch.
 Arguments st_E {_ _ _} _ / : simpl nomatch.
@@ -227,9 +227,9 @@ Record plain_type `{!typeG Σ} 𝔄 := {
   pt_own_persistent v tid vl : Persistent (pt_own v tid vl);
   pt_size_eq v tid vl : pt_own v tid vl -∗ ⌜length vl = pt_size⌝;
 }.
-Existing Instance pt_own_persistent.
-Instance: Params (@pt_size) 3 := {}.
-Instance: Params (@pt_own) 3 := {}.
+Global Existing Instance pt_own_persistent.
+Global Instance: Params (@pt_size) 3 := {}.
+Global Instance: Params (@pt_own) 3 := {}.
 Arguments pt_size {_ _ _} _ / : simpl nomatch.
 Arguments pt_own {_ _ _} _ _ _ _ / : simpl nomatch.
 
@@ -264,13 +264,13 @@ Section ofe.
     (∀vπ d tid vs, ty.(ty_own) vπ d tid vs ≡ ty'.(ty_own) vπ d tid vs) →
     (∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l ≡ ty'.(ty_shr) vπ d κ tid l) →
     type_equiv' ty ty'.
-  Instance type_equiv {𝔄} : Equiv (type 𝔄) := type_equiv'.
+  Global Instance type_equiv {𝔄} : Equiv (type 𝔄) := type_equiv'.
   Inductive type_dist' {𝔄} (n: nat) (ty ty': type 𝔄) : Prop := TypeDist:
     ty.(ty_size) = ty'.(ty_size) → ty.(ty_lfts) = ty'.(ty_lfts) → ty.(ty_E) = ty'.(ty_E) →
     (∀vπ d tid vs, ty.(ty_own) vπ d tid vs ≡{n}≡ ty'.(ty_own) vπ d tid vs) →
     (∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l ≡{n}≡ ty'.(ty_shr) vπ d κ tid l) →
     type_dist' n ty ty'.
-  Instance type_dist {𝔄} : Dist (type 𝔄) := type_dist'.
+  Global Instance type_dist {𝔄} : Dist (type 𝔄) := type_dist'.
 
   Definition type_unpack {𝔄} (ty: type 𝔄)
     : prodO (prodO (prodO (prodO natO (listO lftO)) (listO (prodO lftO lftO)))
@@ -368,13 +368,13 @@ Section ofe_lemmas.
     st.(st_size) = st'.(st_size) → st.(st_lfts) = st'.(st_lfts) → st.(st_E) = st'.(st_E) →
     (∀vπ d tid vl, st.(st_own) vπ d tid vl ≡ st'.(st_own) vπ d tid vl) →
     simple_type_equiv' st st'.
-  Instance simple_type_equiv {𝔄} : Equiv (simple_type 𝔄) := simple_type_equiv'.
+  Global Instance simple_type_equiv {𝔄} : Equiv (simple_type 𝔄) := simple_type_equiv'.
   Inductive simple_type_dist' {𝔄} (n: nat) (st st': simple_type 𝔄) : Prop :=
     SimpleTypeDist:
     st.(st_size) = st'.(st_size) → st.(st_lfts) = st'.(st_lfts) → st.(st_E) = st'.(st_E) →
     (∀vπ d tid vl, st.(st_own) vπ d tid vl ≡{n}≡ (st'.(st_own) vπ d tid vl)) →
     simple_type_dist' n st st'.
-  Instance simple_type_dist {𝔄} : Dist (simple_type 𝔄) := simple_type_dist'.
+  Global Instance simple_type_dist {𝔄} : Dist (simple_type 𝔄) := simple_type_dist'.
 
   Definition simple_type_ofe_mixin {𝔄} : OfeMixin (simple_type 𝔄).
   Proof.
@@ -406,12 +406,12 @@ Section ofe_lemmas.
     pt.(pt_size) = pt'.(pt_size) →
     (∀v tid vl, pt.(pt_own) v tid vl ≡ pt'.(pt_own) v tid vl) →
     plain_type_equiv' pt pt'.
-  Instance plain_type_equiv {𝔄} : Equiv (plain_type 𝔄) := plain_type_equiv'.
+  Global Instance plain_type_equiv {𝔄} : Equiv (plain_type 𝔄) := plain_type_equiv'.
   Inductive plain_type_dist' {𝔄} (n: nat) (pt pt': plain_type 𝔄) : Prop := PlainTypeDist:
     pt.(pt_size) = pt'.(pt_size) →
     (∀v tid vl, pt.(pt_own) v tid vl ≡{n}≡ (pt'.(pt_own) v tid vl)) →
     plain_type_dist' n pt pt'.
-  Instance plain_type_dist {𝔄} : Dist (plain_type 𝔄) := plain_type_dist'.
+  Global Instance plain_type_dist {𝔄} : Dist (plain_type 𝔄) := plain_type_dist'.
 
   Definition plain_type_unpack {𝔄} (pt: plain_type 𝔄)
     : prodO natO (𝔄 -d> thread_id -d> list val -d> iPropO Σ) :=
@@ -662,22 +662,22 @@ Class Copy `{!typeG Σ} {𝔄} (ty: type 𝔄) := {
       (na_own tid (F ∖ shr_locsE l ty.(ty_size)) -∗ l ↦∗{q'} vl
         ={E}=∗ na_own tid F ∗ q.[κ])
 }.
-Existing Instances copy_persistent.
-Instance: Params (@Copy) 3 := {}.
+Global Existing Instance copy_persistent.
+Global Instance: Params (@Copy) 3 := {}.
 
 Notation ListCopy := (TCHForall (λ 𝔄, @Copy _ _ 𝔄)).
 
 Class Send `{!typeG Σ} {𝔄} (ty: type 𝔄) :=
   send_change_tid tid tid' vπ d vl :
     ty.(ty_own) vπ d tid vl ⊣⊢ ty.(ty_own) vπ d tid' vl.
-Instance: Params (@Send) 3 := {}.
+Global Instance: Params (@Send) 3 := {}.
 
 Notation ListSend := (TCHForall (λ 𝔄, @Send _ _ 𝔄)).
 
 Class Sync `{!typeG Σ} {𝔄} (ty: type 𝔄) :=
   sync_change_tid tid tid' vπ d κ l :
     ty.(ty_shr) vπ d κ tid l ⊣⊢ ty.(ty_shr) vπ d κ tid' l.
-Instance: Params (@Sync) 3 := {}.
+Global Instance: Params (@Sync) 3 := {}.
 
 Notation ListSync := (TCHForall (λ 𝔄, @Sync _ _ 𝔄)).
 
@@ -758,7 +758,7 @@ Definition resolve `{!typeG Σ} {𝔄} (E: elctx) (L: llctx) (ty: type 𝔄) (Φ
   ∀F qL vπ d tid vl, ↑lftN ∪ ↑prophN ⊆ F →
     lft_ctx -∗ proph_ctx -∗ elctx_interp E -∗ llctx_interp L qL -∗
     ty.(ty_own) vπ d tid vl ={F}=∗ |={F}▷=>^d |={F}=> ⟨π, Φ (vπ π)⟩ ∗ llctx_interp L qL.
-Instance: Params (@resolve) 3 := {}.
+Global Instance: Params (@resolve) 3 := {}.
 
 Definition resolvel `{!typeG Σ} {𝔄l} (E: elctx) (L: llctx) (tyl: typel 𝔄l)
                  (Φl: plist (λ 𝔄, 𝔄 → Prop) 𝔄l) : Prop :=
@@ -870,15 +870,15 @@ Definition type_incl `{!typeG Σ} {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) (
   ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ (ty_lft ty' ⊑ ty_lft ty) ∗
   (□ ∀vπ d tid vl, ty.(ty_own) vπ d tid vl -∗ ty'.(ty_own) (f ∘ vπ) d tid vl) ∗
   (□ ∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l -∗ ty'.(ty_shr) (f ∘ vπ) d κ tid l).
-Instance: Params (@type_incl) 4 := {}.
+Global Instance: Params (@type_incl) 4 := {}.
 
 Definition subtype `{!typeG Σ} {𝔄 𝔅} E L (ty: type 𝔄) (ty': type 𝔅) (f: 𝔄 → 𝔅)
   : Prop := ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗ type_incl ty ty' f).
-Instance: Params (@subtype) 6 := {}.
+Global Instance: Params (@subtype) 6 := {}.
 
 Definition eqtype `{!typeG Σ} {𝔄 𝔅} E L (ty: type 𝔄) (ty': type 𝔅)
   (f: 𝔄 → 𝔅) (g: 𝔅 → 𝔄) : Prop := subtype E L ty ty' f ∧ subtype E L ty' ty g.
-Instance: Params (@eqtype) 6 := {}.
+Global Instance: Params (@eqtype) 6 := {}.
 
 Definition subtype_id `{!typeG Σ} {𝔄} E L (ty ty': type 𝔄) : Prop
   := subtype E L ty ty' id.

@@ -17,7 +17,7 @@ Module Export lft_notation.
 End lft_notation.
 
 Definition static : lft := (∅ : gmultiset _).
-Instance lft_intersect : Meet lft := λ κ κ', κ ⊎ κ'.
+Global Instance lft_intersect : Meet lft := λ κ κ', κ ⊎ κ'.
 
 Inductive bor_state :=
   | Bor_in
@@ -63,7 +63,7 @@ Definition lftGpreS' := lftGpreS.
 Definition lftΣ : gFunctors :=
   #[ boxΣ; GFunctor (authR alftUR); GFunctor (authR ilftUR);
      GFunctor (authR borUR); GFunctor (authR natUR); GFunctor (authR inhUR) ].
-Instance subG_lftGpreS Σ :
+Global Instance subG_lftGpreS Σ :
   subG lftΣ Σ → lftGpreS Σ.
 Proof. solve_inG. Qed.
 
@@ -197,12 +197,12 @@ Section defs.
     (∃ κ', lft_incl κ κ' ∗ raw_bor κ' P)%I.
 End defs.
 
-Instance: Params (@lft_bor_alive) 4 := {}.
-Instance: Params (@lft_inh) 5 := {}.
-Instance: Params (@lft_vs) 4 := {}.
-Instance idx_bor_params : Params (@idx_bor) 5 := {}.
-Instance raw_bor_params : Params (@raw_bor) 4 := {}.
-Instance bor_params : Params (@bor) 4 := {}.
+Global Instance: Params (@lft_bor_alive) 4 := {}.
+Global Instance: Params (@lft_inh) 5 := {}.
+Global Instance: Params (@lft_vs) 4 := {}.
+Global Instance idx_bor_params : Params (@idx_bor) 5 := {}.
+Global Instance raw_bor_params : Params (@raw_bor) 4 := {}.
+Global Instance bor_params : Params (@bor) 4 := {}.
 
 Notation "q .[ κ ]" := (lft_tok q κ)
     (format "q .[ κ ]", at level 2, left associativity) : bi_scope.
@@ -216,7 +216,7 @@ Infix "⊑" := lft_incl (at level 70) : bi_scope.
 (* TODO: Making all these things opaque is rather annoying, we should
    find a way to avoid it, or *at least*, to avoid having to manually unfold
    this because iDestruct et al don't look through these names any more. *)
-Typeclasses Opaque lft_tok lft_dead bor_cnt lft_bor_alive lft_bor_dead
+Global Typeclasses Opaque lft_tok lft_dead bor_cnt lft_bor_alive lft_bor_dead
   lft_inh lft_inv_alive lft_vs_inv lft_vs lft_inv_dead lft_inv lft_incl
   idx_bor_own idx_bor raw_bor bor.
 

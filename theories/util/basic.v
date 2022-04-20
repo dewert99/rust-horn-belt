@@ -27,7 +27,7 @@ Proof. done. Qed.
 Definition s_comb {A B C} (f: A → B → C) (g: A → B) x := (f x) (g x).
 Infix "⊛" := s_comb (left associativity, at level 50).
 Global Arguments s_comb {_ _ _} _ _ _ / : assert.
-Typeclasses Transparent s_comb.
+Global Typeclasses Transparent s_comb.
 
 Class Inj3 {A B C D} (R1: relation A) (R2: relation B) (R3: relation C)
     (S: relation D) (f: A → B → C → D) : Prop :=

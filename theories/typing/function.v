@@ -11,7 +11,7 @@ Fixpoint subst_plv {𝔄l} (bl: plistc binder 𝔄l) (vl: plistc val 𝔄l) (e: 
   | _::_, b -:: bl', v -:: vl' => subst' b v (subst_plv bl' vl' e)
   end.
 
-Instance do_subst_plv {𝔄l} (bl vl: plistc _ 𝔄l) e :
+Global Instance do_subst_plv {𝔄l} (bl vl: plistc _ 𝔄l) e :
   DoSubstL bl (map of_val vl) e (subst_plv bl vl e).
 Proof.
   rewrite /DoSubstL. induction 𝔄l, bl, vl; [done|]=>/=. by rewrite IH𝔄l.
@@ -94,7 +94,7 @@ End fn.
 
 Arguments fn_params {_ _} _ _.
 
-Instance elctx_empty : Empty (lft → elctx) := λ _, [].
+Global Instance elctx_empty : Empty (lft → elctx) := λ _, [].
 
 Notation "fn< p > ( E ; ity , .. , ity' ) → oty" :=
   (fn (λ p, FP E%EL (ity%T +:: .. (+[ity'%T]) ..) oty%T))
