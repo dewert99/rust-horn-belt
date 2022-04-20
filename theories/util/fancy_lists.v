@@ -1,5 +1,5 @@
 From iris.algebra Require Import ofe.
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From lrust.util Require Import basic.
 
 (** * Heterogeneous List *)
@@ -154,7 +154,7 @@ Fixpoint plookup {Xl} (xl: plist Xl) : ∀i, F (Xl !!ₗ i) :=
   end.
 
 Global Instance papp_psep_iso {Xl Yl}
-  : Iso (curry (@papp Xl Yl)) (λ xl, (psepl xl, psepr xl)).
+  : Iso (uncurry (@papp Xl Yl)) (λ xl, (psepl xl, psepr xl)).
 Proof.
   split; fun_ext.
   - case=>/= [??]. by rewrite papp_sepl papp_sepr.
@@ -704,7 +704,7 @@ Lemma big_sepHL_2_big_sepN {F G H: A → Type} {Xl}
   [∗ nat] i < length Xl, Φ _ (xl +!! i) (yl -!! i) (zl -!! i).
 Proof.
   move: Φ. induction Xl; inv_hlist xl; case yl; case zl; [done|]=>/= *.
-  f_equiv. apply IHXl.
+  f_equiv; [done|apply IHXl].
 Qed.
 
 Lemma big_sepHL_2_lookup {F G H: A → Type} {Xl}

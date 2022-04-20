@@ -1,14 +1,14 @@
 From iris.algebra Require Import frac.
 From iris.base_logic.lib Require Import na_invariants.
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From lrust.lang Require Import races adequacy proofmode notation.
 From lrust.lifetime Require Import lifetime frac_borrow.
 From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
 Class typePreG Σ := PreTypeG {
-  type_preG_lrustG :> lrustPreG Σ;
-  type_preG_lftG :> lftPreG Σ;
+  type_preG_lrustGS :> lrustGpreS Σ;
+  type_preG_lftGS :> lftGpreS Σ;
   type_preG_na_invG :> na_invG Σ;
   type_preG_frac_borG :> frac_borG Σ;
   type_preG_prophG:> prophPreG Σ;

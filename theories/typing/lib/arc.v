@@ -25,7 +25,7 @@ Section arc.
      (* We use this disjunction, and not simply [ty_shr] here, *)
      (*    because [weak_new] cannot prove ty_shr, even for a dead *)
      (*    lifetime. *)
-     (ty.(ty_shr) (ν ⊓ ty.(ty_lft)) tid (l +ₗ 2) ∨ [†ν]) ∗
+     (ty.(ty_shr) (ν ⊓ ty_lft ty) tid (l +ₗ 2) ∨ [†ν]) ∗
      □ (1.[ν] ={↑lftN ∪ ↑lft_userN ∪ ↑arc_endN}[↑lft_userN]▷=∗
           [†ν] ∗ ▷ (l +ₗ 2) ↦∗: ty.(ty_own) tid ∗ † l…(2 + ty.(ty_size))))%I.
 
@@ -63,8 +63,8 @@ Section arc.
     (∃ γ ν q, arc_persist tid ν γ l ty ∗ arc_tok γ q ∗ q.[ν])%I.
   Lemma arc_own_share E l ty tid q :
     ↑lftN ⊆ E →
-    lft_ctx -∗ (q).[ty.(ty_lft)] -∗ full_arc_own l ty tid
-    ={E}=∗ (q).[ty.(ty_lft)] ∗ shared_arc_own l ty tid.
+    lft_ctx -∗ (q).[ty_lft ty] -∗ full_arc_own l ty tid
+    ={E}=∗ (q).[ty_lft ty] ∗ shared_arc_own l ty tid.
   Proof.
     iIntros (?) "#LFT Htok (Hl1 & Hl2 & H† & Hown)".
     iMod (lft_create with "LFT") as (ν) "[Hν #Hν†]"=>//.
@@ -806,7 +806,7 @@ Section arc.
     iAssert (shared_arc_own rc' ty tid ∗ llctx_interp [ϝ ⊑ₗ []] 1)%I
       with "[>Hrc' HL]" as "[Hrc' HL]".
     { iDestruct "Hrc'" as "[?|$]"; last done.
-      iMod (lctx_lft_alive_tok ty.(ty_lft) with "HE HL")
+      iMod (lctx_lft_alive_tok ty_lft ty with "HE HL")
         as (?) "(Htok & HL & Hclose)"; [done| |].
       { change (ty_outlives_E (arc ty)) with (ty_outlives_E ty).
         eapply (lctx_lft_alive_incl _ _ ϝ); first solve_typing.
@@ -921,7 +921,7 @@ Section arc.
     iAssert (shared_arc_own rc' ty tid ∗ llctx_interp [ϝ ⊑ₗ []] 1)%I
       with "[>Hrc' HL]" as "[Hrc' HL]".
     { iDestruct "Hrc'" as "[?|$]"; last done.
-      iMod (lctx_lft_alive_tok ty.(ty_lft) with "HE HL")
+      iMod (lctx_lft_alive_tok ty_lft ty with "HE HL")
         as (?) "(Htok & HL & Hclose)"; [done| |].
       { change (ty_outlives_E (arc ty)) with (ty_outlives_E ty).
         eapply (lctx_lft_alive_incl _ _ ϝ); first solve_typing.

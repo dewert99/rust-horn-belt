@@ -21,7 +21,7 @@ Section uniq_bor.
 
   Program Definition uniq_bor {𝔄} (κ: lft) (ty: type 𝔄) : type (𝔄 * 𝔄) := {|
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
-    ty_own vπ d tid vl := κ ⊑ ty.(ty_lft) ∗ [loc[l] := vl] ∃d' ξi,
+    ty_own vπ d tid vl := κ ⊑ ty_lft ty ∗ [loc[l] := vl] ∃d' ξi,
       let ξ := PrVar (𝔄 ↾ prval_to_inh (fst ∘ vπ)) ξi in
       ⌜(S d' ≤ d)%nat ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ uniq_body ty (fst ∘ vπ) ξi d' κ tid l;
     ty_shr vπ d κ' tid l := [S(d') := d] ∃(l': loc) ξ, ⌜snd ∘ vπ ./ [ξ]⌝ ∗
@@ -107,10 +107,10 @@ Section typing.
   Qed.
 
   Global Instance uniq_send {𝔄} κ (ty: type 𝔄) : Send ty → Send (&uniq{κ} ty).
-  Proof. move=> >/=. rewrite /uniq_body. by do 19 f_equiv. Qed.
+  Proof. move=> >/=. rewrite /uniq_body. by do 19 (f_equiv || move=>?). Qed.
 
   Global Instance uniq_sync {𝔄} κ (ty: type 𝔄) : Sync ty → Sync (&uniq{κ} ty).
-  Proof. move=> >/=. by do 10 f_equiv. Qed.
+  Proof. move=> >/=. by do 10 (f_equiv || move=>?). Qed.
 
   Global Instance uniq_just_loc {𝔄} κ (ty: type 𝔄) : JustLoc (&uniq{κ} ty).
   Proof. iIntros (???[|[[]|][]]) "[_ ?] //". by iExists _. Qed.

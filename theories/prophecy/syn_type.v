@@ -62,7 +62,7 @@ Proof.
   try (by split; [move=> ->|move=> [=]]);
   by split; [move=> [->->]|move=> [=]].
 Qed.
-Instance syn_type_beq_dec: EqDecision syn_type.
+Global Instance syn_type_beq_dec: EqDecision syn_type.
 Proof.
   refine (λ 𝔄 𝔅, cast_if (decide (syn_type_beq 𝔄 𝔅)));
   by rewrite -syn_type_eq_correct.

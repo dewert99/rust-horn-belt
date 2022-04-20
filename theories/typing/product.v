@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.algebra Require Import list numbers.
 From lrust.typing Require Import lft_contexts.
 From lrust.typing Require Export type.
@@ -290,7 +290,7 @@ Section typing.
   Hint Resolve prod_resolve : lrust_typing.
   Lemma xprod_resolve {𝔄l} (tyl: typel 𝔄l) Φl E L :
     resolvel E L tyl Φl →
-    resolve E L (Π! tyl) (λ al, pforall (λ _, curry ($)) (pzip Φl al)).
+    resolve E L (Π! tyl) (λ al, pforall (λ _, uncurry ($)) (pzip Φl al)).
   Proof.
     elim; [eapply resolve_impl; [apply resolve_just|done]|]=>/= *.
     by eapply resolve_impl; [solve_typing|]=>/= [[??][??]].
@@ -424,7 +424,7 @@ Section typing.
   Qed.
 
   Lemma xprod_ty_app_prod {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l) :
-    eqtype E L (Π! (tyl h++ tyl')) (Π! tyl * Π! tyl') psep (curry papp).
+    eqtype E L (Π! (tyl h++ tyl')) (Π! tyl * Π! tyl') psep (uncurry papp).
   Proof.
     elim: tyl=> [|> Eq].
     - eapply eqtype_eq.

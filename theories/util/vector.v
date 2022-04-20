@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From lrust.util Require Import basic.
 
 (* TODO : move all that to stdpp *)
@@ -25,7 +25,7 @@ Global Instance vhd_vsingleton_iso {A} : Iso vhd (λ x: A, [#x]).
 Proof. split; [|done]. fun_ext=> v. by inv_vec v. Qed.
 
 Global Instance vhd_vtl_vcons_iso {A n} :
-  Iso (λ v: vec A (S n), (vhd v, vtl v)) (curry vcons').
+  Iso (λ v: vec A (S n), (vhd v, vtl v)) (uncurry vcons').
 Proof. split; fun_ext; [|by case]=> v. by inv_vec v. Qed.
 
 Global Instance vec_to_list_inj' {A n} : Inj (=) (=) (@vec_to_list A n).
@@ -52,7 +52,7 @@ Qed.
 Lemma vapp_ex {A m n} (xl: _ A (m + n)) : ∃yl zl, xl = yl +++ zl.
 Proof. eexists _, _. apply vsepat_app. Qed.
 
-Global Instance vapp_vsepat_iso {A} m n : Iso (curry vapp) (@vsepat A m n).
+Global Instance vapp_vsepat_iso {A} m n : Iso (uncurry vapp) (@vsepat A m n).
 Proof.
   split; fun_ext.
   - move=> [xl ?]. by elim xl; [done|]=>/= ???->.

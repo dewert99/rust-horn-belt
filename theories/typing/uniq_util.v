@@ -13,7 +13,7 @@ Section uniq_util.
     &{κ} (∃vπ' d', ⧖(S d') ∗ .PC[ξ] vπ' d' ∗ l ↦∗: ty.(ty_own) vπ' d' tid).
 
   Lemma ty_share_uniq_body {𝔄} (ty: type 𝔄) vπ ξi d κ tid l κ' q E :
-    ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
+    ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty_lft ty -∗
     &{κ'} (uniq_body ty vπ ξi d κ tid l) -∗ q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
       &{κ'} 1:[PrVar (𝔄 ↾ prval_to_inh vπ) ξi] ∗ ty.(ty_shr) vπ d κ' tid l ∗ q.[κ'].
   Proof.
@@ -37,7 +37,7 @@ Section uniq_util.
   Qed.
 
   Lemma ty_own_proph_uniq_body {𝔄} (ty: type 𝔄) vπ ξi d κ tid l κ' q E :
-    ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
+    ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty_lft ty -∗
     uniq_body ty vπ ξi d κ tid l -∗ q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
       let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
       ∃ζl q', ⌜vπ ./ ζl⌝ ∗ q':+[ζl ++ [ξ]] ∗
@@ -64,7 +64,7 @@ Section uniq_util.
 
   Lemma resolve_uniq_body {𝔄} (ty: type 𝔄) vπ ξi d κ tid l E L q F :
     lctx_lft_alive E L κ → ↑lftN ∪ ↑prophN ⊆ F →
-    lft_ctx -∗ proph_ctx -∗ κ ⊑ ty.(ty_lft) -∗ elctx_interp E -∗ llctx_interp L q -∗
+    lft_ctx -∗ proph_ctx -∗ κ ⊑ ty_lft ty -∗ elctx_interp E -∗ llctx_interp L q -∗
     uniq_body ty vπ ξi d κ tid l ={F}=∗ |={F}▷=>^(S d) |={F}=>
       ⟨π, π (PrVar (𝔄 ↾ prval_to_inh vπ) ξi) = vπ π⟩ ∗ llctx_interp L q.
   Proof.

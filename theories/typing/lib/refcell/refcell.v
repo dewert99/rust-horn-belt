@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.algebra Require Import auth csum frac agree numbers.
 From iris.bi Require Import fractional.
 From lrust.lifetime Require Import na_borrow.
@@ -101,7 +101,7 @@ Section refcell.
          | _ => False
          end%I;
        ty_shr κ tid l :=
-         (∃ α γ, κ ⊑ α ∗ α ⊑ ty.(ty_lft) ∗
+         (∃ α γ, κ ⊑ α ∗ α ⊑ ty_lft ty ∗
                  &na{α, tid, refcell_invN}(refcell_inv tid l γ α ty))%I |}.
   Next Obligation.
     iIntros (??[|[[]|]]); try iIntros "[]". rewrite ty_size_eq /=. by iIntros (->).

@@ -3,6 +3,7 @@ From stdpp Require Export gmultiset strings.
 From iris.base_logic.lib Require Export invariants.
 From iris.base_logic.lib Require Import boxes.
 From iris.bi Require Import fractional.
+From iris.proofmode Require Import proofmode.
 Set Default Proof Using "Type".
 
 Definition lftN : namespace := nroot .@ "lft".
@@ -14,29 +15,29 @@ Module Type lifetime_sig.
   (** CMRAs needed by the lifetime logic  *)
   (* We can't instantie the module parameters with inductive types, so we
      have aliases here. *)
-  Parameter lftG' : gFunctors → Set.
-  Global Notation lftG := lftG'.
-  Existing Class lftG'.
-  Parameter lftPreG' : gFunctors → Set.
-  Global Notation lftPreG := lftPreG'.
-  Existing Class lftPreG'.
+  Parameter lftGS' : gFunctors → Set.
+  Global Notation lftGS := lftGS'.
+  Existing Class lftGS'.
+  Parameter lftGpreS' : gFunctors → Set.
+  Global Notation lftGpreS := lftGpreS'.
+  Existing Class lftGpreS'.
 
   (** Definitions *)
   Parameter lft : Type.
   Parameter static : lft.
   Declare Instance lft_intersect : Meet lft.
 
-  Parameter lft_ctx : ∀ `{!invG Σ, !lftG Σ}, iProp Σ.
+  Parameter lft_ctx : ∀ `{!invGS Σ, !lftGS Σ}, iProp Σ.
 
-  Parameter lft_tok : ∀ `{!lftG Σ} (q : Qp) (κ : lft), iProp Σ.
-  Parameter lft_dead : ∀ `{!lftG Σ} (κ : lft), iProp Σ.
+  Parameter lft_tok : ∀ `{!lftGS Σ} (q : Qp) (κ : lft), iProp Σ.
+  Parameter lft_dead : ∀ `{!lftGS Σ} (κ : lft), iProp Σ.
 
-  Parameter lft_incl : ∀ `{!invG Σ, !lftG Σ} (κ κ' : lft), iProp Σ.
-  Parameter bor : ∀ `{!invG Σ, !lftG Σ} (κ : lft) (P : iProp Σ), iProp Σ.
+  Parameter lft_incl : ∀ `{!invGS Σ, !lftGS Σ} (κ κ' : lft), iProp Σ.
+  Parameter bor : ∀ `{!invGS Σ, !lftGS Σ} (κ : lft) (P : iProp Σ), iProp Σ.
 
   Parameter bor_idx : Type.
-  Parameter idx_bor_own : ∀ `{!lftG Σ} (q : frac) (i : bor_idx), iProp Σ.
-  Parameter idx_bor : ∀ `{!invG Σ, !lftG Σ} (κ : lft) (i : bor_idx) (P : iProp Σ), iProp Σ.
+  Parameter idx_bor_own : ∀ `{!lftGS Σ} (q : frac) (i : bor_idx), iProp Σ.
+  Parameter idx_bor : ∀ `{!invGS Σ, !lftGS Σ} (κ : lft) (i : bor_idx) (P : iProp Σ), iProp Σ.
 
   (** Notation *)
   Notation "q .[ κ ]" := (lft_tok q κ)
@@ -49,7 +50,7 @@ Module Type lifetime_sig.
   Infix "⊑" := lft_incl (at level 70) : bi_scope.
 
   Section properties.
-  Context `{!invG Σ, !lftG Σ}.
+  Context `{!invGS Σ, !lftGS Σ}.
 
   (** Instances *)
   Global Declare Instance lft_inhabited : Inhabited lft.
@@ -84,9 +85,16 @@ Module Type lifetime_sig.
   Global Declare Instance lft_tok_fractional κ : Fractional (λ q, q.[κ])%I.
   Global Declare Instance lft_tok_as_fractional κ q :
     AsFractional q.[κ] (λ q, q.[κ])%I q.
+  Global Declare Instance frame_lft_tok p κ q1 q2 RES :
+    FrameFractionalHyps p q1.[κ] (λ q, q.[κ])%I RES q1 q2 →
+    Frame p q1.[κ] q2.[κ] RES | 5.
+
   Global Declare Instance idx_bor_own_fractional i : Fractional (λ q, idx_bor_own q i)%I.
   Global Declare Instance idx_bor_own_as_fractional i q :
     AsFractional (idx_bor_own q i) (λ q, idx_bor_own q i)%I q.
+  Global Declare Instance frame_idx_bor_own p i q1 q2 RES :
+    FrameFractionalHyps p (idx_bor_own q1 i) (λ q, idx_bor_own q i)%I RES q1 q2 →
+    Frame p (idx_bor_own q1 i) (idx_bor_own q2 i) RES | 5.
 
   (** Laws *)
   Parameter lft_tok_sep : ∀ q κ1 κ2, q.[κ1] ∗ q.[κ2] ⊣⊢ q.[κ1 ⊓ κ2].
@@ -158,8 +166,8 @@ Module Type lifetime_sig.
   End properties.
 
   Parameter lftΣ : gFunctors.
-  Global Declare Instance subG_lftPreG Σ : subG lftΣ Σ → lftPreG Σ.
+  Global Declare Instance subG_lftGpreS Σ : subG lftΣ Σ → lftGpreS Σ.
 
-  Parameter lft_init : ∀ `{!invG Σ, !lftPreG Σ} E, ↑lftN ⊆ E →
-    ⊢ |={E}=> ∃ _ : lftG Σ, lft_ctx.
+  Parameter lft_init : ∀ `{!invGS Σ, !lftGpreS Σ} E, ↑lftN ⊆ E →
+    ⊢ |={E}=> ∃ _ : lftGS Σ, lft_ctx.
 End lifetime_sig.

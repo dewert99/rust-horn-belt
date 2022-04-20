@@ -1,12 +1,12 @@
 From iris.algebra Require Import lib.mono_nat numbers.
 From iris.base_logic Require Import lib.own.
 From iris.base_logic.lib Require Export invariants.
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From lrust.lang Require Export lang.
 Set Default Proof Using "Type".
 Import uPred.
 
-Class timeG Σ := TimeG {
+Class timeGS Σ := TimeG {
   time_mono_nat_inG :> inG Σ mono_natR;
   time_nat_inG :> inG Σ (authR natUR);
   time_global_name : gname;
@@ -27,7 +27,7 @@ Proof. solve_inG. Qed.
 Definition timeN : namespace := nroot .@ "lft_usr" .@ "time".
 
 Section definitions.
-  Context `{!timeG Σ}.
+  Context `{!timeGS Σ}.
 
   (** persistent time receipt *)
   Definition persistent_time_receipt (n : nat) :=
@@ -36,19 +36,19 @@ Section definitions.
   Definition cumulative_time_receipt (n : nat) :=
     own time_cumulative_name (◯ n).
   (** invariant *)
-  Definition time_ctx `{!invG Σ} :=
+  Definition time_ctx `{!invGS Σ} :=
     inv timeN (∃ n m,
        own time_global_name (mono_nat_lb (n + m)) ∗
        own time_cumulative_name (● n) ∗
-       own time_persistent_name (mono_nat_auth 1 m)).
+       own time_persistent_name (●MN m)).
   (** authority *)
   Definition time_interp (n: nat) : iProp Σ :=
-    own time_global_name (mono_nat_auth 1 n).
+    own time_global_name (●MN n).
 End definitions.
 
-Typeclasses Opaque persistent_time_receipt cumulative_time_receipt.
-Instance: Params (@persistent_time_receipt) 2 := {}.
-Instance: Params (@cumulative_time_receipt) 2 := {}.
+Global Typeclasses Opaque persistent_time_receipt cumulative_time_receipt.
+Global Instance: Params (@persistent_time_receipt) 2 := {}.
+Global Instance: Params (@cumulative_time_receipt) 2 := {}.
 
 Notation "⧖ n" := (persistent_time_receipt n)
   (at level 1, format "⧖ n") : bi_scope.
@@ -56,7 +56,7 @@ Notation "⧗ n" := (cumulative_time_receipt n)
   (at level 1, format "⧗ n") : bi_scope.
 
 Section time.
-  Context `{!timeG Σ}.
+  Context `{!timeGS Σ}.
   Implicit Types P Q : iProp Σ.
 
   Global Instance persistent_time_receipt_timeless n : Timeless (⧖n).
@@ -83,7 +83,7 @@ Section time.
   Qed.
 
   Lemma persistent_time_receipt_sep n m : ⧖(n `max` m) ⊣⊢ ⧖n ∗ ⧖m.
-  Proof. by rewrite /persistent_time_receipt -mono_nat_lb_op own_op. Qed.
+  Proof. by rewrite /persistent_time_receipt mono_nat_lb_op own_op. Qed.
   Lemma cumulative_time_receipt_sep n m : ⧗(n + m) ⊣⊢ ⧗n ∗ ⧗m.
   Proof. by rewrite /cumulative_time_receipt -nat_op auth_frag_op own_op. Qed.
 
@@ -101,7 +101,7 @@ Section time.
   Lemma cumulative_time_receipt_0 : ⊢ |==> ⧗0.
   Proof. rewrite /cumulative_time_receipt. apply own_unit. Qed.
 
-  Lemma cumulative_persistent_time_receipt `{!invG Σ} E n m :
+  Lemma cumulative_persistent_time_receipt `{!invGS Σ} E n m :
     ↑timeN ⊆ E → time_ctx -∗ ⧗n -∗ ⧖m ={E}=∗ ⧖(n + m).
   Proof.
     iIntros (?) "#TIME Hn #Hm".
@@ -121,7 +121,7 @@ Section time.
     rewrite (_:(n'+m')%nat = ((n'-n) + (m'+n))%nat); [done|lia].
   Qed.
 
-  Lemma step_cumulative_time_receipt `{!invG Σ} E n :
+  Lemma step_cumulative_time_receipt `{!invGS Σ} E n :
     ↑timeN ⊆ E →
     time_ctx -∗ time_interp n ={E, E∖↑timeN}=∗ time_interp n ∗
     (time_interp (S n) ={E∖↑timeN, E}=∗ time_interp (S n) ∗ ⧗1).
@@ -137,7 +137,7 @@ Section time.
     iApply (own_mono with "H'Sn"). apply mono_nat_lb_mono. lia.
   Qed.
 
-  Lemma time_receipt_le `{!invG Σ} E n m m' :
+  Lemma time_receipt_le `{!invGS Σ} E n m m' :
     ↑timeN ⊆ E →
     time_ctx -∗ time_interp n -∗ ⧖m -∗ ⧗m' ={E}=∗
     ⌜m+m' ≤ n⌝%nat ∗ time_interp n ∗ ⧗m'.
@@ -151,13 +151,13 @@ Section time.
   Qed.
 End time.
 
-Lemma time_init `{!invG Σ, !timePreG Σ} E : ↑timeN ⊆ E →
-  ⊢ |={E}=> ∃ _ : timeG Σ, time_ctx ∗ time_interp 0.
+Lemma time_init `{!invGS Σ, !timePreG Σ} E : ↑timeN ⊆ E →
+  ⊢ |={E}=> ∃ _ : timeGS Σ, time_ctx ∗ time_interp 0.
 Proof.
   intros ?.
-  iMod (own_alloc (mono_nat_auth 1 0 ⋅ mono_nat_lb 0)) as (time_global_name) "[??]";
+  iMod (own_alloc (●MN 0 ⋅ mono_nat_lb 0)) as (time_global_name) "[??]";
     [by apply mono_nat_both_valid|].
-  iMod (own_alloc (mono_nat_auth 1 0)) as (time_persistent_name) "?";
+  iMod (own_alloc (●MN 0)) as (time_persistent_name) "?";
     [by apply mono_nat_auth_valid|].
   iMod (own_alloc (● 0%nat)) as (time_cumulative_name) "?"; [by apply auth_auth_valid|].
   iExists (TimeG _ _ _ time_global_name time_persistent_name time_cumulative_name).

@@ -1,6 +1,6 @@
 From iris.program_logic Require Import weakestpre.
 From iris.base_logic.lib Require Import invariants.
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.algebra Require Import excl.
 From lrust.lang Require Import proofmode notation.
 From lrust.lang Require Export lang.
@@ -36,7 +36,7 @@ Proof. solve_inG. Qed.
 
 (** Now we come to the Iris part of the proof. *)
 Section proof.
-Context `{!lrustG Σ, !spawnG Σ} (N : namespace).
+Context `{!lrustGS Σ, !spawnG Σ} (N : namespace).
 
 Definition spawn_inv (γf γj : gname) (c : loc) (Ψ : val → iProp Σ) : iProp Σ :=
   (own γf (Excl ()) ∗ own γj (Excl ()) ∨

@@ -1,12 +1,12 @@
 From iris.base_logic.lib Require Import invariants.
 From iris.program_logic Require Import weakestpre.
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.bi Require Import fractional.
 From iris.algebra Require Import excl csum frac auth numbers.
 From lrust.lang Require Import lang proofmode notation new_delete.
-Set Default Proof Using "Type".
+From iris.prelude Require Import options.
 
-(* A: while working on Arc, I think figured that the "weak count
+(* JH: while working on Arc, I think figured that the "weak count
 locking" mechanism that Rust is using and that is verified below may
 not be necessary.
 
@@ -24,7 +24,7 @@ What's wrong with this protocol? The "only" problem I can see is that if
 someone tries to upgrade a weak after we did the CAS, then this will
 fail even though this could be possible.
 
-B: Upgrade failing spuriously sounds like a problem severe enough to
+RJ: Upgrade failing spuriously sounds like a problem severe enough to
 justify the locking protocol.
 *)
 
@@ -99,7 +99,7 @@ Definition try_unwrap_full : val :=
     else #2.
 
 (** The CMRA we need. *)
-(* Not bundling heapG, as it may be shared with other users. *)
+(* Not bundling heapGS, as it may be shared with other users. *)
 
 (* See rc.v for understanding the structure of this CMRA.
    The only additional thing is the [optionR (exclR unitO))], used to handle
@@ -110,11 +110,11 @@ Definition arc_stR :=
 Class arcG Σ :=
   RcG :> inG Σ (authR arc_stR).
 Definition arcΣ : gFunctors := #[GFunctor (authR arc_stR)].
-Instance subG_arcΣ {Σ} : subG arcΣ Σ → arcG Σ.
+Global Instance subG_arcΣ {Σ} : subG arcΣ Σ → arcG Σ.
 Proof. solve_inG. Qed.
 
 Section def.
-  Context `{!lrustG Σ, !arcG Σ} (P1 : Qp → iProp Σ) (P2 : iProp Σ) (N : namespace).
+  Context `{!lrustGS Σ, !arcG Σ} (P1 : Qp → iProp Σ) (P2 : iProp Σ) (N : namespace).
 
   Definition arc_tok γ q : iProp Σ :=
     own γ (◯ (Some $ Cinl (q, 1%positive, None), 0%nat)).
@@ -158,10 +158,10 @@ Section arc.
      this is the lifetime token), and P2 is the thing that is owned by the
      protocol when only weak references are left (in practice, P2 is the
      ownership of the underlying memory incl. deallocation). *)
-  Context `{!lrustG Σ, !arcG Σ} (P1 : Qp → iProp Σ) {HP1:Fractional P1}
+  Context `{!lrustGS Σ, !arcG Σ} (P1 : Qp → iProp Σ) {HP1:Fractional P1}
           (P2 : iProp Σ) (N : namespace).
 
-  Instance P1_AsFractional q : AsFractional (P1 q) P1 q.
+  Local Instance P1_AsFractional q : AsFractional (P1 q) P1 q.
   Proof using HP1. done. Qed.
 
   Global Instance arc_inv_ne n :
@@ -284,7 +284,7 @@ Section arc.
     - wp_apply (wp_cas_int_fail with "Hl"); [congruence|]. iIntros "Hl".
       iMod ("Hclose2" with "Hown") as "HP". iModIntro.
       iMod ("Hclose1" with "[-HP HΦ]") as "_".
-      { iExists _. iFrame. iExists qq. auto with iFrame. }
+      { iExists _. iFrame. iExists qq. iCombine "HP1 HP1'" as "$". auto with iFrame. }
       iModIntro. wp_case. iApply ("IH" with "HP HΦ").
   Qed.
 
@@ -398,7 +398,7 @@ Section arc.
     { iIntros "!> HP". iInv N as (st) "[>H● H]" "Hclose1".
       iMod ("Hacc" with "HP") as "[Hown Hclose2]".
       iDestruct (weak_tok_auth_val with "H● Hown") as %(st' & weak & -> & Hval).
-      destruct st' as [[[[??]?]| |]|]; try done; iExists _.
+      destruct st' as [[[[q' c]?]| |]|]; try done; iExists _.
       - iDestruct "H" as (q) "(>Heq & [HP1 HP1'] & >$ & ?)". iDestruct "Heq" as %Heq.
         iIntros "!>"; iSplit; iMod ("Hclose2" with "Hown") as "HP".
         + iIntros "_ Hl". iExists (q/2)%Qp. iMod (own_update with "H●") as "[H● $]".
@@ -408,10 +408,10 @@ Section arc.
             apply frac_valid. rewrite /= -Heq comm_L.
             by apply Qp_add_le_mono_l, Qp_div_le. }
           iFrame. iApply "Hclose1". iExists _. iFrame. iExists _. iFrame.
-          rewrite /= [xH ⋅ _]comm_L frac_op [(_ + c)%Qp]comm -[(_ + _)%Qp]assoc
+          rewrite /= [xH ⋅ _]comm_L frac_op [(_ + q')%Qp]comm -[(_ + _)%Qp]assoc
                   Qp_div_2 left_id_L. auto with iFrame.
         + iIntros "Hl". iFrame. iApply ("Hclose1" with "[-]"). iExists _. iFrame.
-          iExists q. auto with iFrame.
+          iExists q. iCombine "HP1 HP1'" as "$". auto with iFrame.
       - iDestruct "H" as "[>$ ?]". iIntros "!>"; iSplit; first by auto with congruence.
         iIntros "Hl". iMod ("Hclose2" with "Hown") as "$". iApply "Hclose1".
         iExists _. auto with iFrame.
@@ -521,14 +521,16 @@ Section arc.
           by apply (op_local_update _ _ (Some (Cinr (Excl ())))). }
         iMod ("Hclose" with "[H● Hs Hw]") as "_"; first by iExists _; do 2 iFrame.
         iModIntro. wp_case. iApply wp_fupd. wp_op.
-        iApply ("HΦ"). rewrite -{2}Hq''. iFrame. by iApply close_last_strong.
+        iApply ("HΦ"). rewrite -{2}Hq''. iCombine "HP1 HP1'" as "$".
+        by iApply close_last_strong.
       + destruct Hqq' as [? ->].
         rewrite -[in (_, _)](Pos.succ_pred s) // -[wl in Cinl (_, wl)]left_id
                 -Pos.add_1_l 2!pair_op Cinl_op Some_op.
         iMod (own_update_2 _ _ _ _ with "H● Hown") as "H●".
         { apply auth_update_dealloc, prod_local_update_1, @cancel_local_update_unit, _. }
         iMod ("Hclose" with "[- HΦ]") as "_".
-        { iExists _. iFrame. iExists (q + q'')%Qp. iFrame. iSplit; last by destruct s.
+        { iExists _. iFrame. iExists (q + q'')%Qp. iCombine "HP1 HP1'" as "$".
+          iSplit; last by destruct s.
           iIntros "!> !%". rewrite assoc -Hq''. f_equal. apply comm, _. }
         iModIntro. wp_case. wp_op; case_bool_decide; simplify_eq. by iApply "HΦ".
     - wp_apply (wp_cas_int_fail with "Hs"); [congruence|]. iIntros "Hs".
@@ -553,7 +555,8 @@ Section arc.
         etrans; first apply: cancel_local_update_unit.
         by apply (op_local_update _ _ (Some (Cinr (Excl ())))). }
       iMod ("Hclose" with "[H● Hs Hw]") as "_"; first by iExists _; do 2 iFrame.
-      iApply ("HΦ" $! true). rewrite -{1}Hq''. iFrame. by iApply close_last_strong.
+      iApply ("HΦ" $! true). rewrite -{1}Hq''. iCombine "HP1 HP1'" as "$".
+      by iApply close_last_strong.
     - wp_apply (wp_cas_int_fail with "Hs"); [congruence|]. iIntros "Hs".
       iMod ("Hclose" with "[-Hown HP1 HΦ]") as "_"; first by iExists _; auto with iFrame.
       iApply ("HΦ" $! false). by iFrame.
@@ -597,7 +600,7 @@ Section arc.
         iInv N as ([st w]) "[>H● H]" "Hclose".
         iDestruct (own_valid_2 with "H● H◯") as
            %[[[[=]|Hincl]%option_included _]%prod_included [Hval _]]%auth_both_valid_discrete.
-        simpl in Hincl. destruct Hincl as (? & ? & [=<-] & -> & Hincl); last first.
+        simpl in Hincl. destruct Hincl as (x1 & x2 & [=<-] & -> & Hincl); last first.
         assert (∃ q p, x2 = Cinl (q, p, Excl' ())) as (? & ? & ->).
         { destruct Hincl as [|Hincl]; first by setoid_subst; eauto.
           apply csum_included in Hincl. destruct Hincl as [->|[Hincl|(?&?&[=]&?)]]=>//.
@@ -610,13 +613,13 @@ Section arc.
           csum_local_update_l, prod_local_update_2, delete_option_local_update, _. }
         iMod ("Hclose" with "[-HΦ H◯ HP1]") as "_"; first by iExists _; auto with iFrame.
         iModIntro. wp_seq. iApply "HΦ". iFrame.
-      + setoid_subst. iDestruct "H" as (?) "(Hq & ? & ? & >? & >%)". subst. wp_read.
+      + setoid_subst. iDestruct "H" as (?) "(Hq & HP1' & ? & >? & >%)". subst. wp_read.
         iMod (own_update_2 with "H● H◯") as "H●".
         { apply auth_update_dealloc. rewrite -{1}[(_, 0%nat)]right_id.
           apply cancel_local_update_unit, _. }
         iMod ("Hclose" with "[H●]") as "_"; first by iExists _; iFrame.
         iModIntro. wp_seq. wp_op. wp_let. wp_op. wp_write. iApply "HΦ".
-        iDestruct "Hq" as %<-. iFrame.
+        iDestruct "Hq" as %<-. iCombine "HP1 HP1'" as "$". iFrame.
   Qed.
 
   Lemma try_unwrap_full_spec (γ : gname) (q: Qp) (l : loc) :

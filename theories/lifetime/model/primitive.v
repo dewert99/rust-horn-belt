@@ -7,7 +7,7 @@ Set Default Proof Using "Type".
 Import uPred.
 
 Section primitive.
-Context `{!invG Σ, !lftG Σ}.
+Context `{!invGS Σ, !lftGS Σ}.
 Implicit Types κ : lft.
 
 Lemma to_borUR_included (B : gmap slice_name bor_state) i s q :
@@ -18,8 +18,8 @@ Proof.
   by move=> /Some_pair_included [_] /Some_included_total /to_agree_included=>->.
 Qed.
 
-Lemma lft_init `{!lftPreG Σ} E :
-  ↑lftN ⊆ E → ⊢ |={E}=> ∃ _ : lftG Σ, lft_ctx.
+Lemma lft_init `{!lftGpreS Σ} E :
+  ↑lftN ⊆ E → ⊢ |={E}=> ∃ _ : lftGS Σ, lft_ctx.
 Proof.
   iIntros (?). rewrite /lft_ctx.
   iMod (own_alloc (● ∅ : authR alftUR)) as (γa) "Ha"; first by apply auth_auth_valid.
@@ -300,9 +300,18 @@ Proof.
   intros p q. rewrite /idx_bor_own -own_bor_op /own_bor. f_equiv=>?.
   rewrite -auth_frag_op singleton_op -pair_op agree_idemp. done.
 Qed.
+Global Instance frame_lft_tok p κ q1 q2 RES :
+  FrameFractionalHyps p q1.[κ] (λ q, q.[κ])%I RES q1 q2 →
+  Frame p q1.[κ] q2.[κ] RES | 5.
+Proof. apply: frame_fractional. Qed.
+
 Global Instance idx_bor_own_as_fractional i q :
   AsFractional (idx_bor_own q i) (λ q, idx_bor_own q i)%I q.
 Proof. split. done. apply _. Qed.
+Global Instance frame_idx_bor_own p i q1 q2 RES :
+  FrameFractionalHyps p (idx_bor_own q1 i) (λ q, idx_bor_own q i)%I RES q1 q2 →
+  Frame p (idx_bor_own q1 i) (idx_bor_own q2 i) RES | 5.
+Proof. apply: frame_fractional. Qed.
 
 (** Lifetime inclusion *)
 Lemma lft_incl_acc E κ κ' q :
@@ -357,7 +366,8 @@ Proof.
   iIntros "Hκ Hκ'".
   destruct (Qp_lower_bound q q') as (qq & q0 & q'0 & -> & ->).
   iExists qq. rewrite -lft_tok_sep.
-  iDestruct "Hκ" as "[$$]". iDestruct "Hκ'" as "[$$]". auto.
+  iDestruct "Hκ" as "[$ Hκ]". iDestruct "Hκ'" as "[$ Hκ']".
+  iIntros "[Hκ+ Hκ'+]". iSplitL "Hκ Hκ+"; iApply fractional_split; iFrame.
 Qed.
 
 Lemma lft_incl_glb κ κ' κ'' : κ ⊑ κ' -∗ κ ⊑ κ'' -∗ κ ⊑ κ' ⊓ κ''.
@@ -369,7 +379,9 @@ Proof.
     iDestruct (lft_intersect_acc with "Hκ' Hκ''") as (qq) "[Hqq Hclose]".
     iExists qq. iFrame. iIntros "!> Hqq".
     iDestruct ("Hclose" with "Hqq") as "[Hκ' Hκ'']".
-    iMod ("Hclose'" with "Hκ'") as "$". by iApply "Hclose''".
+    iMod ("Hclose'" with "Hκ'") as "?".
+    iMod ("Hclose''" with "Hκ''") as "?". iModIntro.
+    iApply fractional_half. iFrame.
   - rewrite -lft_dead_or. iIntros "[H†|H†]". by iApply "H1†". by iApply "H2†".
 Qed.
 

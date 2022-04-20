@@ -19,7 +19,7 @@ Section slice_basic.
   Qed.
 
   Global Instance shr_slice_send {𝔄} κ (ty: type 𝔄) : Sync ty → Send (shr_slice κ ty).
-  Proof. move=> >/=. by do 12 f_equiv. Qed.
+  Proof. move=> >/=. by do 12 (f_equiv || move=>?). Qed.
 
   Lemma shr_slice_resolve {𝔄} κ (ty: type 𝔄) E L : resolve E L (shr_slice κ ty) (const True).
   Proof. apply resolve_just. Qed.
@@ -76,7 +76,7 @@ Section slice_basic.
   Proof. move=> >/=. rewrite /uniq_body. by do 24 f_equiv. Qed.
 
   Global Instance uniq_slice_sync {𝔄} κ (ty: type 𝔄) : Sync ty → Sync (uniq_slice κ ty).
-  Proof. move=> >/=. by do 17 f_equiv. Qed.
+  Proof. move=> >/=. by do 17 (f_equiv || move=>?). Qed.
 
   Lemma uniq_slice_resolve {𝔄} κ (ty: type 𝔄) E L :
     lctx_lft_alive E L κ →

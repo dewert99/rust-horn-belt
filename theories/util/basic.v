@@ -1,6 +1,6 @@
 Require Export Equality FunctionalExtensionality.
 From iris.algebra Require Import ofe.
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 
 (** * Utility for Point-Free Style *)
 

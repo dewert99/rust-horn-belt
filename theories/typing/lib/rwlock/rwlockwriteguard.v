@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.algebra Require Import auth csum frac agree.
 From iris.bi Require Import fractional.
 From lrust.lifetime Require Import na_borrow.
@@ -23,7 +23,7 @@ Section rwlockwriteguard.
          match vl return _ with
          | [ #(LitLoc l) ] =>
            ∃ γ β tid_shr, &{β}((l +ₗ 1) ↦∗: ty.(ty_own) tid) ∗
-             α ⊑ β ∗ β ⊑ ty.(ty_lft) ∗
+             α ⊑ β ∗ β ⊑ ty_lft ty ∗
              &at{β,rwlockN}(rwlock_inv tid tid_shr l γ β ty) ∗
              own γ (◯ writing_st)
          | _ => False

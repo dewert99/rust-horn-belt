@@ -7,9 +7,9 @@ Functional Verification of Rust Programs with Unsafe Code".
 
 This version is known to compile with:
 
-- Coq 8.13.0
+- Coq 8.15.0
 - A development version of [Iris](https://gitlab.mpi-sws.org/iris/iris)
-  (the version `dev.2021-03-27.0.f1484b2b`)
+  (the version `dev.2022-04-12.0.a3bed7ea`)
 
 ## Building from source
 

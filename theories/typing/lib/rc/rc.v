@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.algebra Require Import auth csum frac agree excl numbers.
 From lrust.lang.lib Require Import memcpy.
 From lrust.lifetime Require Import na_borrow.
@@ -77,7 +77,7 @@ Section rc.
               (* We use this disjunction, and not simply [ty_shr] here,
                  because [weak_new] cannot prove ty_shr, even for a dead
                  lifetime. *)
-              (ty.(ty_shr) (ν ⊓ ty.(ty_lft)) tid (l +ₗ 2) ∨ [†ν]) ∗
+              (ty.(ty_shr) (ν ⊓ ty_lft ty) tid (l +ₗ 2) ∨ [†ν]) ∗
               □ (1.[ν] ={↑lftN ∪ ↑lft_userN}[↑lft_userN]▷=∗ [†ν]))%I.
 
   Global Instance rc_persist_persistent tid ν γ l ty : Persistent (rc_persist tid ν γ l ty).

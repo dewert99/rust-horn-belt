@@ -36,7 +36,7 @@ Section own.
     - by rewrite left_id shift_loc_0.
     - by rewrite right_id Nat.add_0_r.
     - iSplit; by [iIntros "[??]"|iIntros].
-    - rewrite heap_freeable_op_eq. f_equiv.
+    - rewrite heap_freeable_op_eq. f_equiv; [|done].
       by rewrite -Qp_div_add_distr pos_to_Qp_add -Nat2Pos.inj_add.
   Qed.
 
@@ -108,10 +108,10 @@ Section own.
   Qed.
 
   Global Instance own_send {𝔄} n (ty: type 𝔄) : Send ty → Send (own_ptr n ty).
-  Proof. move=> >/=. by do 9 f_equiv. Qed.
+  Proof. move=> >/=. by do 9 (f_equiv || move=>?). Qed.
 
   Global Instance own_sync {𝔄} n (ty: type 𝔄) : Sync ty → Sync (own_ptr n ty).
-  Proof. move=> >/=. by do 6 f_equiv. Qed.
+  Proof. move=> >/=. by do 6 (f_equiv || move=>?). Qed.
 
   Global Instance own_just_loc {𝔄} n (ty: type 𝔄) : JustLoc (own_ptr n ty).
   Proof. iIntros (?[|]?[|[[]|][]]) "? //". by iExists _. Qed.

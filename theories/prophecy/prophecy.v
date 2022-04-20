@@ -2,7 +2,7 @@ Import EqNotations.
 From stdpp Require Import strings.
 From iris.algebra Require Import auth cmra functions gmap csum frac agree.
 From iris.bi Require Import fractional.
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.base_logic Require Import invariants.
 From lrust.util Require Import basic vector discrete_fun.
 From lrust.prophecy Require Export syn_type.
@@ -201,7 +201,7 @@ Local Definition proph_sim (S: proph_smryUR) (L: proph_log) :=
 Local Notation "S :~ L" := (proph_sim S L) (at level 70, format "S  :~  L").
 
 Section defs.
-Context `{!invG Σ, !prophG Σ}.
+Context `{!invGS Σ, !prophG Σ}.
 
 (** Prophecy Context *)
 Local Definition proph_inv: iProp Σ :=
@@ -231,7 +231,7 @@ Notation "⟨ π , φ ⟩" := (proph_obs (λ π, φ%type%stdpp))
 (** * Iris Lemmas *)
 
 Section proph.
-Context `{!invG Σ, !prophG Σ}.
+Context `{!invGS Σ, !prophG Σ}.
 
 (** Instances *)
 
@@ -245,9 +245,17 @@ Proof.
 Qed.
 Global Instance proph_tok_as_fractional q ξ : AsFractional q:[ξ] (λ q, q:[ξ]%I) q.
 Proof. split; by [|apply _]. Qed.
+Global Instance frame_proph_tok p ξ q1 q2 RES :
+  FrameFractionalHyps p q1:[ξ] (λ q, q:[ξ])%I RES q1 q2 →
+  Frame p q1:[ξ] q2:[ξ] RES | 5.
+Proof. apply: frame_fractional. Qed.
 
 Global Instance proph_toks_as_fractional q ξl : AsFractional q:+[ξl] (λ q, q:+[ξl]%I) q.
 Proof. split; by [|apply _]. Qed.
+Global Instance frame_proph_toks p ξl q1 q2 RES :
+  FrameFractionalHyps p q1:+[ξl] (λ q, q:+[ξl])%I RES q1 q2 →
+  Frame p q1:+[ξl] q2:+[ξl] RES | 5.
+Proof. apply: frame_fractional. Qed.
 
 Global Instance proph_obs_persistent φπ : Persistent .⟨φπ⟩ := _.
 Global Instance proph_obs_timeless φπ : Timeless .⟨φπ⟩ := _.
@@ -272,8 +280,9 @@ Lemma proph_tok_combine ξl ζl q q' :
   q:+[ξl] -∗ q':+[ζl] -∗
     ∃q'', q'':+[ξl ++ ζl] ∗ (q'':+[ξl ++ ζl] -∗ q:+[ξl] ∗ q':+[ζl]).
 Proof.
-  case (Qp_lower_bound q q')=> [q''[?[?[->->]]]]. iIntros "[ξl $][ζl $]".
-  iExists q''. iIntros "{$ξl $ζl}[$$]".
+  case (Qp_lower_bound q q')=> [q''[?[?[->->]]]]. iIntros "[ξl ξl'][ζl ζl']".
+  iExists q''. iFrame "ξl ζl". iIntros "[ξl ζl]".
+  iSplitL "ξl ξl'"; iApply fractional_split; iFrame.
 Qed.
 
 (** Initialization *)
@@ -425,13 +434,13 @@ Global Opaque proph_ctx proph_tok proph_obs.
 
 (** * Prophecy Equalizer *)
 
-Definition proph_eqz `{!invG Σ, !prophG Σ} {A} (uπ vπ: proph A) : iProp Σ :=
+Definition proph_eqz `{!invGS Σ, !prophG Σ} {A} (uπ vπ: proph A) : iProp Σ :=
   ∀E ξl q, ⌜↑prophN ⊆ E ∧ vπ ./ ξl⌝ -∗ q:+[ξl] ={E}=∗ ⟨π, uπ π = vπ π⟩ ∗ q:+[ξl].
 
 Notation "uπ :== vπ" := (proph_eqz uπ vπ) (at level 70, format "uπ  :==  vπ") : bi_scope.
 
 Section proph_eqz.
-Context `{!invG Σ, !prophG Σ}.
+Context `{!invGS Σ, !prophG Σ}.
 
 (** ** Constructing Prophecy Equalizers *)
 

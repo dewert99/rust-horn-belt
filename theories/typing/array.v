@@ -156,12 +156,12 @@ Section typing.
   Qed.
 
   Lemma array_plus_prod {𝔄} m n (ty: type 𝔄) E L :
-    eqtype E L [ty;^ m + n] ([ty;^ m] * [ty;^ n]) (vsepat m) (curry vapp).
+    eqtype E L [ty;^ m + n] ([ty;^ m] * [ty;^ n]) (vsepat m) (uncurry vapp).
   Proof.
     apply eqtype_symm, eqtype_unfold; [apply _|]. iIntros (?) "_!>_".
     iSplit; [iPureIntro=>/=; lia|]. iSplit.
     { rewrite/= lft_intersect_list_app. iApply lft_intersect_equiv_idemp. }
-    have Eq: ∀vπ: proph (vec 𝔄 _ * _), vfunsep (curry vapp ∘ vπ) =
+    have Eq: ∀vπ: proph (vec 𝔄 _ * _), vfunsep (uncurry vapp ∘ vπ) =
       vfunsep (fst ∘ vπ) +++ vfunsep (snd ∘ vπ).
     { move=> ?? vπ. have {1}<-: pair ∘ vapply (vfunsep $ fst ∘ vπ) ⊛
       vapply (vfunsep $ snd ∘ vπ) = vπ by rewrite !semi_iso' -surjective_pairing_fun.
@@ -179,7 +179,7 @@ Section typing.
   Qed.
 
   Lemma array_succ_prod {𝔄} n (ty: type 𝔄) E L :
-    eqtype E L [ty;^ S n] (ty * [ty;^ n]) (λ v, (vhd v, vtl v)) (curry (λ x, vcons x)).
+    eqtype E L [ty;^ S n] (ty * [ty;^ n]) (λ v, (vhd v, vtl v)) (uncurry (λ x, vcons x)).
   Proof.
     eapply eqtype_eq.
     - eapply eqtype_trans; [apply (array_plus_prod 1)|].

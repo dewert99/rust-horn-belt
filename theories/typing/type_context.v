@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From lrust.typing Require Import type lft_contexts.
 Set Default Proof Using "Type".
 
@@ -64,7 +64,7 @@ Section type_context.
     | e => to_val e end.
 
   Lemma eval_path_of_val (v: val) : eval_path v = Some v.
-  Proof. case v; [done|]=>/= *. by rewrite (decide_left _). Qed.
+  Proof. case v; [done|]=>/= *. by rewrite (decide_True_pi _). Qed.
 
   Lemma wp_eval_path E p v :
     eval_path p = Some v → ⊢ WP p @ E {{ v', ⌜v' = v⌝ }}.
@@ -538,7 +538,7 @@ Section lemmas.
   Qed.
 
   Lemma unblock_tctx_cons_unblock {𝔄 𝔄l} p (ty: type 𝔄) (T T': tctx 𝔄l) κ E L :
-    lctx_lft_alive E L ty.(ty_lft) → unblock_tctx E L κ T T' →
+    lctx_lft_alive E L (ty_lft ty) → unblock_tctx E L κ T T' →
     unblock_tctx E L κ (p ◁{κ} ty +:: T) (p ◁ ty +:: T').
   Proof.
     iIntros (Alv Un ??[??]) "#LFT #E [L L'] #†κ /=[(%v &%& Upd) T]".

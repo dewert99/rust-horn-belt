@@ -383,7 +383,7 @@ Section typing.
     move: Cl. rewrite Into. iIntros (? Body ?????) "_ _ _ _ _ $$ _ Obs".
     iMod persistent_time_receipt_0 as "#⧖". iApply wp_value. iExists -[const tr].
     iFrame "Obs". iSplit; [|done]. iLöb as "IH". iExists _, 0%nat.
-    iSplit; [by rewrite/= decide_left|]. iFrame "⧖". iExists tr.
+    iSplit; [by rewrite/= decide_True_pi|]. iFrame "⧖". iExists tr.
     iSplit; [done|]. iExists fb, "return", bl', e, _. iSplit; [done|].
     iIntros "!>!> *%%% LFT TIME PROPH UNIQ Efp Na L C T ?".
     iApply (Body _ _ (RecV _ _ _) $! _ (_-::_) with

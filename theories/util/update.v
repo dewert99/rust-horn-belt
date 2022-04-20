@@ -1,5 +1,5 @@
 From iris.bi Require Import updates.
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From lrust.util Require Import basic.
 
 (* TODO : move all that to Iris *)

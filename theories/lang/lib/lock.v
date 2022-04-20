@@ -1,5 +1,5 @@
 From iris.program_logic Require Import weakestpre.
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.algebra Require Import excl.
 From lrust.lang Require Import lang proofmode notation.
 Set Default Proof Using "Type".
@@ -16,7 +16,7 @@ Definition release : val := λ: ["l"], "l" <-ˢᶜ #false.
    their cancelling view shift has a non-empty mask, and it would have to be
    executed in the consequence view shift of a borrow. *)
 Section proof.
-  Context `{!lrustG Σ}.
+  Context `{!lrustGS Σ}.
 
   Definition lock_proto (l : loc) (R : iProp Σ) : iProp Σ :=
     (∃ b : bool, l ↦ #b ∗ if b then True else R)%I.

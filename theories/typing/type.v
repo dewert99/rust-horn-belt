@@ -11,10 +11,10 @@ Set Default Proof Using "Type".
 Implicit Type (𝔄 𝔅 ℭ: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Class typeG Σ := TypeG {
-  type_lrustG :> lrustG Σ;
+  type_lrustGS :> lrustGS Σ;
   type_prophG :> prophG Σ;
   type_uniqG :> uniqG Σ;
-  type_lftG :> lftG Σ;
+  type_lftGS :> lftGS Σ;
   type_na_invG :> na_invG Σ;
   type_frac_borG :> frac_borG Σ;
 }.
@@ -121,7 +121,7 @@ Proof.
 Qed.
 
 Lemma elctx_interp_ty_outlives_E `{!typeG Σ} {𝔄} (ty: type 𝔄) α :
-  elctx_interp (ty_outlives_E ty α) ⊣⊢ α ⊑ ty.(ty_lft).
+  elctx_interp (ty_outlives_E ty α) ⊣⊢ α ⊑ ty_lft ty.
 Proof.
   rewrite /ty_outlives_E /elctx_elt_interp big_sepL_fmap /=.
   elim ty.(ty_lfts)=>/= [|κ l ->].
@@ -453,12 +453,12 @@ Ltac solve_ne_type :=
 
 Inductive TypeLftMorphism `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Prop :=
 | type_lft_morphism_add α βs E :
-    (∀ty, ⊢ (T ty).(ty_lft) ≡ₗ α ⊓ ty.(ty_lft)) →
+    (∀ty, ⊢ ty_lft (T ty) ≡ₗ α ⊓ ty_lft ty) →
     (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢
-      elctx_interp E ∗ elctx_interp ty.(ty_E) ∗ [∗ list] β ∈ βs, β ⊑ ty.(ty_lft)) →
+      elctx_interp E ∗ elctx_interp ty.(ty_E) ∗ [∗ list] β ∈ βs, β ⊑ ty_lft ty) →
     TypeLftMorphism T
 | type_lft_morphism_const α E :
-    (∀ty, ⊢ (T ty).(ty_lft) ≡ₗ α) →
+    (∀ty, ⊢ ty_lft (T ty) ≡ₗ α) →
     (∀ty, elctx_interp (T ty).(ty_E) ⊣⊢ elctx_interp E) →
     TypeLftMorphism T.
 Existing Class TypeLftMorphism.
@@ -516,7 +516,7 @@ Qed.
 
 Lemma type_lft_morphism_lft_equiv_proper {𝔄 𝔅} (T: type 𝔄 → type 𝔅)
   {HT: TypeLftMorphism T} ty ty' :
-  ty.(ty_lft) ≡ₗ ty'.(ty_lft) -∗ (T ty).(ty_lft) ≡ₗ (T ty').(ty_lft).
+  ty_lft ty ≡ₗ ty_lft ty' -∗ ty_lft (T ty) ≡ₗ ty_lft (T ty').
 Proof.
   iIntros "#?". case HT=> [α βs E Hα HE|α E Hα HE].
   - iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
@@ -528,7 +528,7 @@ Qed.
 
 Lemma type_lft_morphism_elctx_interp_proper {𝔄 𝔅} (T: type 𝔄 → type 𝔅)
   {HT: TypeLftMorphism T} ty ty' :
-  elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
+  elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) → (⊢ ty_lft ty ≡ₗ ty_lft ty') →
   elctx_interp (T ty).(ty_E) ≡ elctx_interp (T ty').(ty_E).
 Proof.
   move=> EqvE EqvLft. move: HT=> [|] > ? HE; [|by rewrite !HE].
@@ -541,13 +541,13 @@ Class TypeNonExpansive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : P
   type_ne_ty_size ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (T ty).(ty_size) = (T ty').(ty_size);
   type_ne_ty_own n ty ty' :
-    ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
+    ty.(ty_size) = ty'.(ty_size) → (⊢ ty_lft ty ≡ₗ ty_lft ty') →
     elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
     (∀vπ d tid vl, ty.(ty_own) vπ d tid vl ≡{n}≡ ty'.(ty_own) vπ d tid vl) →
     (∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l ≡{S n}≡ ty'.(ty_shr) vπ d κ tid l) →
     (∀vπ d tid vl, (T ty).(ty_own) vπ d tid vl ≡{n}≡ (T ty').(ty_own) vπ d tid vl);
   type_ne_ty_shr n ty ty' :
-    ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
+    ty.(ty_size) = ty'.(ty_size) → (⊢ ty_lft ty ≡ₗ ty_lft ty') →
     elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
     (∀vπ d tid vl,
       dist_later n (ty.(ty_own) vπ d tid vl) (ty'.(ty_own) vπ d tid vl)) →
@@ -559,13 +559,13 @@ Class TypeContractive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Pr
   type_contractive_type_lft_morphism : TypeLftMorphism T;
   type_contractive_ty_size ty ty' : (T ty).(ty_size) = (T ty').(ty_size);
   type_contractive_ty_own n ty ty' :
-    ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
+    ty.(ty_size) = ty'.(ty_size) → (⊢ ty_lft ty ≡ₗ ty_lft ty') →
     elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
     (∀vπ d tid vl, dist_later n (ty.(ty_own) vπ d tid vl) (ty'.(ty_own) vπ d tid vl)) →
     (∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l ≡{n}≡ ty'.(ty_shr) vπ d κ tid l) →
     (∀vπ d tid vl, (T ty).(ty_own) vπ d tid vl ≡{n}≡ (T ty').(ty_own) vπ d tid vl);
   type_contractive_ty_shr n ty ty' :
-    ty.(ty_size) = ty'.(ty_size) → (⊢ ty.(ty_lft) ≡ₗ ty'.(ty_lft)) →
+    ty.(ty_size) = ty'.(ty_size) → (⊢ ty_lft ty ≡ₗ ty_lft ty') →
     elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
     (∀vπ d tid vl, match n with S (S n) =>
       ty.(ty_own) vπ d tid vl ≡{n}≡ ty'.(ty_own) vπ d tid vl | _ => True end) →
@@ -867,7 +867,7 @@ End real.
 
 Definition type_incl `{!typeG Σ} {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) (f: 𝔄 → 𝔅)
   : iProp Σ :=
-  ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ (ty'.(ty_lft) ⊑ ty.(ty_lft)) ∗
+  ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ (ty_lft ty' ⊑ ty_lft ty) ∗
   (□ ∀vπ d tid vl, ty.(ty_own) vπ d tid vl -∗ ty'.(ty_own) (f ∘ vπ) d tid vl) ∗
   (□ ∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l -∗ ty'.(ty_shr) (f ∘ vπ) d κ tid l).
 Instance: Params (@type_incl) 4 := {}.
@@ -900,7 +900,7 @@ Section subtyping.
   Lemma eqtype_unfold {𝔄 𝔅} E L f g `{!Iso f g} (ty : type 𝔄) (ty' : type 𝔅) :
     eqtype E L ty ty' f g ↔
     ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ ty.(ty_lft) ≡ₗ ty'.(ty_lft) ∗
+      ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ ty_lft ty ≡ₗ ty_lft ty' ∗
       (□ ∀vπ d tid vl, ty.(ty_own) vπ d tid vl ↔ ty'.(ty_own) (f ∘ vπ) d tid vl) ∗
       (□ ∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l ↔ ty'.(ty_shr) (f ∘ vπ) d κ tid l)).
   Proof.
@@ -924,7 +924,7 @@ Section subtyping.
   Lemma eqtype_id_unfold {𝔄} E L (ty ty': type 𝔄) :
     eqtype E L ty ty' id id ↔
     ∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ ty.(ty_lft) ≡ₗ ty'.(ty_lft) ∗
+      ⌜ty.(ty_size) = ty'.(ty_size)⌝ ∗ ty_lft ty ≡ₗ ty_lft ty' ∗
       (□ ∀vπ d tid vl, ty.(ty_own) vπ d tid vl ↔ ty'.(ty_own) vπ d tid vl) ∗
       (□ ∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l ↔ ty'.(ty_shr) vπ d κ tid l)).
   Proof. by rewrite eqtype_unfold. Qed.
@@ -1058,7 +1058,7 @@ Section subtyping.
   (** Simple Type *)
 
   Lemma type_incl_simple_type {𝔄 𝔅} f (st: simple_type 𝔄) (st': simple_type 𝔅):
-    st.(st_size) = st'.(st_size) → st'.(ty_lft) ⊑ st.(ty_lft) -∗
+    st.(st_size) = st'.(st_size) → ty_lft st' ⊑ ty_lft st -∗
     □ (∀vπ d tid vl, st.(st_own) vπ d tid vl -∗ st'.(st_own) (f ∘ vπ) d tid vl) -∗
     type_incl st st' f.
   Proof.
@@ -1069,7 +1069,7 @@ Section subtyping.
 
   Lemma subtype_simple_type {𝔄 𝔅} E L f (st: simple_type 𝔄) (st': simple_type 𝔅) :
     (∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ⌜st.(st_size) = st'.(st_size)⌝ ∗ st'.(ty_lft) ⊑ st.(ty_lft) ∗
+      ⌜st.(st_size) = st'.(st_size)⌝ ∗ ty_lft st' ⊑ ty_lft st ∗
       (∀vπ d tid vl, st.(st_own) vπ d tid vl -∗ st'.(st_own) (f ∘ vπ) d tid vl))) →
     subtype E L st st' f.
   Proof.
@@ -1081,7 +1081,7 @@ Section subtyping.
   (** Plain Type *)
 
   Lemma type_incl_plain_type {𝔄 𝔅} f (pt: plain_type 𝔄) (pt': plain_type 𝔅):
-    pt.(pt_size) = pt'.(pt_size) → pt'.(ty_lft) ⊑ pt.(ty_lft) -∗
+    pt.(pt_size) = pt'.(pt_size) → ty_lft pt' ⊑ ty_lft pt -∗
     □ (∀v tid vl, pt.(pt_own) v tid vl -∗ pt'.(pt_own) (f v) tid vl) -∗
     type_incl pt pt' f.
   Proof.
@@ -1093,7 +1093,7 @@ Section subtyping.
 
   Lemma subtype_plain_type {𝔄 𝔅} E L f (pt: plain_type 𝔄) (pt': plain_type 𝔅) :
     (∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ⌜pt.(pt_size) = pt'.(pt_size)⌝ ∗ pt'.(ty_lft) ⊑ pt.(ty_lft) ∗
+      ⌜pt.(pt_size) = pt'.(pt_size)⌝ ∗ ty_lft pt' ⊑ ty_lft pt ∗
       (∀v tid vl, pt.(pt_own) v tid vl -∗ pt'.(pt_own) (f v) tid vl))) →
     subtype E L pt pt' f.
   Proof.

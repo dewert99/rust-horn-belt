@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.algebra Require Import auth csum frac agree.
 From lrust.lang.lib Require Import memcpy lock.
 From lrust.lifetime Require Import na_borrow.
@@ -46,11 +46,11 @@ Section mutexguard.
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
     (* One logical step is required for [ty_share] *)
     ty_own Φπ d tid vl := ⌜d > 0⌝ ∗ [loc[l] := vl] ∃Φ κ',
-      ⌜Φπ = const Φ⌝ ∗ κ ⊑ κ' ∗ κ' ⊑ ty.(ty_lft) ∗
+      ⌜Φπ = const Φ⌝ ∗ κ ⊑ κ' ∗ κ' ⊑ ty_lft ty ∗
       &at{κ, mutexN} (lock_proto l (mutex_body ty Φ κ' l tid)) ∗
       mutex_body ty Φ κ' l tid;
     ty_shr Φπ _ κ' tid l := ∃Φ (l': loc) κᵢ (vπ: proph 𝔄) d,
-      ⌜Φπ = const Φ⌝ ∗ κ' ⊑ κᵢ ∗ κᵢ ⊑ ty.(ty_lft) ∗
+      ⌜Φπ = const Φ⌝ ∗ κ' ⊑ κᵢ ∗ κᵢ ⊑ ty_lft ty ∗
       &frac{κ'}(λ q', l ↦{q'} #l') ∗ ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗
       □ ∀E q, ⌜↑lftN ∪ ↑shrN ⊆ E⌝ -∗ q.[κᵢ]
         ={E,E∖↑shrN}=∗ |={E∖↑shrN}▷=>^(S d) |={E∖↑shrN,E}=>
@@ -87,7 +87,7 @@ Section mutexguard.
     iMod (inv_alloc shrN _ (_ ∨ ty.(ty_shr) _ _ _ _ _)%I with "[Bor]") as "#inv".
     { iLeft. iNext. iExact "Bor". }
     iModIntro. iFrame "κ'". iExists _, _, κᵢ, _, _. iSplit; [done|].
-    iFrame "Bor↦ Obs ⧖ κ'⊑κᵢ". iAssert (κᵢ ⊑ ty.(ty_lft))%I as "#?".
+    iFrame "Bor↦ Obs ⧖ κ'⊑κᵢ". iAssert (κᵢ ⊑ ty_lft ty)%I as "#?".
     { iApply lft_incl_trans; [iApply lft_intersect_incl_l|done]. }
     iSplit; [done|]. iIntros "!>" (???) "κᵢ".
     iInv shrN as "[Bor|#ty]" "Close"; iIntros "/=!>!>!>"; last first.
@@ -131,7 +131,8 @@ Section mutexguard.
   Global Instance mutexguard_send {𝔄} κ (ty: type 𝔄) :
     Send ty → Send (mutexguard κ ty).
   Proof.
-    move=> ?>/=. rewrite /mutex_body. do 21 f_equiv; [|done]. by do 2 f_equiv.
+    move=> ?>/=. rewrite /mutex_body. do 21 (f_equiv || move=>?); [|done].
+    by do 2 f_equiv.
   Qed.
 
   (* In order to prove [mutexguard_resolve] with a non-trivial postcondition,

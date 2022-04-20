@@ -13,9 +13,9 @@ Section S.
 
   Definition Tn n := Nat.iter (S n) T base.
 
-  Lemma Tn_ty_lft_const n n' : ⊢ (Tn n).(ty_lft) ≡ₗ (Tn n').(ty_lft).
+  Lemma Tn_ty_lft_const n n' : ⊢ ty_lft (Tn n) ≡ₗ ty_lft (Tn n').
   Proof using HT.
-    have Eq: ∀n, ⊢ (Tn n).(ty_lft) ≡ₗ (Tn 0).(ty_lft); last first.
+    have Eq: ∀n, ⊢ ty_lft (Tn n) ≡ₗ ty_lft (Tn 0); last first.
     { iApply lft_equiv_trans; [|iApply lft_equiv_sym]; iApply Eq. }
     clear n n'=> n. case type_contractive_type_lft_morphism=> [> Hα ?|> Hα ?]; last first.
     { iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_sym. iApply Hα. }

@@ -24,12 +24,12 @@ Notation llctx := (list llctx_elt).
 Notation "κ ⊑ₗ κl" := (@pair lft (list lft) κ κl) (at level 55).
 
 (* External lifetime context. *)
-Definition elctx_elt_interp `{!invG Σ, !lftG Σ} (x : elctx_elt) : iProp Σ :=
+Definition elctx_elt_interp `{!invGS Σ, !lftGS Σ} (x : elctx_elt) : iProp Σ :=
   (x.1 ⊑ x.2)%I.
 Notation elctx_interp := (big_sepL (λ _, elctx_elt_interp)).
 
 Section lft_contexts.
-  Context `{!invG Σ, !lftG Σ}.
+  Context `{!invGS Σ, !lftGS Σ}.
   Implicit Type (κ: lft).
 
   Global Instance elctx_interp_permut :
@@ -56,7 +56,7 @@ Section lft_contexts.
       iDestruct "Hq" as (κ0) "(% & Hq & #?)".
       iDestruct "Hq'" as (κ0') "(% & Hq' & #?)". simpl in *.
       rewrite (inj ((lft_intersect_list κs) ⊓.) κ0' κ0); last congruence.
-      iExists κ0. by iFrame "∗%".
+      iExists κ0. iFrame "∗%". done.
   Qed.
 
   Definition llctx_interp (L : llctx) (q : Qp) : iProp Σ :=
@@ -68,6 +68,11 @@ Section lft_contexts.
   Global Instance llctx_interp_as_fractional L q :
     AsFractional (llctx_interp L q) (llctx_interp L) q.
   Proof. split. done. apply _. Qed.
+  Global Instance frame_llctx_interp p L q1 q2 RES :
+    FrameFractionalHyps p (llctx_interp L q1) (llctx_interp L) RES q1 q2 →
+    Frame p (llctx_interp L q1) (llctx_interp L q2) RES | 5.
+  Proof. apply: frame_fractional. Qed.
+
   Global Instance llctx_interp_permut :
     Proper ((≡ₚ) ==> eq ==> (⊣⊢)) llctx_interp.
   Proof. intros ????? ->. by apply big_opL_permutation. Qed.
@@ -347,7 +352,7 @@ Arguments elctx_sat {_ _ _} _ _ _.
 Arguments lctx_lft_incl_incl {_ _ _ _ _} _ _.
 Arguments lctx_lft_alive_tok {_ _ _ _ _} _ _ _.
 
-Lemma elctx_sat_submseteq `{!invG Σ, !lftG Σ} E E' L :
+Lemma elctx_sat_submseteq `{!invGS Σ, !lftGS Σ} E E' L :
   E' ⊆+ E → elctx_sat E L E'.
 Proof. iIntros (HE' ?) "_ !> H". by iApply big_sepL_submseteq. Qed.
 

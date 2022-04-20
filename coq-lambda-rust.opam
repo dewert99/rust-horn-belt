@@ -13,8 +13,7 @@ it possible to easily prove the functionnal correctness of well-typed program.
 """
 
 depends: [
-  "coq-iris" { (= "dev.2021-03-27.0.f1484b2b") | (= "dev") }
-  "coq" { (>= "8.13.0") }
+  "coq-iris" { (= "dev.2022-04-12.0.a3bed7ea") | (= "dev") }
 ]
 
 build: [make "-j%{jobs}%"]

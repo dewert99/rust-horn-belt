@@ -47,7 +47,7 @@ Section array_util.
   Qed.
 
   Lemma ty_share_big_sepL {𝔄} (ty: type 𝔄) E aπl d κ l tid q :
-    ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty.(ty_lft) -∗
+    ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty_lft ty -∗
     &{κ} ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) -∗ q.[κ]
       ={E}=∗ |={E}▷=>^d |={E}=>
         ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i)) ∗ q.[κ].
@@ -64,7 +64,7 @@ Section array_util.
   Qed.
 
   Lemma ty_own_proph_big_sepL {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) wll d tid κ q :
-    ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty.(ty_lft) -∗
+    ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty_lft ty -∗
     ([∗ list] i ↦ aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2) -∗ q.[κ]
       ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
         (q':+[ξl] ={E}=∗
@@ -85,7 +85,7 @@ Section array_util.
   Qed.
 
   Lemma ty_own_proph_big_sepL_mt {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) l d tid κ q :
-    ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty.(ty_lft) -∗
+    ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty_lft ty -∗
     ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) -∗ q.[κ]
       ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
         (q':+[ξl] ={E}=∗
@@ -100,7 +100,7 @@ Section array_util.
   Qed.
 
   Lemma ty_shr_proph_big_sepL {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) d κ tid l κ' q :
-    ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
+    ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty_lft ty -∗
     ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i)) -∗ q.[κ']
       ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
         (q':+[ξl] ={E}=∗ q.[κ']).

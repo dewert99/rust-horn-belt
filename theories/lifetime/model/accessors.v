@@ -5,7 +5,7 @@ From iris.base_logic.lib Require Import boxes.
 Set Default Proof Using "Type".
 
 Section accessors.
-Context `{!invG Σ, !lftG Σ}.
+Context `{!invGS Σ, !lftGS Σ}.
 Implicit Types κ : lft.
 
 (* Helper internal lemmas *)
@@ -28,7 +28,7 @@ Proof.
     by apply (exclusive_local_update _ (1%Qp, to_agree (Bor_open q))). }
   rewrite own_bor_op -fmap_insert. iDestruct "Hbor" as "[Hown $]".
   iExists _. iFrame "∗".
-  rewrite -insert_delete big_sepM_insert ?lookup_delete // big_sepM_delete /=; last done.
+  rewrite -insert_delete_insert big_sepM_insert ?lookup_delete // big_sepM_delete /=; last done.
   iDestruct "HB" as "[_ $]". auto.
 Qed.
 
@@ -51,7 +51,7 @@ Proof.
   rewrite own_bor_op -fmap_insert. iDestruct "Hbor" as "[Hown $]".
   rewrite big_sepM_delete //. simpl. iDestruct "HB" as "[>$ HB]".
   iExists _. iFrame "Hbox Hown".
-  rewrite -insert_delete big_sepM_insert ?lookup_delete //. simpl. by iFrame.
+  rewrite -insert_delete_insert big_sepM_insert ?lookup_delete //. simpl. by iFrame.
 Qed.
 
 Lemma add_vs Pb Pb' P Q Pi κ :

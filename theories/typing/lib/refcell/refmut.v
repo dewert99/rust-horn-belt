@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.algebra Require Import auth csum frac agree.
 From iris.bi Require Import fractional.
 From lrust.lifetime Require Import na_borrow.
@@ -27,7 +27,7 @@ Section refmut.
          match vl return _ with
          | [ #(LitLoc lv);  #(LitLoc lrc) ] =>
            ∃ ν q γ β ty', &{α ⊓ ν}(lv ↦∗: ty.(ty_own) tid) ∗
-             α ⊑ β ∗ α ⊓ ν ⊑ ty.(ty_lft) ∗
+             α ⊑ β ∗ α ⊓ ν ⊑ ty_lft ty ∗
              &na{β, tid, refcell_invN}(refcell_inv tid lrc γ β ty') ∗
              q.[ν] ∗ own γ (◯ writing_stR q ν)
          | _ => False

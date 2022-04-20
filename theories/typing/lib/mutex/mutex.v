@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.algebra Require Import auth csum frac agree.
 From lrust.lang.lib Require Import memcpy lock.
 From lrust.lifetime Require Import na_borrow.
@@ -63,7 +63,7 @@ Section mutex.
       ty_own Φπ _ tid vl := ∃Φ (b: bool) vl' (vπ: proph 𝔄) d,
         ⌜vl = #b :: vl' ∧ Φπ = const Φ⌝ ∗
         ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ty.(ty_own) vπ d tid vl';
-      ty_shr Φπ _ κ tid l := ∃Φ κ', ⌜Φπ = const Φ⌝ ∗ κ ⊑ κ' ∗ κ' ⊑ ty.(ty_lft) ∗
+      ty_shr Φπ _ κ tid l := ∃Φ κ', ⌜Φπ = const Φ⌝ ∗ κ ⊑ κ' ∗ κ' ⊑ ty_lft ty ∗
         &at{κ, mutexN} (lock_proto l (mutex_body ty Φ κ' l tid));
     |}%I.
   Next Obligation.

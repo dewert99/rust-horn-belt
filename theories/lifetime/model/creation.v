@@ -6,7 +6,7 @@ From iris.proofmode Require Import tactics.
 Set Default Proof Using "Type".
 
 Section creation.
-Context `{!invG Σ, !lftG Σ}.
+Context `{!invGS Σ, !lftGS Σ}.
 Implicit Types κ : lft.
 
 Lemma lft_kill (I : gmap lft lft_names) (K K' : gset lft) (κ : lft) :
@@ -125,7 +125,7 @@ Proof.
     iModIntro. rewrite /lft_inv. iIntros (κ ?) "[[Hκ %]|[Hκ %]]".
     - iLeft. iFrame "Hκ". iPureIntro. by apply lft_alive_in_insert.
     - iRight. iFrame "Hκ". iPureIntro. by apply lft_dead_in_insert. }
-  iModIntro; iExists {[ Λ ]}.
+  iModIntro; iExists {[+ Λ +]}.
   rewrite {1}/lft_tok big_sepMS_singleton. iFrame "HΛ".
   clear I A HΛ. iIntros "!> HΛ".
   iApply (step_fupd_mask_mono (↑lftN ∪ ↑lft_userN) _ ((↑lftN ∪ ↑lft_userN)∖↑mgmtN)).
@@ -134,8 +134,6 @@ Proof.
     set_solver. }
   { done. }
   iInv mgmtN as (A I) "(>HA & >HI & Hinv)" "Hclose".
-  { (* FIXME solve_ndisj should really handle this... *)
-    assert (↑mgmtN ⊆ ↑lftN) by solve_ndisj. set_solver. }
   rewrite /lft_tok big_sepMS_singleton.
   iDestruct (own_valid_2 with "HA HΛ")
     as %[[s [?%leibniz_equiv ?]]%singleton_included_l _]%auth_both_valid_discrete.
@@ -172,7 +170,7 @@ Proof.
     split; last done. by eapply gmultiset_elem_of_subseteq. }
   { intros κ ???. rewrite elem_of_difference elem_of_filter elem_of_dom. auto. }
   iModIntro. iMod ("Hclose" with "[-]") as "_"; last first.
-  { iModIntro. rewrite /lft_dead. iExists Λ. rewrite elem_of_singleton. auto. }
+  { iModIntro. rewrite /lft_dead. iExists Λ. rewrite gmultiset_elem_of_singleton. auto. }
   iNext. iExists (<[Λ:=false]>A), I.
   rewrite /own_alft_auth /to_alftUR fmap_insert. iFrame "HA HI".
   rewrite HI !big_sepS_union //.

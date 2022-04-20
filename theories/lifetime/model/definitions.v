@@ -38,7 +38,7 @@ Definition ilftUR := gmapUR lft (agreeR lft_namesO).
 Definition borUR := gmapUR slice_name (prodR fracR (agreeR bor_stateO)).
 Definition inhUR := gset_disjUR slice_name.
 
-Class lftG Σ := LftG {
+Class lftGS Σ := LftG {
   lft_box :> boxG Σ;
   alft_inG :> inG Σ (authR alftUR);
   alft_name : gname;
@@ -48,9 +48,9 @@ Class lftG Σ := LftG {
   lft_cnt_inG :> inG Σ (authR natUR);
   lft_inh_inG :> inG Σ (authR inhUR);
 }.
-Definition lftG' := lftG.
+Definition lftGS' := lftGS.
 
-Class lftPreG Σ := LftPreG {
+Class lftGpreS Σ := LftGPreS {
   lft_preG_box :> boxG Σ;
   alft_preG_inG :> inG Σ (authR alftUR);
   ilft_preG_inG :> inG Σ (authR ilftUR);
@@ -58,13 +58,13 @@ Class lftPreG Σ := LftPreG {
   lft_preG_cnt_inG :> inG Σ (authR natUR);
   lft_preG_inh_inG :> inG Σ (authR inhUR);
 }.
-Definition lftPreG' := lftPreG.
+Definition lftGpreS' := lftGpreS.
 
 Definition lftΣ : gFunctors :=
   #[ boxΣ; GFunctor (authR alftUR); GFunctor (authR ilftUR);
      GFunctor (authR borUR); GFunctor (authR natUR); GFunctor (authR inhUR) ].
-Instance subG_lftPreG Σ :
-  subG lftΣ Σ → lftPreG Σ.
+Instance subG_lftGpreS Σ :
+  subG lftΣ Σ → lftGpreS Σ.
 Proof. solve_inG. Qed.
 
 Definition bor_filled (s : bor_state) : bool :=
@@ -77,7 +77,7 @@ Definition to_ilftUR : gmap lft lft_names → ilftUR := fmap to_agree.
 Definition to_borUR : gmap slice_name bor_state → borUR := fmap ((1%Qp,.) ∘ to_agree).
 
 Section defs.
-  Context `{!invG Σ, !lftG Σ}.
+  Context `{!invGS Σ, !lftGS Σ}.
 
   Definition lft_tok (q : Qp) (κ : lft) : iProp Σ :=
     ([∗ mset] Λ ∈ κ, own alft_name (◯ {[ Λ := Cinl q ]}))%I.
@@ -221,7 +221,7 @@ Typeclasses Opaque lft_tok lft_dead bor_cnt lft_bor_alive lft_bor_dead
   idx_bor_own idx_bor raw_bor bor.
 
 Section basic_properties.
-Context `{!invG Σ, !lftG Σ}.
+Context `{!invGS Σ, !lftGS Σ}.
 Implicit Types κ : lft.
 
 (* Unfolding lemmas *)

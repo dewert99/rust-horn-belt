@@ -17,10 +17,10 @@ Section vec_basic.
   Qed.
 
   Global Instance vec_send {𝔄} (ty: type 𝔄) : Send ty → Send (vec_ty ty).
-  Proof. move=> ?>/=. by do 19 f_equiv. Qed.
+  Proof. move=> ?>/=. by do 19 (f_equiv || move=>?). Qed.
 
   Global Instance vec_sync {𝔄} (ty: type 𝔄) : Sync ty → Sync (vec_ty ty).
-  Proof. move=> ?>/=. by do 16 f_equiv. Qed.
+  Proof. move=> ?>/=. by do 16 (f_equiv || move=>?). Qed.
 
   Lemma vec_resolve {𝔄} (ty: type 𝔄) Φ E L :
     resolve E L ty Φ → resolve E L (vec_ty ty) (lforall Φ).

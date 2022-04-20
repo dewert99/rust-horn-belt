@@ -30,12 +30,12 @@ Instance lft_inhabited : Inhabited lft := populate static.
 
 Canonical lftO := leibnizO lft.
 
-Definition lft_equiv `{!invG Σ, !lftG Σ} (κ κ':lft) : iProp Σ :=
+Definition lft_equiv `{!invGS Σ, !lftGS Σ} (κ κ':lft) : iProp Σ :=
   κ ⊑ κ' ∗ κ' ⊑ κ.
 Infix "≡ₗ" := lft_equiv (at level 70) : bi_scope.
 
 Section derived.
-Context `{!invG Σ, !lftG Σ}.
+Context `{!invGS Σ, !lftGS Σ}.
 Implicit Types κ : lft.
 
 (* Deriving this just to prove that it can be derived.

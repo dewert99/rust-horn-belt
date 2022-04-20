@@ -6,15 +6,15 @@ Set Default Proof Using "Type".
 
 Class frac_borG Σ := frac_borG_inG :> inG Σ fracR.
 
-Local Definition frac_bor_inv `{!invG Σ, !lftG Σ, !frac_borG Σ} (φ : Qp → iProp Σ) γ κ' :=
+Local Definition frac_bor_inv `{!invGS Σ, !lftGS Σ, !frac_borG Σ} (φ : Qp → iProp Σ) γ κ' :=
   (∃ q, φ q ∗ own γ q ∗ (⌜q = 1%Qp⌝ ∨ ∃ q', ⌜(q + q' = 1)%Qp⌝ ∗ q'.[κ']))%I.
 
-Definition frac_bor `{!invG Σ, !lftG Σ, !frac_borG Σ} κ (φ : Qp → iProp Σ) :=
+Definition frac_bor `{!invGS Σ, !lftGS Σ, !frac_borG Σ} κ (φ : Qp → iProp Σ) :=
   (∃ γ κ', κ ⊑ κ' ∗ &at{κ',lftN} (frac_bor_inv φ γ κ'))%I.
 Notation "&frac{ κ }" := (frac_bor κ) (format "&frac{ κ }") : bi_scope.
 
 Section frac_bor.
-  Context `{!invG Σ, !lftG Σ, !frac_borG Σ} (φ : Qp → iProp Σ).
+  Context `{!invGS Σ, !lftGS Σ, !frac_borG Σ} (φ : Qp → iProp Σ).
   Implicit Types E : coPset.
 
   Global Instance frac_bor_contractive κ n :
@@ -108,8 +108,8 @@ Section frac_bor.
       - iRight. iExists qq. iFrame. iPureIntro.
         by rewrite (comm _ qφ0).
       - iDestruct "Hq" as (q') "[% Hq'κ]". iRight. iExists (qq + q')%Qp.
-        iFrame. iPureIntro.
-        rewrite assoc (comm _ _ qq). done.
+        iSplitR; last first. { iApply fractional_split. iFrame. }
+        iPureIntro. rewrite assoc (comm _ _ qq). done.
   Qed.
 
   Lemma frac_bor_acc' E q κ :
@@ -129,7 +129,8 @@ Section frac_bor.
     iMod (at_bor_acc_tok with "LFT Hshr Hκ1") as "[H Hclose']"; try done.
     iDestruct (frac_bor_trade1 with "Hφ [$H $Hown $Hqφ]") as "[H >Hκ3]".
     iMod ("Hclose'" with "H") as "Hκ1".
-    iApply "Hclose". iFrame "Hκ1". rewrite Hq. iFrame.
+    iApply "Hclose". iApply fractional_half. iFrame "Hκ1". rewrite Hq.
+    iApply fractional_split. iFrame.
   Qed.
 
   Lemma frac_bor_acc E q κ `{!Fractional φ} :
@@ -154,7 +155,7 @@ Section frac_bor.
   Qed.
 End frac_bor.
 
-Lemma frac_bor_lft_incl `{!invG Σ, !lftG Σ, !frac_borG Σ} κ κ' q:
+Lemma frac_bor_lft_incl `{!invGS Σ, !lftGS Σ, !frac_borG Σ} κ κ' q:
   lft_ctx -∗ &frac{κ}(λ q', (q * q').[κ']) -∗ κ ⊑ κ'.
 Proof.
   iIntros "#LFT#Hbor". iApply lft_incl_intro. iModIntro. iSplitR.

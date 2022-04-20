@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From lrust.typing Require Export type.
 From lrust.typing Require Import type_context lft_contexts product own uniq_bor.
 From lrust.typing Require Import shr_bor mod_ty uninit.

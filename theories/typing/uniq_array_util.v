@@ -8,7 +8,7 @@ Section uniq_array_util.
 
   Lemma ty_share_big_sepL_uniq_body {𝔄} (ty: type 𝔄) n (vπξil: vec _ n)
       d κ tid l κ' q E :
-    ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
+    ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty_lft ty -∗
     &{κ'} ([∗ list] i ↦ vπξi ∈ vπξil, uniq_body ty vπξi.1 vπξi.2 d κ tid (l +ₗ[ty] i)) -∗
     q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
       let ξl := vmap (λ vπξi, PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2) vπξil in
@@ -31,7 +31,7 @@ Section uniq_array_util.
 
   Lemma ty_own_proph_big_sepL_uniq_body {𝔄} (ty: type 𝔄) n (vπξil: vec _ n)
       d κ tid l κ' q E :
-    ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty.(ty_lft) -∗
+    ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty_lft ty -∗
     ([∗ list] i ↦ vπξi ∈ vπξil, uniq_body ty vπξi.1 vπξi.2 d κ tid (l +ₗ[ty] i)) -∗
     q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
       let ξl := vmap (λ vπξi, PrVar (𝔄 ↾ prval_to_inh vπξi.1) vπξi.2) vπξil in
@@ -61,7 +61,7 @@ Section uniq_array_util.
 
   Lemma resolve_big_sepL_uniq_body {𝔄} (ty: type 𝔄) n (vπξil: vec _ n) d κ tid l E L q F :
     lctx_lft_alive E L κ → ↑lftN ∪ ↑prophN ⊆ F →
-    lft_ctx -∗ proph_ctx -∗ κ ⊑ ty.(ty_lft) -∗ elctx_interp E -∗ llctx_interp L q -∗
+    lft_ctx -∗ proph_ctx -∗ κ ⊑ ty_lft ty -∗ elctx_interp E -∗ llctx_interp L q -∗
     ([∗ list] i ↦ vπξi ∈ vπξil, uniq_body ty vπξi.1 vπξi.2 d κ tid (l +ₗ[ty] i))
       ={F}=∗ |={F}▷=>^(S d) |={F}=>
       let φπ π := lforall (λ vπξi,

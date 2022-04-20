@@ -1,5 +1,5 @@
-From iris.algebra Require Import auth cmra functions gmap frac_agree.
-From iris.proofmode Require Import tactics.
+From iris.algebra Require Import auth cmra functions gmap dfrac_agree.
+From iris.proofmode Require Import proofmode.
 From iris.base_logic Require Import invariants.
 From lrust.util Require Import discrete_fun.
 From lrust.prophecy Require Import prophecy.
@@ -9,7 +9,7 @@ Implicit Type (𝔄i: syn_typei) (𝔄: syn_type).
 
 (** * Camera for Unique Borrowing *)
 
-Local Definition uniq_itemR 𝔄i := frac_agreeR (leibnizO (proph 𝔄i * nat)).
+Local Definition uniq_itemR 𝔄i := dfrac_agreeR (leibnizO (proph 𝔄i * nat)).
 Local Definition uniq_gmapUR 𝔄i := gmapUR positive (uniq_itemR 𝔄i).
 Local Definition uniq_smryUR := discrete_funUR uniq_gmapUR.
 Definition uniqUR: ucmra := authUR uniq_smryUR.
@@ -32,7 +32,7 @@ Definition uniqN: namespace := lft_userN .@ "uniq".
 (** * Iris Propositions *)
 
 Section defs.
-Context `{!invG Σ, !prophG Σ, !uniqG Σ}.
+Context `{!invGS Σ, !prophG Σ, !uniqG Σ}.
 
 (** Unique Reference Context *)
 Definition uniq_inv: iProp Σ := ∃S, own uniq_name (● S).
@@ -62,7 +62,7 @@ Definition prval_to_inh {𝔄} (vπ: proph 𝔄) : inh_syn_type 𝔄 :=
   to_inh_syn_type (vπ inhabitant).
 
 Section lemmas.
-Context `{!invG Σ, !prophG Σ, !uniqG Σ}.
+Context `{!invGS Σ, !prophG Σ, !uniqG Σ}.
 
 Global Instance uniq_ctx_persistent : Persistent uniq_ctx := _.
 Global Instance val_obs_timeless ξ vπ d : Timeless (.VO[ξ] vπ d) := _.

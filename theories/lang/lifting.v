@@ -1,4 +1,4 @@
-From iris.proofmode Require Import tactics.
+From iris.proofmode Require Import proofmode.
 From iris.program_logic Require Export weakestpre.
 From iris.program_logic Require Import ectx_lifting.
 From lrust.lang Require Export lang heap time.
@@ -6,14 +6,14 @@ From lrust.lang Require Import tactics.
 Set Default Proof Using "Type".
 Import uPred.
 
-Class lrustG Σ := LRustG {
-  lrustG_invG : invG Σ;
-  lrustG_gen_heapG :> heapG Σ;
-  lrustG_gen_timeG :> timeG Σ
+Class lrustGS Σ := LRustGS {
+  lrustGS_invGS : invGS Σ;
+  lrustGS_gen_heapGS :> heapGS Σ;
+  lrustGS_gen_timeGS :> timeGS Σ
 }.
 
-Program Instance lrustG_irisG `{!lrustG Σ} : irisG lrust_lang Σ := {
-  iris_invG := lrustG_invG;
+Program Instance lrustGS_irisGS `{!lrustGS Σ} : irisGS lrust_lang Σ := {
+  iris_invGS := lrustGS_invGS;
   state_interp σ stepcnt κs _ := (heap_ctx σ ∗ time_interp stepcnt)%I;
   fork_post _ := True%I;
   num_laters_per_step n := n
@@ -22,7 +22,7 @@ Next Obligation.
   intros. iIntros "/= [$ H]". by iMod (time_interp_step with "H") as "$".
 Qed.
 
-Global Opaque iris_invG.
+Global Opaque iris_invGS.
 
 Ltac inv_lit :=
   repeat match goal with
@@ -67,7 +67,7 @@ Instance do_subst_vec xl (vsl : vec val (length xl)) e :
 Proof. by rewrite /DoSubstL subst_v_eq. Qed.
 
 Section lifting.
-Context `{!lrustG Σ}.
+Context `{!lrustGS Σ}.
 Implicit Types P Q : iProp Σ.
 Implicit Types e : expr.
 Implicit Types ef : option expr.

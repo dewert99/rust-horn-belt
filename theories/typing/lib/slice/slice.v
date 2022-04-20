@@ -82,7 +82,7 @@ Section slice.
   (* Rust's &'a mut [T] *)
   Program Definition uniq_slice {𝔄} (κ: lft) (ty: type 𝔄) : type (listₛ (𝔄 * 𝔄)) := {|
     ty_size := 2;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
-    ty_own vπ d tid vl := κ ⊑ ty.(ty_lft) ∗
+    ty_own vπ d tid vl := κ ⊑ ty_lft ty ∗
       ∃(l: loc) (n d': nat) (aπξil: vec (proph 𝔄 * positive) n),
         let aaπl := vmap
           (λ aπξi π, (aπξi.1 π, π (PrVar (𝔄 ↾ prval_to_inh aπξi.1) aπξi.2): 𝔄)) aπξil in
@@ -122,7 +122,8 @@ Section slice.
     iMod (bor_fracture (λ q, q:+[_])%I with "LFT Borξl") as "Borξl"; [done|].
     iModIntro. case d as [|]; [lia|]. iExists _, _, _, _. iFrame "Bor↦ Borξl".
     iSplit; last first.
-    { iClear "#". iNext. iStopProof. do 3 f_equiv. iApply ty_shr_depth_mono. lia. }
+    { iClear "#". iNext. iStopProof. do 3 f_equiv; [|done].
+      iApply ty_shr_depth_mono. lia. }
     iPureIntro. split.
     - fun_ext=>/= ?. by elim aπξil; [done|]=>/= ???->.
     - rewrite /ξl. elim aπξil; [done|]=>/= ????.
