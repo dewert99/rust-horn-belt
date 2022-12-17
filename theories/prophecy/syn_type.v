@@ -1,13 +1,16 @@
 From iris.prelude Require Import prelude.
+From stdpp Require Import gmap.
 From lrust.util Require Import basic vector fancy_lists.
+From lrust.lang Require lang.
 Set Default Proof Using "Type".
 
 (** * Syntax for Coq type *)
 
-Inductive syn_type := Zₛ | boolₛ | unitₛ | Propₛ
+Inductive syn_type := Zₛ | boolₛ | unitₛ | Propₛ | locₛ
 | optionₛ (_: syn_type) | listₛ (_: syn_type) | vecₛ (_: syn_type) (_: nat)
 | prodₛ (_ _: syn_type) | sumₛ (_ _: syn_type) | funₛ (_ _: syn_type)
-| xprodₛ (_: list syn_type) | xsumₛ (_: list syn_type).
+| xprodₛ (_: list syn_type) | xsumₛ (_: list syn_type)
+| fmapₛ(_: syn_type) .
 
 Notation syn_typel := (list syn_type).
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
@@ -27,9 +30,10 @@ Global Instance Empty_setₛ_empty: Empty syn_type := Empty_setₛ.
 
 Fixpoint of_syn_type (𝔄: syn_type) : Type :=
   match 𝔄 with
-  | Zₛ => Z | boolₛ => bool | unitₛ => () | Propₛ => Prop
+  | Zₛ => Z | boolₛ => bool | unitₛ => () | Propₛ => Prop | locₛ => lang.loc
   | optionₛ 𝔄₀ => option (of_syn_type 𝔄₀) | listₛ 𝔄₀ => list (of_syn_type 𝔄₀)
   | vecₛ 𝔄₀ n => vec (of_syn_type 𝔄₀) n
+  | fmapₛ 𝔄₀ => gmap lang.loc (of_syn_type 𝔄₀)
   | prodₛ 𝔄₀ 𝔄₁ => of_syn_type 𝔄₀ * of_syn_type 𝔄₁
   | sumₛ 𝔄₀ 𝔄₁ => of_syn_type 𝔄₀ + of_syn_type 𝔄₁
   | funₛ 𝔄₀ 𝔄₁ => of_syn_type 𝔄₀ → of_syn_type 𝔄₁
@@ -42,8 +46,8 @@ Coercion of_syn_type: syn_type >-> Sortclass.
 
 Fixpoint syn_type_beq 𝔄 𝔅 : bool :=
   match 𝔄, 𝔅 with
-  | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Propₛ, Propₛ => true
-  | optionₛ 𝔄₀, optionₛ 𝔅₀ | listₛ 𝔄₀, listₛ 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀
+  | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Propₛ, Propₛ | locₛ, locₛ => true
+  | optionₛ 𝔄₀, optionₛ 𝔅₀ | listₛ 𝔄₀, listₛ 𝔅₀ | fmapₛ 𝔄₀, fmapₛ 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀
   | vecₛ 𝔄₀ n, vecₛ 𝔅₀ m => syn_type_beq 𝔄₀ 𝔅₀ && bool_decide (n = m)
   | 𝔄₀ * 𝔄₁, 𝔅₀ * 𝔅₁ | 𝔄₀ + 𝔄₁, 𝔅₀ + 𝔅₁ | 𝔄₀ → 𝔄₁, 𝔅₀ → 𝔅₁
     => syn_type_beq 𝔄₀ 𝔅₀ && syn_type_beq 𝔄₁ 𝔅₁
