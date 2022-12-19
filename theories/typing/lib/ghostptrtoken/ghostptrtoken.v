@@ -51,17 +51,18 @@ Section token.
   Qed.
 
   Lemma trans_big_sepM_mt_ty_own {𝔄} (ty: type 𝔄) aπm d tid :
-    ([∗ list] elt ∈ aπm, elt.1 ↦∗: ty.(ty_own) elt.2 d tid) ⊣⊢
-    ∃(wll: vec (list val) (length aπm)), ([∗ list] elt ∈ (vzip (vmap (λ x, x.1) (Vector.of_list aπm)) wll), elt.1 ↦∗ elt.2) ∗
-      ([∗ list] aπwl ∈ vzip (vmap (λ x, x.2) (Vector.of_list aπm)) wll, ty.(ty_own) aπwl.1 d tid aπwl.2).
+    ([∗ map] l ↦ aπ ∈ aπm, l ↦∗: ty.(ty_own) aπ d tid) ⊣⊢
+    ∃(wll: vec (list val) (length (map_to_list aπm))), ([∗ list] elt ∈ (vzip (vmap (λ x, x.1) (Vector.of_list (map_to_list aπm))) wll), elt.1 ↦∗ elt.2) ∗
+      ([∗ list] aπwl ∈ vzip (vmap (λ x, x.2) (Vector.of_list (map_to_list aπm))) wll, ty.(ty_own) aπwl.1 d tid aπwl.2).
   Proof.
+    rewrite big_opM_map_to_list.
     iSplit.
-    - iIntros "↦owns". iInduction aπm as [|] "IH"=>/=.
+    - iIntros "↦owns". iInduction (map_to_list aπm) as [|] "IH"=>/=.
       { iExists [#]. iSplit; [done|done]. }
       iDestruct "↦owns" as "[(%& ↦ & ty) ↦owns]".
       iDestruct ("IH" with "↦owns") as (?) "(↦s & tys)".
       iExists (_:::_). iFrame.
-    - iIntros "(%& ↦s & tys)". iInduction aπm as [|] "IH"; [done|].
+    - iIntros "(%& ↦s & tys)". iInduction (map_to_list aπm) as [|] "IH"; [done|].
       inv_vec wll=>/= ??.
       iDestruct "↦s" as "[↦ ↦s]". iDestruct "tys" as "[ty tys]".
       iSplitL "↦ ty".
@@ -71,20 +72,20 @@ Section token.
 
   Definition list_to_gmap {A} `{Countable K} : list (K * A) → gmap K A := list_to_map.
 
-  Lemma remove_mapply {A B} `{Countable K} π (aπm: gmap K (A → B)):
-    mapply aπm π = list_to_map (prod_map id (.$ π) <$> (map_to_list aπm)).
+  Lemma remove_mapply {A B} `{Countable K} (aπm: gmap K (A → B)):
+    mapply aπm = λ π, list_to_map (prod_map id (.$ π) <$> (map_to_list aπm)).
   Proof.
+    apply functional_extensionality. intros.
     rewrite list_to_map_fmap. rewrite list_to_map_to_list. exact.
   Qed.
 
-  Lemma remove_mapply2 {𝔄} `{Countable K} ξl (aπm: gmap K (proph 𝔄)):
-    (mapply aπm ./ ξl) <-> (λ π, list_to_gmap (prod_map id (.$ π) <$> (map_to_list aπm))) ./ ξl.
+  Lemma zip_to_prod_map{A B C} (f: B → C) (l: list (A * B)):
+    (zip l.*1 (f <$> l.*2)) = (prod_map id f) <$> l.
   Proof.
-    split.
-    intros. intros π π' eqv. specialize (H0 π π' eqv).
-    rewrite 2! remove_mapply in H0. exact.
-    intros. intros π π' eqv. specialize (H0 π π' eqv).
-    rewrite 2! remove_mapply. exact.
+    rewrite zip_with_fmap_r. rewrite zip_with_fst_snd.
+    congr fmap.
+    intros. apply functional_extensionality. intros. destruct x.
+    unfold prod_map. unfold uncurry. unfold Datatypes.uncurry. unfold fst. unfold snd. unfold id. reflexivity.
   Qed.
 
   Lemma ty_own_proph_big_sepM_mt {𝔄} (ty: type 𝔄) (n: nat) E aπm d tid κ q :
@@ -94,7 +95,6 @@ Section token.
       (q':+[ξl] ={E}=∗
         ([∗ map] l ↦ aπ ∈ aπm, l ↦∗: ty.(ty_own) aπ d tid) ∗ q.[κ]).
   Proof.
-    rewrite {1} big_opM_map_to_list.
     rewrite {1} trans_big_sepM_mt_ty_own. iIntros (?) "LFT In (%& ↦ & tys) κ".
     iMod (ty_own_proph_big_sepL with "LFT In tys κ") as "Upd"; [done|].
     iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&%& ξl & Totys) !>".
@@ -103,19 +103,14 @@ Section token.
     rewrite vec_to_list_map in H0. rewrite vec_to_list_to_vec in H0.
     apply proph_dep_constr with (λ x, zip ((map_to_list aπm).*1) x) _ _  in H0.
     iSplit. iPureIntro.
-    rewrite remove_mapply2.
+    rewrite remove_mapply.
     apply proph_dep_constr.
     unfold compose in H0. unfold lapply in H0.
     intros π π' eqv. specialize (H0 π π' eqv).
-    rewrite zip_with_fmap_r in H0. rewrite zip_with_fst_snd in H0.
-    rewrite zip_with_fmap_r in H0. rewrite zip_with_fst_snd in H0.
-    assert (forall π,(uncurry (λ (x: loc) (z: (proph (of_syn_type 𝔄))) , (x, z π))) = prod_map id (.$ π)).
-    intros. apply functional_extensionality. intros. destruct x.
-    unfold prod_map. unfold uncurry. unfold Datatypes.uncurry. unfold fst. unfold snd. unfold id. reflexivity.
-    rewrite 2! H1 in H0. exact H0.
+    rewrite 2! zip_to_prod_map in H0. exact H0.
     iIntros "{$ξl}ξl".
     iMod ("Totys" with "ξl") as "[tys $]".
-    rewrite big_opM_map_to_list. rewrite trans_big_sepM_mt_ty_own.
+    rewrite trans_big_sepM_mt_ty_own.
     iModIntro. iExists _. iFrame.
   Qed.
 
@@ -127,7 +122,7 @@ Section token.
   Proof.
     iIntros (?) "#LFT #In #In' tys κ'".
     rewrite big_opM_map_to_list.
-    setoid_rewrite remove_mapply2.
+    setoid_rewrite remove_mapply.
     iInduction (map_to_list aπm) as [|] "IH" forall (q).
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
       iFrame "κ'". iSplit.

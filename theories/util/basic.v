@@ -110,6 +110,8 @@ Proof. fun_ext=>/= ?. apply zip_fst_snd. Qed.
 
 Definition mapply {K V B} `{Countable K} (fm: gmap K (B → V)) (x: B) : gmap K V := (.$ x) <$> fm.
 
+Definition mforall{A} `{Countable K} (Φ: A → Prop) (xm: gmap K A) : Prop := map_Forall (const Φ) xm.
+
 Definition llookup {A} (xl: list A) (i: fin (length xl)) : A :=
   list_to_vec xl !!! i.
 Infix "!!ₗ" := llookup (at level 20, right associativity).
@@ -123,6 +125,14 @@ Proof. by elim fl; [done|]=>/= ??->. Qed.
 (** Fixpoint version of [List.Forall: *)
 Fixpoint lforall {A} (Φ: A → Prop) (xl: list A) : Prop :=
   match xl with [] => True | x :: xl' => Φ x ∧ lforall Φ xl' end.
+
+Lemma lforall_Forall {A} (Φ: A → Prop) (xl: list A) :
+  (lforall Φ xl) <-> (List.Forall Φ xl).
+Proof.
+  split.
+  induction xl. exact. intros. destruct H. rewrite Forall_cons. split; [done|by apply IHxl].
+  induction xl. exact. intros. rewrite Forall_cons in H. destruct H. apply IHxl in H0. exact.
+Qed.
 
 Section forall2b. Context {A B} (f: A → B → bool).
 Fixpoint forall2b (xl: list A) (yl: list B) :=

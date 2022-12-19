@@ -121,6 +121,7 @@ theories/typing/lib/mutex/mutexguard.v
 # theories/typing/lib/rwlock/rwlockreadguard_code.v
 # theories/typing/lib/rwlock/rwlockwriteguard_code.v
 theories/typing/lib/ghostptrtoken/ghostptrtoken.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken_basic.v
 theories/typing/examples/inc_max.v
 theories/typing/examples/odd_sum.v
 theories/typing/examples/projection_toggle.v
