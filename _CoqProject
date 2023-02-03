@@ -73,6 +73,13 @@ theories/typing/typing.v
 theories/typing/soundness.v
 theories/typing/uniq_array_util.v
 theories/typing/ptr.v
+theories/typing/lib/ghostptrtoken/heap_util.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken_basic.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken_insertremove.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken_borrow_mut.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken_borrow.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken_merge.v
 theories/typing/lib/gfp.v
 theories/typing/lib/panic.v
 theories/typing/lib/loop.v
@@ -120,9 +127,6 @@ theories/typing/lib/mutex/mutexguard.v
 # theories/typing/lib/rwlock/rwlock_code.v
 # theories/typing/lib/rwlock/rwlockreadguard_code.v
 # theories/typing/lib/rwlock/rwlockwriteguard_code.v
-theories/typing/lib/ghostptrtoken/ghostptrtoken.v
-theories/typing/lib/ghostptrtoken/ghostptrtoken_basic.v
-theories/typing/lib/ghostptrtoken/ghostptrtoken_insertremove.v
 theories/typing/examples/inc_max.v
 theories/typing/examples/odd_sum.v
 theories/typing/examples/projection_toggle.v

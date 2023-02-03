@@ -1,6 +1,6 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import uniq_util typing ptr.
-From lrust.typing.lib Require Import ghostptrtoken.ghostptrtoken.
+From lrust.typing.lib Require Import ghostptrtoken.ghostptrtoken ghostptrtoken.heap_util.
 Set Default Proof Using "Type".
 
 Open Scope nat.
@@ -17,7 +17,7 @@ Section ghostptrtoken_insertremove.
   (* Rust's GhostPtrToken::insert *)
   Lemma ghostptrtoken_insert_type {𝔄} (ty: type 𝔄) :
     typed_val (ghostptrtoken_insert ty) (fn<α>(∅; &uniq{α} (ghostptrtoken_ty ty), box ty) → ptr)
-      (λ post '-[(al, al'); a], forall ptr, al' = (ptr,a)::al → post ptr).
+      (λ post '-[(al, al'); a], forall ptr, al' = (ptr,a)::al → ((ty.(ty_size) > 0) → NoDup al'.*1) → post ptr).
   Proof.
     eapply type_fn; [apply _|]=> α ??[l[x[]]]. simpl_subst.
     iIntros (?(lπ & bπ &[]) ?) "#LFT #TIME #PROPH #UNIQ #E Na L C /=(l & x &_) #Obs".
@@ -41,16 +41,17 @@ Section ghostptrtoken_insertremove.
     iDestruct "↦token" as (aπl Eq1) "(↦l & ↦tys & †)".
     iCombine "⧖u ⧖x" as "#⧖". simpl.
     iMod (uniq_update with "UNIQ Vo Pc") as "[Vo Pc]"; [done|].
-    unfold big_sepAL.
-    iMod ("ToBor" with "[↦l ↦tys x' † †x' Pc]") as "[Bor α]".
-    { iNext. iExists _, _. rewrite split_mt_token. iFrame "⧖ Pc".
-      iExists ((p, bπ)::aπl). iFrame. iSplit; [done|].
-      iSplitL "↦tys x'".
-      iNext. rewrite big_sepL_cons. iSplitL "x'".
-      iDestruct "x'" as (?) "(↦&own)". iExists (vl). iFrame. iApply (ty_own_depth_mono with "own"). lia.
-      iApply (big_sepL_impl with "↦tys"). iModIntro. iIntros (?[??]?) "H".
-      iDestruct "H" as (?) "(H1&H2)". iExists vl. iFrame. iApply (ty_own_depth_mono with "H2"). fold max. lia.
-      rewrite freeable_sz_full. iFrame "†x'". }
+    iAssert ((l' ↦∗: (ghostptrtoken_ty ty).(ty_own) _ (S (du `max` dx)) tid))%I with "[↦l ↦tys x' † †x']" as "own".
+    iExists _. iFrame. iExists ((p, bπ)::aπl). iSplit; [done|].
+    rewrite freeable_sz_full. iFrame. iNext.
+    unfold big_sepAL. rewrite big_sepL_cons. iSplitL "x'".
+    iDestruct "x'" as (?) "(↦&own)". iExists (vl). iFrame. iApply (ty_own_depth_mono with "own"). lia.
+    iApply (big_sepL_impl with "↦tys"). iModIntro. iIntros (?[??]?) "H".
+    iDestruct "H" as (?) "(H1&H2)". iExists vl. iFrame. iApply (ty_own_depth_mono with "H2"). lia.
+    iDestruct ((plain_entails_r (ghost_ptr_token_no_dup _ _ _ _ _)) with "own") as "(own&>%no_dup)".
+    iMod ("ToBor" with "[own Pc]") as "[Bor α]".
+    iDestruct (bi.later_intro with "own") as "own". 
+    iNext. iExists _, _. iFrame "⧖ Pc own".
     iMod ("ToL" with "α L") as "L".
     set lπ' := λ π, ((alapply ((p, bπ)::aπl) π), π ξ).
     iApply (type_type +[#l' ◁ &uniq{α} (ghostptrtoken_ty ty); #x ◁ box ptr] -[lπ'; const p]
@@ -64,8 +65,9 @@ Section ghostptrtoken_insertremove.
       rewrite (tctx_hasty_val #x). iExists _. iSplit; [done|].
       simpl. iFrame. iNext. iExists _. iFrame. iExists p. done.
     - iApply proph_obs_impl; [|done]=> π.
-      move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=. case (lπ π)=>/= ??->-> Ilp Eq.
-      apply Ilp. rewrite Eq. reflexivity.
+      move: (equal_f Eq1 π) (equal_f Eq2 π)=>/=. case (lπ π)=>/= ??->-> Imp Eq.
+      apply Imp. rewrite Eq. reflexivity.
+      intros. rewrite Eq. apply no_dup. done.
   Qed.
 
   Definition ghostptrtoken_remove {𝔄} (ty: type 𝔄) : val :=
@@ -76,7 +78,7 @@ Section ghostptrtoken_insertremove.
   (* Rust's GhostPtrToken::re,ove *)
   Lemma ghostptrtoken_remove_type {𝔄} (ty: type 𝔄) :
     typed_val (ghostptrtoken_remove ty) (fn<α>(∅; &uniq{α} (ghostptrtoken_ty ty), ptr) → box ty)
-      (λ post '-[(al, al'); p], exists(a: 𝔄), ((list_to_gmap al) !! p = Some a) ∧ ((<[p:=a]>(list_to_gmap al') = (list_to_gmap al)) → post a)).
+      (λ post '-[(al, al'); p], exists(a: 𝔄), ((list_to_gmap al) !! p = Some a) ∧ ((<[p:=a]>(list_to_gmap al') = (list_to_gmap al)) → ((ty.(ty_size) > 0) → NoDup al.*1) → post a)).
   Proof.
     eapply type_fn; [apply _|]=> α ??[l[x[]]]. simpl_subst.
     iIntros (?(lπ & pπ &[]) ?) "#LFT #TIME #PROPH #UNIQ #E Na L C /=(l & x &_) #Obs".
@@ -94,7 +96,9 @@ Section ghostptrtoken_insertremove.
     move: Eq2. set ξ := PrVar _ ξi=> Eq2.
     iMod (lctx_lft_alive_tok α with "E L") as (?) "(α & L & ToL)"; [solve_typing..|].
     iMod (bor_acc with "LFT Bor α") as "[(%&%& ⧖u & Pc & ↦token) ToBor]"; [done|].
-    wp_seq. iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
+    wp_seq. 
+    iDestruct ((plain_entails_r (ghost_ptr_token_no_dup _ _ _ _ _)) with "↦token") as "(↦token&>%no_dup)".
+    iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     rewrite split_mt_token. case du as [|du]=>//=.
     iDestruct "↦token" as (aπl Eq1) "(↦l & ↦token)".
     iCombine "⧖u ⧖x" as "#⧖". simpl.
@@ -140,6 +144,8 @@ Section ghostptrtoken_insertremove.
       rewrite lookup_eq in Heqbπ. injection Heqbπ as ->.
       apply Imp. rewrite Eq.
       rewrite /alapply 2! list_to_map_fmap -fmap_insert. f_equal.
-      rewrite (equal_f pπeq). exact.
+      rewrite (equal_f pπeq). exact. 
+      intros. rewrite -Eq1. apply no_dup. done.
   Qed.
+    
 End ghostptrtoken_insertremove.
