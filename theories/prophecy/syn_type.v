@@ -7,7 +7,7 @@ Set Default Proof Using "Type".
 Inductive syn_type := Zₛ | boolₛ | unitₛ | Propₛ
 | optionₛ (_: syn_type) | listₛ (_: syn_type) | vecₛ (_: syn_type) (_: nat)
 | prodₛ (_ _: syn_type) | sumₛ (_ _: syn_type) | funₛ (_ _: syn_type)
-| xprodₛ (_: list syn_type) | xsumₛ (_: list syn_type).
+| xprodₛ (_: list syn_type) | xsumₛ (_: list syn_type) | ghostₛ (_: nat) (_: syn_type).
 
 Notation syn_typel := (list syn_type).
 Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
@@ -25,7 +25,20 @@ Notation Empty_setₛ := (xsumₛ []).
 
 Global Instance Empty_setₛ_empty: Empty syn_type := Empty_setₛ.
 
-Fixpoint of_syn_type (𝔄: syn_type) : Type :=
+Fixpoint ghost_level (𝔄: syn_type) : nat :=
+  match 𝔄 with
+  | Zₛ => 0 | boolₛ => 0 | unitₛ => 0 | Propₛ => 0
+  | optionₛ 𝔄₀ => ghost_level 𝔄₀ | listₛ 𝔄₀ => ghost_level 𝔄₀
+  | vecₛ 𝔄₀ n => ghost_level 𝔄₀
+  | prodₛ 𝔄₀ 𝔄₁ => ghost_level 𝔄₀ `max` ghost_level 𝔄₁
+  | sumₛ 𝔄₀ 𝔄₁ => ghost_level 𝔄₀ `max` ghost_level 𝔄₁
+  | funₛ 𝔄₀ 𝔄₁ => ghost_level 𝔄₀ `max` ghost_level 𝔄₁
+  | xprodₛ 𝔄l => foldr max 0 (ghost_level <$> 𝔄l)
+  | xsumₛ 𝔄l => foldr max 0 (ghost_level <$> 𝔄l)
+  | ghostₛ level 𝔄 => level + ghost_level 𝔄
+  end.
+
+Fixpoint of_syn_type (𝔄: syn_type): Type :=
   match 𝔄 with
   | Zₛ => Z | boolₛ => bool | unitₛ => () | Propₛ => Prop
   | optionₛ 𝔄₀ => option (of_syn_type 𝔄₀) | listₛ 𝔄₀ => list (of_syn_type 𝔄₀)
@@ -35,6 +48,7 @@ Fixpoint of_syn_type (𝔄: syn_type) : Type :=
   | funₛ 𝔄₀ 𝔄₁ => of_syn_type 𝔄₀ → of_syn_type 𝔄₁
   | xprodₛ 𝔄l => plist of_syn_type 𝔄l
   | xsumₛ 𝔄l => psum of_syn_type 𝔄l
+  | ghostₛ _ 𝔄 => of_syn_type 𝔄
   end.
 Coercion of_syn_type: syn_type >-> Sortclass.
 
@@ -48,6 +62,7 @@ Fixpoint syn_type_beq 𝔄 𝔅 : bool :=
   | 𝔄₀ * 𝔄₁, 𝔅₀ * 𝔅₁ | 𝔄₀ + 𝔄₁, 𝔅₀ + 𝔅₁ | 𝔄₀ → 𝔄₁, 𝔅₀ → 𝔅₁
     => syn_type_beq 𝔄₀ 𝔅₀ && syn_type_beq 𝔄₁ 𝔅₁
   | Π! 𝔄l, Π! 𝔅l | Σ! 𝔄l, Σ! 𝔅l => forall2b syn_type_beq 𝔄l 𝔅l
+  | ghostₛ l 𝔄₀, ghostₛ l' 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀ && (if decide (l = l') then true else false)
   | _, _ => false
   end%ST.
 
@@ -78,6 +93,7 @@ Fixpoint inh_syn_type 𝔄 : bool :=
   | funₛ 𝔄₀ 𝔄₁ => negb (inh_syn_type 𝔄₀) || inh_syn_type 𝔄₁
   | xprodₛ 𝔄l => forallb inh_syn_type 𝔄l
   | xsumₛ 𝔄l => existsb inh_syn_type 𝔄l
+  | ghostₛ _ 𝔄 => inh_syn_type 𝔄
   | _ => true
   end.
 
@@ -100,6 +116,7 @@ Proof.
     + elim; [done|]=>/= 𝔄 ? IH. case Eq: (inh_syn_type 𝔄)=>/= H.
       * left. apply FIX. by rewrite Eq.
       * right. by apply IH.
+    + move=> ? 𝔄?. destruct (FIX 𝔄) as [to_res _]. apply to_res. done.
   - case: 𝔄=>//=.
     + move=> ?[|?]; rewrite negb_orb=> /andb_True[/negb_True/bool_decide_spec ??] v;
       [lia|]. by eapply FIX, vhd.
@@ -114,6 +131,7 @@ Proof.
       =>/= ?[??]; [by apply IH|]. eapply FIX; [|done]. by rewrite Eq.
     + elim; [move=> ?; by apply absurd|]=> ?? IH.
       rewrite negb_orb=> /andb_True[??] [?|?]; by [eapply FIX|apply IH].
+    + move=> ? 𝔄?. destruct (FIX 𝔄) as [_ to_res]. apply to_res. done.
 Qed.
 Lemma of_inh_syn_type {𝔄} : inh_syn_type 𝔄 → 𝔄.
 Proof. apply of_just_and_neg_inh_syn_type. Qed.
