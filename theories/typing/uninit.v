@@ -77,7 +77,7 @@ Section uninit.
   Qed.
 
   Program Definition uninit n : type () := {|
-    ty_size := n;  ty_lfts := [];  ty_E := [];
+    ty_size := n;  ty_lfts := [];  ty_E := [];  ty_proph _ ξl := ξl = [];
     ty_own _ _ _ vl := ⌜length vl = n⌝;
     ty_shr _ _ κ _ l := uninit_shr κ l n 0;
   |}%I.
@@ -91,15 +91,16 @@ Section uninit.
   Qed.
   Next Obligation.
     iIntros "*% _ _ $$ !>". iApply step_fupdN_full_intro.
-    iModIntro. iExists [], 1%Qp. iSplit.
-    { iPureIntro. apply proph_dep_singleton. by case=> [][]. }
+    iModIntro. iExists [], 1%Qp. iSplit. done.
     iSplit; [done|]. by iIntros.
   Qed.
   Next Obligation.
     iIntros "*% _ _ _ _ $ !>!>!>". iApply step_fupdN_full_intro.
-    iModIntro. iExists [], 1%Qp. iSplit.
-    { iPureIntro. apply proph_dep_singleton. by case=> [][]. }
+    iModIntro. iExists [], 1%Qp. iSplit. done.
     iSplit; [done|]. by iIntros.
+  Qed.
+  Next Obligation.
+    move=> /= ???->. apply proph_dep_singleton. by case=> [][].
   Qed.
 End uninit.
 
@@ -133,7 +134,10 @@ Section typing.
 
   Lemma uninit_unit E L : eqtype E L (↯ 0) () id id.
   Proof.
-    apply eqtype_id_unfold. iIntros (?) "_!>_". iSplit; [done|].
+    apply eqtype_id_unfold. iIntros (?) "_!>_".
+    iSplit. iPureIntro. split; [done|]. simpl. intros ??.
+    split. intros ->. exists (const -[]). split; [|done]. fun_ext. simpl. intros. apply proof_irrel.
+    intros (?&?&->). done.
     iSplit; [iApply lft_equiv_refl|]. iSplit; iModIntro.
     - iIntros (??? vl). rewrite unit_ty_own. by case vl.
     - iIntros. by rewrite unit_ty_shr.
@@ -147,7 +151,10 @@ Section typing.
     eqtype E L (↯ (m + n)) (↯ m * ↯ n) (const ((), ())) (const ()).
   Proof.
     apply eqtype_unfold. { split; fun_ext; by [case|case=> [[][]]]. }
-    iIntros (?) "_!>_". iSplit; [done|]. iSplit; [iApply lft_equiv_refl|].
+    iIntros (?) "_!>_". iSplit. iPureIntro. split; [done|].
+    simpl. intros ??. split. intros ->. exists [], []. rewrite left_id. done.
+    intros (?&?&->&->&->). by apply left_id.
+    iSplit; [iApply lft_equiv_refl|].
     iSplit; iModIntro=>/=.
     - iIntros (??? vl). iSplit; last first.
       { iIntros ((?&?&->&?&?)) "!%". rewrite app_length. by f_equal. }

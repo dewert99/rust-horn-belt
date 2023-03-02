@@ -3,6 +3,9 @@ Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
 
+Lemma join_app {A} (l1 l2: list (list A)): mjoin l1 ++ mjoin l2 = mjoin (l1 ++ l2).
+Proof. induction l1; simpl. done. by rewrite -app_assoc IHl1. Qed. 
+
 Notation "l +ₗ[ ty ] i" := (l%L +ₗ Z.of_nat (i%nat * ty.(ty_size))%nat)
   (format "l  +ₗ[ ty ]  i", at level 50, left associativity) : loc_scope.
 
@@ -66,20 +69,22 @@ Section array_util.
   Lemma ty_own_proph_big_sepL {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) wll d tid κ q :
     ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty_lft ty -∗
     ([∗ list] i ↦ aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2) -∗ q.[κ]
-      ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
+      ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜∃ ξll, ξl = mjoin ξll ∧ Forall2 ty.(ty_proph) aπl ξll⌝ ∗ q':+[ξl] ∗
         (q':+[ξl] ={E}=∗
           ([∗ list] i ↦ aπwl ∈ vzip aπl wll, ty.(ty_own) aπwl.1 d tid aπwl.2) ∗ q.[κ]).
   Proof.
     iIntros (?) "#LFT #In tys κ". iInduction aπl as [|] "IH" forall (q)=>/=.
     { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
-      iFrame "κ". do 2 (iSplit; [done|]). by iIntros. }
+      iFrame "κ". iSplit. iExists []. done.
+      (iSplit; [done|]). by iIntros. }
     inv_vec wll=> ??. iDestruct "tys" as "[ty tys]". iDestruct "κ" as "[κ κ₊]".
     iMod (ty_own_proph with "LFT In ty κ") as "Upd"; [done|].
     iMod ("IH" with "tys κ₊") as "Upd'". iCombine "Upd Upd'" as "Upd".
     iApply (step_fupdN_wand with "Upd").
-    iIntros "!> [>(%&%&%& ξl & Toty) >(%&%&%& ζl & Totys)] !>".
+    iIntros "!> [>(%&%&%& ξl & Toty) >(%&%&(%&->&%)& ζl & Totys)] !>".
     iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
-    iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_vec_S|].
+    iExists _, _. iFrame "ξζl". iSplit.
+    iExists (ξl :: ξll). rewrite Forall2_cons. done. 
     iIntros "ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
     iMod ("Toty" with "ξl") as "[$$]". by iMod ("Totys" with "ζl") as "[$$]".
   Qed.
@@ -87,7 +92,7 @@ Section array_util.
   Lemma ty_own_proph_big_sepL_mt {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) l d tid κ q :
     ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty_lft ty -∗
     ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) -∗ q.[κ]
-      ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
+      ={E}=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜∃ ξll, ξl = mjoin ξll ∧ Forall2 ty.(ty_proph) aπl ξll⌝ ∗ q':+[ξl] ∗
         (q':+[ξl] ={E}=∗
           ([∗ list] i ↦ aπ ∈ aπl, (l +ₗ[ty] i) ↦∗: ty.(ty_own) aπ d tid) ∗ q.[κ]).
   Proof.
@@ -102,21 +107,32 @@ Section array_util.
   Lemma ty_shr_proph_big_sepL {𝔄} (ty: type 𝔄) n E (aπl: vec _ n) d κ tid l κ' q :
     ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty_lft ty -∗
     ([∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d κ tid (l +ₗ[ty] i)) -∗ q.[κ']
-      ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜vapply aπl ./ ξl⌝ ∗ q':+[ξl] ∗
+      ={E}▷=∗ |={E}▷=>^d |={E}=> ∃ξl q', ⌜∃ ξll, ξl = mjoin ξll ∧ Forall2 ty.(ty_proph) aπl ξll⌝ ∗ q':+[ξl] ∗
         (q':+[ξl] ={E}=∗ q.[κ']).
   Proof.
     iIntros (?) "#LFT #In #In' tys κ'". iInduction aπl as [|] "IH" forall (l q)=>/=.
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
-      iFrame "κ'". do 2 (iSplit; [done|]). by iIntros. }
+      iFrame "κ'". iSplit. by iExists []. (iSplit; [done|]). by iIntros. }
     iDestruct "κ'" as "[κ' κ'₊]". iDestruct "tys" as "[ty tys]".
     iMod (ty_shr_proph with "LFT In In' ty κ'") as "Upd"; [done|].
     setoid_rewrite <-shift_loc_assoc_nat. iMod ("IH" with "tys κ'₊") as "Upd'".
     iIntros "!>!>". iCombine "Upd Upd'" as "Upd". iApply (step_fupdN_wand with "Upd").
-    iIntros "[>(%&%&%& ξl & Toκ') >(%&%&%& ζl & Toκ'₊)] !>".
+    iIntros "[>(%&%&%& ξl & Toκ') >(%&%&(%&->&%)& ζl & Toκ'₊)] !>".
     iDestruct (proph_tok_combine with "ξl ζl") as (?) "[ξζl Toξζl]".
-    iExists _, _. iFrame "ξζl". iSplit; [iPureIntro; by apply proph_dep_vec_S|].
+    iExists _, _. iFrame "ξζl".
+    iSplit. iExists (ξl :: ξll). rewrite Forall2_cons. done. 
     iIntros "ξζl". iDestruct ("Toξζl" with "ξζl") as "[ξl ζl]".
     iMod ("Toκ'" with "ξl") as "$". by iMod ("Toκ'₊" with "ζl") as "$".
+  Qed.
+
+  Lemma ty_proph_weaken_big_sepL {𝔄} (ty: type 𝔄) n (aπl: vec _ n) ξl:
+   (∃ ξll, ξl = mjoin ξll ∧ Forall2 ty.(ty_proph) aπl ξll) → vapply aπl ./[𝔄] ξl.
+  Proof. 
+    intros (?&->&?). revert x H. induction aπl; intros. done.
+    destruct x. inversion H.
+    rewrite vec_to_list_cons Forall2_cons in H. destruct H.
+    rewrite /vapply. simpl. apply proph_dep_vec_S; unfold compose; simpl.
+    by eapply ty_proph_weaken. by apply IHaπl.
   Qed.
 
   Lemma resolve_big_sepL_ty_own {𝔄} (ty: type 𝔄) Φ n (aπl: vec _ n) wll d tid F q E L :
@@ -191,6 +207,16 @@ Section array_util.
     iIntros (->) "#In tys". iInduction aπl as [|] "IH" forall (l); [done|]=>/=.
     iDestruct "tys" as "[ty tys]". setoid_rewrite <-shift_loc_assoc_nat.
     iSplitL "ty"; by [iApply "In"|iApply "IH"].
+  Qed.
+
+  Lemma incl_big_sepL_ty_proph {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅)
+      f n (aπl: vec _ n) ξll:
+    (∀aπ ξl, ty'.(ty_proph) (f ∘ aπ) ξl → ty.(ty_proph) aπ ξl) →
+    (Forall2 ty'.(ty_proph) (vmap (f ∘.) aπl) ξll) →
+    (Forall2 ty.(ty_proph) aπl ξll).
+  Proof.
+    revert aπl ξll; induction n; intros ?? In tys; destruct ξll; inv_vec aπl; intros; inversion tys; constructor.
+    by apply In. by apply IHn.
   Qed.
 
   Lemma big_sepL_ty_shr_lft_mono {𝔄} (ty: type 𝔄) aπl d κ κ' tid l :

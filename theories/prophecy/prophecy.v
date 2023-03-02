@@ -48,10 +48,13 @@ Proof. move=> ?? Eqv. apply Eqv. split. lia. left. constructor. Qed.
 Lemma proph_dep_ghost ξ : (.$ ξ) ./{S (pv_level ξ)} [].
 Proof. move=> ?? Eqv. apply Eqv. split. lia. right. lia. Qed.
 
+Lemma proph_dep_ghost' {A} (vπ: proph A) ξl' ξl level: vπ ./{level} ξl → vπ ./{S level} ξl'.
+Proof. move=> H ?? Eqv. apply H. intros ?[? _]. apply Eqv. split. lia. right. lia. Qed.
+
 Lemma proph_dep_constr {A B} (f: A → B) vπ ξl level: vπ ./{level} ξl → f ∘ vπ ./{level} ξl.
 Proof. move=> Dep ?? /Dep ?. by apply (f_equal f). Qed.
 
-Local Lemma proph_dep_mono {A} ξl ζl (vπ: proph A) level :
+Lemma proph_dep_mono {A} ξl ζl (vπ: proph A) level :
   ξl ⊆ ζl → vπ ./{level} ξl → vπ ./{level} ζl.
 Proof. 
   move=> In Dep ?? Eqv. apply Dep => ?[?[?|?]]; apply Eqv; 
@@ -108,24 +111,24 @@ Lemma proph_dep_prod {A B} ξl ζl (vπ: proph (A * B)) level1 level2:
 Proof.
   move=> ??. rewrite (surjective_pairing_fun vπ). apply proph_dep_constr2; eapply proph_dep_level_mono; [ |done| |done]; lia.
 Qed.
-(* 
-Lemma proph_dep_list_prod {A B} ξl ζl (f: proph (list (A * B))) :
-  map fst ∘ f ./ ξl → map snd ∘ f ./ ζl → f ./ ξl ++ ζl.
+
+Lemma proph_dep_list_prod {A B} ξl ζl (f: proph (list (A * B))) level :
+  map fst ∘ f ./{level} ξl → map snd ∘ f ./{level} ζl → f ./{level} ξl ++ ζl.
 Proof. move=> ??. rewrite -(zip_fst_snd_fun f). by apply proph_dep_constr2. Qed.
 
-Lemma proph_dep_vec_S {A n} ξl ζl (vπ: proph (vec A (S n))) :
-  vhd ∘ vπ ./ ξl → vtl ∘ vπ ./ ζl → vπ ./ ξl ++ ζl.
+Lemma proph_dep_vec_S {A n} ξl ζl (vπ: proph (vec A (S n))) level:
+  vhd ∘ vπ ./{level} ξl → vtl ∘ vπ ./{level} ζl → vπ ./{level} ξl ++ ζl.
 Proof.
   move=> ??. rewrite (surjective_vcons_fun vπ). by apply proph_dep_constr2.
 Qed.
 
-Lemma proph_dep_vinsert {A n} (vπl: vec (proph A) n) i wπ ξ ζl ζl' :
-  vapply (vtake i vπl) ./ ζl → wπ ./ [ξ] → vapply (vdrop' i vπl) ./ ζl' →
-  vapply (vinsert i wπ vπl) ./ ζl ++ ξ :: ζl'.
+Lemma proph_dep_vinsert {A n} (vπl: vec (proph A) n) i wπ ξ ζl ζl' level:
+  vapply (vtake i vπl) ./{level} ζl → wπ ./{level} [ξ] → vapply (vdrop' i vπl) ./{level} ζl' →
+  vapply (vinsert i wπ vπl) ./{level} ζl ++ ξ :: ζl'.
 Proof.
   move=> ???. rewrite vapply_insert_backmid.
   have ->: ξ :: ζl' = [ξ] ++ ζl' by done. by apply proph_dep_constr3.
-Qed. *)
+Qed.
 
 Local Lemma ForallOrdPairs_nil {A} (R: relation A):
   (ForallOrdPairs R []) <-> True.
@@ -663,34 +666,43 @@ Proof.
   iModIntro. iCombine "Obs Obs'" as "?". by iApply proph_obs_impl; [|done]=> ?[->].
 Qed.
 
-(* Lemma proph_eqz_constr {A B} f `{!@Inj A B (=) (=) f} uπ vπ P:
-  uπ :={P}= vπ -∗ f ∘ uπ :={P}= f ∘ vπ.
+Lemma proph_eqz_constr {A B} (f: A → B) `{!@Inj A B (=) (=) f} uπ vπ P:
+  uπ :={P}= vπ -∗ f ∘ uπ :={λ vπ ξl, exists vπ0, vπ = f ∘ vπ0 /\ P vπ0 ξl}= f ∘ vπ.
 Proof.
-  iIntros "Eqz" (???[? Dep]) "ξl". move/proph_dep_destr in Dep.
+  iIntros "Eqz" (???[? (vπ0&?&?)]) "ξl". 
+  replace vπ0 with vπ in H2.
   iMod ("Eqz" with "[%//] ξl") as "[Obs $]". iModIntro.
   iApply proph_obs_impl; [|by iApply "Obs"]=> ??/=. by f_equal.
+  fun_ext; intros; specialize ((equal_f H1) x) => /= eq; specialize (inj _ _ _ eq); done.
 Qed.
 
-Lemma proph_eqz_constr2 {A B C} f `{!@Inj2 A B C (=) (=) (=) f} uπ uπ' vπ vπ' level:
-  uπ :={P}= vπ -∗ uπ' :={P}= vπ' -∗ f ∘ uπ ⊛ uπ' :={level}= f ∘ vπ ⊛ vπ'.
+Lemma proph_eqz_constr2 {A B C} f `{!@Inj2 A B C (=) (=) (=) f} uπ uπ' vπ vπ' P Q:
+  uπ :={P}= vπ -∗ uπ' :={Q}= vπ' -∗ f ∘ uπ ⊛ uπ' :={λ vπ ξl, exists vπ0 ξl0 vπ1 ξl1, ξl = ξl0 ++ ξl1 /\ vπ = f ∘ vπ0 ⊛ vπ1 /\ P vπ0 ξl0 /\ Q vπ1 ξl1}= f ∘ vπ ⊛ vπ'.
 Proof.
-  iIntros "Eqz Eqz'" (???[? Dep]) "ξl". move: Dep=> /proph_dep_destr2[??].
-  iMod ("Eqz" with "[%//] ξl") as "[Obs ξl]".
-  iMod ("Eqz'" with "[%//] ξl") as "[Obs' $]". iModIntro.
-  iCombine "Obs Obs'" as "?". by iApply proph_obs_impl; [|done]=>/= ?[->->].
+  iIntros "Eqz Eqz'" (???[? (vπ0&ξl0&vπ1&ξl1&->&?&?&?)]) "[ξl0 ξl1]".
+  replace vπ0 with vπ in H2. replace vπ1 with vπ' in H3.
+  iMod ("Eqz" with "[%//] ξl0") as "[Obs ξl0]".
+  iMod ("Eqz'" with "[%//] ξl1") as "[Obs' ξl1]". iModIntro. iFrame.
+  iCombine "Obs Obs'" as "?". by iApply proph_obs_impl; [|done] =>/= ?[->->].
+  fun_ext; intros; specialize ((equal_f H1) x) => /= eq; destruct (inj2 _ _ _ _ _ eq) as [??]; done.
+  fun_ext; intros; specialize ((equal_f H1) x) => /= eq; destruct (inj2 _ _ _ _ _ eq) as [??]; done.
 Qed.
 
-Lemma proph_eqz_constr3 {A B C D} f `{!@Inj3 A B C D (=) (=) (=) (=) f} level
+Lemma proph_eqz_constr3 {A B C D} f `{!@Inj3 A B C D (=) (=) (=) (=) f} P0 P1 P2
     uπ₀ uπ₁ uπ₂ vπ₀ vπ₁ vπ₂ :
-  uπ₀ :={level}= vπ₀ -∗ uπ₁ :={level}= vπ₁ -∗ uπ₂ :={level}= vπ₂ -∗
-  f ∘ uπ₀ ⊛ uπ₁ ⊛ uπ₂ :={level}= f ∘ vπ₀ ⊛ vπ₁ ⊛ vπ₂.
+  uπ₀ :={P0}= vπ₀ -∗ uπ₁ :={P1}= vπ₁ -∗ uπ₂ :={P2}= vπ₂ -∗
+  f ∘ uπ₀ ⊛ uπ₁ ⊛ uπ₂ :={λ vπ ξl, exists vπ0 ξl0 vπ1 ξl1 vπ2 ξl2, ξl = ξl0 ++ ξl1 ++ ξl2 /\ vπ = f ∘ vπ0 ⊛ vπ1 ⊛ vπ2 /\ P0 vπ0 ξl0 /\ P1 vπ1 ξl1 /\ P2 vπ2 ξl2}= f ∘ vπ₀ ⊛ vπ₁ ⊛ vπ₂.
 Proof.
-  iIntros "Eqz₀ Eqz₁ Eqz₂" (???[? Dep]) "ξl". move: Dep=> /proph_dep_destr3[?[??]].
-  iMod ("Eqz₀" with "[%//] ξl") as "[Obs ξl]".
-  iMod ("Eqz₁" with "[%//] ξl") as "[Obs' ξl]". iCombine "Obs Obs'" as "Obs".
-  iMod ("Eqz₂" with "[%//] ξl") as "[Obs' $]". iCombine "Obs Obs'" as "?".
-  by iApply proph_obs_impl; [|done]=>/= ?[[->->]->].
-Qed. *)
+  iIntros "Eqz0 Eqz1 Eqz2" (???[? (vπ0&ξl0&vπ1&ξl1&vπ2&ξl2&->&?&?&?&?)]) "(ξl0&ξl1&ξl2)".
+  replace vπ₀ with vπ0. replace vπ₁ with vπ1. replace vπ₂ with vπ2.
+  iMod ("Eqz0" with "[%//] ξl0") as "[Obs0 ξl0]".
+  iMod ("Eqz1" with "[%//] ξl1") as "[Obs1 ξl1]".
+  iMod ("Eqz2" with "[%//] ξl2") as "[Obs2 ξl2]". iModIntro. iFrame.
+  iCombine "Obs0 Obs1 Obs2" as "?". by iApply proph_obs_impl; [|done] =>/= ? [->[->->]].
+  fun_ext; intros; specialize ((equal_f H1) x) => /= eq; destruct (inj3 _ _ _ _ _ _ _ eq) as [?[??]]; done.
+  fun_ext; intros; specialize ((equal_f H1) x) => /= eq; destruct (inj3 _ _ _ _ _ _ _ eq) as [?[??]]; done.
+  fun_ext; intros; specialize ((equal_f H1) x) => /= eq; destruct (inj3 _ _ _ _ _ _ _ eq) as [?[??]]; done.
+Qed.
 
 Lemma proph_eqz_eq {A} (uπ uπ' vπ vπ': proph A) ξl P :
   uπ = uπ' → vπ = vπ' → uπ :={P}= vπ -∗ uπ' :={P}= vπ'.
@@ -703,17 +715,24 @@ Proof.
   split. done. by apply H. 
 Qed.
 
-(* Lemma proph_eqz_prod {A B} (uπ vπ: proph (A * B)) level level':
-  fst ∘ uπ :={level}= fst ∘ vπ -∗ snd ∘ uπ :={level'}= snd ∘ vπ -∗ uπ :={level}= vπ.
+Lemma proph_eqz_prod {A B} (uπ vπ: proph (A * B)) P Q:
+ fst ∘ uπ :={P}= fst ∘ vπ -∗ snd ∘ uπ :={Q}= snd ∘ vπ -∗ uπ :={λ vπ ξl, exists ξl0 ξl1, ξl = ξl0 ++ ξl1 /\ P (fst∘vπ) ξl0 /\ Q (snd∘vπ) ξl1}= vπ.
 Proof.
   iIntros "Eqz Eqz'". iDestruct (proph_eqz_constr2 with "Eqz Eqz'") as "?".
-  by rewrite -!surjective_pairing_fun.
+  rewrite -!surjective_pairing_fun. iApply proph_eqz_mono; [|done].
+  simpl. intros ?(?&?&->&?&?). eexists (fst ∘ vπ), _, (snd ∘ vπ), _. rewrite -surjective_pairing_fun. done.
 Qed.
 
-Lemma proph_eqz_vinsert {A n} xπ yπ (zπl: vec (proph A) n) i :
-  xπ :== yπ -∗ vapply (vinsert i xπ zπl) :== vapply (vinsert i yπ zπl).
+
+Lemma proph_eqz_vinsert {A n} xπ yπ (zπl: vec (proph A) n) i P :
+  xπ :={P}= yπ -∗ vapply (vinsert i xπ zπl) :={λ vπ ξl, exists ξl0 ξl1 ξl2, ξl = ξl0 ++ ξl1 ++ ξl2 /\ P (λ π, (vπ π) !!! i) ξl1}= vapply (vinsert i yπ zπl).
 Proof.
   iIntros "Eqz". rewrite !vapply_insert_backmid.
-  iApply (proph_eqz_constr3 with "[] Eqz []"); iApply proph_eqz_refl.
-Qed. *)
+  iApply proph_eqz_mono; last first.
+  iApply ((proph_eqz_constr3 _ (const (const True)) _ (const (const True))) with "[] Eqz []"); iApply proph_eqz_refl.
+  intros ?(?&?&?&->&?). eexists _, _, _, _, _, _. 
+  do 3 (split; [done|]). split; [|done]. revert H. eassert (impl _ _); [|done]. f_equiv.
+  rewrite -vapply_insert_backmid. fun_ext. intros.
+  rewrite /vapply vmap_insert vlookup_insert. done.
+Qed.
 End proph_eqz.

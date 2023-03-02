@@ -48,7 +48,7 @@ Section own.
   Global Opaque freeable_sz.
 
   Program Definition own_ptr {𝔄} (n: nat) (ty: type 𝔄) : type 𝔄 := {|
-    ty_size := 1;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_size := 1;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E); ty_proph := ty.(ty_proph);
     ty_own vπ d tid vl := [S(d') := d] [loc[l] := vl]
       ▷ l ↦∗: ty.(ty_own) vπ d' tid ∗ freeable_sz n ty.(ty_size) l;
     ty_shr vπ d κ tid l := [S(d') := d]
@@ -96,13 +96,16 @@ Section own.
     iIntros ">(%ξl & %q &%& ξl & Toκ) !>". iExists ξl, q. iSplit; [done|].
     iIntros "{$ξl}ξl". by iMod ("Toκ" with "ξl").
   Qed.
+  Next Obligation.
+    intros ??. apply ty_proph_weaken.
+  Qed.
 
   Global Instance own_ne {𝔄} n : NonExpansive (@own_ptr 𝔄 n).
   Proof. solve_ne_type. Qed.
 
   Global Instance own_type_contractive 𝔄 n : TypeContractive (@own_ptr 𝔄 n).
   Proof.
-    split; [by apply type_lft_morphism_id_like|done| |].
+    split; [by apply type_lft_morphism_id_like|done|done| |].
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= > *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
@@ -142,7 +145,7 @@ Section own.
   Lemma own_type_incl {𝔄 𝔅} n (f: 𝔄 → 𝔅) ty1 ty2 :
     type_incl ty1 ty2 f -∗ type_incl (own_ptr n ty1) (own_ptr n ty2) f.
   Proof.
-    iIntros "#(%Eq &?& InOwn & InShr)". do 2 (iSplit; [done|]). iSplit; iModIntro.
+    iIntros "#([%Eq %InProph] &?& InOwn & InShr)". do 2 (iSplit; [done|]). iSplit; iModIntro.
     - iIntros (?[|?]??); [done|]. rewrite/= {1}by_just_loc_ex Eq.
       iIntros "(%&->& ↦ &$)". iApply (heap_mapsto_pred_wand with "↦"). iApply "InOwn".
     - iIntros (?[|?]???); [done|]. iIntros "#[%l'[??]]". iExists l'.
@@ -171,7 +174,7 @@ Section box.
 
   Global Instance box_type_contractive 𝔄 : TypeContractive (@box 𝔄).
   Proof.
-    split; [by apply type_lft_morphism_id_like|done| |].
+    split; [by apply type_lft_morphism_id_like|done|done| |].
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
@@ -179,7 +182,7 @@ Section box.
   Lemma box_type_incl {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty':
     type_incl ty ty' f -∗ type_incl (box ty) (box ty') f.
   Proof.
-    iIntros "[%Eq ?]". rewrite /box Eq. iApply own_type_incl. by iSplit.
+    iIntros "[[%Eq %] ?]". rewrite /box Eq. iApply own_type_incl. by iSplit.
   Qed.
 
   Lemma box_subtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty ty' :

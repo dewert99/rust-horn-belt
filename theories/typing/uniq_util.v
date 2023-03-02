@@ -10,7 +10,7 @@ Section uniq_util.
       (κ: lft) (tid: thread_id) (l: loc) : iProp Σ :=
     let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
     .VO[ξ] vπ d ∗
-    &{κ} (∃vπ' d', ⧖(S d') ∗ .PC[ξ] vπ' d' ∗ l ↦∗: ty.(ty_own) vπ' d' tid).
+    &{κ} (∃vπ' d', ⧖(S d') ∗ .PC[ξ, ty.(ty_proph)] vπ' d' ∗ l ↦∗: ty.(ty_own) vπ' d' tid).
 
   Lemma ty_share_uniq_body {𝔄} (ty: type 𝔄) vπ ξi d κ tid l κ' q E :
     ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty_lft ty -∗
@@ -40,7 +40,7 @@ Section uniq_util.
     ↑lftN ⊆ E → lft_ctx -∗ κ' ⊑ κ -∗ κ' ⊑ ty_lft ty -∗
     uniq_body ty vπ ξi d κ tid l -∗ q.[κ'] ={E}=∗ |={E}▷=>^(S d) |={E}=>
       let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in
-      ∃ζl q', ⌜vπ ./ ζl⌝ ∗ q':+[ζl ++ [ξ]] ∗
+      ∃ζl q', ⌜ty_proph ty vπ ζl⌝ ∗ q':+[ζl ++ [ξ]] ∗
         (q':+[ζl ++ [ξ]] ={E}=∗ uniq_body ty vπ ξi d κ tid l ∗ q.[κ']).
   Proof.
     set ξ := PrVar _ ξi. have ?: Inhabited 𝔄 := populate (vπ inhabitant).
@@ -75,7 +75,8 @@ Section uniq_util.
     iMod (ty_own_proph with "LFT In ty κ₊") as "Upd"; [solve_ndisj|].
     iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
     iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&%& ξl & Toty)".
-    iMod (uniq_resolve with "PROPH Vo Pc ξl") as "($& Pc & ξl)"; [solve_ndisj..|].
+    iMod (uniq_resolve with "PROPH Vo Pc ξl") as "($& Pc & ξl)"; [solve_ndisj| |].
+    by eapply ty_proph_weaken.
     iMod ("Toty" with "ξl") as "[ty κ₊]".
     iMod ("ToBor" with "[⧖ Pc ↦ ty]") as "[_ κ]".
     { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. }
@@ -101,12 +102,16 @@ Section uniq_util.
   Qed.
 
   Lemma incl_uniq_body {𝔄} (ty ty': type 𝔄) vπ ξi d κ κ' tid l :
-    κ' ⊑ κ -∗ □ (∀vπ d tid vl, ty.(ty_own) vπ d tid vl ↔ ty'.(ty_own) vπ d tid vl) -∗
+  (∀vπ ξl, ty_proph ty vπ ξl ↔ ty_proph ty' vπ ξl) → κ' ⊑ κ -∗ □ (∀vπ d tid vl, ty.(ty_own) vπ d tid vl ↔ ty'.(ty_own) vπ d tid vl) -∗
     uniq_body ty vπ ξi d κ tid l -∗ uniq_body ty' vπ ξi d κ' tid l.
   Proof.
-    iIntros "#InLft #EqOwn [$ Pc]". iApply (bor_shorten with "InLft").
+    iIntros (?) "#InLft #EqOwn [$ Pc]". iApply (bor_shorten with "InLft").
     iApply bor_iff; [|done]. iIntros "!>!>".
-    iSplit; iDestruct 1 as (vπ' d'') "(⧖ & Pc &%vl & ↦ & ?)"; iExists vπ', d'';
+    assert ((pointwise_relation _ (pointwise_relation _ (↔))) ty.(ty_proph) ty'.(ty_proph)). done.
+    iSplit; iDestruct 1 as (vπ' d'') "(⧖ & Pc &%vl & ↦ & ?)"; iExists vπ', d''; rewrite H0;
     iFrame "⧖ Pc"; iExists vl; iFrame "↦"; by iApply "EqOwn".
   Qed.
+
+  Lemma proph_ctrl_eqz' ξ ty vπ d : proph_ctx -∗ .PC[ξ, ty.(ty_proph)] vπ d -∗ (.$ ξ) :={ty.(ty_proph)}= vπ.
+  Proof. apply proph_ctrl_eqz. intros. by eapply ty_proph_weaken. Qed.
 End uniq_util.

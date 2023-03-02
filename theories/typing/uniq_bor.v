@@ -1,5 +1,5 @@
-From lrust.typing Require Export type.
-From lrust.typing Require Import type_context programs mod_ty uniq_util.
+From lrust.typing Require Export type uniq_util.
+From lrust.typing Require Import type_context programs mod_ty.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
@@ -21,10 +21,11 @@ Section uniq_bor.
 
   Program Definition uniq_bor {𝔄} (κ: lft) (ty: type 𝔄) : type (𝔄 * 𝔄) := {|
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    ty_proph vπ ξl := exists ξ ξl', ξl = ξl'++[ξ] /\ snd∘vπ ./[𝔄] [ξ] /\ ty.(ty_proph) (fst∘vπ) ξl';
     ty_own vπ d tid vl := κ ⊑ ty_lft ty ∗ [loc[l] := vl] ∃d' ξi,
       let ξ := PrVar (𝔄 ↾ prval_to_inh (fst ∘ vπ)) ξi in
       ⌜(S d' ≤ d)%nat ∧ snd ∘ vπ = (.$ ξ)⌝ ∗ uniq_body ty (fst ∘ vπ) ξi d' κ tid l;
-    ty_shr vπ d κ' tid l := [S(d') := d] ∃(l': loc) ξ, ⌜snd ∘ vπ ./ [ξ]⌝ ∗
+    ty_shr vπ d κ' tid l := [S(d') := d] ∃(l': loc) ξ, ⌜snd ∘ vπ ./[𝔄] [ξ]⌝ ∗
       &frac{κ'} (λ q, l ↦{q} #l') ∗ &frac{κ'} (λ q, q:[ξ]) ∗
       ▷ ty.(ty_shr) (fst ∘ vπ) d' κ' tid l';
   |}%I.
@@ -66,7 +67,7 @@ Section uniq_bor.
     iApply step_fupdN_nmono; [by apply Le|]. iApply (step_fupdN_wand with "Upd").
     iIntros "!> >(%&%&%& [ζlξ Touniq]) !>". set ξ := PrVar _ ξi.
     iExists (_ ++ [ξ]), _. iSplit.
-    { iPureIntro. apply proph_dep_prod; [done|]. rewrite Eq. apply proph_dep_one. }
+    { iPureIntro. eexists _, _. split. done. split. rewrite Eq. apply proph_dep_one. done. }
     iIntros "{$ζlξ}ζlξ". iMod ("Touniq" with "ζlξ") as "[uniq $]". iModIntro.
     iExists _, _. by iFrame.
   Qed.
@@ -81,14 +82,19 @@ Section uniq_bor.
     iMod (frac_bor_acc with "LFT Bor κ1") as (?) "[>ξ Toκ1]"; [done|].
     rewrite proph_tok_singleton.
     iDestruct (proph_tok_combine with "ζl [$ξ]") as (q) "[ζlξ Toζlξ]". iModIntro.
-    iExists (ζl ++ [ξ]), q. iSplit; [iPureIntro; by apply proph_dep_prod|].
+    iExists (ζl ++ [ξ]), q. iSplit. iPureIntro. eexists _, _. by split.
     iIntros "{$ζlξ}ζlξ". iDestruct ("Toζlξ" with "ζlξ") as "[ζl ξ]".
     iMod ("Toκ'" with "ζl") as "$". iMod ("Toκ1" with "ξ") as "κ1".
     by iMod ("Toκ'₊" with "κ1") as "$".
   Qed.
+  Next Obligation. move=> /= ?????[?[?[->[??]]]]. apply proph_dep_prod. by eapply ty_proph_weaken. done. Qed.
 
   Global Instance uniq_bor_ne {𝔄} κ : NonExpansive (@uniq_bor 𝔄 κ).
-  Proof. rewrite /uniq_bor /uniq_body. solve_ne_type. Qed.
+  Proof.
+    solve_ne_type. 
+    intros *. simpl. unfold uniq_body. f_equiv; [by rewrite H|]; do 15 f_equiv. 
+    rewrite proph_ctrl_proper; [done| |done..]. intros ??. apply H. do 3 f_equiv. by eapply ty_own_ne.
+  Qed.
 End uniq_bor.
 
 Notation "&uniq{ κ }" := (uniq_bor κ) (format "&uniq{ κ }") : lrust_type_scope.
@@ -98,11 +104,13 @@ Section typing.
 
   Global Instance uniq_type_contractive {𝔄} κ : TypeContractive (uniq_bor (𝔄:=𝔄) κ).
   Proof.
-    split; [by apply (type_lft_morphism_add_one κ)|done| |].
+    split; [by apply (type_lft_morphism_add_one κ)|done| | |].
+    - intros **. simpl. do 6 f_equiv. apply H. 
     - move=> > ? Hl * /=. f_equiv.
       + apply equiv_dist. iDestruct Hl as "#[??]".
         iSplit; iIntros "#H"; (iApply lft_incl_trans; [iApply "H"|done]).
-      + rewrite /uniq_body. do 18 (f_contractive || f_equiv). by simpl in *.
+      + rewrite /uniq_body. do 15 (f_contractive || f_equiv).
+      apply equiv_dist. f_equiv. done. do 3 f_equiv. by simpl in *.
     - move=> */=. do 10 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
@@ -148,7 +156,8 @@ Section typing.
   Proof.
     move=> In /eqtype_id_unfold Eqt ?. iIntros "L".
     iDestruct (Eqt with "L") as "#Eqt". iDestruct (In with "L") as "#In". iIntros "!> #E".
-    iSplit; [done|]. iDestruct ("Eqt" with "E") as (?) "[[??][#EqOwn #EqShr]]".
+    iDestruct ("Eqt" with "E") as ([??]) "[[??][#EqOwn #EqShr]]".
+    iSplit. iPureIntro. split; [done|]. simpl. intros ??(?&?&->&?&?). eexists _, _. do 2 (split; [done|]). apply H0. done.
     iSpecialize ("In" with "E"). iSplit; [by iApply lft_intersect_mono|].
     iSplit; iModIntro=>/=.
     - iIntros "*". rewrite {1}by_just_loc_ex. iIntros "[#? (%&->& Big)]".
@@ -202,7 +211,7 @@ Section typing.
     iMod ("ToL" with "κ") as "$". iFrame "In". iExists _, _. by iFrame.
   Qed.
 
-  Lemma tctx_uniq_mod_ty_out {𝔄 𝔅 ℭl} κ f ty (T: tctx ℭl) p E L
+  Lemma tctx_uniq_mod_ty_out `{SameLevel 𝔄 𝔅} {ℭl} κ f ty (T: tctx ℭl) p E L
     `{!@Inj 𝔄 𝔅 (=) (=) f} : lctx_lft_alive E L κ →
     tctx_incl E L (p ◁ &uniq{κ} (<{f}> ty) +:: T) (p ◁ &uniq{κ} ty +:: T)
       (λ post '((b, b') -:: cl), ∀a a', b = f a → b' = f a' → post ((a, a') -:: cl)).
@@ -223,7 +232,7 @@ Section typing.
     iMod (uniq_intro aπ with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].
     set ζ := PrVar _ ζi. iDestruct (uniq_proph_tok with "ζVo ζPc") as "(ζVo & ζ & ζPc)".
     iMod (uniq_preresolve ξ [ζ] (λ π, f (π ζ)) with "PROPH ξVo ξPc [$ζ]") as
-    "(Obs' & [ζ _] & ToξPc)"; [done|apply proph_dep_constr, proph_dep_one|done|].
+    "(Obs' & [ζ _] & ToξPc)"; [done| rewrite same_level; apply proph_dep_constr, proph_dep_one|done|].
     iCombine "Obs Obs'" as "Obs". iSpecialize ("ζPc" with "ζ").
     iExists ((λ π, (aπ π, π ζ)) -:: _). iFrame "T".
     iMod ("ToBor" with "[ToξPc] [↦ ty ζPc]") as "[Bor κ]"; last first.
@@ -235,11 +244,11 @@ Section typing.
     - iNext. iExists _, _. iFrame "⧖ ζPc". iExists _. iFrame.
     - iIntros "!> (%&%& ⧖' & ζPc &%& ↦ & ty) !>!>". iExists _, _. iFrame "⧖'".
       iSplitR "↦ ty".
-      { iApply "ToξPc". iApply proph_eqz_constr. by iApply proph_ctrl_eqz. }
+      { iApply "ToξPc". iApply proph_eqz_constr. iApply (proph_ctrl_eqz' with "PROPH ζPc"). }
       iExists _. iFrame "↦". iExists _. by iFrame.
   Qed.
 
-  Lemma tctx_uniq_eqtype {𝔄 𝔅 ℭl} κ (f: 𝔄 → 𝔅) g ty ty' (T: tctx ℭl) p E L :
+  Lemma tctx_uniq_eqtype `{SameLevel 𝔄 𝔅} {ℭl} κ (f: 𝔄 → 𝔅) g ty ty' (T: tctx ℭl) p E L :
     eqtype E L ty ty' f g → SemiIso g f → lctx_lft_alive E L κ →
     tctx_incl E L (p ◁ &uniq{κ} ty +:: T) (p ◁ &uniq{κ} ty' +:: T)
       (λ post '((a, a') -:: cl), post ((f a, f a') -:: cl)).
@@ -247,8 +256,8 @@ Section typing.
     move=> [Sub Sub'] ? Alv. split; [by move=> ???[[??]?]|].
     iIntros (??[vπ ?]?) "LFT #PROPH UNIQ E L /=[p T] Obs".
     iDestruct (Sub with "L") as "#Sub". iDestruct (Sub' with "L") as "#Sub'".
-    iDestruct ("Sub" with "E") as "#(_& _ & #InOwn &_)".
-    iDestruct ("Sub'" with "E") as "#(_& ? & #InOwn' &_)".
+    iDestruct ("Sub" with "E") as "#([_ %InProph] & _ & #InOwn &_)".
+    iDestruct ("Sub'" with "E") as "#([_ %InProph']& ? & #InOwn' &_)".
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
     have ?: Inhabited 𝔄 := populate (vπ inhabitant).1.
     have ?: Inhabited 𝔅 := populate (f inhabitant).
@@ -260,7 +269,7 @@ Section typing.
     iMod (uniq_intro (f ∘ fst ∘ vπ) with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].
     set ζ := PrVar _ ζi. iDestruct (uniq_proph_tok with "ζVo ζPc") as "(ζVo & ζ & ζPc)".
     iMod (uniq_preresolve ξ [ζ] (λ π, g (π ζ)) with "PROPH ξVo ξPc [$ζ]") as
-    "(Obs' & [ζ _] & ToξPc)"; [done|apply proph_dep_constr, proph_dep_one|done|].
+    "(Obs' & [ζ _] & ToξPc)"; [done|rewrite -same_level; apply proph_dep_constr, proph_dep_one|done|].
     iCombine "Obs Obs'" as "Obs". iSpecialize ("ζPc" with "ζ").
     iExists ((λ π, (f (vπ π).1, π ζ)) -:: _). iFrame "T".
     iMod ("ToBor" with "[ToξPc] [↦ ty ζPc]") as "[Bor κ]"; last first.
@@ -272,15 +281,16 @@ Section typing.
     - iNext. iExists _, _. iFrame "⧖ ζPc". iExists _. iFrame "↦". by iApply "InOwn".
     - iIntros "!> (%bπ &%& ⧖' & ζPc &%& ↦ & ty) !>!>". iExists _, _. iFrame "⧖'".
       iSplitR "↦ ty".
-      { iApply "ToξPc". iApply proph_eqz_constr. by iApply proph_ctrl_eqz. }
+      { iApply "ToξPc". iApply proph_eqz_mono; [ |iApply proph_eqz_constr; iApply (proph_ctrl_eqz' with "PROPH ζPc")].
+      simpl. intros. eexists _. split. done. by apply InProph'. }
       iExists _. iFrame "↦". by iApply "InOwn'".
   Qed.
 
-  Lemma tctx_extract_uniq_eqtype {𝔄 𝔅 ℭl} κ (f: 𝔅 → 𝔄) g ty ty' (T: tctx ℭl) p E L :
+  Lemma tctx_extract_uniq_eqtype `{SameLevel 𝔄 𝔅} {ℭl} κ (f: 𝔅 → 𝔄) g ty ty' (T: tctx ℭl) p E L :
     lctx_lft_alive E L κ → eqtype E L ty' ty f g → SemiIso g f →
     tctx_extract_elt E L (p ◁ &uniq{κ} ty) (p ◁ &uniq{κ} ty' +:: T) T
       (λ post '((b, b') -:: cl), post ((f b, f b') -:: cl)).
-  Proof. move=> ???. by eapply tctx_uniq_eqtype. Qed.
+  Proof. move=> ???. by eapply tctx_uniq_eqtype. Unshelve. constructor. symmetry. apply same_level. Qed.
 End typing.
 
 Global Hint Resolve uniq_resolve uniq_real uniq_subtype uniq_eqtype

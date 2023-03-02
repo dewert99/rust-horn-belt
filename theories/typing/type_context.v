@@ -90,7 +90,7 @@ Section type_context.
     : iProp Σ := match t with
     | p ◁ ty => ∃v d, ⌜eval_path p = Some v⌝ ∗ ⧖d ∗ ty.(ty_own) vπ d tid [v]
     | p ◁{κ} ty => ∃v, ⌜eval_path p = Some v⌝ ∗
-        ([†κ] ={⊤}=∗ ∃vπ' d, ▷(vπ :== vπ') ∗ ⧖d ∗ ty.(ty_own) vπ' d tid [v]) end%I.
+        ([†κ] ={⊤}=∗ ∃vπ' d, ▷(vπ :={ty.(ty_proph)}= vπ') ∗ ⧖d ∗ ty.(ty_own) vπ' d tid [v]) end%I.
 
   (* Block tctx_elt_interp from reducing with simpl when t is a constructor. *)
   Global Arguments tctx_elt_interp : simpl never.
@@ -395,13 +395,16 @@ Section lemmas.
   Proof.
     intros Sub InLft. split; [by intros ??? [??]|].
     iIntros (??[vπ wπl]?) "#LFT _ _ E L /=[(%v &%& Toty) T] Obs".
-    iDestruct (Sub with "L E") as "#(_&_& #InOwn &_)".
+    iDestruct (Sub with "L E") as "#([% %] &_& #InOwn &_)".
     iDestruct (InLft with "L E") as "#κ⊑κ'". iModIntro. iExists (f ∘ vπ -:: wπl).
     iFrame "L Obs T". iExists v. iSplit; [done|]. iIntros "†κ'".
     iMod (lft_incl_dead with "κ⊑κ' †κ'") as "†κ"; [done|].
     iMod ("Toty" with "†κ") as (vπ' d) "(?& ⧖ & ty)". iModIntro.
     iExists (f ∘ vπ'), d. iFrame "⧖".
-    iSplitR "ty"; by [iApply proph_eqz_constr|iApply "InOwn"].
+    iSplitR "ty"; [|by iApply "InOwn"].
+    iApply proph_eqz_mono; last first.
+    by iApply proph_eqz_constr. 
+    move => /= *. eexists _. split. done. by apply H1.
   Qed.
 
   (* Extracting from a type context. *)

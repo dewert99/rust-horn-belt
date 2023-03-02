@@ -22,7 +22,7 @@ Section borrow.
     iDestruct (elctx_interp_ty_outlives_E with "Out") as "#?".
     iMod (uniq_intro vπ with "PROPH UNIQ") as (ξi) "[Vo Pc]"; [done|].
     set ξ := PrVar _ ξi.
-    iMod (bor_create ⊤ κ (∃vπ' d, ⧖(S d) ∗ .PC[ξ] vπ' d ∗
+    iMod (bor_create ⊤ κ (∃vπ' d, ⧖(S d) ∗ .PC[ξ, ty.(ty_proph)] vπ' d ∗
       _ ↦∗: ty.(ty_own) vπ' d _)%I with "LFT [↦ ty Pc]") as "[Bor Toty]"; [done| |].
     { iExists _, _. iFrame "Pc ⧖". iExists _. iFrame. }
     iExists -[pair ∘ vπ ⊛ (.$ ξ); (.$ ξ)]. rewrite/= right_id. iFrame "L". iModIntro.
@@ -31,7 +31,7 @@ Section borrow.
     - iExists _. iSplit; [done|]. iIntros "†κ".
       iMod ("Toty" with "†κ") as (??) "(>⧖' & Pc & ↦ty)". iExists _, _.
       iFrame "⧖' ↦ty †". iIntros "!>!>".
-      iDestruct (proph_ctrl_eqz with "PROPH Pc") as "$".
+      iDestruct (proph_ctrl_eqz' with "PROPH Pc") as "$".
   Qed.
 
   Lemma tctx_extract_hasty_borrow {𝔄 𝔅 ℭl} E L p n
@@ -69,7 +69,8 @@ Section borrow.
       by iApply (fupd_step_fupdN_fupd_mask_mono with "H"). }
     wp_seq. iDestruct 1 as (ξl q') "/= (%Hdep & Hdt & Hclose'')".
     iDestruct (uniq_agree with "Hvo Hpc") as "%Hag"; inversion Hag; subst; clear Hag.
-    iMod (uniq_resolve with "PROPH Hvo Hpc Hdt") as "(Hobs & Hpc & Hdt)"; [done|done| ].
+    iMod (uniq_resolve with "PROPH Hvo Hpc Hdt") as "(Hobs & Hpc & Hdt)"; [done| | ].
+    by eapply ty_proph_weaken.
     iMod ("Hclose''" with "Hdt") as "[Hown Htok]".
     iMod ("Hclose'" with "[H↦ Hown Hpc]") as "[Huniq Htok2]".
     { iFrame "#∗". iExists _. iFrame. }
@@ -115,7 +116,7 @@ Section borrow.
     iMod (rebor with "LFT κ⊑κ' ξBor") as "[ξBor ToξBor]"; [done|].
     iMod (uniq_intro (fst ∘ vπ) with "PROPH UNIQ") as (ζi) "(ζVo & ζPc)"; [done|].
     set ζ := PrVar _ ζi.
-    iMod (bor_create _ κ' (∃vπ' d', .VO[ξ] vπ' d' ∗ ⧖(S d') ∗ .PC[ζ] vπ' d')%I
+    iMod (bor_create _ κ' (∃vπ' d', .VO[ξ] vπ' d' ∗ ⧖(S d') ∗ .PC[ζ, ty.(ty_proph)] vπ' d')%I
       with "LFT [⧖ ξVo ζPc]") as "[ζBor ToζBig]"; [done| |].
     { iExists _, _. iFrame "ξVo ζPc". iApply persistent_time_receipt_mono; [|done]. lia. }
     iMod (bor_combine with "LFT ξBor ζBor") as "Bor"; [done|].
@@ -132,13 +133,15 @@ Section borrow.
       - iModIntro. iSplitL; [|done]. iExists _. iSplit; [done|]. iIntros "_!>".
         iExists _, _. iFrame "⧖". iSplitL "ζPc"; last first.
         { iFrame "In". iExists _, _. by iFrame. }
-        iNext. iDestruct (proph_ctrl_eqz with "PROPH ζPc") as "Eqz".
-        iApply (proph_eqz_prod with "[Eqz]"); [done|iApply proph_eqz_refl]. }
+        iNext. iDestruct (proph_ctrl_eqz' with "PROPH ζPc") as "Eqz".
+        simpl. iApply proph_eqz_mono; last first.
+        iApply ((proph_eqz_prod _ _ _) with "[Eqz]"); [done|iApply (proph_eqz_refl _ (λ vπ ξl, vπ ./[𝔄] ξl))].
+        simpl. intros ? (?&?&->&?&?). eexists _, _. done.  }
     iDestruct "ξBig" as (??) "(>#⧖ & ξPc & ↦ty)".
     iDestruct "ζBig" as (??) "(>ξVo & _ & ζPc)".
     iMod (uniq_strip_later with "ξVo ξPc") as (<-<-) "[ξVo ξPc]".
     iMod (uniq_strip_later with "ζVo ζPc") as (<-<-) "[ζVo ζPc]".
-    iMod ("ToBor" $! (∃ vπ' d', ⧖(S d') ∗ .PC[ζ] vπ' d' ∗
+    iMod ("ToBor" $! (∃ vπ' d', ⧖(S d') ∗ .PC[ζ, ty.(ty_proph)] vπ' d' ∗
       l ↦∗: ty.(ty_own) vπ' d' tid)%I with "[ξVo ξPc] [ζPc ↦ty]") as "ζBor".
     { iIntros "!> (%&% & #? & ζPc & ↦ty)".
       iMod (uniq_update with "UNIQ ξVo ξPc") as "[ξVo ξPc]"; [solve_ndisj|].
@@ -150,9 +153,11 @@ Section borrow.
     iExists _. iSplit; [done|]. iIntros "#†κ'". iMod ("ToξBor" with "†κ'") as "ξBor".
     iMod ("ToζBig" with "†κ'") as (vπ' ?) "(>ξVo & >⧖' & ζPc)". iModIntro.
     iExists _, _. iFrame "⧖' In". iSplitL "ζPc".
-    - iNext. iDestruct (proph_ctrl_eqz with "PROPH ζPc") as "Eqz".
+    - iNext. iDestruct (proph_ctrl_eqz' with "PROPH ζPc") as "Eqz".
+      iApply proph_eqz_mono; last first.
       iApply (proph_eqz_prod _ (pair ∘ vπ' ⊛ (snd ∘ vπ)) with "[Eqz]");
-      [done|iApply proph_eqz_refl].
+      [done|iApply (proph_eqz_refl _ (λ vπ ξl, vπ ./[𝔄] ξl))].
+      simpl. intros ?(?&?&->&?&?). eexists _, _. done.
     - iExists _, _.
       rewrite /uniq_body (proof_irrel (prval_to_inh _) (prval_to_inh (fst ∘ vπ))).
       by iFrame.
@@ -207,7 +212,7 @@ Section borrow.
       iMod (cumulative_persistent_time_receipt with "TIME ⧗1 ⧖'") as "⧖'";
         [solve_ndisj|].
       iIntros "!>!>". iDestruct ("ToξPc" with "[ζPc]") as "ξPc".
-      { iApply (proph_ctrl_eqz with "PROPH ζPc"). }
+      { iApply (proph_ctrl_eqz' with "PROPH ζPc"). }
       iExists _, _. iFrame "⧖' ξPc". rewrite split_mt_ptr. iExists _. iFrame.
   Qed.
 
@@ -275,8 +280,8 @@ Section borrow.
     iMod (uniq_strip_later with "ξVo ξPc") as (<-->) "[ξVo ξPc]".
     iMod (uniq_update ξ with "UNIQ ξVo ξPc") as "[ξVo ξPc]"; [done|].
     iMod ("Hclose'" $! (∃l': loc, l ↦ #l' ∗
-      (∃ vπ' d', .VO[ω] vπ' d' ∗ .PC[ξ] (λ π, (vπ' π, π ω)) (S d') ∗ ⧖ (S (S d'))) ∗
-      &{κ'}(∃ vπ' d', ⧖(S d') ∗ .PC[ω] vπ' d' ∗ l' ↦∗: ty.(ty_own) vπ' d' tid))%I
+      (∃ vπ' d', .VO[ω] vπ' d' ∗ .PC[ξ, _] (λ π, (vπ' π, π ω)) (S d') ∗ ⧖ (S (S d'))) ∗
+      &{κ'}(∃ vπ' d', ⧖(S d') ∗ .PC[ω, ty.(ty_proph)] vπ' d' ∗ l' ↦∗: ty.(ty_own) vπ' d' tid))%I
       with "[] [Hbor Hl ωVo ξPc]") as "[Hbor Htok]".
     { iIntros "!> H !>!>". iDestruct "H" as (l') "(H↦ & (%&%& ωVo & ξPc & ⧖) & H)".
       iExists _, (S d'). iFrame "⧖ ξPc". rewrite split_mt_uniq_bor. iFrame "Hκ'".
@@ -314,7 +319,7 @@ Section borrow.
     { apply (proph_dep_prod [_] [_]); apply proph_dep_one. }
     iDestruct ("ToζPc" with "ζ") as "ζPc".
     iDestruct ("ToωPc" with "ω") as "ωPc".
-    iMod ("Hclose'" $! (∃vπ' d', ⧖ (S d') ∗ .PC[ζ] vπ' d' ∗
+    iMod ("Hclose'" $! (∃vπ' d', ⧖ (S d') ∗ .PC[ζ, ty.(ty_proph)] vπ' d' ∗
       l' ↦∗: ty.(ty_own) vπ' d' tid)%I with "[Heqz ωVo ωPc Ht] [Hown ζPc]") as "[? Htok]".
     { iIntros "!> H".
       iMod (bi.later_exist_except_0 with "H") as (? ?) "(>#Hd' & Hpc & Hinner)".
@@ -323,8 +328,10 @@ Section borrow.
       - iExists _, d'.
         iMod (cumulative_persistent_time_receipt with "TIME Ht Hd'") as "$";
           [solve_ndisj|].
-        iFrame. iApply "Heqz". iDestruct (proph_ctrl_eqz with "PROPH Hpc") as "Eqz".
-        iApply (proph_eqz_constr2 with "Eqz []"). iApply proph_eqz_refl.
+        iFrame. iApply "Heqz". iDestruct (proph_ctrl_eqz' with "PROPH Hpc") as "Eqz".
+        iApply proph_eqz_mono; last first.
+        iApply (proph_eqz_constr2 with "Eqz []"). iApply (proph_eqz_refl _ (λ vπ ξl, vπ ./[𝔄] ξl)).
+        simpl. intros ? (?&?&->&?&?). eexists a, _, (.$ ω), _. split. done. split. fun_ext. done. done.
       - iExists _, _. by iFrame. }
     { iExists _, _. by iFrame. }
     iExists -[λ π, ((vπ π).1.1 , π ζ)]. rewrite right_id.

@@ -121,13 +121,14 @@ Section typing.
     move=> NeIT NeOT.
     have Eq: (∀n ty ty', ty.(ty_size) = ty'.(ty_size) → (⊢ ty_lft ty ≡ₗ ty_lft ty') →
       elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
+      (∀vπ ξ, ty.(ty_proph) vπ ξ ≡ ty'.(ty_proph) vπ ξ) →
       (∀vπ d tid vl, dist_later n (ty.(ty_own) vπ d tid vl) (ty'.(ty_own) vπ d tid vl)) →
       (∀vπ d κ tid l, (ty.(ty_shr) vπ d κ tid l) ≡{n}≡ (ty'.(ty_shr) vπ d κ tid l)) →
       ∀vπ vl,
         (fn (λ x, FP (E x) (IT x ty) (OT x ty))).(ty_own) vπ 0 xH vl ≡{n}≡
         (fn (λ x, FP (E x) (IT x ty') (OT x ty'))).(ty_own) vπ 0 xH vl); last first.
-    { split; [|done| |].
-      - apply (type_lft_morphism_const _ static [])=>//= ?. apply lft_equiv_refl.
+    { split; [|done|done| |].
+      - apply (type_lft_morphism_const _ static [])=>//= ?. apply lft_equiv_refl. 
       - move=> *. by apply Eq.
       - move=>/= n *. apply bi.exist_ne=> ?. apply bi.sep_ne; [done|].
         apply uPred_primitive.later_contractive. destruct n=>/=; [done|by apply Eq]. }
@@ -140,6 +141,7 @@ Section typing.
       - by apply Ne.
       - by iApply type_lft_morphism_lft_equiv_proper.
       - apply type_lft_morphism_elctx_interp_proper=>//. apply _.
+      - by apply type_ne_ty_proph. 
       - apply dist_dist_later. by apply Ne.
       - apply dist_S. by apply Ne. }
     move: (NeIT x)=> [?[->NeITl]]. do 5 f_equiv; [|do 3 f_equiv; [|f_equiv]].
@@ -177,7 +179,7 @@ Section typing.
     iDestruct ("IH" with "E") as "$".
   Qed.
 
-  Lemma fn_subtype {A 𝔄l 𝔄l' 𝔅 𝔅'}
+  (* Lemma fn_subtype {A 𝔄l 𝔄l' 𝔅 𝔅'}
         (fp: A → fn_params 𝔄l 𝔅) (fp': A → fn_params 𝔄l' 𝔅') fl g E L :
     (∀x ϝ, let E' := E ++ fp_E (fp' x) ϝ in elctx_sat E' L (fp_E (fp x) ϝ) ∧
       subtypel E' L (fp' x).(fp_ityl) (fp x).(fp_ityl) fl ∧
@@ -185,7 +187,10 @@ Section typing.
     subtype E L (fn fp) (fn fp')
      (λ tr (post: predₛ 𝔅') (al': Π!%ST 𝔄l'), tr (post ∘ g) (plist_map fl al')).
   Proof.
-    move=> Big. apply subtype_plain_type=>/= ?. iIntros "L".
+    move=> Big. apply subtype_plain_type.
+    intros ???. fun_ext. fold of_syn_type. intros ?. fun_ext. intros.
+    apply (equal_f H x0)
+    move=> /= ?. iIntros "L".
     iAssert (∀x ϝ, □ (elctx_interp (E ++ fp_E (fp' x) ϝ) -∗
       elctx_interp (fp_E (fp x) ϝ) ∗
       ([∗ hlist] ty'; ty;- f ∈ (fp' x).(fp_ityl); (fp x).(fp_ityl);- fl,
@@ -229,7 +234,7 @@ Section typing.
     apply subtype_plain_type. iIntros (?) "_!>_/=". iSplit; [done|].
     iSplit; [iApply lft_incl_refl|]. iIntros "* ?". iStopProof. do 13 f_equiv.
     iIntros "Big" (?). iApply "Big".
-  Qed.
+  Qed. *)
 
   Local Lemma wp_app_hasty_box {𝔄l} vl r (f: val)
     (pl: plistc _ 𝔄l) tyl vπl tid (Φ: val → iProp Σ) :
@@ -410,4 +415,4 @@ End typing.
 Ltac simpl_fp_E := rewrite /fp_E /ty_outlives_E /=.
 
 Global Hint Resolve elctx_sat_fp_E : lrust_typing.
-Global Hint Resolve fn_resolve fn_subtype : lrust_typing.
+Global Hint Resolve fn_resolve (*fn_subtype*) : lrust_typing.

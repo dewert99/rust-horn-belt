@@ -152,6 +152,9 @@ Section array_idx.
       hasty_uniq_idxs p κ ty m (S i)
     end.
 
+  Global Instance same_level_succ_pred 𝔄 n: mod_ty.SameLevel (vecₛ 𝔄 (S n)) (𝔄 * vecₛ 𝔄 n).
+  Proof. constructor. simpl. lia. Qed.
+
   Lemma tctx_split_uniq_array {𝔄} (ty: type 𝔄) n κ p E L :
     lctx_lft_alive E L κ →
     tctx_incl E L +[p ◁ &uniq{κ} [ty;^ n]] (hasty_uniq_idxs p κ ty n 0)
@@ -226,7 +229,7 @@ Section array_idx.
     iDestruct (proph_tok_combine with "ξl ζξl") as (?) "[ξζξl Toξζξl]".
     iMod (uniq_preresolve ξ _ (vapply (vinsert i (.$ ζ) aπl))
       with "PROPH Vo Pc ξζξl") as "(Obs' & ξζξl & ToPc)"; [done| |].
-    { apply proph_dep_vinsert=>//. apply proph_dep_one. }
+    { apply proph_dep_vinsert=>//; [ |apply proph_dep_one| ]; simpl; eapply ty_proph_weaken_big_sepL; done. }
     iCombine "Obs Obs'" as "#?". iClear "Obs".
     iDestruct ("Toξζξl" with "ξζξl") as "[ξl ζξl]".
     iDestruct ("Toζξl" with "ζξl") as "[ζ ξl']". iSpecialize ("Pc'" with "ζ").
@@ -243,8 +246,12 @@ Section array_idx.
     - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' & ↦ty)".
       iCombine "⧖ ⧖'" as "⧖!"=>/=. iExists _, _. iFrame "⧖!".
       iDestruct ("ToPc" with "[Pc']") as "$".
-      { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
-        by iApply proph_eqz_vinsert. }
+      { iDestruct (proph_ctrl_eqz' with "PROPH Pc'") as "Eqz".
+        iApply proph_eqz_mono; [|iApply proph_eqz_vinsert].
+        simpl. intros ? (?&->&?). rewrite semi_iso' vec_to_list_insert insert_take_drop in H2.
+        apply Forall2_app_inv_l in H2. destruct H2 as (?&?&?&?&->). inversion H3.
+        rewrite -join_app vapply_insert. simpl. setoid_rewrite vlookup_insert. eexists _, _, _. done.
+        rewrite vec_to_list_length. apply fin_to_nat_lt. done.  }
       iClear "#". rewrite split_mt_array semi_iso' vinsert_backmid -big_sepL_vbackmid.
       iSplitL "↦tys". { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
       iSplitL "↦ty". { iStopProof. do 3 f_equiv. iApply ty_own_depth_mono. lia. }

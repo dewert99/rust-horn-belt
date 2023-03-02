@@ -69,10 +69,11 @@ Section product_split.
       { eapply tctx_incl_trans; [apply tctx_of_shift_loc_0|].
         eapply subtype_tctx_incl, HSub, subtype_trans, mod_ty_in.
         eapply subtype_trans; [apply prod_ty_right_id|].
-        apply prod_subtype; solve_typing. }
+        apply prod_subtype; solve_typing.
+        apply semi_iso_inj. }
         by move=> ?[?[]]. }
     move=> ???? IH _ ?. eapply tctx_incl_ext.
-    { eapply tctx_incl_trans; [|by eapply subtype_tctx_incl, HSub, mod_ty_in].
+    { eapply tctx_incl_trans; [| eapply subtype_tctx_incl, HSub, mod_ty_in; apply semi_iso_inj].
       eapply tctx_incl_trans; [|by apply Merge]. apply tctx_incl_tail.
       eapply tctx_incl_trans; [|by apply IH].
       apply (tctx_incl_app +[_] +[_]); [by apply tctx_to_shift_loc_0, _|].
@@ -219,9 +220,11 @@ Section product_split.
     - iClear "⧖". iIntros "!> [(%&% & ⧖ & ζPc & ↦ty) (%&% & ⧖' & ζ'Pc & ↦ty')] !>!>".
       iCombine "⧖ ⧖'" as "⧖"=>/=. iExists (pair ∘ _ ⊛ _), _. iFrame "⧖".
       iSplitR "↦ty ↦ty'".
-      { iApply "ToξPc". iApply (proph_eqz_constr2 with "[ζPc] [ζ'Pc]");
-        [iApply (proph_ctrl_eqz with "PROPH ζPc")|
-         iApply (proph_ctrl_eqz with "PROPH ζ'Pc")]. }
+      { iApply "ToξPc". simpl. iIntros (???(?&?&?&->&?&?)) "ξ".
+       iApply (proph_eqz_prod with "[ζPc] [ζ'Pc]");
+        [iApply (proph_ctrl_eqz' with "PROPH ζPc")|
+         iApply (proph_ctrl_eqz' with "PROPH ζ'Pc")| |done].
+         iPureIntro. split; [done|]. eexists _, _. done. }
       iDestruct "↦ty" as (?) "[↦ ty]". iDestruct "↦ty'" as (?) "[↦' ty']".
       iExists (_ ++ _). rewrite heap_mapsto_vec_app.
       iDestruct (ty_size_eq with "ty") as %->. iFrame "↦ ↦'". iExists _, _.
@@ -235,6 +238,9 @@ Section product_split.
     | ty +:: tyl' =>
       p +ₗ #off ◁ &uniq{κ} ty +:: hasty_uniq_offsets p κ tyl' (off + ty.(ty_size))
     end.
+
+  Local Instance xprod_sty_same_level' 𝔄 𝔄l : SameLevel (Π!(𝔄::𝔄l)) (𝔄*Π!𝔄l).
+  Proof. constructor. symmetry. apply same_level. Qed.
 
   Lemma tctx_split_uniq_xprod {𝔄l} κ (tyl: typel 𝔄l) E L p :
     lctx_lft_alive E L κ →

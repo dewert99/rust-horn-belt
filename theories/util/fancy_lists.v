@@ -2,6 +2,12 @@ From iris.algebra Require Import ofe.
 From iris.proofmode Require Import proofmode.
 From lrust.util Require Import basic.
 
+Global Instance existT_inj `{EqDecision A} {P} x : Inj (=) (=) (@existT A P x).
+Proof. intros ???. eassert (Inj_dep_pair_on _ _ _ _); [|by apply H0].
+  apply eq_dep_eq_on__inj_pair2_on, eq_rect_eq_on__eq_dep_eq_on, Streicher_K_on__eq_rect_eq_on, UIP_refl_on__Streicher_K_on, UIP_on__UIP_refl_on.
+  intros ?. erewrite (proof_irrel p2). done.
+Qed.
+
 (** * Heterogeneous List *)
 
 (* TODO : put relevant parts of this into stdpp ? *)
@@ -276,6 +282,13 @@ Definition fin_renew_by_plist2 {Xl Yl} (xl: plist2 Xl Yl) (i: fin (length Xl))
     : fin (length Yl) :=
   fin_renew (plist2_eq_nat_len xl) i.
 
+Definition fin_renew_by_plist2' {Xl Yl} (xl: plist2 Xl Yl) (i: fin (length Yl))
+: fin (length Xl) :=
+fin_renew (eq_eq_nat _ _ (eq_sym (eq_nat_eq _ _ (plist2_eq_nat_len xl)))) i.
+
+Global Instance fin_renew_by_plist2_iso {Xl Yl} (xl: plist2 Xl Yl): Iso (fin_renew_by_plist2 xl) (fin_renew_by_plist2' xl).
+Proof. split; fun_ext; simpl; intros ?; apply fin_to_nat_inj; rewrite /fin_renew_by_plist2 /fin_renew_by_plist2' 2! fin_to_nat_fin_renew; done. Qed.
+
 Fixpoint p2lookup {Xl Yl} : ∀(xl: plist2 Xl Yl) i,
     F (Xl !!ₗ i) (Yl !!ₗ fin_renew_by_plist2 xl i) :=
   match Xl, Yl with
@@ -382,6 +395,40 @@ Global Instance pinj_Inj {Xl} i : Inj eq eq (@pinj Xl i).
 Proof.
   move: i. elim Xl; [move=> i; by inv_fin i|]=>/= ?? IH i.
   inv_fin i. { by move=>/= ??[=?]. } by move=>/= ???[=/IH ?].
+Qed.
+
+Fixpoint psum_variant_id {Xl: list A} : psum Xl → (fin (length Xl)) :=
+    match Xl with
+    | [] => λ x, absurd x
+    | X::Xl' => λ p,
+      match p with
+      | inl _ => 0%fin
+      | inr p' => FS (psum_variant_id p') 
+      end 
+    end.
+
+Lemma pinj_proper {Xl} i j (x: F (Xl !!ₗ i)) y :
+  i = j ∧ x ~= y → pinj i x = pinj j y.
+Proof.
+  move: Xl i j x y. elim; [move=> i; by inv_fin i|]=>/= ?? IH i j.
+  inv_fin i; inv_fin j=>//=. { by move=> ??[?->]. }
+  by move=> ???[??]. by move=> ???[??]. move=> ????[[= H]?]. f_equiv. apply IH. split; [|done].
+  apply existT_inj in H. done.
+Qed.
+
+Lemma psum_destruct {Xl: list A} (p: psum Xl) i (steq: (psum_variant_id p) = i) :
+   {v | p = (pinj i v)}.
+Proof.
+  induction Xl; inv_fin i; simpl; destruct p; intros; inversion steq.
+  exists f. done. apply existT_inj in H0. destruct (IHXl p i H0) as (?&?).  eexists _.
+  f_equal. done.
+Qed.
+
+Lemma psum_destruct_fun  {Xl: list A} {X} (p: X → psum Xl) i (steq: ∀ x, (psum_variant_id (p x)) = i):
+  {f | p = (pinj i) ∘ f}.
+Proof.
+  eexists _. Unshelve. 2:{ intros x. destruct (psum_destruct (p x) i (steq x)). exact x0. }
+  fun_ext; intro. simpl. remember (psum_destruct (p x) i (steq x)). destruct s. done.
 Qed.
 
 Fixpoint psum_map {Xl Yl} :

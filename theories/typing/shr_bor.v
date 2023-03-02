@@ -9,6 +9,7 @@ Section shr_bor.
 
   Program Definition shr_bor {𝔄} (κ: lft) (ty: type 𝔄) : type 𝔄 := {|
     st_size := 1;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    st_proph := ty.(ty_proph);
     st_own vπ d tid vl := [S(d') := d] [loc[l] := vl] ty.(ty_shr) vπ d' κ tid l
   |}%I.
   Next Obligation.
@@ -28,6 +29,7 @@ Section shr_bor.
     iModIntro. iExists ξl, q. iSplit; [done|]. iIntros "{$ξl}ξl".
     by iMod ("Upd" with "ξl") as "$".
   Qed.
+ Next Obligation. move=> *. by eapply ty_proph_weaken. Qed.
 
   Global Instance shr_ne {𝔄} κ : NonExpansive (@shr_bor 𝔄 κ).
   Proof. solve_ne_type. Qed.
@@ -40,7 +42,7 @@ Section typing.
 
   Global Instance shr_type_contractive {𝔄} κ : TypeContractive (@shr_bor _ _ 𝔄 κ).
   Proof.
-    split; [by apply (type_lft_morphism_add_one κ)|done| |].
+    split; [by apply (type_lft_morphism_add_one κ)|done |done| |].
     - move=>/= *. by do 4 f_equiv.
     - move=>/= *. do 8 (f_contractive || f_equiv). by simpl in *.
   Qed.
@@ -65,8 +67,8 @@ Section typing.
   Lemma shr_type_incl {𝔄 𝔅} κ κ' (f: 𝔄 → 𝔅) ty ty' :
     κ' ⊑ κ -∗ type_incl ty ty' f -∗ type_incl (&shr{κ} ty) (&shr{κ'} ty') f.
   Proof.
-    iIntros "#? (_&#?&_& #Sub)".
-    iApply type_incl_simple_type=>/=; [done|by iApply lft_intersect_mono|].
+    iIntros "#? ([_ %ProphIn]&#?&_& #Sub)".
+    iApply type_incl_simple_type=>/=; [done|done|by iApply lft_intersect_mono|].
     iIntros "!>" (?[|?]??); [done|]. rewrite/= by_just_loc_ex.
     iIntros "[%[->?]]". iApply "Sub". by iApply ty_shr_lft_mono.
   Qed.

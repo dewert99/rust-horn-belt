@@ -7,6 +7,14 @@ Implicit Type (𝔄 𝔅: syn_type) (𝔄l 𝔅l: syn_typel).
 
 Notation max_ty_size := (max_hlist_with (λ _, ty_size)).
 
+Lemma xsum_ghost_level_le {𝔄l} (i: fin (length 𝔄l)) : (ghost_level (𝔄l !!ₗ i) <= ghost_level (Σ! 𝔄l))%nat.
+Proof.
+  rewrite /llookup. simpl. induction 𝔄l as [|? v IH]; inv_fin i; rewrite fmap_cons; simpl. simpl.
+  lia. intros. simpl in i. specialize (IH i).
+  simpl. transitivity (foldr Init.Nat.max 0%nat (ghost_level <$> v)). done.
+  lia.
+Qed.
+
 Section sum.
   Context `{!typeG Σ}.
 
@@ -46,6 +54,7 @@ Section sum.
   Program Definition xsum_ty {𝔄l} (tyl: typel 𝔄l) : type (Σ! 𝔄l) := {|
     ty_size := S (max_ty_size tyl);
     ty_lfts := tyl_lfts tyl;  ty_E := tyl_E tyl;
+    ty_proph vπ ξl := exists i (vπ': proph (𝔄l !!ₗ i)), vπ = pinj i ∘ vπ' /\ (tyl +!! i).(ty_proph) vπ' ξl;
     ty_own vπ d tid vl := ∃i (vπ': proph (𝔄l !!ₗ i)) vl' vl'',
       ⌜vπ = pinj i ∘ vπ' ∧ vl = #i :: vl' ++ vl'' ∧ length vl = S (max_ty_size tyl)⌝ ∗
       (tyl +!! i).(ty_own) vπ' d tid vl';
@@ -79,7 +88,7 @@ Section sum.
     { iApply lft_incl_trans; by [|iApply ty_lfts_lookup_incl]. }
     iModIntro. iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toty]".
     iModIntro. iExists ξl, q'. iSplit.
-    - iPureIntro. by apply proph_dep_constr.
+    - iPureIntro. eexists _, _. done.
     - iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[?$]".
       iModIntro. iExists i, vπ', vl', vl''. by iSplit.
   Qed.
@@ -89,8 +98,13 @@ Section sum.
     { iApply lft_incl_trans; by [|iApply ty_lfts_lookup_incl]. }
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd"). iMod 1 as (ξl q' ?) "[ξl Toκ]".
     iModIntro. iExists ξl, q'. iSplit.
-    - iPureIntro. by apply proph_dep_constr.
+    - iPureIntro. eexists _, _. done.
     - iIntros "{$ξl}ξl". by iMod ("Toκ" with "ξl").
+  Qed.
+  Next Obligation.
+    move=> 𝔄l???[x[?[->?]]]. apply proph_dep_constr.
+    eapply proph_dep_level_mono; [|by eapply ty_proph_weaken].
+    apply xsum_ghost_level_le.
   Qed.
 
   Global Instance xsum_ty_ne {𝔄l} : NonExpansive (@xsum_ty 𝔄l).
@@ -101,6 +115,7 @@ Section sum.
     - by rewrite EqMsz.
     - rewrite /tyl_lfts. elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
     - rewrite /tyl_E. elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
+    - move=> *. do 6 f_equiv. by apply @hlookup_ne.
     - move=> *. rewrite EqMsz. do 10 f_equiv. by apply @hlookup_ne.
     - move=> *. f_equiv=> i. rewrite /is_sum_pad EqMsz.
       have Eqv': tyl +!! i ≡{n}≡ tyl' +!! i by apply @hlookup_ne.
@@ -161,6 +176,8 @@ Section typing.
     split=>/=.
     - apply xsum_lft_morphism. eapply TCHForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
+    - move=> ?? H *. do 5 f_equiv. rewrite !hlookup_apply. by eapply type_ne_ty_proph.
+    Unshelve. by eapply TCHForall_lookup in All.
     - move=> *. f_equiv=> ?. eapply TCHForall_lookup in All. rewrite !hlookup_apply.
       do 7 f_equiv; [|by apply All]. do 5 f_equiv. by apply EqMsz.
     - move=> *. f_equiv=> ?. eapply TCHForall_lookup in All.
@@ -177,6 +194,8 @@ Section typing.
     split=>/=.
     - apply xsum_lft_morphism. eapply TCHForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
+    - move=> ?? H *. do 5 f_equiv. rewrite !hlookup_apply. by eapply type_contractive_ty_proph.
+    Unshelve. by eapply TCHForall_lookup in All.
     - move=> *. f_equiv=> ?. eapply TCHForall_lookup in All. rewrite !hlookup_apply.
       do 7 f_equiv; [|by apply All]. do 5 f_equiv. by apply EqMsz.
     - move=> *. f_equiv=> ?. eapply TCHForall_lookup in All.
@@ -255,7 +274,7 @@ Section typing.
     iAssert (□ (elctx_interp E -∗ ⌜max_ty_size tyl = max_ty_size tyl'⌝))%I as "#EqSz".
     { iInduction Subs as [|?????????? Sub Subs] "IH"; [by iIntros "!>_"|].
       iDestruct (Sub with "L") as "#Sub". iDestruct ("IH" with "L") as "#IH'".
-      iIntros "!> E /=". iDestruct ("Sub" with "E") as (->) "#_".
+      iIntros "!> E /=". iDestruct ("Sub" with "E") as ([->?]) "#_".
       by iDestruct ("IH'" with "E") as %->. }
     iAssert (□ (elctx_interp E -∗ tyl_lft tyl' ⊑ tyl_lft tyl))%I as "#InLft".
     { iClear "EqSz". iInduction Subs as [|?????????? Sub Subs] "IH".
@@ -267,7 +286,20 @@ Section typing.
     move/subtypel_llctx_lookup in Subs. iDestruct (Subs with "L") as "#InTyl".
     iIntros "!> #E". iDestruct ("EqSz" with "E") as %EqSz.
     iSpecialize ("InLft" with "E"). iSpecialize ("InTyl" with "E").
-    iSplit; simpl; [iPureIntro; by f_equal|]. iSplit; [done|].
+    iSplit; simpl. iAssert ⌜forall i, (_: Prop)⌝%I as %InProph.
+    iApply pure_forall_2. iIntros (i). iDestruct ("InTyl" $! i) as "((_&res)&_&_&_)". iExact "res".
+    iPureIntro. split. by f_equal.
+    intros ??(i&?).
+    specialize (semi_iso' _ (fin_renew_by_plist2 fl) i) as eq.
+    rewrite -eq in H. destruct H as (vπ'&?&?). 
+    eassert (∀ π, _). intros. specialize (equal_f H π). simpl.
+    destruct (psum_destruct (vπ π) _ eq_refl) as (?&->). rewrite psum_map_pinj. intros. apply pinj_inj in H1 as [?%semi_iso_inj _]. exact H1.
+    destruct (psum_destruct_fun vπ _ X) as (?&->).
+    eexists _, _. split. done.
+    apply InProph. simpl. revert H0. eassert (impl _ _); [|done]. f_equiv.
+    fun_ext. simpl. intros π. specialize (equal_f H π). simpl. rewrite psum_map_pinj. intros. apply pinj_inj in H0 as [?%semi_iso_inj ?].
+    symmetry. by apply JMeq_eq.
+    iSplit; [done|].
     iSplit; iModIntro; iIntros "*".
     - iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "?".
       iExists (fin_renew_by_plist2 fl i), (_ ∘ vπ'), vl', vl''. rewrite EqSz. iSplit.
@@ -276,7 +308,7 @@ Section typing.
       iDestruct ("InTyl" $! i) as (_) "[_[InOwn _]]". by iApply "InOwn".
     - iDestruct 1 as (i vπ' ->) "[??]".
       iExists (fin_renew_by_plist2 fl i), (fl -2!! i ∘ vπ').
-      rewrite /is_sum_pad EqSz. iDestruct ("InTyl" $! i) as (->) "[_[_ InShr]]".
+      rewrite /is_sum_pad EqSz. iDestruct ("InTyl" $! i) as ([->?]) "[_[_ InShr]]".
       iSplit. { iPureIntro. fun_ext=>/= ?. by rewrite psum_map_pinj. }
       iSplit; [by rewrite fin_to_nat_fin_renew|by iApply "InShr"].
   Qed.

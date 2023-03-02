@@ -46,15 +46,15 @@ Definition val_obs (ξ: proph_var) (vπ: proph ξ.(pv_ty)) (d: nat) : iProp Σ :
 
 (** Prophecy Controller *)
 Local Definition val_obs2 ξ vπ d : iProp Σ := own_line ξ 1 vπ d.
-Definition proph_ctrl (ξ: proph_var) (vπ: proph ξ.(pv_ty)) (d: nat) : iProp Σ :=
-  (val_obs ξ vπ d ∗ 1:[ξ]) ∨ ((∃vπ' d', val_obs2 ξ vπ' d') ∗ (.$ ξ) :== vπ).
+Definition proph_ctrl (ξ: proph_var) P (vπ: proph ξ.(pv_ty)) (d: nat) : iProp Σ :=
+  (val_obs ξ vπ d ∗ 1:[ξ]) ∨ ((∃vπ' d', val_obs2 ξ vπ' d') ∗ (.$ ξ) :={P}= vπ).
 End defs.
 
 Notation ".VO[ ξ ]" := (val_obs ξ) (at level 5, format ".VO[ ξ ]") : bi_scope.
 Local Notation ".VO2[ ξ ]" := (val_obs2 ξ)
   (at level 5, format ".VO2[ ξ ]") : bi_scope.
-Notation ".PC[ ξ ]" := (proph_ctrl ξ)
-  (at level 5, format ".PC[ ξ ]") : bi_scope.
+Notation ".PC[ ξ , P ]" := (proph_ctrl ξ P)
+  (at level 5, format ".PC[ ξ , P ]") : bi_scope.
 
 (** * Lemmas *)
 
@@ -83,8 +83,8 @@ Proof.
     -frac_agree_op Qp_half_half.
 Qed.
 
-Local Lemma vo_pc ξ vπ d vπ' d' :
-  .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' -∗ ⌜vπ = vπ'⌝ ∗ ⌜d = d'⌝ ∗ .VO2[ξ] vπ d ∗ 1:[ξ].
+Local Lemma vo_pc ξ P vπ d vπ' d' :
+  .VO[ξ] vπ d -∗ .PC[ξ, P] vπ' d' -∗ ⌜vπ = vπ'⌝ ∗ ⌜d = d'⌝ ∗ .VO2[ξ] vπ d ∗ 1:[ξ].
 Proof.
   iIntros "Vo [[Vo' ?]|[(%&%& Vo2) _]]";
   [|by iDestruct (own_line_agree with "Vo Vo2") as %[? _]].
@@ -102,9 +102,9 @@ Proof.
   iMod (inv_alloc _ _ uniq_inv with "[●ε]") as "?"; by [iExists ε|].
 Qed.
 
-Lemma uniq_intro {𝔄} (vπ: proph 𝔄) d E :
+Lemma uniq_intro {𝔄} (vπ: proph 𝔄) d (P: proph 𝔄 → _) E :
   ↑prophN ∪ ↑uniqN ⊆ E → proph_ctx -∗ uniq_ctx ={E}=∗ ∃ξi,
-    let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in .VO[ξ] vπ d ∗ .PC[ξ] vπ d.
+    let ξ := PrVar (𝔄 ↾ prval_to_inh vπ) ξi in .VO[ξ] vπ d ∗ .PC[ξ, P] vπ d.
 Proof.
   iIntros (?) "PROPH ?". iInv uniqN as (S) ">●S".
   set 𝔄i := 𝔄 ↾ prval_to_inh vπ. set I := dom (gset _) (S 𝔄i).
@@ -118,9 +118,9 @@ Proof.
   iDestruct (vo_vo2 with "Vo2") as "[$?]". iLeft. iFrame.
 Qed.
 
-Lemma uniq_strip_later ξ vπ d vπ' d' :
-  ▷ .VO[ξ] vπ d -∗ ▷ .PC[ξ] vπ' d' -∗
-    ◇ (⌜vπ = vπ'⌝ ∗ ⌜d = d'⌝ ∗ .VO[ξ] vπ d ∗ .PC[ξ] vπ' d').
+Lemma uniq_strip_later ξ vπ d vπ' d' P :
+  ▷ .VO[ξ] vπ d -∗ ▷ .PC[ξ, P] vπ' d' -∗
+    ◇ (⌜vπ = vπ'⌝ ∗ ⌜d = d'⌝ ∗ .VO[ξ] vπ d ∗ .PC[ξ, P] vπ' d').
 Proof.
   iIntros ">Vo [>[Vo' ?]|[>(%&%& Vo2) _]]";
   [|by iDestruct (own_line_agree with "Vo Vo2") as %[? _]].
@@ -128,21 +128,21 @@ Proof.
   do 2 (iSplit; [done|]). iSplitL "Vo"; [done|]. iLeft. by iSplitL "Vo'".
 Qed.
 
-Lemma uniq_agree ξ vπ d vπ' d' :
-  .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' -∗ ⌜vπ = vπ' ∧ d = d'⌝.
+Lemma uniq_agree ξ vπ d vπ' d' P :
+  .VO[ξ] vπ d -∗ .PC[ξ, P] vπ' d' -∗ ⌜vπ = vπ' ∧ d = d'⌝.
 Proof.
   iIntros "Vo Pc". by iDestruct (vo_pc with "Vo Pc") as (->->) "?".
 Qed.
 
-Lemma uniq_proph_tok ξ vπ d vπ' d' :
-  .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' -∗ .VO[ξ] vπ d ∗ 1:[ξ] ∗ (1:[ξ] -∗ .PC[ξ] vπ' d').
+Lemma uniq_proph_tok ξ vπ d vπ' d' P :
+  .VO[ξ] vπ d -∗ .PC[ξ, P] vπ' d' -∗ .VO[ξ] vπ d ∗ 1:[ξ] ∗ (1:[ξ] -∗ .PC[ξ, P] vπ' d').
 Proof.
   iIntros "Vo Pc". iDestruct (vo_pc with "Vo Pc") as (->->) "[Vo2 $]".
   iDestruct (vo_vo2 with "Vo2") as "[$?]". iIntros "?". iLeft. iFrame.
 Qed.
 
-Lemma uniq_update ξ vπ'' d'' vπ d vπ' d' E : ↑uniqN ⊆ E →
-  uniq_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' ={E}=∗ .VO[ξ] vπ'' d'' ∗ .PC[ξ] vπ'' d''.
+Lemma uniq_update ξ vπ'' d'' vπ d vπ' d' P E : ↑uniqN ⊆ E →
+  uniq_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ, P] vπ' d' ={E}=∗ .VO[ξ] vπ'' d'' ∗ .PC[ξ, P] vπ'' d''.
 Proof.
   iIntros (?) "? Vo Pc". iDestruct (vo_pc with "Vo Pc") as (->->) "[Vo2 ξ]".
   iInv uniqN as (S) ">●S". set S' := add_line ξ 1 vπ'' d'' S.
@@ -153,9 +153,9 @@ Proof.
   iDestruct (vo_vo2 with "Vo2") as "[$?]". iLeft. iFrame.
 Qed.
 
-Lemma uniq_resolve ξ ζl q vπ d vπ' d' E : ↑prophN ⊆ E → vπ ./ ζl →
-  proph_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ] vπ' d' -∗ q:+[ζl] ={E}=∗
-    ⟨π, π ξ = vπ π⟩ ∗ .PC[ξ] vπ d ∗ q:+[ζl].
+Lemma uniq_resolve ξ ζl q vπ d vπ' d' P E : ↑prophN ⊆ E → vπ ./[pv_sty ξ] ζl →
+  proph_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ, P] vπ' d' -∗ q:+[ζl] ={E}=∗
+    ⟨π, π ξ = vπ π⟩ ∗ .PC[ξ, P] vπ d ∗ q:+[ζl].
 Proof.
   iIntros (??) "PROPH Vo Pc ζl". iDestruct (vo_pc with "Vo Pc") as (<-<-) "[? ξ]".
   iMod (proph_resolve with "PROPH ξ ζl") as "[#? $]"; [done|done|].
@@ -163,9 +163,9 @@ Proof.
   by iApply proph_eqz_obs.
 Qed.
 
-Lemma uniq_preresolve ξ ζl uπ q vπ d vπ'' d'' E : ↑prophN ⊆ E → uπ ./ ζl →
-  proph_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ] vπ'' d'' -∗ q:+[ζl] ={E}=∗
-    ⟨π, π ξ = uπ π⟩ ∗ q:+[ζl] ∗ (∀vπ' d', uπ :== vπ' -∗ .PC[ξ] vπ' d').
+Lemma uniq_preresolve ξ ζl uπ q vπ d vπ'' d'' P E : ↑prophN ⊆ E → uπ ./[pv_sty ξ] ζl →
+  proph_ctx -∗ .VO[ξ] vπ d -∗ .PC[ξ, P] vπ'' d'' -∗ q:+[ζl] ={E}=∗
+    ⟨π, π ξ = uπ π⟩ ∗ q:+[ζl] ∗ (∀vπ' d', uπ :={P}= vπ' -∗ .PC[ξ, P] vπ' d').
 Proof.
   iIntros (??) "PROPH Vo Pc ζl". iDestruct (vo_pc with "Vo Pc") as (<-<-) "[? ξ]".
   iMod (proph_resolve with "PROPH ξ ζl") as "[#Obs $]"; [done|done|].
@@ -174,8 +174,17 @@ Proof.
   by iDestruct (proph_eqz_modify with "Obs Eqz") as "?".
 Qed.
 
-Lemma proph_ctrl_eqz ξ vπ d : proph_ctx -∗ .PC[ξ] vπ d -∗ (.$ ξ) :== vπ.
-Proof. iIntros "#? [[_ ?]|[_ ?]]"; by [iApply proph_eqz_token|]. Qed.
+Lemma proph_ctrl_eqz ξ P vπ d : (∀ ξl, (P vπ ξl: Prop) → vπ ./[pv_sty ξ] ξl) → proph_ctx -∗ .PC[ξ, P] vπ d -∗ (.$ ξ) :={P}= vπ.
+Proof. iIntros (?) "#? [[_ ?]|[_ ?]]"; [|done]. iApply proph_eqz_mono; [| by iApply proph_eqz_token]. done. Qed.
+
+Global Instance proph_ctrl_mono ξ :
+  Proper (pointwise_relation _ (pointwise_relation _ (flip impl)) ==> (=) ==> (=) ==> (⊢)) (proph_ctrl ξ).
+Proof. intros ?????->??->. unfold proph_ctrl. do 2 f_equiv. iApply proph_eqz_mono; intros ??; by apply H. Qed.
+
+Global Instance proph_ctrl_proper ξ :
+  Proper (pointwise_relation _ (pointwise_relation _ (↔)) ==> (=) ==> (=) ==> (⊣⊢)) (proph_ctrl ξ).
+Proof. intros ?????->??->. unfold proph_ctrl. do 2 f_equiv. iSplit; iApply proph_eqz_mono; intros ??; by apply H. Qed.
+
 End lemmas.
 
 Global Opaque uniq_ctx val_obs proph_ctrl.

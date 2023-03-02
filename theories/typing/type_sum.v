@@ -231,7 +231,9 @@ Section type_sum.
     iMod (uniq_intro aπ with "PROPH UNIQ") as (ζi) "[Vo' Pc']"; [done|].
     set ζ := PrVar _ ζi. iDestruct (uniq_proph_tok with "Vo' Pc'") as "(Vo' & ζ & Pc')".
     iMod (uniq_preresolve ξ [ζ] (λ π, pinj i (π ζ)) with "PROPH Vo Pc [$ζ]")
-      as "(Obs' &[ζ _]& ToPc)"; [done|by apply proph_dep_constr, proph_dep_one|done|].
+      as "(Obs' &[ζ _]& ToPc)"; [done| |done|].
+      eapply proph_dep_constr, proph_dep_level_mono; [|apply proph_dep_one]. unfold pv_level.
+      apply xsum_ghost_level_le.
     iCombine "Obs' Obs" as "#?". iClear "Obs". iSpecialize ("Pc'" with "ζ").
     iMod ("ToBor" with "[↦ip ToPc] [↦ ty Pc']") as "[Bor κ]"; last first.
     - iMod ("ToL" with "κ") as "$". iModIntro.
@@ -244,7 +246,11 @@ Section type_sum.
     - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame.
     - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' &%& ↦ & ty)".
       iExists _, _. iFrame "⧖'". iSplitL "Pc' ToPc".
-      { iApply "ToPc". iApply proph_eqz_constr. by iApply proph_ctrl_eqz. }
+      { iApply "ToPc". iApply proph_eqz_mono; [|iApply proph_eqz_constr; by iApply proph_ctrl_eqz']. 
+      simpl. intros ? (?&?&?&?). assert (x1 = i).
+      specialize (equal_f H0 inhabitant). simpl. intros (->&?)%pinj_inj. done.
+      rewrite H0. clear H0. revert x2 H1. rewrite H2. intros. 
+      eexists _. done. }
       rewrite split_mt_sum. iExists _, _. iSplit; [done|]. iFrame "↦ip".
       iExists _. iFrame.
   Qed.

@@ -19,6 +19,7 @@ Section array.
 
   Program Definition array {𝔄} n (ty: type 𝔄) : type (vecₛ 𝔄 n) := {|
     ty_size := n * ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_proph vπ ξl := exists ξll, ξl = mjoin ξll /\ Forall2 ty.(ty_proph) (vfunsep vπ) ξll;
     ty_own vπ d tid vl := ∃wll: vec _ _, ⌜vl = concat wll⌝ ∗
       [∗ list] aπwl ∈ vzip (vfunsep vπ) wll, ty.(ty_own) aπwl.1 d tid aπwl.2;
     ty_shr vπ d κ tid l :=
@@ -41,7 +42,7 @@ Section array.
   Next Obligation.
     iIntros (????????? q ?) "#LFT #In (%&->& tys) κ".
     iMod (ty_own_proph_big_sepL with "LFT In tys κ") as "Upd"; [done|].
-    iApply (step_fupdN_wand with "Upd"). rewrite vapply_funsep.
+    iApply (step_fupdN_wand with "Upd").
     iIntros "!> >(%&%&%& ξl & Totys) !>". iExists _, _. iSplit; [done|].
     iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[? $]". iExists _. by iFrame.
   Qed.
@@ -49,12 +50,19 @@ Section array.
     iIntros "*% LFT In In' tys κ'". rewrite -{2}[vπ]vapply_funsep.
     iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Upd"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
-    iIntros ">(%&%&%& ξl & Totys) !>". iExists _, _. iSplit; [done|].
+    iIntros ">(%&%&(%&->&%)& ξl & Totys) !>". iExists (mjoin ξll), _.
+    iSplit. iExists _. rewrite vapply_funsep. done.
     iIntros "{$ξl}ξl". by iMod ("Totys" with "ξl") as "[$$]".
+  Qed.
+  Next Obligation.
+    move=> /= ????? H. apply ty_proph_weaken_big_sepL in H. rewrite vapply_funsep in H. done. 
   Qed.
 
   Global Instance array_ne {𝔄} n : NonExpansive (@array 𝔄 n).
-  Proof. solve_ne_type. Qed.
+  Proof. solve_ne_type.
+    move => /= ??. do 3 f_equiv.
+    split; intros; (eapply Forall2_impl; [done|]); intros; by eapply ty_proph_ne. 
+  Qed.
 End array.
 
 (* The notation in Rust is [ty; n], but it conflicts with lists in Coq *)
@@ -65,8 +73,10 @@ Section typing.
 
   Global Instance array_type_ne {𝔄} n : TypeNonExpansive (@array _ _ 𝔄 n).
   Proof.
-    split; [by apply type_lft_morphism_id_like|by move=>/= ??->| | ]=>/= > Sz *;
+    split; [by apply type_lft_morphism_id_like|by move=>/= ??->|shelve| | ]=>/= > Sz *;
     [by do 6 f_equiv|rewrite Sz; by do 3 f_equiv].
+    Unshelve. move=> ?? H ?? /=. do 3 f_equiv.
+    split; intros; (eapply Forall2_impl; [done|]); intros; by eapply H.
   Qed.
 
   Global Instance array_copy {𝔄} n (ty: type 𝔄) : Copy ty → Copy [ty;^ n].
@@ -129,11 +139,14 @@ Section typing.
     subtype E L ty ty' f → subtype E L [ty;^ n] [ty';^ n] (vmap f).
   Proof.
     iIntros (Sub ?) "L". iDestruct (Sub with "L") as "#Sub".
-    iIntros "!> E". iDestruct ("Sub" with "E") as "(%Sz &?&#?&#?)".
-    iSplit; [by rewrite/= Sz|]. iSplit; [done|].
+    iIntros "!> E". iDestruct ("Sub" with "E") as "((%Sz&%) &?&#?&#?)".
     have Eq: ∀vπ, vfunsep (vmap f ∘ vπ) = vmap (f ∘.) (vfunsep vπ).
     { move=> ?? vπ. rewrite -{1}[vπ]vapply_funsep.
       move: {vπ}(vfunsep vπ)=> aπl. by elim aπl; [done|]=>/= ???<-. }
+    iSplit. iPureIntro. split. by rewrite/= Sz.
+    move=> /= ??[?[->?]]. eexists _. split; [done|].
+    eapply incl_big_sepL_ty_proph; [done|by rewrite -Eq].
+    iSplit; [done|].
     iSplit; iIntros "!> */="; rewrite Eq.
     - iIntros "(%&->&?)". iExists _. iSplit; [done|]. by iApply incl_big_sepL_ty_own.
     - iIntros "?". by iApply incl_big_sepL_ty_shr.
@@ -145,9 +158,12 @@ Section typing.
   Lemma array_one {𝔄} (ty: type 𝔄) E L : eqtype E L [ty;^ 1] ty vhd (λ x, [#x]).
   Proof.
     apply eqtype_unfold; [apply _|]. iIntros "% _!>_".
-    iSplit; [by rewrite/= Nat.add_0_r|]. iSplit; [iApply lft_equiv_refl|].
     have Eq: ∀vπ, vhd ∘ vπ = vhd (vfunsep vπ). { move=> ??? vπ.
     rewrite -{1}[vπ]vapply_funsep. move: (vfunsep vπ)=> aπl. by inv_vec aπl. }
+    iSplit. iPureIntro. split; [by rewrite/= Nat.add_0_r|].
+    move => ?? /=. split. intros (?&->&?); destruct x; inversion H. inversion H5. simpl. by rewrite right_id.
+    intros. eexists [_]. split. simpl. rewrite right_id. done. by constructor.
+    iSplit; [iApply lft_equiv_refl|].
     iSplit; iIntros "!> %vπ */="; rewrite Eq;
     move: {vπ}(vfunsep (A:=𝔄) vπ)=> aπl; inv_vec aπl=> ?; [iSplit|].
     - iIntros "(%wll &->&?)". inv_vec wll=>/= ?. by do 2 rewrite right_id.
@@ -159,13 +175,19 @@ Section typing.
     eqtype E L [ty;^ m + n] ([ty;^ m] * [ty;^ n]) (vsepat m) (uncurry vapp).
   Proof.
     apply eqtype_symm, eqtype_unfold; [apply _|]. iIntros (?) "_!>_".
-    iSplit; [iPureIntro=>/=; lia|]. iSplit.
-    { rewrite/= lft_intersect_list_app. iApply lft_intersect_equiv_idemp. }
     have Eq: ∀vπ: proph (vec 𝔄 _ * _), vfunsep (uncurry vapp ∘ vπ) =
-      vfunsep (fst ∘ vπ) +++ vfunsep (snd ∘ vπ).
-    { move=> ?? vπ. have {1}<-: pair ∘ vapply (vfunsep $ fst ∘ vπ) ⊛
-      vapply (vfunsep $ snd ∘ vπ) = vπ by rewrite !semi_iso' -surjective_pairing_fun.
-      move: (_ $ fst ∘ _)=> aπl. by elim aπl; [by rewrite semi_iso'|]=>/= ???<-. }
+    vfunsep (fst ∘ vπ) +++ vfunsep (snd ∘ vπ).
+  { move=> ?? vπ. have {1}<-: pair ∘ vapply (vfunsep $ fst ∘ vπ) ⊛
+    vapply (vfunsep $ snd ∘ vπ) = vπ by rewrite !semi_iso' -surjective_pairing_fun.
+    move: (_ $ fst ∘ _)=> aπl. by elim aπl; [by rewrite semi_iso'|]=>/= ???<-. }
+    iSplit. iPureIntro. split=>/=; [lia|].
+    intros ??. rewrite Eq vec_to_list_app. split. 
+    intros (?&?&->&(?&->&?)&(?&->&?)).
+    eexists (_ ++ _). rewrite join_app. 
+    split. done. by apply Forall2_app.
+    intros (?&->&(?&?&?&?&->)%Forall2_app_inv_l). eexists _, _. split. by rewrite -join_app.
+    split; eexists; (split; [done|]); done.
+    iSplit. { rewrite/= lft_intersect_list_app. iApply lft_intersect_equiv_idemp. }
     iSplit; iIntros "!> %vπ %/="; rewrite Eq; move: (vfunsep (fst ∘ vπ))=> aπl;
     move: {vπ}(vfunsep (snd ∘ vπ))=> bπl; iIntros "*"; [iSplit|].
     - iIntros "(%&%&->&(%&->&?)&(%&->&?))". iExists (_+++_).
