@@ -1,5 +1,5 @@
 From lrust.lang Require Import proofmode.
-From lrust.typing Require Export lft_contexts type bool.
+From lrust.typing Require Export lft_contexts type.
 From lrust.typing Require Import base_type.
 Import uPred.
 Set Default Proof Using "Type".
@@ -11,13 +11,37 @@ Module fix_defs.
 Section S.
   Context `{!typeG Σ} {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T}.
 
+  Definition Tn_h n := Nat.iter n T base.
+
+  Program Definition base : type 𝔄 :=
+  {| st_size := 0; st_lfts := [];  st_E := [];
+     st_proph vπ ξl := exists i, (Tn_h i).(ty_proph) vπ ξl;
+      st_own _ _ _ _ := False |}%I.
+  Next Obligation. by iIntros. Qed.
+  Next Obligation. done. Qed.
+  Next Obligation. by iIntros. Qed.
+  Next Obligation. move=> /= ??[??]. by eapply ty_proph_weaken. Qed.
+
+  Global Instance base_send: Send (base).
+  Proof. done. Qed.
+
+  Lemma base_resolve E L Φ : resolve E L base Φ.
+  Proof. iIntros "* _ _ _ _" ([]). Qed.
+
+  Lemma base_real {𝔅} E L (f: 𝔄 → 𝔅) : real E L base f.
+  Proof.
+    split.
+    - iIntros "*% _ _ _" ([]).
+    - by iIntros "*% _ _ _ (%x&_&>%)".
+  Qed.
+
   Definition Tn n := Nat.iter (S n) T base.
 
   Lemma Tn_ty_lft_const n n' : ⊢ ty_lft (Tn n) ≡ₗ ty_lft (Tn n').
   Proof using HT.
     have Eq: ∀n, ⊢ ty_lft (Tn n) ≡ₗ ty_lft (Tn 0); last first.
     { iApply lft_equiv_trans; [|iApply lft_equiv_sym]; iApply Eq. }
-    clear n n'=> n. case type_contractive_type_lft_morphism=> [> Hα ?|> Hα ?]; last first.
+    clear n n'=> n. case type_ne_type_lft_morphism=> [> Hα ?|> Hα ?]; last first.
     { iApply lft_equiv_trans; [iApply Hα|]. iApply lft_equiv_sym. iApply Hα. }
     elim: n=> [|n IH]; [apply lft_equiv_refl|]. rewrite /Tn /=.
     iApply lft_equiv_trans; [iApply type_lft_morphism_lft_equiv_proper; iApply IH|].
@@ -33,12 +57,33 @@ Section S.
   Proof using HT.
     have Eq: ∀n, elctx_interp (Tn (S n)).(ty_E) ≡ elctx_interp (Tn 1).(ty_E);
     [|by rewrite !Eq]. clear n n'=> n.
-    case type_contractive_type_lft_morphism=> [> Hα HE|> ? HE]; last by rewrite !HE.
+    case type_ne_type_lft_morphism=> [> Hα HE|> ? HE]; last by rewrite !HE.
     elim: n; [done|]=> n IH.
     rewrite (HE (Tn (S n))) IH !HE !assoc -!persistent_sep_dup -!assoc.
     iSplit; iIntros "#H"; repeat iDestruct "H" as "[? H]"; iFrame "#".
     iApply (big_sepL_impl with "H"). iIntros "!> * _". iIntros "#?".
     iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const (S n) 0) as "[_ $]".
+  Qed.
+
+  Lemma Tn_ty_proph_const (n n': nat) vπ ξl : (ty_proph (Nat.iter n T base) vπ ξl ≡ ty_proph (Nat.iter n' T base) vπ ξl).
+  Proof using HT.
+    assert (forall n vπ ξ, (ty_proph (Nat.iter n T base) vπ ξ ≡ ty_proph base vπ ξ)); [|by rewrite 2! H].
+    clear -HT. intros. induction n. done. rewrite -IHn.
+    clear -HT. revert vπ ξ. induction n; intros.  
+    simpl. split. 
+    - intros. destruct (type_ne_ty_proph_invert _ _ _ H) as (vπl&ξl&?&?).
+    assert (exists i, Forall2 (Tn_h i).(ty_proph) vπl ξl) as (i&?); last first.
+    exists (S i). simpl. by apply H1.
+    clear H1. revert ξl H0. induction vπl; intros; inversion_clear H0. exists 0%nat. done.
+    destruct (IHvπl _ H2) as (i&?). destruct H1 as (i'&?).
+    exists (i `max` i')%nat. assert (forall i i' vπ ξl, (ty_proph (Tn_h i) vπ ξl) -> (ty_proph (Tn_h (i+i')) vπ ξl)) as Tn'mono.
+    clear -HT. intros ?????. induction i'. replace (i + 0)%nat with i; [done|lia].
+    replace (i + S i')%nat with (S (i + i'))%nat; [|lia]. remember (i + i')%nat as i0.
+    clear -HT IHi'. revert ξl vπ IHi'. induction i0; simpl; intros. done. simpl in IHi0. eapply type_ne_ty_proph; [|done]. intros ???. by apply IHi0.
+    constructor. replace (i `max` i')%nat with (i' + ((i `max` i') - i'))%nat; [|lia]. by apply Tn'mono.
+    eapply Forall2_impl; [done|]. intros ???. replace (i `max` i')%nat with (i + ((i `max` i') - i))%nat; [|lia]. by apply Tn'mono.
+    - intros ([|?]&?). done. simpl in H. eapply type_ne_ty_proph; [|done]. simpl. intros ???. eexists _. done.
+    - simpl. apply type_ne_ty_proph'. done.
   Qed.
 
   Lemma Tn_cauchy n i : (n ≤ i)%nat →
@@ -49,10 +94,10 @@ Section S.
   Proof using HT.
     move: i. elim: n=> /=[|n IH]=> i ?.
     - split; [done|]. apply HT=>//; [apply type_contractive_ty_size|
-        apply (Tn_ty_lft_const (S i) 1)|apply (Tn_ty_E_const i 0)].
+    apply (Tn_ty_lft_const (S i) 1)|apply (Tn_ty_E_const i 0)|apply (Tn_ty_proph_const (2 + i) 2)].
     - case i as [|]; [lia|]. case (IH i) as [??]; [lia|].
       split; (apply HT=>//; [apply type_contractive_ty_size|
-        apply (Tn_ty_lft_const (2 + i) (2 + n))|apply (Tn_ty_E_const (S i) (S n))]).
+        apply (Tn_ty_lft_const (2 + i) (2 + n))|apply (Tn_ty_E_const (S i) (S n))|apply (Tn_ty_proph_const (3 + i) (3 + n))]).
   Qed.
   Program Definition own_shr_chain :=
     {| chain_car n := ((Tn (3 + n)).(ty_own), (Tn (3 + n)).(ty_shr)) :
@@ -66,7 +111,7 @@ Section S.
 
   Program Definition Tn' n : type 𝔄 := {|
     ty_size := (Tn 0).(ty_size);  ty_lfts := (Tn 0).(ty_lfts);  ty_E := (Tn 1).(ty_E);
-    ty_own := (Tn n).(ty_own);  ty_shr := (Tn n).(ty_shr)
+    ty_proph := base.(ty_proph); ty_own := (Tn n).(ty_own);  ty_shr := (Tn n).(ty_shr)
   |}.
   Next Obligation.
     move=> *. rewrite ty_size_eq /Tn. iIntros "->!%/=". apply type_contractive_ty_size.
@@ -79,17 +124,22 @@ Section S.
     iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const n 0) as "[_ $]".
   Qed.
   Next Obligation.
-    move=> n *. iIntros "#LFT #?". iApply (ty_own_proph with "LFT"); [done|].
+    move=> n *. iIntros "#LFT #?". setoid_rewrite (Tn_ty_proph_const 0 (S n)). 
+    iApply (ty_own_proph with "LFT"); [done|].
     iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const n 0) as "[_ $]".
   Qed.
   Next Obligation.
-    move=> n *. iIntros "#LFT #? #?". iApply (ty_shr_proph with "LFT"); [done|done|].
+    move=> n *. iIntros "#LFT #? #?". setoid_rewrite (Tn_ty_proph_const 0 (S n)).
+    iApply (ty_shr_proph with "LFT"); [done|done|].
     iApply lft_incl_trans; [done|]. iDestruct (Tn_ty_lft_const n 0) as "[_ $]".
+  Qed.
+  Next Obligation.
+    move=> *. eapply ty_proph_weaken. done.
   Qed.
 
   Program Definition fix_ty: type 𝔄 := {|
     ty_size := (Tn 0).(ty_size);  ty_lfts := (Tn 0).(ty_lfts);  ty_E := (Tn 1).(ty_E);
-    ty_own := (compl own_shr_chain).1;  ty_shr := (compl own_shr_chain).2
+    ty_proph := base.(ty_proph); ty_own := (compl own_shr_chain).1;  ty_shr := (compl own_shr_chain).2
   |}.
   Next Obligation.
     move=> *. apply @limit_preserving, _.
@@ -124,6 +174,10 @@ Section S.
     move=> *. apply @limit_preserving; [|move=> ?; by apply (ty_shr_proph (Tn' _))].
     apply limit_preserving_entails; [done|]=> ??? Eq. do 3 f_equiv. apply Eq.
   Qed.
+  Next Obligation.
+    move=> *. eapply ty_proph_weaken. done.
+  Qed.
+
 
   Lemma fix_ty_Tn'_dist n : fix_ty ≡{n}≡ Tn' (3 + n).
   Proof. split=>// *; apply conv_compl. Qed.
@@ -135,6 +189,7 @@ Global Notation fix_ty := fix_ty.
 
 Section fix_ty.
   Context `{!typeG Σ}.
+  Opaque base.
 
   Lemma fix_unfold_fold {𝔄} (T: type 𝔄 → type 𝔄) {HT: TypeContractive T} E L :
     eqtype E L (fix_ty T) (T (fix_ty T)) id id.
@@ -142,30 +197,33 @@ Section fix_ty.
     have EqOwn: ∀n vπ d tid vl, (T $ Tn T (3 + n)).(ty_own) vπ d tid vl ≡
       (T $ Tn' T (3 + n)).(ty_own) vπ d tid vl.
     { move=> n *. apply equiv_dist=> ?. apply HT=>//; [apply HT|
-        apply (Tn_ty_lft_const T (3 + n) 0)|apply (Tn_ty_E_const T (2 + n) 0)]. }
+        apply (Tn_ty_lft_const T (3 + n) 0)|apply (Tn_ty_E_const T (2 + n) 0)|
+        apply (Tn_ty_proph_const T (4 + n) 0)]. }
     have EqShr: ∀n vπ d κ tid l, (T $ Tn T (2 + n)).(ty_shr) vπ d κ tid l ≡
       (T $ Tn' T (2 + n)).(ty_shr) vπ d κ tid l.
     { move=> n *. apply equiv_dist=> n'. apply HT=>//; [apply HT|
         apply (Tn_ty_lft_const T (2 + n) 0)|apply (Tn_ty_E_const T (1 + n) 0)|
+        apply (Tn_ty_proph_const T (3 + n) 0)|
         by case n'=> [|[|?]]]. }
     have EqOwn': ∀vπ d tid vl, (fix_ty T).(ty_own) vπ d tid vl ≡
       (T (fix_ty T)).(ty_own) vπ d tid vl.
     { move=> *. apply equiv_dist=> n. etrans; [apply dist_S, conv_compl|].
       rewrite/= (EqOwn n). symmetry. apply HT=>// *; [apply lft_equiv_refl| |].
       - move: n=> [|n]; [done|].
-        case (fix_ty_Tn'_dist T (S n))=> [_ _ _ Eq _]. apply dist_S, Eq.
-      - case (fix_ty_Tn'_dist T n)=> [_ _ _ _ Eq]. apply Eq. }
+        case (fix_ty_Tn'_dist T (S n))=> [_ _ _ _ Eq _]. apply dist_S, Eq.
+      - case (fix_ty_Tn'_dist T n)=> [_ _ _ _ _ Eq]. apply Eq. }
     have EqShr': ∀vπ d κ tid l, (fix_ty T).(ty_shr) vπ d κ tid l ≡
       (T (fix_ty T)).(ty_shr) vπ d κ tid l.
     { move=> *. apply equiv_dist=> n. etrans; [apply conv_compl|].
       rewrite/= (EqShr n). symmetry. apply HT=>// *; [apply lft_equiv_refl| |].
       - move: n=> [|[|n]]; [done|done|].
-        case (fix_ty_Tn'_dist T (S n))=> [_ _ _ Eq _]. apply dist_S, Eq.
+        case (fix_ty_Tn'_dist T (S n))=> [_ _ _ _ Eq _]. apply dist_S, Eq.
       - move: n=> [|n]; [done|].
-        case (fix_ty_Tn'_dist T n)=> [_ _ _ _ Eq]. apply Eq. }
-    apply eqtype_id_unfold. iIntros "*_!>_". iSplit; [iPureIntro; by apply HT|].
+        case (fix_ty_Tn'_dist T n)=> [_ _ _ _ _ Eq]. apply Eq. }
+    apply eqtype_id_unfold. iIntros "*_!>_". iSplit; [iPureIntro|].
+    split; [apply HT|]. setoid_rewrite (type_ne_ty_proph' (fix_ty T) (base T)); [|done]. by apply (Tn_ty_proph_const T 0 1).
     iSplit; [|iSplit; iIntros "!> *"].
-    - case type_contractive_type_lft_morphism=> [α βs E' Hα HE'|α E' Hα HE'].
+    - case type_ne_type_lft_morphism=> [α βs E' Hα HE'|α E' Hα HE'].
       + iApply lft_equiv_trans; [|iApply lft_equiv_sym; iApply Hα].
         iApply lft_equiv_trans; [iApply Hα|].
         iApply lft_equiv_trans; [|iApply lft_intersect_equiv_proper;
@@ -186,27 +244,68 @@ Section fix_ty.
     subtype E L (T (fix_ty T)) (fix_ty T) id.
   Proof. eapply proj2, fix_unfold_fold. Qed.
 
+  Lemma base_ne' {𝔄} (T T': type 𝔄 → type 𝔄) {HT: TypeContractive T} {HT': TypeContractive T'} : (∀ ty vπ ξ, (T ty).(ty_proph) vπ ξ → (T' ty).(ty_proph) vπ ξ) → (∀ vπ ξ, (base T).(ty_proph) vπ ξ → (base T').(ty_proph) vπ ξ).
+  Proof. 
+    intros ???. simpl. intros (i&?). exists i. revert vπ ξ H0.
+    (induction i; [done|]). simpl. intros. apply H. by eapply type_ne_ty_proph.
+  Qed.
+
+  Lemma base_ne {𝔄} (T T': type 𝔄 → type 𝔄) {HT: TypeContractive T} {HT': TypeContractive T'} n : (∀ ty, T ty ≡{n}≡ T' ty) → (base T) ≡{n}≡ (base T').
+  Proof. intros. constructor; try done. intros. split; apply base_ne'; try done; by setoid_rewrite H. Qed.
+
   Lemma fix_ty_ne {𝔄} (T T': type 𝔄 → type 𝔄)
-      `{!TypeContractive T, !NonExpansive T, !TypeContractive T'} n :
+      `{!TypeContractive T, !NonExpansive T} {HT: TypeContractive T'} n :
     (∀ty, T ty ≡{n}≡ T' ty) → fix_ty T ≡{n}≡ fix_ty T'.
   Proof.
     move=> Eq.
     have Eq': compl (own_shr_chain T) ≡{n}≡ compl (own_shr_chain T').
     { have Eq'': Tn T (3 + n) ≡{n}≡ Tn T' (3 + n).
-      { rewrite /Tn. elim (S (3 + n)); [done|]=> ? IH. by rewrite !Nat_iter_S IH Eq. }
+      { rewrite /Tn. elim (S (3 + n)); [by apply base_ne|]=> ? IH. by rewrite !Nat_iter_S IH Eq. }
       etrans; [apply conv_compl|]. etrans; [|symmetry; apply conv_compl].
       split; repeat move=> ? /=; apply Eq''. }
-    split=>/=; try apply Eq; try apply Eq'. by rewrite /Tn /= (Eq base) Eq.
+    split=>/=; try apply Eq; try apply Eq'; [..|intros]; try rewrite /Tn /= -!Eq; try by rewrite base_ne.
   Qed.
+(* 
+  Program Definition base' {𝔄} (T: type 𝔄 → type 𝔄) : type 𝔄 :=
+  {| st_size := (Tn T 0).(ty_size);  st_lfts := (Tn T 0).(ty_lfts);  st_E := (Tn T 1).(ty_E);
+     st_proph vπ ξl := false;
+      st_own _ _ _ _ := False |}%I.
+  Next Obligation. by iIntros. Qed.
+  Next Obligation. done. Qed.
+  Next Obligation. by iIntros. Qed.
+  Next Obligation. by intros. Qed.
+
+  Lemma Tn_h_proph_alt {𝔄} (T: type 𝔄 → type 𝔄) `{!TypeContractive T} vπ ξl i: (Tn_h T i).(ty_proph) vπ ξl <-> (Nat.iter i T (base' T)).(ty_proph) vπ ξl.
+  Proof. revert vπ ξl. induction i; simpl. done. by eapply type_ne_ty_proph'. Qed. *)
+
+  Lemma base_type_contractive {𝔄 𝔅} (P: (type 𝔄 → type 𝔅) → Prop) (T : type 𝔄 → type 𝔅 → type 𝔅)
+    `{!(∀ty, TypeContractive (T ty))} :
+   (∀`{!P U}, TypeNonExpansiveBase U) → P (λ _, base_type.base) → (∀`{!P U}, P (λ ty, T ty (U ty))) → 
+    TypeContractive (λ ty, base (T ty)).
+  Proof.
+  move=> HP ? HT. have Hne: ∀n, TypeNonExpansiveBase (λ ty, Tn_h (T ty) n).
+  { intros. apply HP. induction n as [|? IH]; [done|apply HT, IH].  }
+  split; [done|split|done|done].
+  - eapply (type_lft_morphism_const _ _ []); simpl; intros; by [iApply lft_equiv_refl|].
+  - intros. simpl. intros (i&?). exists i.  by eapply Hne.
+  - simpl. intros ??? (i&?). destruct (Hne i). destruct (type_ne_ty_proph_invert _ _ _ H0) as (vπl&ξl&?&?).
+  exists vπl, ξl. intuition. exists i. intuition.
+  Qed.
+
 
   Lemma fix_type_ne {𝔄 𝔅} (T : type 𝔄 → type 𝔅 → type 𝔅)
       `{!(∀ty, TypeContractive (T ty))} :
     (∀`{!TypeNonExpansive U}, TypeNonExpansive (λ ty, T ty (U ty))) →
       TypeNonExpansive (λ ty, fix_ty (T ty)).
   Proof.
-    move=> HT. have Hne: ∀n, TypeNonExpansive (λ ty, Tn (T ty) n).
-    { elim=> [|? IH]; [apply HT, _|apply HT, IH]. }
-    split=>/=.
+    move=> HT.
+    have Hbase: TypeContractive (λ ty, base (T ty)).
+    eapply (base_type_contractive TypeNonExpansive); intuition.
+    apply type_ne_base.  apply type_contractive_type_ne, const_type_contractive.
+    have Hne: ∀n, TypeNonExpansive (λ ty, Tn (T ty) n).
+    { elim=> [|? IH]; [eapply HT, _|apply HT, IH]. }
+    split; [|split|..]=>/=.
+    - eapply HT, _.
     - case (type_ne_type_lft_morphism (T := λ ty, Tn (T ty) 1))=>
       [α βs E Hα HE|α E Hα HE].
       + eapply (type_lft_morphism_add _ α βs E), HE=> ?.
@@ -215,7 +314,8 @@ Section fix_ty.
       + eapply (type_lft_morphism_const _ α E), HE=> ?.
         iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
         iApply (Tn_ty_lft_const _ 1 0).
-    - apply HT, _.
+    - move=> *. by apply Hbase.
+    - move=> *. by apply Hbase.
     - move=> *. etrans; [apply conv_compl|].
       etrans; [|symmetry; apply conv_compl]. by apply Hne.
     - move=> *. etrans; [apply conv_compl|].
@@ -227,9 +327,14 @@ Section fix_ty.
     (∀`{!TypeContractive U}, TypeContractive (λ ty, T ty (U ty))) →
       TypeContractive (λ ty, fix_ty (T ty)).
   Proof.
-    move=> HT. have Hne: ∀n, TypeContractive (λ ty, Tn (T ty) n).
+    move=> HT.
+    have Hbase: TypeContractive (λ ty, base (T ty)).
+    eapply (base_type_contractive TypeContractive); intuition.
+    apply type_contractive_base. apply const_type_contractive.
+    have Hne: ∀n, TypeContractive (λ ty, Tn (T ty) n).
     { elim=> [|? IH]; [apply HT, _|apply HT, IH]. }
-    split=>/=.
+    split; [|split|..]=>/=.
+    - apply HT, _.
     - case (type_ne_type_lft_morphism (T := λ ty, Tn (T ty) 1))=>
       [α βs E Hα HE|α E Hα HE].
       + eapply (type_lft_morphism_add _ α βs E), HE=> ?.
@@ -238,7 +343,8 @@ Section fix_ty.
       + eapply (type_lft_morphism_const _ α E), HE=> ?.
         iApply lft_equiv_trans; [|iApply Hα]. iApply lft_equiv_sym.
         iApply (Tn_ty_lft_const _ 1 0).
-    - apply HT, _.
+    - move=> *. by apply Hbase.
+    - move=> *. by apply Hbase.
     - move=> *. etrans; [apply conv_compl|].
       etrans; [|symmetry; apply conv_compl]. by apply Hne.
     - move=> *. etrans; [apply conv_compl|].
@@ -304,7 +410,7 @@ Section fix_ty.
   Qed.
 End fix_ty.
 
-Section fix_subtyping.
+(* Section fix_subtyping.
   Context `{!typeG Σ}.
 
   Local Lemma wand_forall P (Φ: nat → iProp Σ) : (∀n, P -∗ Φ n) ⊢ (P -∗ ∀n, Φ n).
@@ -390,7 +496,7 @@ Section fix_subtyping.
   Proof.
     move=> ?. eapply (eqtype_trans _ _ _ id id); [|done]. apply fix_unfold_fold.
   Qed.
-End fix_subtyping.
+End fix_subtyping. *)
 
-Global Hint Resolve fix_subtype_l fix_subtype_r fix_eqtype_l fix_eqtype_r | 100
-  : lrust_typing.
+(* Global Hint Resolve fix_subtype_l fix_subtype_r fix_eqtype_l fix_eqtype_r | 100
+  : lrust_typing. *)

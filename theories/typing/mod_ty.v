@@ -109,7 +109,8 @@ Section typing.
 
   Global Instance mod_ty_type_ne `{SameLevel 𝔄 𝔅} (f: 𝔄 → 𝔅) : TypeNonExpansive <{f}>%T.
   Proof.
-    split; simpl; intros; [apply type_lft_morphism_id_like| |do 3 f_equiv|do 3 f_equiv|do 3 f_equiv]; try done. apply H0.
+    split; [|split|..]; simpl; intros; [|apply type_lft_morphism_id_like|do 3 f_equiv| |do 3 f_equiv|do 3 f_equiv]; try done.
+    destruct H0 as (vπ'&->&?). exists [vπ'], [ξ]. intuition. eexists _. inversion_clear H1. done.
   Qed.
 
   Global Instance mod_ty_copy `{SameLevel 𝔄 𝔅} (f: 𝔄 → 𝔅) ty : Copy ty → Copy (<{f}> ty).

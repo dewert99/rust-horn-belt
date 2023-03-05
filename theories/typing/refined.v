@@ -13,8 +13,9 @@ Section refined.
     ⟨π, Φ (vπ π)⟩ ∗ l ↦∗: ty.(ty_own) vπ d tid.
   Proof. iSplit; [|iIntros "[$$]"]. iIntros "(%&?&$&?)". iExists _. iFrame. Qed.
 
-  Program Definition refined {𝔄} (Φ: pred' 𝔄) (ty: type 𝔄) :={|
+  Program Definition refined {𝔄} (Φ: pred' 𝔄) (ty: type 𝔄) := {|
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_proph := ty.(ty_proph);
     ty_own vπ d tid vl := ⟨π, Φ (vπ π)⟩ ∗ ty.(ty_own) vπ d tid vl;
     ty_shr vπ d κ tid l := ⟨π, Φ (vπ π)⟩ ∗ ty.(ty_shr) vπ d κ tid l;
   |}%I.
@@ -33,6 +34,7 @@ Section refined.
   Next Obligation.
     iIntros "*% LFT In In' [_ ty] κ". by iApply (ty_shr_proph with "LFT In In' ty κ").
   Qed.
+  Next Obligation. move=> *. by eapply ty_proph_weaken. Qed.
 
   Global Instance refined_ne {𝔄} (Φ: 𝔄 → _) : NonExpansive (refined Φ).
   Proof. solve_ne_type. Qed.
@@ -45,7 +47,8 @@ Section typing.
 
   Global Instance refined_type_ne {𝔄} (Φ: 𝔄 → _) : TypeNonExpansive !{Φ}%T.
   Proof.
-    split=>/= *; [by apply type_lft_morphism_id_like|done|by f_equiv..].
+    split; [|split|..]=>/= *; [done| by apply type_lft_morphism_id_like|intuition| |by f_equiv..].
+    eexists [_], [_]. intuition. by constructor. by inversion_clear H.
   Qed.
 
   Global Instance refined_send {𝔄} (Φ: 𝔄 → _) ty : Send ty → Send (!{Φ} ty).

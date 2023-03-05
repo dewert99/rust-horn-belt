@@ -73,10 +73,12 @@ Section typing.
 
   Global Instance array_type_ne {𝔄} n : TypeNonExpansive (@array _ _ 𝔄 n).
   Proof.
-    split; [by apply type_lft_morphism_id_like|by move=>/= ??->|shelve| | ]=>/= > Sz *;
+    split; [by move=>/= ??->|shelve| |]=>/= > Sz *;
     [by do 6 f_equiv|rewrite Sz; by do 3 f_equiv].
-    Unshelve. move=> ?? H ?? /=. do 3 f_equiv.
-    split; intros; (eapply Forall2_impl; [done|]); intros; by eapply H.
+    Unshelve. split; [by apply type_lft_morphism_id_like|..].
+    move=> ?? H ?? /=. do 3 f_equiv.
+    intros ?; (eapply Forall2_impl; [done|]); intros; by eapply H.
+    intros ???(ξl&->&?). exists (vfunsep vπ), ξl. intuition. exists ξl. intuition.
   Qed.
 
   Global Instance array_copy {𝔄} n (ty: type 𝔄) : Copy ty → Copy [ty;^ n].

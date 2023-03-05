@@ -127,8 +127,9 @@ Section typing.
       ∀vπ vl,
         (fn (λ x, FP (E x) (IT x ty) (OT x ty))).(ty_own) vπ 0 xH vl ≡{n}≡
         (fn (λ x, FP (E x) (IT x ty') (OT x ty'))).(ty_own) vπ 0 xH vl); last first.
-    { split; [|done|done| |].
+    { split; [|split|..]; [done| |done| | |].
       - apply (type_lft_morphism_const _ static [])=>//= ?. apply lft_equiv_refl. 
+      - intros. exists [], []. intuition. 
       - move=> *. by apply Eq.
       - move=>/= n *. apply bi.exist_ne=> ?. apply bi.sep_ne; [done|].
         apply uPred_primitive.later_contractive. destruct n=>/=; [done|by apply Eq]. }
@@ -141,7 +142,7 @@ Section typing.
       - by apply Ne.
       - by iApply type_lft_morphism_lft_equiv_proper.
       - apply type_lft_morphism_elctx_interp_proper=>//. apply _.
-      - by apply type_ne_ty_proph. 
+      - by apply type_ne_ty_proph'. 
       - apply dist_dist_later. by apply Ne.
       - apply dist_S. by apply Ne. }
     move: (NeIT x)=> [?[->NeITl]]. do 5 f_equiv; [|do 3 f_equiv; [|f_equiv]].

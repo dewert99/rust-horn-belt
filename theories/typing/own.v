@@ -105,7 +105,8 @@ Section own.
 
   Global Instance own_type_contractive 𝔄 n : TypeContractive (@own_ptr 𝔄 n).
   Proof.
-    split; [by apply type_lft_morphism_id_like|done|done| |].
+    split; [done|split; [by apply type_lft_morphism_id_like|done|]| |].
+    - simpl; intros. exists [vπ], [ξ]. intuition. by inversion_clear H0.
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
     - move=>/= > *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
@@ -174,9 +175,10 @@ Section box.
 
   Global Instance box_type_contractive 𝔄 : TypeContractive (@box 𝔄).
   Proof.
-    split; [by apply type_lft_morphism_id_like|done|done| |].
+    split; [done|split; [by apply type_lft_morphism_id_like|done|]| |].
+    - simpl; intros. exists [vπ], [ξ]. intuition. by inversion_clear H0.
     - move=>/= > ->*. do 9 (f_contractive || f_equiv). by simpl in *.
-    - move=>/= *. do 6 (f_contractive || f_equiv). by simpl in *.
+    - move=>/= > *. do 6 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
   Lemma box_type_incl {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty':

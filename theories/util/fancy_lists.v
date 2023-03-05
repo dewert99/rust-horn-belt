@@ -209,6 +209,16 @@ Fixpoint papply {A} {F: A → Type} {B Xl}
 Infix "-$" := papply (at level 61, left associativity).
 Notation "( fl -$.)" := (papply fl) (only parsing).
 
+Fixpoint pfunsep {A} {F: A → Type} {B Xl} : (B → plist F Xl) → plist (λ X, B → F X) Xl :=
+  match Xl with [] => λ _, -[] | X :: Xl => λ f, (phd ∘ f) -:: pfunsep (ptl ∘ f) end.
+
+Global Instance papply_pfunsep_iso {A} {F: A → Type} {B Xl} : Iso (@papply A F B Xl) pfunsep.
+Proof.
+  split; fun_ext; intros; [|fun_ext; intros]; induction Xl; simpl. 
+  destruct x.  done. destruct x. simpl in IHXl. rewrite IHXl. done.
+  destruct (x x0). done. simpl in IHXl. rewrite IHXl. simpl. destruct (x x0). done.
+Qed.
+
 Lemma papply_app {A} {F: A → Type} {B Xl Yl}
   (fl: plist (λ X, B → F X) Xl) (gl: plist (λ X, B → F X) Yl) (x: B) :
   (fl -++ gl) -$ x = (fl -$ x) -++ (gl -$ x).
@@ -446,6 +456,23 @@ Proof.
   move=>/= [??]i. inv_fin i; [done|]=>/= ??. by rewrite FIX.
 Qed.
 
+Definition sum_match {A B C} (f: A → C) (g: B → C) (xy : A + B) : C :=
+  match xy with inl x => (f x) | inr y => (g y) end.
+
+Fixpoint psum_match {Xl Y} :
+    plist (λ X, F X → Y) Xl → psum Xl → Y :=
+  match Xl with
+  | [] => λ _, absurd
+  | _::_ => λ '(f -:: fl'), sum_match f (psum_match fl')
+  end.
+
+Lemma psum_match_pinj {Xl Y} (fl: plist (λ X, F X → Y) Xl) i x :
+  psum_match fl (pinj i x) = ((fl -!! i) x).
+Proof.
+  move: Xl fl i x. fix FIX 1. move=> [|??]//=; [move=> ? i; by inv_fin i|].
+  move=>/= [??]i. inv_fin i; [done|]=>/= ??. by rewrite FIX.
+Qed.
+
 Definition to_psum_2 {X Y} (s: F X + F Y) : psum [X; Y] :=
   match s with inl x => inl x | inr y => inr (inl y) end.
 Definition of_psum_2 {X Y} (s: psum [X; Y]) : F X + F Y :=
@@ -504,6 +531,20 @@ Inductive HForall (Φ: ∀X, F X → Prop) : ∀{Xl}, hlist F Xl → Prop :=
 
 Fixpoint pforall {Xl} (Φ: ∀X, F X → Prop) (xl: plist F Xl) : Prop :=
   match Xl, xl with [], _ => True | _::_, x -:: xl' => Φ _ x ∧ pforall Φ xl' end.
+
+Fixpoint forallHL_1 {Xl} (Φ: ∀X, F X → G X → Prop)
+(xl: hlist F Xl) (yl: plist G Xl) : Prop :=
+match xl, yl with
+  | +[], _ => true
+  | x +:: xl', y -:: yl' => Φ _ x y /\ forallHL_1 Φ xl' yl'
+end%I.
+
+Lemma forallHL_1_lookup {Xl} i (Φ: ∀X, F X → G X → Prop) (xl: _ Xl) yl :
+  forallHL_1 Φ xl yl → Φ _ (xl +!! i) (yl -!! i).
+Proof.
+  move=> All. rewrite /llookup. 
+  induction xl; inv_fin i; destruct yl; destruct All; [done|]. intros. apply IHxl. done. 
+Qed.
 
 Inductive TCHForall (Φ: ∀X, F X → Prop) : ∀{Xl}, hlist F Xl → Prop :=
 | TCHForall_nil: TCHForall Φ +[]

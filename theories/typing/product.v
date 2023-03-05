@@ -214,12 +214,24 @@ Section typing.
       + by rewrite/= !elctx_interp_app HE HE'.
   Qed.
 
+  Global Instance prod_type_base {𝔄 𝔅 ℭ} (T: type 𝔄 → type 𝔅) (T': type 𝔄 → type ℭ) :
+    TypeNonExpansiveBase T → TypeNonExpansiveBase T' → TypeNonExpansiveBase (λ ty, T ty * T' ty)%T.
+  Proof.
+    move=> ??. split=>/=; first apply _.
+    - move=> *. do 6 f_equiv; by apply type_ne_ty_proph.
+    - intros ???(ξ&ξ'&->&H&H'). 
+    destruct (type_ne_ty_proph_invert _ _ _ H) as (vπl&ξl&?&?).
+    destruct (type_ne_ty_proph_invert _ _ _ H') as (vπl'&ξl'&?&?).
+    exists (vπl ++ vπl'), (ξl ++ ξl'). split. by apply Forall2_app.
+    intros ? F2. apply Forall2_app_inv in F2. eexists _, _. intuition.
+    by eapply Forall2_same_length, Forall2_impl. 
+  Qed.
+
   Global Instance prod_type_ne {𝔄 𝔅 ℭ} (T: type 𝔄 → type 𝔅) (T': type 𝔄 → type ℭ) :
     TypeNonExpansive T → TypeNonExpansive T' → TypeNonExpansive (λ ty, T ty * T' ty)%T.
   Proof.
-    move=> ??. split=>/=; first apply _.
+    move=> ??. split=>/=; [|apply _|..].
     - move=> *. f_equiv; by apply type_ne_ty_size.
-    - move=> *. do 6 f_equiv; by apply type_ne_ty_proph.
     - move=> *. do 6 f_equiv; by apply type_ne_ty_own.
     - move=> ? ty ty' *. rewrite (type_ne_ty_size (T:=T) ty ty'); [|done].
       f_equiv; by apply type_ne_ty_shr.
@@ -228,9 +240,8 @@ Section typing.
   Global Instance prod_type_contractive {𝔄 𝔅 ℭ} (T: type 𝔄 → type 𝔅) (T': type 𝔄 → type ℭ) :
     TypeContractive T → TypeContractive T' → TypeContractive (λ ty, T ty * T' ty)%T.
   Proof.
-    move=> ??. split=>/=; first apply _.
+    move=> ??. split=>/=; [|apply _|..].
     - move=> *. f_equiv; by apply type_contractive_ty_size.
-    - move=> *. do 6 f_equiv; by apply type_contractive_ty_proph.
     - move=> *. do 6 f_equiv; by apply type_contractive_ty_own.
     - move=> ? ty ty' *. rewrite (type_contractive_ty_size (T:=T) ty ty').
       f_equiv; by apply type_contractive_ty_shr.

@@ -556,11 +556,15 @@ Proof.
 Qed.
 End type_lft_morphism.
 
-Class TypeNonExpansive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Prop := {
+Class TypeNonExpansiveBase `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Prop := {
   type_ne_type_lft_morphism :> TypeLftMorphism T;
-  type_ne_ty_size ty ty' :
-    ty.(ty_size) = ty'.(ty_size) → (T ty).(ty_size) = (T ty').(ty_size);
-  type_ne_ty_proph ty ty': (∀vπ ξ, ty.(ty_proph) vπ ξ ≡ ty'.(ty_proph) vπ ξ) → (∀vπ ξ, (T ty).(ty_proph) vπ ξ ≡ (T ty').(ty_proph) vπ ξ);
+  type_ne_ty_proph ty ty': (∀vπ ξ, impl (ty.(ty_proph) vπ ξ) (ty'.(ty_proph) vπ ξ)) → (∀vπ ξ, impl ((T ty).(ty_proph) vπ ξ) ((T ty').(ty_proph) vπ ξ));
+  type_ne_ty_proph_invert ty vπ ξ: (T ty).(ty_proph) vπ ξ → ∃vπl ξl, Forall2 ty.(ty_proph) vπl ξl ∧ (∀ ty', Forall2 ty'.(ty_proph) vπl ξl → (T ty').(ty_proph) vπ ξ)
+}.
+
+Class TypeNonExpansive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Prop := {
+  type_ne_ty_size ty ty' : ty.(ty_size) = ty'.(ty_size) → (T ty).(ty_size) = (T ty').(ty_size);
+  type_ne_base :> TypeNonExpansiveBase T;
   type_ne_ty_own n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty_lft ty ≡ₗ ty_lft ty') →
     elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
@@ -579,9 +583,8 @@ Class TypeNonExpansive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : P
 }.
 
 Class TypeContractive `{!typeG Σ} {𝔄 𝔅} (T: type 𝔄 → type 𝔅) : Prop := {
-  type_contractive_type_lft_morphism : TypeLftMorphism T;
   type_contractive_ty_size ty ty' : (T ty).(ty_size) = (T ty').(ty_size);
-  type_contractive_ty_proph ty ty': (∀vπ ξ, ty.(ty_proph) vπ ξ ≡ ty'.(ty_proph) vπ ξ) → (∀vπ ξ, (T ty).(ty_proph) vπ ξ ≡ (T ty').(ty_proph) vπ ξ);
+  type_contractive_base :> TypeNonExpansiveBase T;
   type_contractive_ty_own n ty ty' :
     ty.(ty_size) = ty'.(ty_size) → (⊢ ty_lft ty ≡ₗ ty_lft ty') →
     elctx_interp ty.(ty_E) ≡ elctx_interp ty'.(ty_E) →
@@ -608,30 +611,50 @@ Class ListTypeContractive `{!typeG Σ} {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅
 Section type_contractive.
   Context `{!typeG Σ}.
 
+  Lemma type_ne_ty_proph' `{TypeNonExpansiveBase Σ 𝔄 𝔅 T} ty ty' : (∀vπ ξ, ty.(ty_proph) vπ ξ ≡ ty'.(ty_proph) vπ ξ) → (∀vπ ξ, (T ty).(ty_proph) vπ ξ ≡ (T ty').(ty_proph) vπ ξ).
+  Proof.
+    intros; split; apply type_ne_ty_proph; intros ???; by apply H0.
+  Qed.
+
   Global Instance type_contractive_type_ne {𝔄 𝔅} (T: type 𝔄 → type 𝔅) :
     TypeContractive T → TypeNonExpansive T.
   Proof.
-    move=> HT. split; [by apply HT|move=> *; by apply HT|by apply HT| |].
+    move=> HT. split; [move => *; by apply HT|by apply HT| |].
     - move=> *. apply HT=>// *; by [apply dist_dist_later|apply dist_S].
     - move=> n *. apply HT=>// *; [|by apply dist_dist_later].
       case n as [|[|]]=>//. simpl in *. by apply dist_S.
   Qed.
 
+  Global Instance type_ne_base_compose {𝔄 𝔅 ℭ} (T: type 𝔅 → type ℭ) (T': type 𝔄 → type 𝔅) :
+    TypeNonExpansiveBase T → TypeNonExpansiveBase T' → TypeNonExpansiveBase (T ∘ T').
+  Proof.
+    move=> HT HT'. split; [by apply _|move=> ???; by apply HT, HT'| ].
+    intros ????. simpl. destruct (type_ne_ty_proph_invert (T:=T) _ _ _ H) as (vπl&ξl&?&?).
+    eassert (exists vπl0 ξl0, (_/\(∀ ty', _ _ -> (_:Prop)))) as (vπl0&ξl0&?&?); last first.
+    exists vπl0, ξl0. split. exact H2. intros. apply H1. exact (H3 ty' H4).
+    clear H1. revert ξl H0. induction vπl; intros ??; [|revert IHvπl]; inversion_clear H0; intros. exists [], []. done.
+    edestruct IHvπl as (?&?&?&?). done.
+    destruct (type_ne_ty_proph_invert (T:=T') _ _ _ H1) as (vπl'&ξl'&?&?).
+    eexists (x ++ vπl'), (x0 ++ ξl'). split. by apply Forall2_app.
+    intros ? (?&?)%Forall2_app_inv. intuition.
+    by eapply Forall2_same_length, Forall2_impl.
+  Qed.
+
   Global Instance type_ne_ne_compose {𝔄 𝔅 ℭ} (T: type 𝔅 → type ℭ) (T': type 𝔄 → type 𝔅) :
     TypeNonExpansive T → TypeNonExpansive T' → TypeNonExpansive (T ∘ T').
   Proof.
-    move=> HT HT'. split; [by apply _|move=> *; by apply HT, HT'|move=>*; by apply HT, HT'| |];
-    (move=> n *; apply HT; try (by apply HT');
+    move=> HT HT'. split; [move=> *; by apply HT, HT'|apply type_ne_base_compose; [apply HT|apply HT']| |];
+    (move=> n *; apply HT; try (by apply HT'); try (by apply type_ne_ty_proph');
       first (by iApply type_lft_morphism_lft_equiv_proper);
-      first (apply type_lft_morphism_elctx_interp_proper=>//; apply _)).
+      first (apply type_lft_morphism_elctx_interp_proper=>//; apply _)); 
     move=> *. case n as [|]=>//; by apply HT'.
   Qed.
 
   Global Instance type_contractive_compose_right {𝔄 𝔅 ℭ} (T: type 𝔅 → type ℭ) (T': type 𝔄 → type 𝔅) :
     TypeContractive T → TypeNonExpansive T' → TypeContractive (T ∘ T').
   Proof.
-    move=> HT HT'. split; [by apply _|move=> *; by apply HT|move=> *; by apply HT, HT'| |];
-    (move=> n *; apply HT; try (by apply HT');
+    move=> HT HT'. split; [move=> *; by apply HT|apply type_ne_base_compose; [apply HT|apply HT']| |];
+    (move=> n *; apply HT; try (by apply HT'); try (by apply type_ne_ty_proph');
       first (by iApply type_lft_morphism_lft_equiv_proper);
       first (apply type_lft_morphism_elctx_interp_proper=>//; apply _));
     move=> *; case n as [|[|]]=>//; by apply HT'.
@@ -641,8 +664,8 @@ Section type_contractive.
          (T: type 𝔅 → type ℭ) (T': type 𝔄 → type 𝔅) :
     TypeNonExpansive T → TypeContractive T' → TypeContractive (T ∘ T').
   Proof.
-    move=> HT HT'. split; [by apply _|move=> *; by apply HT, HT'|move=> *; by apply HT, HT'| |];
-    (move=> n *; apply HT; try (by apply HT');
+    move=> HT HT'. split; [move=> *; by apply HT, HT'|apply type_ne_base_compose; [apply HT|apply HT']| |];
+    (move=> n *; apply HT; try (by apply HT'); try (by apply type_ne_ty_proph');
       first (by iApply type_lft_morphism_lft_equiv_proper);
       first (apply type_lft_morphism_elctx_interp_proper=>//; apply _));
     move=> *; case n as [|]=>//; by apply HT'.
@@ -650,10 +673,16 @@ Section type_contractive.
 
   Global Instance const_type_contractive {𝔄 𝔅} (ty: type 𝔄) :
     TypeContractive (λ _: type 𝔅, ty).
-  Proof. split; move=>// *. eright=> _; by [iApply lft_equiv_refl|]. Qed.
+  Proof. 
+    split; move=>// *. split; move=>// *. eright=> _; by [iApply lft_equiv_refl|].
+    exists [], []. done.
+   Qed.
 
   Global Instance id_type_ne {𝔄} : TypeNonExpansive (id: type 𝔄 → type 𝔄).
-  Proof. split=>//. by apply type_lft_morphism_id_like. Qed.
+  Proof. 
+    split=>//. split=>//. by apply type_lft_morphism_id_like.
+    intros ????. exists [vπ], [ξ]. intuition. inversion_clear H0. done.
+  Qed.
 
   Global Instance type_list_non_expansive_nil {𝔄} :
     ListTypeNonExpansive (λ _: type 𝔄, +[]).

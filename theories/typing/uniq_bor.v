@@ -104,8 +104,11 @@ Section typing.
 
   Global Instance uniq_type_contractive {𝔄} κ : TypeContractive (uniq_bor (𝔄:=𝔄) κ).
   Proof.
-    split; [by apply (type_lft_morphism_add_one κ)|done| | |].
-    - intros **. simpl. do 6 f_equiv. apply H. 
+    split; [|split|..].
+    - done. - by apply (type_lft_morphism_add_one κ).
+    - intros. simpl. do 6 f_equiv. apply H.
+    - simpl. intros ???(ξ&ξl&->&?&?). exists [fst∘vπ], [ξl]. 
+      intuition. eexists _, _. inversion_clear H1. done.
     - move=> > ? Hl * /=. f_equiv.
       + apply equiv_dist. iDestruct Hl as "#[??]".
         iSplit; iIntros "#H"; (iApply lft_incl_trans; [iApply "H"|done]).

@@ -3,7 +3,7 @@ From iris.algebra Require Import ofe.
 From iris.proofmode Require Import proofmode.
 
 (** * Utility for Point-Free Style *)
-
+Ltac f_exact H := revert H; (eassert (impl _ _); [|done]); f_equiv.
 Ltac fun_ext := apply functional_extensionality.
 Ltac fun_ext_dep := apply functional_extensionality_dep.
 

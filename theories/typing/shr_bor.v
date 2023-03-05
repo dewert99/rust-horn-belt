@@ -42,7 +42,8 @@ Section typing.
 
   Global Instance shr_type_contractive {𝔄} κ : TypeContractive (@shr_bor _ _ 𝔄 κ).
   Proof.
-    split; [by apply (type_lft_morphism_add_one κ)|done |done| |].
+    split; [done| split; [by apply (type_lft_morphism_add_one κ)|done|]| |].
+    - simpl; intros. exists [vπ], [ξ]. intuition. by inversion_clear H0.
     - move=>/= *. by do 4 f_equiv.
     - move=>/= *. do 8 (f_contractive || f_equiv). by simpl in *.
   Qed.

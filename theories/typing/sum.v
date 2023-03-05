@@ -167,6 +167,19 @@ Section typing.
       + by rewrite !elctx_interp_app HE HE'.
   Qed.
 
+  Global Instance xsum_base_type_ne {𝔄 𝔅l} (Tl: hlist (λ 𝔅, type 𝔄 → type 𝔅) 𝔅l) :
+    TCHForall (λ _, TypeNonExpansiveBase) Tl → TypeNonExpansiveBase (Σ! ∘ (happly Tl))%T.
+  Proof.
+    move=> All. split=>/=.
+    - apply xsum_lft_morphism. eapply TCHForall_impl; [|done]. move=> /= ???. apply type_ne_type_lft_morphism.
+    - move=> ?? H *. do 5 f_equiv. rewrite !hlookup_apply. by eapply type_ne_ty_proph.
+    Unshelve. eapply TCHForall_lookup in All. apply All.
+    - intros ???ξ(i&vπ&->&?). rewrite !hlookup_apply in H.
+    specialize (TCHForall_lookup i _ _ All) as TNE. simpl in TNE.
+     edestruct (type_ne_ty_proph_invert (𝔄:=𝔄) ty vπ ξ H) as (vπl&ξl&?&?).
+    exists vπl, ξl. intuition. eexists _, _. rewrite !hlookup_apply. intuition.
+  Qed.
+
   Global Instance xsum_type_ne {𝔄 𝔅l} (T: type 𝔄 → typel 𝔅l) :
     ListTypeNonExpansive T → TypeNonExpansive (Σ! ∘ T)%T.
   Proof.
@@ -174,10 +187,8 @@ Section typing.
       ty_size ty = ty_size ty' → max_ty_size (Tl +$ ty) = max_ty_size (Tl +$ ty').
     { move=> *. elim All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
     split=>/=.
-    - apply xsum_lft_morphism. eapply TCHForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
-    - move=> ?? H *. do 5 f_equiv. rewrite !hlookup_apply. by eapply type_ne_ty_proph.
-    Unshelve. by eapply TCHForall_lookup in All.
+    - eapply xsum_base_type_ne, TCHForall_impl; [|done]. move=> /= *. apply type_ne_base.
     - move=> *. f_equiv=> ?. eapply TCHForall_lookup in All. rewrite !hlookup_apply.
       do 7 f_equiv; [|by apply All]. do 5 f_equiv. by apply EqMsz.
     - move=> *. f_equiv=> ?. eapply TCHForall_lookup in All.
@@ -192,10 +203,8 @@ Section typing.
     have EqMsz: ∀ty ty', max_ty_size (Tl +$ ty) = max_ty_size (Tl +$ ty').
     { move=> *. elim All; [done|]=>/= ???? One _ ->. f_equal. by apply One. }
     split=>/=.
-    - apply xsum_lft_morphism. eapply TCHForall_impl; [|done]. by move=> >[].
     - move=> *. f_equiv. by apply EqMsz.
-    - move=> ?? H *. do 5 f_equiv. rewrite !hlookup_apply. by eapply type_contractive_ty_proph.
-    Unshelve. by eapply TCHForall_lookup in All.
+    - eapply xsum_base_type_ne, TCHForall_impl; [|done]. move=> /= *. apply type_ne_base.
     - move=> *. f_equiv=> ?. eapply TCHForall_lookup in All. rewrite !hlookup_apply.
       do 7 f_equiv; [|by apply All]. do 5 f_equiv. by apply EqMsz.
     - move=> *. f_equiv=> ?. eapply TCHForall_lookup in All.
