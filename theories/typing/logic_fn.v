@@ -46,11 +46,11 @@ Section typing.
     eexists _, (λ π, (_, _)). split. done. eexists _, _. done.
   Qed.
 
-  Lemma xprod_destruct_logic_fn {𝔄l 𝔅} (tyl: typel 𝔄l) (tyr: type 𝔅) (f: (plist of_syn_type 𝔄l) → 𝔅) : 
-    logic_fn tyl tyr f → logic_fn +[Π! tyl]%T tyr (λ '-[xl], f xl).
+  Lemma xprod_destruct_logic_fn {𝔄l 𝔅l 𝔅} (tyl: typel 𝔄l) (tyoth: typel 𝔅l) (tyr: type 𝔅) (f: (plist of_syn_type (𝔄l ++ 𝔅l)) → 𝔅) : 
+    logic_fn (tyl h++ tyoth) tyr f → logic_fn ((Π! tyl)%T +:: tyoth) tyr (λ '(xl -:: xoth), f (xl -++ xoth)).
   Proof.
-    intros ?[lπ[]][(?&?)[]]. unfold logic_fn in H.
-    edestruct (H (pfunsep lπ)) as (?&?). rewrite -(semi_iso' _ _ lπ) in H0.
+    intros ?[lπ othπ][(?&?) ?]. unfold logic_fn in H.
+    edestruct (H ((pfunsep lπ) -++ othπ)) as (?&?). rewrite -(semi_iso' _ _ lπ) in H0.
     clear H f. revert x H0. induction tyl; destruct (pfunsep lπ). done.
     intros ? (?&?&?&?&?).
     replace x0 with (λ π, (phd π, papply ptl π)) in H0. destruct H0 as (->&?&?).
@@ -58,8 +58,8 @@ Section typing.
     eapply IHtyl. rewrite semi_iso'. done.
     fun_ext. intros. specialize (equal_f H x3). unfold to_cons_prod. simpl. 
     destruct (x0 x3). intros [= ->->]. done.
-    eexists x0. f_exact H1.
-    fun_ext. simpl. intros. rewrite semi_iso'. done. 
+    eexists x0. f_exact H2.
+    fun_ext. simpl. intros. rewrite papply_app semi_iso'. done. 
   Qed.
 
   Lemma xsum_inj_ghost_fun {𝔄l} (tyl: typel 𝔄l) i: logic_fn +[(tyl +!! i)] (Σ! tyl)%T (λ '-[v], pinj i v).

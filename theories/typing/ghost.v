@@ -117,8 +117,8 @@ Section typing.
     iDestruct "p" as ([[]|][|]Ev) "[#⧖ ty]"=>//.
     iMod (ty_own_proph with "LFT [] ty κ") as "Upd";
       [done| iApply lft_incl_refl| ].
-      iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]")=>//.
-      { iApply step_fupdN_with_emp. by rewrite difference_empty_L.  }
+    iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]")=>//.
+    { iApply step_fupdN_with_emp. by rewrite difference_empty_L.  }
     wp_seq. iIntros "(%&%&%&ξl&tolft)".
     iMod ("tolft" with "ξl") as "(_&lft)".
     iMod ("ToL" with "lft") as "$".
