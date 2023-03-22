@@ -18,9 +18,14 @@ Section int.
 
   Lemma bool_ty_to_int E L : subtype E L bool_ty int Z_of_bool.
   Proof.
-    apply subtype_plain_type. intros ???; destruct x; destruct y; simpl in H; done.
-    iIntros "*_!>_/=". iSplit; [done|].
+    apply subtype_plain_type. iIntros "*_!>_/=". iSplit; [done|].
     iSplit; [iApply lft_incl_refl|]. by iIntros.
+  Qed.
+
+  Lemma bool_ty_to_int_blocked : blocked_subtype bool_ty int Z_of_bool.
+  Proof.
+    apply blocked_subtype_plain_type.
+    intros ???; destruct x; destruct y; simpl in H; done.
   Qed.
 
   Lemma type_int_instr (z: Z) : typed_val #z int z.

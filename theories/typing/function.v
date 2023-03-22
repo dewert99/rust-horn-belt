@@ -180,7 +180,7 @@ Section typing.
     iDestruct ("IH" with "E") as "$".
   Qed.
 
-  (* Lemma fn_subtype {A 𝔄l 𝔄l' 𝔅 𝔅'}
+  Lemma fn_subtype {A 𝔄l 𝔄l' 𝔅 𝔅'}
         (fp: A → fn_params 𝔄l 𝔅) (fp': A → fn_params 𝔄l' 𝔅') fl g E L :
     (∀x ϝ, let E' := E ++ fp_E (fp' x) ϝ in elctx_sat E' L (fp_E (fp x) ϝ) ∧
       subtypel E' L (fp' x).(fp_ityl) (fp x).(fp_ityl) fl ∧
@@ -188,10 +188,7 @@ Section typing.
     subtype E L (fn fp) (fn fp')
      (λ tr (post: predₛ 𝔅') (al': Π!%ST 𝔄l'), tr (post ∘ g) (plist_map fl al')).
   Proof.
-    move=> Big. apply subtype_plain_type.
-    intros ???. fun_ext. fold of_syn_type. intros ?. fun_ext. intros.
-    apply (equal_f H x0)
-    move=> /= ?. iIntros "L".
+    move=> Big. apply subtype_plain_type=>/= ?. iIntros "L".
     iAssert (∀x ϝ, □ (elctx_interp (E ++ fp_E (fp' x) ϝ) -∗
       elctx_interp (fp_E (fp x) ϝ) ∗
       ([∗ hlist] ty'; ty;- f ∈ (fp' x).(fp_ityl); (fp x).(fp_ityl);- fl,
@@ -235,7 +232,7 @@ Section typing.
     apply subtype_plain_type. iIntros (?) "_!>_/=". iSplit; [done|].
     iSplit; [iApply lft_incl_refl|]. iIntros "* ?". iStopProof. do 13 f_equiv.
     iIntros "Big" (?). iApply "Big".
-  Qed. *)
+  Qed.
 
   Local Lemma wp_app_hasty_box {𝔄l} vl r (f: val)
     (pl: plistc _ 𝔄l) tyl vπl tid (Φ: val → iProp Σ) :

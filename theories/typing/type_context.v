@@ -387,15 +387,14 @@ Section lemmas.
     do 2 (iSplit; [done|]). by iApply "InOwn".
   Qed.
 
-  Lemma subtype_tctx_incl_blocked {𝔄 𝔅 𝔄l} (ty : type 𝔄) (ty' : type 𝔅)
-                                  `{!Inj (=) (=) f}  κ κ' (T: tctx 𝔄l) p E L :
-    subtype E L ty ty' f → lctx_lft_incl E L κ κ' →
+  Lemma subtype_tctx_incl_blocked {𝔄 𝔅 𝔄l} (ty : type 𝔄) (ty' : type 𝔅) f κ κ' (T: tctx 𝔄l) p E L :
+    blocked_subtype ty ty' f → subtype E L ty ty' f → lctx_lft_incl E L κ κ' →
     tctx_incl E L (p ◁{κ} ty +:: T) (p ◁{κ'} ty' +:: T)
       (λ post '(a -:: al), post (f a -:: al)).
   Proof.
-    intros Sub InLft. split; [by intros ??? [??]|].
+    intros [fInj bSub] Sub InLft. split; [by intros ??? [??]|].
     iIntros (??[vπ wπl]?) "#LFT _ _ E L /=[(%v &%& Toty) T] Obs".
-    iDestruct (Sub with "L E") as "#([% %] &_& #InOwn &_)".
+    iDestruct (Sub with "L E") as "#(% &_& #InOwn &_)".
     iDestruct (InLft with "L E") as "#κ⊑κ'". iModIntro. iExists (f ∘ vπ -:: wπl).
     iFrame "L Obs T". iExists v. iSplit; [done|]. iIntros "†κ'".
     iMod (lft_incl_dead with "κ⊑κ' †κ'") as "†κ"; [done|].
@@ -404,7 +403,7 @@ Section lemmas.
     iSplitR "ty"; [|by iApply "InOwn"].
     iApply proph_eqz_mono; last first.
     by iApply proph_eqz_constr. 
-    move => /= *. eexists _. split. done. by apply H1.
+    move => /= *. eexists _. split. done. by apply bSub.
   Qed.
 
   (* Extracting from a type context. *)

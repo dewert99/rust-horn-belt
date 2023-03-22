@@ -15,6 +15,9 @@ Proof. split; fun_ext; repeat case=>//. Qed.
 Section list.
   Context `{!typeG Σ}.
 
+  Global Instance same_level_list {𝔄} : SameLevel (Σ! [(); (𝔄 * listₛ 𝔄)])%ST (listₛ 𝔄).
+  Proof. constructor. simpl. lia. Qed.
+
   Definition list_map {𝔄} (ty: type 𝔄) (ty': type (listₛ 𝔄)) : type (listₛ 𝔄) :=
     <{psum_to_list: (Σ! [(); (𝔄 * listₛ 𝔄)])%ST → listₛ 𝔄}> (Σ! +[(); ty * box ty'])%T.
 End list.
@@ -59,6 +62,20 @@ Section typing.
   Lemma list_eqtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) g ty ty' :
     eqtype E L ty ty' f g → eqtype E L (list_ty ty) (list_ty ty') (map f) (map g).
   Proof. move=> [??]. by split; apply list_subtype. Qed.
+  
+  Lemma list_blocked_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty' :
+    blocked_subtype ty ty' f → blocked_subtype (list_ty ty) (list_ty ty') (map f).
+  Proof.
+    move=> [? sub]. apply fix_blocked_subtype=> ??[? sub']. eapply blocked_subtype_eq.
+    apply mod_ty_blocked_subtype. apply semi_iso_inj. apply list_psum_iso.
+    apply xsum_blocked_subtype. apply (HForall2_1_cons _). apply blocked_subtype_refl. apply (HForall2_1_cons _); [|apply HForall2_1_nil].
+    apply prod_blocked_subtype. done. split; [|apply sub']. done.
+    fun_ext. by case.
+  Qed.
+
+  Lemma list_blocked_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' :
+    blocked_eqtype ty ty' f g → blocked_eqtype (list_ty ty) (list_ty ty') (map f) (map g).
+  Proof. move=> [??]. split; by apply list_blocked_subtype. Qed.
 End typing.
 
 Global Hint Resolve list_resolve | 5 : lrust_typing.

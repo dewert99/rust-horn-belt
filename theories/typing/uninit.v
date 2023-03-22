@@ -147,6 +147,13 @@ Section typing.
   Lemma uninit_unit_2 E L : subtype E L () (↯ 0) id.
   Proof. eapply proj2, uninit_unit. Qed.
 
+  Lemma uninit_blocked_unit : blocked_eqtype (↯ 0) () id id.
+  Proof.
+    apply blocked_eqtype_unfold. apply _.  intros ??.
+    split. intros ->. exists (const -[]). split; [|done]. fun_ext. simpl. intros. apply proof_irrel.
+    intros (?&?&->). done.
+  Qed.
+
   Lemma uninit_plus_prod E L m n :
     eqtype E L (↯ (m + n)) (↯ m * ↯ n) (const ((), ())) (const ()).
   Proof.
@@ -167,6 +174,14 @@ Section typing.
   Lemma uninit_plus_prod_2 E L m n :
     subtype E L (↯ m * ↯ n) (↯ (m + n)) (const ()).
   Proof. eapply proj2, uninit_plus_prod. Qed.
+
+  Lemma uninit_blocked_plus_prod m n :
+    blocked_eqtype (↯ (m + n)) (↯ m * ↯ n) (const ((), ())) (const ()).
+  Proof.
+    apply blocked_eqtype_unfold. { split; fun_ext; by [case|case=> [[][]]]. }
+    intros ??. split. intros ->. exists [], []. rewrite left_id. done.
+    intros (?&?&->&->&->). by apply left_id.
+  Qed.
 End typing.
 
 Global Hint Resolve uninit_resolve uninit_real uninit_unit_1 uninit_unit_2

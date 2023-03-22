@@ -163,6 +163,14 @@ Section own.
   Lemma own_eqtype {𝔄 𝔅} E L n (f: 𝔄 → 𝔅) g ty ty' :
     eqtype E L ty ty' f g → eqtype E L (own_ptr n ty) (own_ptr n ty') f g.
   Proof. move=> [??]. split; by apply own_subtype. Qed.
+
+  Lemma own_blocked_subtype {𝔄 𝔅} n (f: 𝔄 → 𝔅) ty ty' :
+    blocked_subtype ty ty' f → blocked_subtype (own_ptr n ty) (own_ptr n ty') f.
+  Proof. done. Qed.
+
+  Lemma own_blocked_eqtype {𝔄 𝔅} n (f: 𝔄 → 𝔅) g ty ty' :
+    blocked_eqtype ty ty' f g → blocked_eqtype (own_ptr n ty) (own_ptr n ty') f g.
+  Proof. done. Qed.
 End own.
 
 Section box.
@@ -197,6 +205,14 @@ Section box.
   Lemma box_eqtype {𝔄 𝔅} E L (f: 𝔄 → 𝔅) g ty ty' :
     eqtype E L ty ty' f g → eqtype E L (box ty) (box ty') f g.
   Proof. move=> [??]. split; by apply box_subtype. Qed.
+
+  Lemma box_blocked_subtype {𝔄 𝔅} (f: 𝔄 → 𝔅) ty ty' :
+    blocked_subtype ty ty' f → blocked_subtype (box ty) (box ty') f.
+  Proof. done. Qed.
+
+  Lemma box_blocked_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' :
+    blocked_eqtype ty ty' f g → blocked_eqtype (box ty) (box ty') f g.
+  Proof. done. Qed.
 End box.
 
 Section typing.

@@ -137,25 +137,40 @@ Section typing.
       rewrite vapply_funsep. by iIntros ">($&$&$) !>".
   Qed.
 
+  Lemma vmap_funsep {A B n} (f: (A → B)) (vπ: proph (vec A n)) : vfunsep (vmap f ∘ vπ) = vmap (f ∘.) (vfunsep vπ).
+  Proof. 
+    rewrite -{1}[vπ]vapply_funsep.
+    move: {vπ}(vfunsep vπ)=> aπl. by elim aπl; [done|]=>/= ???<-.
+  Qed.
+
   Lemma array_subtype {𝔄 𝔅} E L n (f: 𝔄 → 𝔅) ty ty' :
     subtype E L ty ty' f → subtype E L [ty;^ n] [ty';^ n] (vmap f).
   Proof.
     iIntros (Sub ?) "L". iDestruct (Sub with "L") as "#Sub".
     iIntros "!> E". iDestruct ("Sub" with "E") as "((%Sz&%) &?&#?&#?)".
-    have Eq: ∀vπ, vfunsep (vmap f ∘ vπ) = vmap (f ∘.) (vfunsep vπ).
-    { move=> ?? vπ. rewrite -{1}[vπ]vapply_funsep.
-      move: {vπ}(vfunsep vπ)=> aπl. by elim aπl; [done|]=>/= ???<-. }
     iSplit. iPureIntro. split. by rewrite/= Sz.
     move=> /= ??[?[->?]]. eexists _. split; [done|].
-    eapply incl_big_sepL_ty_proph; [done|by rewrite -Eq].
+    rewrite vmap_funsep. eapply incl_forall2_ty_proph; done.
     iSplit; [done|].
-    iSplit; iIntros "!> */="; rewrite Eq.
+    iSplit; iIntros "!> */="; rewrite vmap_funsep.
     - iIntros "(%&->&?)". iExists _. iSplit; [done|]. by iApply incl_big_sepL_ty_own.
     - iIntros "?". by iApply incl_big_sepL_ty_shr.
   Qed.
   Lemma array_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' n E L :
     eqtype E L ty ty' f g → eqtype E L [ty;^ n] [ty';^ n] (vmap f) (vmap g).
   Proof. move=> [??]. split; by apply array_subtype. Qed.
+
+  Lemma array_blocked_subtype {𝔄 𝔅} n (f: 𝔄 → 𝔅) ty ty' :
+    blocked_subtype ty ty' f → blocked_subtype [ty;^ n] [ty';^ n] (vmap f).
+  Proof.
+    intros [??]. split. intros ?? eq. apply vec_eq. intros. apply (inj f).
+    by rewrite -vlookup_map eq vlookup_map.
+    move=> /= ??[?[->?]]. eexists _. split; [done|].
+    eapply incl_forall2_ty_proph'; [done|by rewrite -vmap_funsep].
+  Qed.
+  Lemma array_blocked_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' n :
+    blocked_eqtype ty ty' f g → blocked_eqtype [ty;^ n] [ty';^ n] (vmap f) (vmap g).
+  Proof. move=> [??]. split; by apply array_blocked_subtype. Qed.
 
   Lemma array_one {𝔄} (ty: type 𝔄) E L : eqtype E L [ty;^ 1] ty vhd (λ x, [#x]).
   Proof.

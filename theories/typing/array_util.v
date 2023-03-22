@@ -209,7 +209,16 @@ Section array_util.
     iSplitL "ty"; by [iApply "In"|iApply "IH"].
   Qed.
 
-  Lemma incl_big_sepL_ty_proph {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅)
+  Lemma incl_forall2_ty_proph {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅)
+      f n (aπl: vec _ n) ξll:
+    (∀aπ ξl, ty.(ty_proph) aπ ξl → ty'.(ty_proph) (f ∘ aπ) ξl) →
+    (Forall2 ty.(ty_proph) aπl ξll) → (Forall2 ty'.(ty_proph) (vmap (f ∘.) aπl) ξll).
+  Proof.
+    revert aπl ξll; induction n; intros ?? In tys; destruct ξll; inv_vec aπl; intros; inversion tys; constructor.
+    by apply In. by apply IHn.
+  Qed.
+
+  Lemma incl_forall2_ty_proph' {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅)
       f n (aπl: vec _ n) ξll:
     (∀aπ ξl, ty'.(ty_proph) (f ∘ aπ) ξl → ty.(ty_proph) aπ ξl) →
     (Forall2 ty'.(ty_proph) (vmap (f ∘.) aπl) ξll) →

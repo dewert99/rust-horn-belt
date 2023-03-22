@@ -384,11 +384,26 @@ Section typing.
     eqtype E L (ty1 * ty2) (ty1' * ty2') (prod_map f g) (prod_map f' g').
   Proof. move=> [??][??]. split; by apply prod_subtype. Qed.
 
+  Lemma prod_blocked_subtype {𝔄 𝔅 𝔄' 𝔅'} f g
+                     (ty1: type 𝔄) (ty2: type 𝔅) (ty1': type 𝔄') (ty2': type 𝔅') :
+    blocked_subtype ty1 ty1' f → blocked_subtype ty2 ty2' g →
+    blocked_subtype (ty1 * ty2) (ty1' * ty2') (prod_map f g).
+  Proof.
+    move=> [Injf Sub] [Injg Sub']. split. intros [??][??][= ??]; f_equal; by eapply inj.
+    simpl. intros ??(?&?&->&?&?). eexists _, _. split. done.
+    split. by apply Sub. by apply Sub'.
+  Qed.
+  Lemma prod_blocked_eqtype {𝔄 𝔅 𝔄' 𝔅'} (f: 𝔄 → 𝔄') f' (g: 𝔅 → 𝔅') g'
+        (ty1: type 𝔄) (ty2: type  𝔅) (ty1': type 𝔄') (ty2': type 𝔅') :
+    blocked_eqtype ty1 ty1' f f' → blocked_eqtype ty2 ty2' g g' →
+    blocked_eqtype (ty1 * ty2) (ty1' * ty2') (prod_map f g) (prod_map f' g').
+  Proof. move=> [??][??]. split; by apply prod_blocked_subtype. Qed.
+  
   Lemma xprod_subtype {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl :
     subtypel E L tyl tyl' fl → subtype E L (Π! tyl) (Π! tyl') (plist_map fl).
   Proof.
     move=> Subs. elim Subs; [solve_typing|]=> *. eapply subtype_eq.
-    { apply mod_ty_subtype; [apply _|apply cons_prod_iso| by apply prod_subtype].  }
+    { apply mod_ty_subtype; [apply _| by apply prod_subtype].  }
     fun_ext. by case.
   Qed.
   Lemma xprod_eqtype {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl gl :
@@ -397,21 +412,84 @@ Section typing.
   Proof.
     move=> /eqtypel_subtypel[??]. by split; apply xprod_subtype.
   Qed.
+  Lemma xprod_blocked_subtype {𝔄l 𝔅l} (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl :
+    blocked_subtypel tyl tyl' fl → blocked_subtype (Π! tyl) (Π! tyl') (plist_map fl).
+  Proof.
+    move=> Subs. elim Subs; [apply blocked_eqtype_refl|]=> *. simpl. eapply blocked_subtype_eq.
+    { apply mod_ty_blocked_subtype; [apply _|apply cons_prod_iso| by apply prod_blocked_subtype].  }
+    fun_ext. by case.
+  Qed.
+  Lemma xprod_blocked_eqtype {𝔄l 𝔅l} (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl gl :
+    blocked_eqtypel tyl tyl' fl gl →
+    blocked_eqtype (Π! tyl) (Π! tyl') (plist_map fl) (plist_map gl).
+  Proof.
+    move=> /blocked_eqtypel_subtypel[??]. by split; apply xprod_blocked_subtype.
+  Qed.
+
+  Lemma prod_assoc_h {X A B C} (vπ: (X → (A * (B * C)))):
+    fst ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ vπ ∧
+    snd ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ (snd ∘ vπ) ∧
+    snd ∘ (prod_assoc ∘ vπ) = snd ∘ (snd ∘ vπ).
+  Proof. split; [|split]; fun_ext=>/= π; by case (vπ π)=> [?[??]]. Qed.
+ 
+  Lemma prod_lid_h {X A} (vπ: (X → (_ * A))): prod_left_id ∘ vπ = snd ∘ vπ.
+  Proof. fun_ext=>/= π. by case (vπ π)=> [[]?]. Qed.
+
+  Lemma prod_rid_h {X A} (vπ: (X → (A * _))): prod_right_id ∘ vπ = fst ∘ vπ.
+  Proof. fun_ext=>/= π. by case (vπ π)=> [?[]]. Qed.
+
+  Lemma prod_ty_blocked_assoc {𝔄 𝔅 ℭ} (ty1: type 𝔄) (ty2: type 𝔅) (ty3: type ℭ) :
+    blocked_eqtype (ty1 * (ty2 * ty3)) ((ty1 * ty2) * ty3) prod_assoc prod_assoc'.
+  Proof.
+    apply blocked_eqtype_unfold; [apply _|]. intros ??. destruct (prod_assoc_h vπ) as [?[??]].
+    simpl. setoid_rewrite H. setoid_rewrite H0. setoid_rewrite H1.
+    split; [intros (?&?&->&?&(?&?&->&?&?)); rewrite app_assoc | intros (?&?&->&(?&?&->&?&?)&?); rewrite -app_assoc];  do 9 (eexists || split || done).
+  Qed.
+
+  Lemma prod_ty_blocked_left_id {𝔄} (ty: type 𝔄) :
+    blocked_eqtype (() * ty) ty prod_left_id prod_left_id'.
+  Proof.
+    apply blocked_eqtype_unfold; [apply _|]. intros ??. setoid_rewrite (prod_lid_h vπ).
+    split. intros (?&?&->&(?&?&->)&?). rewrite left_id. done.
+    intros ?. eexists [], _. split. rewrite left_id. done. split; [|done]. exists (const -[]); split; [|done]. 
+    fun_ext. intros. simpl. apply proof_irrel.
+  Qed.
+
+  Lemma prod_ty_blocked_right_id {𝔄} (ty: type 𝔄) :
+    blocked_eqtype (ty * ()) ty prod_right_id prod_right_id'.
+  Proof.
+    apply blocked_eqtype_unfold; [apply _|]. intros ??. rewrite (prod_rid_h vπ).
+    split. intros (?&?&->&?&(?&?&->)). by rewrite right_id.
+    intros ?. eexists _, []. split. rewrite right_id. done. split; [done|]. exists (const -[]); split; [|done]. 
+    fun_ext. intros. simpl. apply proof_irrel.
+  Qed.
+
+  Lemma xprod_ty_blocked_app_prod {𝔄l 𝔅l} (tyl: typel 𝔄l) (tyl': typel 𝔅l) :
+    blocked_eqtype (Π! (tyl h++ tyl')) (Π! tyl * Π! tyl') psep (uncurry papp).
+  Proof.
+    elim: tyl=> [|> Eq].
+    - eapply blocked_eqtype_eq.
+      + eapply blocked_eqtype_trans; [apply blocked_eqtype_symm, prod_ty_blocked_left_id|].
+      eapply prod_blocked_eqtype.
+      apply mod_ty_blocked_outin. by apply nil_unit_iso'. by apply blocked_eqtype_equiv.
+      + done. + done.
+    - eapply blocked_eqtype_eq.
+      + eapply blocked_eqtype_trans; [by apply mod_ty_blocked_outin, _|].
+        eapply blocked_eqtype_trans. { eapply prod_blocked_eqtype; [apply blocked_eqtype_refl|apply Eq]. }
+        eapply blocked_eqtype_trans; [by apply prod_ty_blocked_assoc|].
+        apply prod_blocked_eqtype. apply mod_ty_blocked_inout. apply cons_prod_iso. apply blocked_eqtype_refl.
+      + fun_ext. by case.
+      + fun_ext. by case=> [[??]?].
+  Qed.
 
   Lemma prod_ty_assoc {𝔄 𝔅 ℭ} E L (ty1: type 𝔄) (ty2: type 𝔅) (ty3: type ℭ) :
     eqtype E L (ty1 * (ty2 * ty3)) ((ty1 * ty2) * ty3) prod_assoc prod_assoc'.
   Proof.
-    have Eq: ∀vπ: proph (𝔄 * (𝔅 * ℭ)),
-      fst ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ vπ ∧
-      snd ∘ (fst ∘ (prod_assoc ∘ vπ)) = fst ∘ (snd ∘ vπ) ∧
-      snd ∘ (prod_assoc ∘ vπ) = snd ∘ (snd ∘ vπ).
-    { move=> vπ. split; [|split]; fun_ext=>/= π; by case (vπ π)=> [?[??]]. }
-    apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=". iSplit; [iPureIntro|].
-    split; [lia|]. intros ??. destruct (Eq vπ) as [?[??]].
-    setoid_rewrite H; [|exact inhabitant]. setoid_rewrite H0; [|exact inhabitant]. setoid_rewrite H1; [|exact inhabitant].
-    split; [intros (?&?&->&?&(?&?&->&?&?)); rewrite app_assoc | intros (?&?&->&(?&?&->&?&?)&?); rewrite -app_assoc];  do 9 (eexists || split || done).
-    iSplit; [rewrite (assoc (++)); by iApply lft_equiv_refl|].
-    iSplit; iIntros "!>" (vπ) "*"; move: (Eq vπ)=> [->[->->]]; [iSplit|].
+    apply eqtype_unfold. apply _. iIntros "*_!>_". 
+    iSplit. iPureIntro. split; [simpl; lia|]. rewrite -blocked_eqtype_unfold.
+    apply prod_ty_blocked_assoc.
+    simpl. iSplit; [rewrite (assoc (++)); by iApply lft_equiv_refl|].
+    iSplit; iIntros "!>" (vπ) "*"; move: (prod_assoc_h vπ)=> [->[->->]]; [iSplit|].
     - iIntros "(%wl1 & %&->&?& %wl2 & %wl3 &->&?& Own3)". iExists (wl1 ++ wl2), wl3.
       iSplit; [by rewrite assoc|]. iFrame "Own3". iExists wl1, wl2. by iFrame.
     - iIntros "(%& %wl3 &->& (%wl1 & %wl2 &->& Own1 &?) &?)". iExists wl1, (wl2 ++ wl3).
@@ -422,16 +500,11 @@ Section typing.
   Lemma prod_ty_left_id {𝔄} E L (ty: type 𝔄) :
     eqtype E L (() * ty) ty prod_left_id prod_left_id'.
   Proof.
-    apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=".
-    have Eq: ∀vπ: proph (_ * 𝔄), prod_left_id ∘ vπ = snd ∘ vπ.
-    { move=> vπ. fun_ext=>/= π. by case (vπ π)=> [[]?]. }
-    iSplit. iPureIntro. split; [done|].
-    intros ??. specialize (Eq vπ). setoid_rewrite Eq; [|exact inhabitant].
-    split. intros (?&?&->&(?&?&->)&?). rewrite left_id. done.
-    intros ?. eexists [], _. split. rewrite left_id. done. split; [|done]. exists (const -[]); split; [|done]. 
-    fun_ext. intros. simpl. apply proof_irrel.
-    iSplit; [by iApply lft_equiv_refl|].
-    iSplit; iIntros "!>*"; rewrite Eq.
+    apply eqtype_unfold; [apply _|]. iIntros "*_!>_".
+    iSplit. iPureIntro. split; [done|]. rewrite -blocked_eqtype_unfold.
+    apply prod_ty_blocked_left_id.
+    simpl. iSplit; [by iApply lft_equiv_refl|].
+    iSplit; iIntros "!>*"; rewrite prod_lid_h.
     - iSplit.
       + by iDestruct 1 as ([|] ? -> (?&?&?)) "?".
       + iIntros. iExists [], _. iFrame. iPureIntro.
@@ -445,16 +518,11 @@ Section typing.
   Lemma prod_ty_right_id {𝔄} E L (ty: type 𝔄) :
     eqtype E L (ty * ()) ty prod_right_id prod_right_id'.
   Proof.
-    apply eqtype_unfold; [apply _|]. iIntros "*_!>_/=".
-    have Eq: ∀vπ: proph (𝔄 * _), prod_right_id ∘ vπ = fst ∘ vπ.
-    { move=> vπ. fun_ext=>/= π. by case (vπ π) => [?[]]. }
-    iSplit. iPureIntro. split; [done|].
-    intros ??. specialize (Eq vπ). setoid_rewrite Eq; [|exact inhabitant].
-    split. intros (?&?&->&?&(?&?&->)). rewrite right_id. done.
-    intros ?. eexists _, []. split. rewrite right_id. done. split; [done|]. exists (const -[]); split; [|done]. 
-    fun_ext. intros. simpl. apply proof_irrel.
-    rewrite right_id. iSplit; [by iApply lft_equiv_refl|].
-    iSplit; iIntros "!>*"; rewrite Eq; [iSplit|].
+    apply eqtype_unfold; [apply _|]. iIntros "*_!>_".
+    iSplit. iPureIntro. split; [simpl; done|]. rewrite -blocked_eqtype_unfold.
+    apply prod_ty_blocked_right_id.
+    simpl. rewrite right_id. iSplit; [by iApply lft_equiv_refl|].
+    iSplit; iIntros "!>*"; rewrite prod_rid_h; [iSplit|].
     - iDestruct 1 as (?[|]->) "[? %H]"; [by rewrite right_id|naive_solver].
     - iIntros. iExists _, []. iFrame. iPureIntro. rewrite right_id.
       split; [done|]. exists (const -[]). split; [|done]. fun_ext=>? /=.

@@ -115,7 +115,7 @@ Section sum.
     - by rewrite EqMsz.
     - rewrite /tyl_lfts. elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
     - rewrite /tyl_E. elim: Eqv=>/= [|>Eqv ? ->]; [done|]. f_equiv. apply Eqv.
-    - move=> *. do 6 f_equiv. by apply @hlookup_ne.
+    - move=> *. do 5 f_equiv. rewrite ty_proph_ne; try done. by apply @hlookup_ne.
     - move=> *. rewrite EqMsz. do 10 f_equiv. by apply @hlookup_ne.
     - move=> *. f_equiv=> i. rewrite /is_sum_pad EqMsz.
       have Eqv': tyl +!! i ≡{n}≡ tyl' +!! i by apply @hlookup_ne.
@@ -298,16 +298,8 @@ Section typing.
     iSplit; simpl. iAssert ⌜forall i, (_: Prop)⌝%I as %InProph.
     iApply pure_forall_2. iIntros (i). iDestruct ("InTyl" $! i) as "((_&res)&_&_&_)". iExact "res".
     iPureIntro. split. by f_equal.
-    intros ??(i&?).
-    specialize (semi_iso' _ (fin_renew_by_plist2 fl) i) as eq.
-    rewrite -eq in H. destruct H as (vπ'&?&?). 
-    eassert (∀ π, _). intros. specialize (equal_f H π). simpl.
-    destruct (psum_destruct (vπ π) _ eq_refl) as (?&->). rewrite psum_map_pinj. intros. apply pinj_inj in H1 as [?%semi_iso_inj _]. exact H1.
-    destruct (psum_destruct_fun vπ _ X) as (?&->).
-    eexists _, _. split. done.
-    apply InProph. simpl. revert H0. eassert (impl _ _); [|done]. f_equiv.
-    fun_ext. simpl. intros π. specialize (equal_f H π). simpl. rewrite psum_map_pinj. intros. apply pinj_inj in H0 as [?%semi_iso_inj ?].
-    symmetry. by apply JMeq_eq.
+    intros ??(i&?&->&?). eexists _, _; split; [|by apply InProph]. 
+    fun_ext. simpl. intros. by rewrite psum_map_pinj.
     iSplit; [done|].
     iSplit; iModIntro; iIntros "*".
     - iDestruct 1 as (i vπ' vl' vl'' (->&->&->)) "?".
@@ -327,6 +319,48 @@ Section typing.
     eqtype E L (Σ! tyl) (Σ! tyl') (psum_map fl) (psum_map gl).
   Proof.
     move=> /eqtypel_subtypel[??]. by split; apply xsum_subtype.
+  Qed.
+
+  Lemma fin_renew_inj n m (H: eq_nat n m): Inj (=) (=) (fin_renew H).
+  Proof. 
+    revert m H. induction n; intros ?????; destruct m; inv_fin x; inv_fin y; try done.
+    simpl. intros ??[= ?%existT_inj]. f_equal. eapply IHn. done.
+  Qed.
+
+  Lemma HForall2_1_lookup {A Xl Yl} {F G: A → Type} {H: A → A → Type} i {Φ: ∀X Y, F X → G Y → H X Y → Prop} {xl: hlist F Xl} {yl: hlist G Yl} {zl} :
+    HForall2_1 Φ xl yl zl → Φ _ _ (xl +!! i) (yl +!! (fin_renew_by_plist2 zl i)) (zl -2!! i).
+  Proof. move=> All. induction All; inv_fin i; [done|]. apply IHAll. Qed.
+
+  Lemma xsum_blocked_subtype {𝔄l 𝔅l} (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl :
+    blocked_subtypel tyl tyl' fl → blocked_subtype (Σ! tyl) (Σ! tyl') (psum_map fl).
+  Proof.
+    intros Sub. rewrite /blocked_subtypel in Sub. split. intros ??.
+    destruct (psum_destruct x _ eq_refl) as (?&->). intros.
+    destruct (psum_destruct y _ eq_refl) as (?&?).
+    eassert _ as H1. exact H. rewrite e in H1. revert H1.
+    rewrite 2! psum_map_pinj. intros (?%fin_renew_inj&?)%pinj_inj.
+    revert H. destruct (psum_destruct y (psum_variant_id x)) as (?&->). done.
+    rewrite 2! psum_map_pinj. intros (_&?)%pinj_inj.
+    apply JMeq_eq in H. f_equal. destruct (HForall2_1_lookup (psum_variant_id x) Sub) as [??].
+    apply (inj _ _ _ H).
+    intros ??(i&?).
+    specialize (semi_iso' _ (fin_renew_by_plist2 fl) i) as eq.
+    rewrite -eq in H. destruct H as (vπ'&?&?). 
+    eassert (∀ π, _). intros. specialize (equal_f H π). simpl.
+    destruct (psum_destruct (vπ π) _ eq_refl) as (?&->). rewrite psum_map_pinj. intros. apply pinj_inj in H1 as [?%semi_iso_inj _]. exact H1.
+    destruct (psum_destruct_fun vπ _ X) as (?&->).
+    eexists _, _. split. done.
+    destruct (HForall2_1_lookup (fin_renew_by_plist2' fl i) Sub) as [? InProph].
+    apply InProph. simpl. revert H0. eassert (impl _ _); [|done]. f_equiv.
+    fun_ext. simpl. intros π. specialize (equal_f H π). simpl. rewrite psum_map_pinj. intros. apply pinj_inj in H0 as [?%semi_iso_inj ?].
+    symmetry. by apply JMeq_eq.
+  Qed.
+
+  Lemma xsum_blocked_eqtype {𝔄l 𝔅l} (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl gl :
+    blocked_eqtypel tyl tyl' fl gl →
+    blocked_eqtype (Σ! tyl) (Σ! tyl') (psum_map fl) (psum_map gl).
+  Proof.
+    move=> /blocked_eqtypel_subtypel[??]. by split; apply xsum_blocked_subtype.
   Qed.
 End typing.
 

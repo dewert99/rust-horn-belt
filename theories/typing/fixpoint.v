@@ -410,7 +410,7 @@ Section fix_ty.
   Qed.
 End fix_ty.
 
-(* Section fix_subtyping.
+Section fix_subtyping.
   Context `{!typeG Σ}.
 
   Local Lemma wand_forall P (Φ: nat → iProp Σ) : (∀n, P -∗ Φ n) ⊢ (P -∗ ∀n, Φ n).
@@ -418,28 +418,61 @@ End fix_ty.
   Local Lemma entails_dist_True (P Q: iProp Σ) : (P ⊢ Q) ↔ ∀n, (P → Q)%I ≡{n}≡ True%I.
   Proof. by rewrite entails_eq_True equiv_dist. Qed.
 
+  Definition sub_T {𝔄 𝔅} (f: (𝔄 → 𝔅)) (T: type 𝔄 → type 𝔄) `{!TypeContractive T}
+  (T' : type 𝔅 → type 𝔅) `{!TypeContractive T'} E L f : Prop :=
+  (∀n, subtype E L (Tn_h T n) (Tn_h T' n) f) /\ (∀n, subtype E L (Tn T n) (Tn T' n) f).
+
+  Lemma base_subtype {𝔄 𝔅} f
+  (T : type 𝔄 → type 𝔄) `{!TypeContractive T}
+  (T' : type 𝔅 → type 𝔅) `{!TypeContractive T'} E L :
+  (∀qL, (llctx_interp L qL -∗ □ (elctx_interp E -∗
+    ∀n, type_incl (Tn_h T n) (Tn_h T' n) f))) →
+  subtype E L (base T) (base T') f.
+  Proof.
+    move=> Incl ql.
+    rewrite Incl. do 2 f_equiv.
+    iIntros "Incl". iSplit; simpl. iSplit; [done|]. iIntros (??[??]). iDestruct ("Incl" $! x) as "((_&%Incl')&_)".
+    iPureIntro. eexists x. by apply Incl'.
+    iSplit. iApply lft_incl_refl. iSplit; iModIntro; iIntros; done.
+  Qed.
+
+  Lemma fix_subtype' {𝔄 𝔅} f
+    (T : type 𝔄 → type 𝔄) `{!TypeContractive T}
+    (T' : type 𝔅 → type 𝔅) `{!TypeContractive T'} E L :
+    (∀ qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
+      ∀n, type_incl (Tn T n) (Tn T' n) f)) →
+    subtype E L (fix_ty T) (fix_ty T') f.
+  Proof.
+    move=> Incl qL.
+    rewrite Incl /type_incl -!persistent_and_sep /=. do 2 f_equiv.
+    (* FIXME : change the definition of limit_preserving so that it
+      applies even if the limti is not computed with compl. *)
+    apply and_intro; [|apply and_intro; [|apply and_intro]].
+    - iIntros "H". iDestruct ("H" $! 0%nat) as "((->&%)&_)". unfold Tn in H.
+      setoid_rewrite (Tn_ty_proph_const T 1 0) in H. 
+      setoid_rewrite (Tn_ty_proph_const T' 1 0) in H. 
+      done.
+    - iIntros "H". iDestruct ("H" $! 0%nat) as "(_&$&_)".
+    - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
+      apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
+    - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
+      apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
+  Qed.
+
   Lemma fix_subtype {𝔄 𝔅} f
     (T : type 𝔄 → type 𝔄) `{!TypeContractive T}
     (T' : type 𝔅 → type 𝔅) `{!TypeContractive T'} E L :
     (∀ty ty', subtype E L ty ty' f → subtype E L (T ty) (T' ty') f) →
     subtype E L (fix_ty T) (fix_ty T') f.
   Proof.
-    move=> Loop qL.
-    have Incl: llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ∀n, type_incl (Tn T n) (Tn T' n) f).
-    { rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
-      apply forall_intro=> n. rewrite -intuitionistically_into_persistently.
-      move: qL. apply Loop. elim n=> [|??]; [solve_typing|by apply Loop]. }
-    rewrite Incl /type_incl -!persistent_and_sep /=. do 2 f_equiv.
-    (* FIXME : change the definition of limit_preserving so that it
-       applies even if the limti is not computed with compl. *)
-    apply and_intro; [|apply and_intro; [|apply and_intro]].
-    - iIntros "H". iDestruct ("H" $! 0%nat) as "($&_)".
-    - iIntros "H". iDestruct ("H" $! 0%nat) as "(_&$&_)".
-    - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
-      apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
-    - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
-      apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
+    move=> Loop. apply fix_subtype'. intros.
+    rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
+    apply forall_intro=> n. rewrite -intuitionistically_into_persistently.
+    move: qL. apply Loop. elim n=> [|??]; [|by apply Loop].
+    apply base_subtype; try done. intros.
+    rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
+    apply forall_intro=> n'. rewrite -intuitionistically_into_persistently.
+    move: qL. elim n'=> [|??]; [apply base_type.base_subtype|by apply Loop].
   Qed.
 
   Lemma fix_eqtype_subtype {𝔄 𝔅} f g
@@ -448,20 +481,15 @@ End fix_ty.
     (∀ty ty', eqtype E L ty ty' f g → eqtype E L (T ty) (T' ty') f g) →
     subtype E L (fix_ty T) (fix_ty T') f.
   Proof.
-    move=> Loop qL.
-    have Incl: llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ∀n, type_incl (Tn T n) (Tn T' n) f).
-    { rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
-      apply forall_intro=> n. rewrite -intuitionistically_into_persistently.
-      move: qL. apply Loop. elim n=> [|??]; [solve_typing|by apply Loop]. }
-    rewrite Incl /type_incl -!persistent_and_sep /=. do 2 f_equiv.
-    apply and_intro; [|apply and_intro; [|apply and_intro]].
-    - iIntros "H". iDestruct ("H" $! 0%nat) as "($&_)".
-    - iIntros "H". iDestruct ("H" $! 0%nat) as "(_&$&_)".
-    - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
-      apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&$&_)".
-    - apply entails_dist_True=> ?. setoid_rewrite conv_compl=>/=.
-      apply entails_dist_True. iIntros "H". iDestruct ("H" $! _) as "(_&_&_&$)".
+    move=> Loop. apply fix_subtype'. intros.
+    rewrite intuitionistically_into_persistently -wand_forall persistently_forall.
+    apply forall_intro=> n. rewrite -intuitionistically_into_persistently.
+    move: qL. apply Loop. elim n=> [|??]; [|by apply Loop].
+    split; apply base_subtype; try done; intros;
+    rewrite intuitionistically_into_persistently -wand_forall persistently_forall;
+    apply forall_intro=> n'; rewrite -intuitionistically_into_persistently; move: qL;
+    (destruct n'; [by apply base_type.base_eqtype|]); simpl; apply Loop;
+    (elim n'=> [|??]; [by apply base_type.base_eqtype|]); by apply Loop.
   Qed.
 
   Lemma fix_eqtype {𝔄 𝔅} f g
@@ -496,7 +524,19 @@ End fix_ty.
   Proof.
     move=> ?. eapply (eqtype_trans _ _ _ id id); [|done]. apply fix_unfold_fold.
   Qed.
-End fix_subtyping. *)
 
-(* Global Hint Resolve fix_subtype_l fix_subtype_r fix_eqtype_l fix_eqtype_r | 100
-  : lrust_typing. *)
+  Lemma fix_blocked_subtype {𝔄 𝔅} `{!Inj (=) (=) f}
+  (T : type 𝔄 → type 𝔄) `{!TypeContractive T}
+  (T' : type 𝔅 → type 𝔅) `{!TypeContractive T'} :
+  (∀ty ty', blocked_subtype ty ty' f → blocked_subtype (T ty) (T' ty') f) →
+  blocked_subtype (fix_ty T) (fix_ty T') f.
+  Proof.
+    intros. split; [done|]. simpl. intros  ??[i?].
+    exists i. revert vπ ξl H0. induction i; intros. done. simpl in H0. 
+    destruct (H (Tn_h T i) (Tn_h T' i)); [|by apply H2].
+    split; [done|]. intros. by apply IHi.
+  Qed.
+End fix_subtyping.
+
+Global Hint Resolve fix_subtype_l fix_subtype_r fix_eqtype_l fix_eqtype_r | 100
+  : lrust_typing.

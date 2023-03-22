@@ -88,6 +88,16 @@ Section typing.
     eqtype E L (&shr{κ} ty) (&shr{κ'} ty') f g.
   Proof. move=> [??] [??]. split; by apply shr_subtype. Qed.
 
+  Lemma shr_blocked_subtype {𝔄 𝔅} κ κ' (f: 𝔄 → 𝔅) ty ty' :
+    blocked_subtype ty ty' f →
+    blocked_subtype (&shr{κ} ty) (&shr{κ'} ty') f.
+  Proof. done. Qed.
+
+  Lemma shr_blocked_eqtype {𝔄 𝔅} κ κ' (f: 𝔄 → 𝔅) g ty ty' :
+    blocked_eqtype ty ty' f g →
+    blocked_eqtype (&shr{κ} ty) (&shr{κ'} ty') f g.
+  Proof. done. Qed.
+
   Lemma read_shr {𝔄} (ty: type 𝔄) κ E L :
     Copy ty → lctx_lft_alive E L κ →
     typed_read E L (&shr{κ} ty) ty (&shr{κ} ty) id id.

@@ -69,8 +69,7 @@ Section product_split.
       { eapply tctx_incl_trans; [apply tctx_of_shift_loc_0|].
         eapply subtype_tctx_incl, HSub, subtype_trans, mod_ty_in.
         eapply subtype_trans; [apply prod_ty_right_id|].
-        apply prod_subtype; solve_typing.
-        apply semi_iso_inj. }
+        apply prod_subtype; solve_typing. }
         by move=> ?[?[]]. }
     move=> ???? IH _ ?. eapply tctx_incl_ext.
     { eapply tctx_incl_trans; [| eapply subtype_tctx_incl, HSub, mod_ty_in; apply semi_iso_inj].

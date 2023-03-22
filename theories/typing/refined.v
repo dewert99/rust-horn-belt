@@ -91,6 +91,17 @@ Section typing.
     iSplit; iIntros "!>* [_$]".
   Qed.
 
+  Lemma refined_blocked_subtype {𝔄 𝔅} (Φ Ψ: _ → Prop) (f: 𝔄 → 𝔅) ty ty' :
+    blocked_subtype ty ty' f →
+    blocked_subtype (!{Φ} ty) (!{Ψ} ty') f.
+  Proof. done. Qed.
+  Lemma refined_blocked_eqtype {𝔄 𝔅} (Φ Ψ: _ → Prop) (f: 𝔄 → 𝔅) g ty ty' :
+    blocked_eqtype ty ty' f g → (∀a, Φ a → Ψ (f a)) → (∀a, Ψ a → Φ (g a)) →
+    blocked_eqtype (!{Φ} ty) (!{Ψ} ty') f g.
+  Proof. done. Qed.
+  Lemma refined_blocked_forget {𝔄} (Φ: 𝔄 → _) ty : blocked_eqtype (!{Φ} ty) ty id id.
+  Proof. apply blocked_eqtype_unfold. apply _. done. Qed.
+
   Lemma tctx_refined_in {𝔄 𝔅l} (Φ: 𝔄 → _) ty E L (T: tctx 𝔅l) p :
     tctx_incl E L (p ◁ ty +:: T) (p ◁ !{Φ} ty +:: T)
       (λ post '(a -:: bl), Φ a ∧ post (a -:: bl)).

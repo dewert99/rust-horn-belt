@@ -175,6 +175,18 @@ Section typing.
     eqtype E L (&uniq{κ} ty) (&uniq{κ} ty') id id.
   Proof. move=> [??][??]. by split; apply uniq_subtype. Qed.
 
+  Lemma uniq_blocked_subtype {𝔄} κ κ' (ty ty': type 𝔄) :
+    blocked_subtype ty ty' id →
+    blocked_subtype (&uniq{κ} ty) (&uniq{κ'} ty') id.
+  Proof. 
+    intros [??]. split. apply id_inj. intros ??(?&?&->&?&?). eexists _, _. intuition.
+  Qed.
+
+  Lemma uniq_blocked_eqtype {𝔄} κ κ' (ty ty': type 𝔄) :
+    blocked_eqtype ty ty' id id →
+    blocked_eqtype (&uniq{κ} ty) (&uniq{κ'} ty') id id.
+  Proof. intros [??]. split; by apply uniq_blocked_subtype. Qed.
+
   Lemma write_uniq {𝔄} E L κ (ty: type 𝔄):
     lctx_lft_alive E L κ →
     typed_write E L (&uniq{κ} ty) ty (&uniq{κ} ty) ty fst (λ v w, (w, v.2)).
@@ -285,7 +297,7 @@ Section typing.
     - iIntros "!> (%bπ &%& ⧖' & ζPc &%& ↦ & ty) !>!>". iExists _, _. iFrame "⧖'".
       iSplitR "↦ ty".
       { iApply "ToξPc". iApply proph_eqz_mono; [ |iApply proph_eqz_constr; iApply (proph_ctrl_eqz' with "PROPH ζPc")].
-      simpl. intros. eexists _. split. done. by apply InProph'. }
+      simpl. intros. eexists _. split. done. f_exact (InProph _ _ H1). by rewrite compose_assoc semi_iso. }
       iExists _. iFrame "↦". by iApply "InOwn'".
   Qed.
 

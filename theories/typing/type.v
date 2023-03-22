@@ -365,6 +365,9 @@ Section ofe_lemmas.
   Global Instance ty_proph_ne {𝔄} n:
     Proper (dist n ==> (=) ==> (=) ==> (↔)) (ty_proph (𝔄:=𝔄)).
   Proof. move=> ?? Eqv ??->??->. destruct Eqv. exact (H2 _ _). Qed.
+  Global Instance ty_proph_proper {𝔄} :
+    Proper ((≡) ==> (=) ==> (=) ==> (↔)) (ty_proph (𝔄:=𝔄)).
+  Proof. move=> ?? Eqv ??->??->. destruct Eqv. exact (H2 _ _). Qed.
 
   Global Instance ty_own_ne {𝔄} n:
     Proper (dist n ==> (=) ==> (=) ==> (=) ==> (=) ==> dist n) (ty_own (𝔄:=𝔄)).
@@ -922,7 +925,7 @@ End real.
 
 Definition type_incl `{!typeG Σ} {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) (f: 𝔄 → 𝔅)
   : iProp Σ :=
-  ⌜ty.(ty_size) = ty'.(ty_size) ∧ ∀vπ ξl, ty'.(ty_proph) (f ∘ vπ) ξl → ty.(ty_proph) vπ ξl⌝ ∗ (ty_lft ty' ⊑ ty_lft ty) ∗
+  ⌜ty.(ty_size) = ty'.(ty_size) ∧ ∀vπ ξl, ty.(ty_proph) vπ ξl → ty'.(ty_proph) (f ∘ vπ) ξl ⌝ ∗ (ty_lft ty' ⊑ ty_lft ty) ∗
   (□ ∀vπ d tid vl, ty.(ty_own) vπ d tid vl -∗ ty'.(ty_own) (f ∘ vπ) d tid vl) ∗
   (□ ∀vπ d κ tid l, ty.(ty_shr) vπ d κ tid l -∗ ty'.(ty_shr) (f ∘ vπ) d κ tid l).
 Global Instance: Params (@type_incl) 4 := {}.
@@ -935,6 +938,13 @@ Definition eqtype `{!typeG Σ} {𝔄 𝔅} E L (ty: type 𝔄) (ty': type 𝔅)
   (f: 𝔄 → 𝔅) (g: 𝔅 → 𝔄) : Prop := subtype E L ty ty' f ∧ subtype E L ty' ty g.
 Global Instance: Params (@eqtype) 6 := {}.
 
+Definition blocked_subtype `{!typeG Σ} {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) (f: 𝔄 → 𝔅)
+  : Prop := Inj (=) (=) f ∧ ∀vπ ξl, ty'.(ty_proph) (f ∘ vπ) ξl → ty.(ty_proph) vπ ξl.
+
+Definition blocked_eqtype `{!typeG Σ} {𝔄 𝔅} (ty: type 𝔄) (ty': type 𝔅) (f: 𝔄 → 𝔅) (g: 𝔅 → 𝔄)
+  : Prop := blocked_subtype ty ty' f ∧ blocked_subtype ty' ty g.
+Global Instance: Params (@blocked_eqtype) 4 := {}.
+
 Definition subtype_id `{!typeG Σ} {𝔄} E L (ty ty': type 𝔄) : Prop
   := subtype E L ty ty' id.
 Definition eqtype_id `{!typeG Σ} {𝔄} E L (ty ty': type 𝔄) : Prop
@@ -946,6 +956,13 @@ Definition subtypel `{!typeG Σ} {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typ
 Definition eqtypel `{!typeG Σ} {𝔄l 𝔅l} E L (tyl: typel 𝔄l) (tyl': typel 𝔅l)
   (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) (gl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔅l 𝔄l) : Prop :=
   HForall2_2flip (λ _ _ ty ty' f g, eqtype E L ty ty' f g) tyl tyl' fl gl.
+
+Definition blocked_subtypel `{!typeG Σ} {𝔄l 𝔅l} (tyl: typel 𝔄l) (tyl': typel 𝔅l)
+  (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) : Prop :=
+  HForall2_1 (λ _ _ ty ty' f, blocked_subtype ty ty' f) tyl tyl' fl.
+Definition blocked_eqtypel `{!typeG Σ} {𝔄l 𝔅l} (tyl: typel 𝔄l) (tyl': typel 𝔅l)
+  (fl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔄l 𝔅l) (gl: plist2 (λ 𝔄 𝔅, 𝔄 → 𝔅) 𝔅l 𝔄l) : Prop :=
+  HForall2_2flip (λ _ _ ty ty' f g, blocked_eqtype ty ty' f g) tyl tyl' fl gl.
 
 Section subtyping.
   Context `{!typeG Σ}.
@@ -965,7 +982,7 @@ Section subtyping.
       iDestruct ("Sub" with "E") as "[[-> %InProph][$[InOwn InShr]]]".
       iDestruct ("Sub'" with "E") as "[[_ %InProph'][$[InOwn' InShr']]]".
       iSplit. iPureIntro. split. done. intros. split. 
-      intros. apply InProph'. by rewrite compose_assoc semi_iso. apply InProph.
+      by apply InProph. intros. f_exact (InProph' _ _ H). by rewrite compose_assoc semi_iso.
       iSplit; iIntros "!>*"; iSplit; iIntros "Res";
       [by iApply "InOwn"| |by iApply "InShr"|];
       [iDestruct ("InOwn'" with "Res") as "?"|iDestruct ("InShr'" with "Res") as "?"];
@@ -978,6 +995,15 @@ Section subtyping.
       [by iApply "EqOwn"|by iApply "EqShr"| |]; [iApply "EqOwn"|iApply "EqShr"];
       by rewrite compose_assoc semi_iso.
       Unshelve. apply H0. done. specialize (H0 (g ∘ vπ) ξl). rewrite compose_assoc semi_iso in H0. by apply H0.
+  Qed.
+
+  Lemma blocked_eqtype_unfold {𝔄 𝔅} f g `{!Iso f g} (ty : type 𝔄) (ty' : type 𝔅) :
+    blocked_eqtype ty ty' f g ↔ (∀vπ ξl, ty.(ty_proph) vπ ξl ↔ ty'.(ty_proph) (f ∘ vπ) ξl).
+  Proof.
+    split.
+    - intros [[_ S][_ S']] ??. intuition. apply S'. by rewrite compose_assoc semi_iso.
+    - intros Eq. split; (split; [apply semi_iso_inj|]); intros ??. by rewrite Eq.
+     by rewrite Eq compose_assoc semi_iso.
   Qed.
 
   Lemma eqtype_id_unfold {𝔄} E L (ty ty': type 𝔄) :
@@ -1011,7 +1037,7 @@ Section subtyping.
   Proof.
     iIntros "[[%%][#InLft[#InOwn #InShr]]] [[%%][#InLft'[#InOwn' #InShr']]]".
     iSplit; [|iSplit; [|iSplit]].
-    - iPureIntro. split. by etrans. intros ???. by apply H0, H2.
+    - iPureIntro. split. by etrans. intros ???. by apply H2, H0.
     - iApply lft_incl_trans; [iApply "InLft'"|iApply "InLft"].
     - iIntros "!>*?". iApply "InOwn'". by iApply "InOwn".
     - iIntros "!>*?". iApply "InShr'". by iApply "InShr".
@@ -1061,12 +1087,45 @@ Section subtyping.
     iIntros "!> #E". iApply "Incl". by iApply big_sepL_submseteq.
   Qed.
 
+  Lemma blocked_subtype_equiv {𝔄} (ty ty': type 𝔄) : ty ≡ ty' → blocked_subtype ty ty' id.
+  Proof. split. apply id_inj. intros ???. by rewrite H. Qed.
+  Lemma blocked_eqtype_equiv {𝔄} (ty ty': type 𝔄) : ty ≡ ty' → blocked_eqtype ty ty' id id.
+  Proof. intros. split; by apply blocked_subtype_equiv. Qed.
+
+  Lemma blocked_subtype_refl {𝔄} (ty: type 𝔄) : blocked_subtype ty ty id.
+  Proof. by apply blocked_subtype_equiv. Qed.
+  Lemma blocked_eqtype_refl {𝔄} (ty: type 𝔄) : blocked_eqtype ty ty id id.
+  Proof. by apply blocked_eqtype_equiv. Qed.
+  Lemma blocked_eqtype_symm {𝔄 𝔅} f g (ty: type 𝔄) (ty': type 𝔅) :
+    blocked_eqtype ty ty' f g → blocked_eqtype ty' ty g f.
+  Proof. move=> [??]. by split. Qed.
+
+  Lemma blocked_subtype_trans {𝔄 𝔅 ℭ} ty ty' ty'' (f: 𝔄 → 𝔅) (g: 𝔅 → ℭ):
+    blocked_subtype ty ty' f → blocked_subtype ty' ty'' g → blocked_subtype ty ty'' (g ∘ f).
+  Proof.
+    move=> [fInj Sub] [gInj Sub']. split. by eapply compose_inj. intuition.
+  Qed.
+  Lemma blocked_eqtype_trans {𝔄 𝔅 ℭ} ty ty' ty'' (f: 𝔄 → 𝔅) f' (g: 𝔅 → ℭ) g':
+    blocked_eqtype ty ty' f f' → blocked_eqtype ty' ty'' g g' →
+    blocked_eqtype ty ty'' (g ∘ f) (f' ∘ g').
+  Proof.
+    move=> [Sub1 Sub1'] [??]. split; by eapply blocked_subtype_trans.
+  Qed.
+
   Lemma subtype_eq {𝔄 𝔅} f g (ty: type 𝔄) (ty': type 𝔅) E L :
     subtype E L ty ty' f → f = g → subtype E L ty ty' g.
   Proof. by move=> ? <-. Qed.
 
   Lemma eqtype_eq {𝔄 𝔅} f f' g g' (ty: type 𝔄) (ty': type 𝔅) E L :
     eqtype E L ty ty' f g → f = f' → g = g' → eqtype E L ty ty' f' g'.
+  Proof. by move=> ? <-<-. Qed.
+
+  Lemma blocked_subtype_eq {𝔄 𝔅} f g (ty: type 𝔄) (ty': type 𝔅) :
+    blocked_subtype ty ty' f → f = g → blocked_subtype ty ty' g.
+  Proof. by move=> ? <-. Qed.
+
+  Lemma blocked_eqtype_eq {𝔄 𝔅} f f' g g' (ty: type 𝔄) (ty': type 𝔅) :
+    blocked_eqtype ty ty' f g → f = f' → g = g' → blocked_eqtype ty ty' f' g'.
   Proof. by move=> ? <-<-. Qed.
 
   Global Instance subtype_proper {𝔄 𝔅} E L :
@@ -1104,6 +1163,13 @@ Section subtyping.
     elim; [split; by constructor|]=>/= > [??] _ [??]; split; by constructor.
   Qed.
 
+  Lemma blocked_eqtypel_subtypel {𝔄l 𝔅l} fl gl (tyl: typel 𝔄l) (tyl': typel 𝔅l):
+    blocked_eqtypel tyl tyl' fl gl →
+    blocked_subtypel tyl tyl' fl ∧ blocked_subtypel tyl' tyl gl.
+  Proof.
+    elim; [split; by constructor|]=>/= > [??] _ [??]; split; by constructor.
+  Qed.
+
   Lemma subtypel_llctx_lookup {𝔄l 𝔅l} (tyl: typel 𝔄l) (tyl': typel 𝔅l) fl qL E L :
     subtypel E L tyl tyl' fl →
     llctx_interp L qL -∗ □ (elctx_interp E -∗ ∀i,
@@ -1118,7 +1184,7 @@ Section subtyping.
   (** Simple Type *)
 
   Lemma type_incl_simple_type {𝔄 𝔅} f (st: simple_type 𝔄) (st': simple_type 𝔅):
-    st.(st_size) = st'.(st_size) → (∀vπ ξl, st'.(st_proph) (f ∘ vπ) ξl → st.(st_proph) vπ ξl) → ty_lft st' ⊑ ty_lft st -∗
+    st.(st_size) = st'.(st_size) → (∀vπ ξl, st.(st_proph) vπ ξl → st'.(st_proph) (f ∘ vπ) ξl) → ty_lft st' ⊑ ty_lft st -∗
     □ (∀vπ d tid vl, st.(st_own) vπ d tid vl -∗ st'.(st_own) (f ∘ vπ) d tid vl) -∗
     type_incl st st' f.
   Proof.
@@ -1129,7 +1195,7 @@ Section subtyping.
 
   Lemma subtype_simple_type {𝔄 𝔅} E L f (st: simple_type 𝔄) (st': simple_type 𝔅) :
     (∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
-      ⌜st.(st_size) = st'.(st_size) ∧ ∀vπ ξl, st'.(st_proph) (f ∘ vπ) ξl → st.(st_proph) vπ ξl⌝ ∗ ty_lft st' ⊑ ty_lft st ∗
+      ⌜st.(st_size) = st'.(st_size) ∧ ∀vπ ξl, st.(st_proph) vπ ξl → st'.(st_proph) (f ∘ vπ) ξl⌝ ∗ ty_lft st' ⊑ ty_lft st ∗
       (∀vπ d tid vl, st.(st_own) vπ d tid vl -∗ st'.(st_own) (f ∘ vπ) d tid vl))) →
     subtype E L st st' f.
   Proof.
@@ -1140,22 +1206,20 @@ Section subtyping.
 
   (** Plain Type *)
 
-  Lemma type_incl_plain_type {𝔄 𝔅} f `{Inj _ _ (=) (=) f} (pt: plain_type 𝔄) (pt': plain_type 𝔅):
+  Lemma type_incl_plain_type {𝔄 𝔅} f (pt: plain_type 𝔄) (pt': plain_type 𝔅):
     pt.(pt_size) = pt'.(pt_size) → ty_lft pt' ⊑ ty_lft pt -∗
     □ (∀v tid vl, pt.(pt_own) v tid vl -∗ pt'.(pt_own) (f v) tid vl) -∗
     type_incl pt pt' f.
   Proof.
     move=> ?. iIntros "#InLft #InOwn". 
-    iSplit. iPureIntro. split. done. intros ?? [??]. simpl. exists (vπ inhabitant).
-    fun_ext. intros. specialize (equal_f H0 x0). specialize (equal_f H0 inhabitant). simpl.
-    intros <- ?. by eapply inj.
+    iSplit. iPureIntro. split. done. intros ?? [??]. simpl. eexists (f x). by rewrite H.
     iSplit; [done|]. iSplit; iIntros "!>*/=".
     - iIntros "[%v[->?]]". iExists (f v). iSplit; [done|]. by iApply "InOwn".
     - iIntros "[%vl[Bor pt]]". iExists vl. iFrame "Bor". iNext.
       iDestruct "pt" as (v->) "?". iExists (f v). iSplit; [done|]. by iApply "InOwn".
   Qed.
 
-  Lemma subtype_plain_type {𝔄 𝔅} E L f `{Inj _ _ (=) (=) f} (pt: plain_type 𝔄) (pt': plain_type 𝔅) :
+  Lemma subtype_plain_type {𝔄 𝔅} E L f (pt: plain_type 𝔄) (pt': plain_type 𝔅) :
     (∀qL, llctx_interp L qL -∗ □ (elctx_interp E -∗
       ⌜pt.(pt_size) = pt'.(pt_size)⌝ ∗ ty_lft pt' ⊑ ty_lft pt ∗
       (∀v tid vl, pt.(pt_own) v tid vl -∗ pt'.(pt_own) (f v) tid vl))) →
@@ -1164,6 +1228,14 @@ Section subtyping.
     move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Sub".
     iIntros "!> #E". iDestruct ("Sub" with "E") as (?) "[??]".
     by iApply type_incl_plain_type.
+  Qed.
+
+  Lemma blocked_subtype_plain_type {𝔄 𝔅} f `{!Inj (=) (=) f} (pt: plain_type 𝔄) (pt': plain_type 𝔅) :
+    blocked_subtype pt pt' f.
+  Proof.
+    split. done. intros ?? [??]. simpl. exists (vπ inhabitant).
+    fun_ext. intros. specialize (equal_f H x0). specialize (equal_f H inhabitant). simpl.
+    intros <- ?. by eapply inj.
   Qed.
 
   (** resolve *)

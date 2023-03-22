@@ -25,6 +25,7 @@ Section maybe_uninit.
   (* Rust's mem::MaybeUninit<T> *)
   Program Definition maybe_uninit {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) := {|
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_proph vπ ξl := (vπ = const None /\ ξl = []) \/ exists vπ', vπ = Some ∘ vπ' /\ ty.(ty_proph) vπ' ξl;
     ty_own vπ d tid vl :=
       ⌜vπ = const None ∧ length vl = ty.(ty_size)⌝ ∨
       ∃vπ': proph 𝔄, ⌜vπ = Some ∘ vπ'⌝ ∗ ty.(ty_own) vπ' d tid vl;
@@ -61,22 +62,26 @@ Section maybe_uninit.
   Next Obligation.
     move=> *. iIntros "LFT In [[->%]|(%vπ &->& ty)] κ".
     { iApply step_fupdN_full_intro. iIntros "!>!>". iExists [], 1%Qp.
-      do 2 (iSplit; [done|]). iIntros "_!>". iFrame "κ". by iLeft. }
+      iSplit; [by iLeft|]. iSplit; [done|]. iIntros "_!>". iFrame "κ". by iLeft. }
     iMod (ty_own_proph with "LFT In ty κ") as "Upd"; [done|].
     iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%ξl & %q &%& ξl & Toty) !>".
-    iExists ξl, q. iSplit; [iPureIntro; by apply proph_dep_constr|].
+    iExists ξl, q. iSplit; [iPureIntro; right; by eexists|].
     iIntros "{$ξl}ξl". iMod ("Toty" with "ξl") as "[?$]".
     iRight. iExists vπ. by iFrame.
   Qed.
   Next Obligation.
     move=> *. iIntros "LFT In In' [[-> ?]|(%vπ &->& ty)] κ".
     { iApply step_fupdN_full_intro. iIntros "!>!>!>!>". iExists [], 1%Qp.
-      do 2 (iSplit; [done|]). by iIntros. }
+      iSplit; [by iLeft|]. iSplit; [done|]. by iIntros. }
     iMod (ty_shr_proph with "LFT In In' ty κ") as "Upd"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
     iIntros ">(%ξl&%q&%& ξl & Toκ) !>". iExists ξl, q.
-    iSplit; [iPureIntro; by apply proph_dep_constr|]. iIntros "{$ξl}ξl".
+    iSplit; [iPureIntro; right; by eexists|]. iIntros "{$ξl}ξl".
     by iMod ("Toκ" with "ξl").
+  Qed.
+  Next Obligation.
+    move=> /= ????[[->->]|[?[->?]]]; [done|].
+    by eapply proph_dep_constr, ty_proph_weaken.
   Qed.
 
   Global Instance maybe_uninit_ne {𝔄} : NonExpansive (@maybe_uninit 𝔄).
@@ -90,8 +95,10 @@ Section typing.
 
   Global Instance maybe_uninit_type_ne {𝔄} : TypeNonExpansive (maybe_uninit (𝔄:=𝔄)).
   Proof.
-    constructor; [by apply type_lft_morphism_id_like|done| |];
-    move=>/= > ->*; by do 4 f_equiv.
+    constructor; [done|constructor| |]; 
+    [by apply type_lft_morphism_id_like|move=>/= *; by do 4 f_equiv| |(move=>/= > ->*; by do 4 f_equiv)..].
+    move =>/= ty??[[->->]|[?[->H]]]. exists [], []. intuition.
+    destruct (type_ne_ty_proph_invert ty _ _ H) as (vπl&ξl&?&?). exists vπl, ξl. intuition. right. eexists. intuition.
   Qed.
 
   Global Instance maybe_uninit_copy {𝔄} (ty: type 𝔄) : Copy ty → Copy (? ty).
@@ -151,8 +158,13 @@ Section typing.
     subtype E L ty ty' f → subtype E L (? ty) (? ty') (option_map f).
   Proof.
     move=> Sub ?. iIntros "L". iDestruct (Sub with "L") as "#Sub".
-    iIntros "!> E". iDestruct ("Sub" with "E") as "(%EqSz &?& #InOwn & #InShr)".
-    do 2 (iSplit; [done|]). iSplit; iIntros "!>*/=".
+    iIntros "!> E". iDestruct ("Sub" with "E") as "((%EqSz & %InProph) &?& #InOwn & #InShr)".
+    iSplit. iPureIntro. split; [done|]. intros ??[[?->]|[vπ'[??]]]. left. split; [|done]. fun_ext. intros.
+    specialize (equal_f H x). simpl. destruct (vπ x); by intros [=].
+    right. fold of_syn_type in vπ'. fold of_syn_type. eexists _. split. 
+    fun_ext. intros. specialize (equal_f H x). simpl. destruct (vπ x); by intros [= ->].
+    by apply InProph.
+    iSplit; [done|]. iSplit; iIntros "!>*/=".
     - iIntros "[[->->]|(%vπ' &->&?)]"; [by iLeft|]. iRight. iExists (f ∘ vπ').
       iSplit; [done|]. by iApply "InOwn".
     - iIntros "[[-> ?]|(%vπ' &->&?)]".
@@ -166,7 +178,9 @@ Section typing.
   Lemma uninit_to_maybe_uninit {𝔄} (ty: type 𝔄) E L :
     subtype E L (↯ ty.(ty_size)) (? ty) (const None).
   Proof.
-    iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_static|].
+    iIntros "*_!>_". iSplit. iPureIntro. split; [done|].
+    intros ??->. left. done.
+    iSplit; [by iApply lft_incl_static|].
     iSplit; iIntros "!>** /="; iLeft; by iSplit.
   Qed.
 
@@ -189,7 +203,9 @@ Section typing.
 
   Lemma into_maybe_uninit {𝔄} (ty: type 𝔄) E L : subtype E L ty (? ty) Some.
   Proof.
-    iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
+    iIntros "*_!>_". iSplit. iPureIntro. split; [done|].
+    intros ???. right. eexists _. done. 
+    iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*?/="; iRight; iExists vπ; by iFrame.
   Qed.
 
@@ -209,7 +225,9 @@ Section typing.
   Lemma maybe_uninit_join {𝔄} (ty: type 𝔄) E L :
     subtype E L (? (? ty)) (? ty) (option_join 𝔄).
   Proof.
-    iIntros "*_!>_". iSplit; [done|]. iSplit; [by iApply lft_incl_refl|].
+    iIntros "*_!>_". iSplit. iPureIntro. split; [done|].
+    intros ??[[->->]|[?[->[[->->]|[?[->?]]]]]]. left. done. left. done. right. eexists. done.
+    iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*/=".
     - iIntros "[[->->]|(%&->&[[->->]|(%vπ'' &->&?)])]"; [by iLeft..|].
       iRight. iExists vπ''. by iFrame.
@@ -324,8 +342,9 @@ Section typing.
     - iNext. iExists _, _. iFrame "⧖ Pc'". iExists _. iFrame.
     - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' &%& ↦ & ty)".
       iExists _, _. iFrame "⧖'".
-      iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
-      iSplitL "Eqz ToPc". { iApply "ToPc". by iApply proph_eqz_constr. }
+      iDestruct (proph_ctrl_eqz' with "PROPH Pc'") as "Eqz".
+      iSplitL "Eqz ToPc". { iApply "ToPc". iApply proph_eqz_mono; [|by iApply proph_eqz_constr]. 
+      intros ?[[eq _]|[?[->?]]]. by specialize (equal_f eq inhabitant). by eexists _.  }
       iExists _. iFrame "↦". iRight. iExists _. by iFrame.
   Qed.
 
@@ -368,8 +387,9 @@ Section typing.
     - iNext. iExists _, _. iFrame "⧖' Pc'". iExists _. by iFrame.
     - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' &%& ↦ & ty)".
       iExists _, _. iFrame "⧖'".
-      iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
-      iSplitL "Eqz ToPc". { iApply "ToPc". by iApply proph_eqz_constr. }
+      iDestruct (proph_ctrl_eqz' with "PROPH Pc'") as "Eqz".
+      iSplitL "Eqz ToPc". { iApply "ToPc". iApply proph_eqz_mono; [|by iApply proph_eqz_constr].
+      intros ?[[eq _]|[?[->?]]]. by specialize (equal_f eq inhabitant). by eexists _.  }
       iExists _. iFrame "↦". iRight. iExists _. by iFrame.
   Qed.
 End typing.

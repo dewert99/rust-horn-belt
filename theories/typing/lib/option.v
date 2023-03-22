@@ -15,6 +15,9 @@ Proof. split; fun_ext; case=>//; by case. Qed.
 Section option.
   Context `{!typeG Σ}.
 
+  Global Instance option_same_level {𝔄} : SameLevel (Σ! [()%ST; 𝔄]) (optionₛ 𝔄).
+  Proof. constructor. simpl. lia. Qed.
+
   (* Rust's Option<T> *)
   Definition option_ty {𝔄} (ty: type 𝔄) : type (optionₛ 𝔄) :=
     <{psum_to_option: (Σ! [(); 𝔄])%ST → optionₛ 𝔄}> (Σ! +[(); ty])%T.

@@ -176,32 +176,48 @@ Section typing.
     intros (?&->&?). eexists; split. done. eexists; split; [|done]. done.
   Qed.
 
-  Lemma mod_ty_in `{SameLevel 𝔄 𝔅} E L (f: 𝔄 → 𝔅) `{Inj _ _ (=) (=) f} ty : subtype E L ty (<{f}> ty) f.
+  Lemma mod_ty_in `{SameLevel 𝔄 𝔅} E L (f: 𝔄 → 𝔅) ty : subtype E L ty (<{f}> ty) f.
   Proof.
     iIntros "*_!>_". iSplit. iPureIntro. split. done.
-    intros ?? (?&?&?). apply compose_inj in H1; [|done]. by rewrite H1.
+    intros ???. exists vπ. done.
     iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>" (vπ) "*?"; iExists vπ; by iSplit.
   Qed.
+  Lemma mod_ty_blocked_in `{SameLevel 𝔄 𝔅} (f: 𝔄 → 𝔅) `{Inj _ _ (=) (=) f} ty : blocked_subtype ty (<{f}> ty) f.
+  Proof.
+    split; [done|]. intros ?? (?&?&?). 
+    apply compose_inj in H1; [|done]. by rewrite H1.
+  Qed.
 
-  Lemma mod_ty_out `{SameLevel 𝔄 𝔅} E L f g `{!@Iso 𝔄 𝔅 f g} ty :
+  Lemma mod_ty_out `{SameLevel 𝔄 𝔅} E L f g `{!@SemiIso 𝔄 𝔅 f g} ty :
     subtype E L (<{f}> ty) ty g.
   Proof.
     iIntros "*_!>_".
-    iSplit. iPureIntro. split; [done|]. intros. exists (g ∘ vπ). by rewrite compose_assoc semi_iso.
+    iSplit. iPureIntro. split; [done|]. intros ?? (?&->&?). by rewrite compose_assoc semi_iso.
     iSplit; [by iApply lft_incl_refl|].
     iSplit; iIntros "!>*/=[%[->?]]"; by rewrite compose_assoc semi_iso.
   Qed.
+  Lemma mod_ty_blocked_out `{SameLevel 𝔄 𝔅} f g `{!@Iso 𝔄 𝔅 f g} ty :
+    blocked_subtype (<{f}> ty) ty g.
+  Proof.
+    split; [apply semi_iso_inj|]. intros. exists (g ∘ vπ). by rewrite compose_assoc semi_iso.
+  Qed.
 
-  Lemma mod_ty_inout `{SameLevel 𝔄 𝔅} E L f g `{!@Iso 𝔄 𝔅 f g} ty :
+  Lemma mod_ty_inout `{SameLevel 𝔄 𝔅} E L f g `{!@SemiIso 𝔄 𝔅 f g} ty :
     eqtype E L ty (<{f}> ty) f g.
-  Proof. split; by [apply mod_ty_in; apply semi_iso_inj |apply mod_ty_out]. Qed.
-  Lemma mod_ty_outin `{SameLevel 𝔄 𝔅} E L f g `{!@Iso 𝔄 𝔅 f g} ty :
+  Proof. by split; [apply mod_ty_in|apply mod_ty_out]. Qed.
+  Lemma mod_ty_outin `{SameLevel 𝔄 𝔅} E L f g `{!@SemiIso 𝔄 𝔅 f g} ty :
     eqtype E L (<{f}> ty) ty g f.
   Proof. by apply eqtype_symm, mod_ty_inout. Qed.
+  Lemma mod_ty_blocked_inout `{SameLevel 𝔄 𝔅} f g `{!@Iso 𝔄 𝔅 f g} ty :
+    blocked_eqtype ty (<{f}> ty) f g.
+  Proof. by split; [apply mod_ty_blocked_in; apply semi_iso_inj |apply mod_ty_blocked_out]. Qed.
+  Lemma mod_ty_blocked_outin `{SameLevel 𝔄 𝔅} f g `{!@Iso 𝔄 𝔅 f g} ty :
+    blocked_eqtype (<{f}> ty) ty g f.
+  Proof. by apply blocked_eqtype_symm, mod_ty_blocked_inout. Qed.
 
   Lemma mod_ty_subtype `{SameLevel 𝔄 𝔅} `{SameLevel 𝔄' 𝔅'} E L h
-      f f' `{Inj 𝔄' 𝔅' (=) (=) f'} g `{!@Iso 𝔄 𝔅 f g} ty ty' :
+      f f' g `{!@SemiIso 𝔄 𝔅 f g} ty ty' :
     subtype E L ty ty' h → subtype E L (<{f}> ty) (<{f'}> ty') (f' ∘ h ∘ g).
   Proof.
     move=> ??. eapply subtype_trans; [by apply mod_ty_out|].
@@ -209,10 +225,24 @@ Section typing.
   Qed.
 
   Lemma mod_ty_eqtype `{SameLevel 𝔄 𝔅} `{SameLevel 𝔄' 𝔅'} E L h h' f f' g g'
-      `{!@Iso 𝔄 𝔅 f g} `{!@Iso 𝔄' 𝔅' f' g'} ty ty' :
+      `{!@SemiIso 𝔄 𝔅 f g} `{!@SemiIso 𝔄' 𝔅' f' g'} ty ty' :
     eqtype E L ty ty' h h' →
     eqtype E L (<{f}> ty) (<{f'}> ty') (f' ∘ h ∘ g) (f ∘ h' ∘ g').
-  Proof. move=> [??]. split; apply mod_ty_subtype; try done; apply semi_iso_inj. Qed.
+  Proof. move=> [??]. split; apply mod_ty_subtype; try done. Qed.
+
+  Lemma mod_ty_blocked_subtype `{SameLevel 𝔄 𝔅} `{SameLevel 𝔄' 𝔅'} h
+      f f' `{Inj 𝔄' 𝔅' (=) (=) f'} g `{!@Iso 𝔄 𝔅 f g} ty ty' :
+    blocked_subtype ty ty' h → blocked_subtype (<{f}> ty) (<{f'}> ty') (f' ∘ h ∘ g).
+  Proof.
+    move=> ?. eapply blocked_subtype_trans; [by apply mod_ty_blocked_out|].
+    eapply blocked_subtype_trans; by [|apply mod_ty_blocked_in].
+  Qed.
+
+  Lemma mod_ty_blockedeqtype `{SameLevel 𝔄 𝔅} `{SameLevel 𝔄' 𝔅'} h h' f f' g g'
+      `{!@Iso 𝔄 𝔅 f g} `{!@Iso 𝔄' 𝔅' f' g'} ty ty' :
+    blocked_eqtype ty ty' h h' →
+    blocked_eqtype (<{f}> ty) (<{f'}> ty') (f' ∘ h ∘ g) (f ∘ h' ∘ g').
+  Proof. move=> [??]. split; apply mod_ty_blocked_subtype; try done; apply semi_iso_inj. Qed.
 End typing.
 
 Global Hint Resolve mod_ty_in mod_ty_out mod_ty_inout mod_ty_outin
