@@ -209,7 +209,7 @@ Section typing.
     rewrite subst_plv_renew. set wl := plistc_renew _ wl'.
     iDestruct ("Big" with "[$E $Efp']") as "(Efp & InIl & InO)".
     iApply ("fn" $! _ _ _ _ _
-      (plist_map_with (λ _ _, (∘)) fl aπl') (λ π b, postπ' π (g b))
+      (plist_map_with (λ _ _ f g x, (f (g x))) fl aπl') (λ π b, postπ' π (g b))
       with "LFT TIME PROPH UNIQ Efp Na L [C] [T] [Obs]").
     - rewrite !cctx_interp_singleton. iRevert "InO C". iClear "#".
       iIntros "#(_&_& InO &_) C". iIntros (?[??]) "Na L /=[(%&%&%& ⧖ & oty) _] Obs".
@@ -413,4 +413,4 @@ End typing.
 Ltac simpl_fp_E := rewrite /fp_E /ty_outlives_E /=.
 
 Global Hint Resolve elctx_sat_fp_E : lrust_typing.
-Global Hint Resolve fn_resolve (*fn_subtype*) : lrust_typing.
+Global Hint Resolve fn_resolve fn_subtype : lrust_typing.
