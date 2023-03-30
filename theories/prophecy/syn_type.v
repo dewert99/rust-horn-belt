@@ -1,10 +1,12 @@
 From iris.prelude Require Import prelude.
+From stdpp Require Import gmap.
 From lrust.util Require Import basic vector fancy_lists.
+From lrust.lang Require lang.
 Set Default Proof Using "Type".
 
 (** * Syntax for Coq type *)
 
-Inductive syn_type := Zₛ | boolₛ | unitₛ | Propₛ
+Inductive syn_type := Zₛ | boolₛ | unitₛ | Propₛ | locₛ
 | optionₛ (_: syn_type) | listₛ (_: syn_type) | vecₛ (_: syn_type) (_: nat)
 | prodₛ (_ _: syn_type) | sumₛ (_ _: syn_type) | funₛ (_ _: syn_type)
 | xprodₛ (_: list syn_type) | xsumₛ (_: list syn_type) | ghostₛ (_: nat) (_: syn_type).
@@ -27,7 +29,7 @@ Global Instance Empty_setₛ_empty: Empty syn_type := Empty_setₛ.
 
 Fixpoint ghost_level (𝔄: syn_type) : nat :=
   match 𝔄 with
-  | Zₛ => 0 | boolₛ => 0 | unitₛ => 0 | Propₛ => 0
+  | Zₛ | boolₛ | unitₛ | Propₛ | locₛ => 0
   | optionₛ 𝔄₀ => ghost_level 𝔄₀ | listₛ 𝔄₀ => ghost_level 𝔄₀
   | vecₛ 𝔄₀ n => ghost_level 𝔄₀
   | prodₛ 𝔄₀ 𝔄₁ => ghost_level 𝔄₀ `max` ghost_level 𝔄₁
@@ -40,7 +42,7 @@ Fixpoint ghost_level (𝔄: syn_type) : nat :=
 
 Fixpoint of_syn_type (𝔄: syn_type): Type :=
   match 𝔄 with
-  | Zₛ => Z | boolₛ => bool | unitₛ => () | Propₛ => Prop
+  | Zₛ => Z | boolₛ => bool | unitₛ => () | Propₛ => Prop | locₛ => lang.loc
   | optionₛ 𝔄₀ => option (of_syn_type 𝔄₀) | listₛ 𝔄₀ => list (of_syn_type 𝔄₀)
   | vecₛ 𝔄₀ n => vec (of_syn_type 𝔄₀) n
   | prodₛ 𝔄₀ 𝔄₁ => of_syn_type 𝔄₀ * of_syn_type 𝔄₁
@@ -56,13 +58,13 @@ Coercion of_syn_type: syn_type >-> Sortclass.
 
 Fixpoint syn_type_beq 𝔄 𝔅 : bool :=
   match 𝔄, 𝔅 with
-  | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Propₛ, Propₛ => true
+  | Zₛ, Zₛ | boolₛ, boolₛ | (), () | Propₛ, Propₛ | locₛ, locₛ => true
   | optionₛ 𝔄₀, optionₛ 𝔅₀ | listₛ 𝔄₀, listₛ 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀
   | vecₛ 𝔄₀ n, vecₛ 𝔅₀ m => syn_type_beq 𝔄₀ 𝔅₀ && bool_decide (n = m)
   | 𝔄₀ * 𝔄₁, 𝔅₀ * 𝔅₁ | 𝔄₀ + 𝔄₁, 𝔅₀ + 𝔅₁ | 𝔄₀ → 𝔄₁, 𝔅₀ → 𝔅₁
     => syn_type_beq 𝔄₀ 𝔅₀ && syn_type_beq 𝔄₁ 𝔅₁
   | Π! 𝔄l, Π! 𝔅l | Σ! 𝔄l, Σ! 𝔅l => forall2b syn_type_beq 𝔄l 𝔅l
-  | ghostₛ l 𝔄₀, ghostₛ l' 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀ && (if decide (l = l') then true else false)
+  | ghostₛ l 𝔄₀, ghostₛ l' 𝔅₀ => syn_type_beq 𝔄₀ 𝔅₀ && bool_decide (l = l')
   | _, _ => false
   end%ST.
 

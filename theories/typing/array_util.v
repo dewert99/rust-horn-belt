@@ -12,6 +12,10 @@ Notation "l +ₗ[ ty ] i" := (l%L +ₗ Z.of_nat (i%nat * ty.(ty_size))%nat)
 Notation "l ↦∗len n" := (∃vl, ⌜length vl = n%nat⌝ ∗ l ↦∗ vl)%I
   (at level 20, format "l  ↦∗len  n") : bi_scope.
 
+Global Instance Forall2_proper {A B} :
+  Proper (pointwise_relation _ (pointwise_relation _ (↔)) ==> (=) ==> (=) ==> (↔)) (@Forall2 A B).
+Proof. split; subst; induction 1; constructor; by firstorder auto. Qed.
+
 Section array_util.
   Context `{!typeG Σ}.
 
@@ -133,6 +137,13 @@ Section array_util.
     rewrite vec_to_list_cons Forall2_cons in H. destruct H.
     rewrite /vapply. simpl. apply proph_dep_vec_S; unfold compose; simpl.
     by eapply ty_proph_weaken. by apply IHaπl.
+  Qed.
+
+  Lemma ty_proph_weaken_big_sepL' {𝔄} (ty: type 𝔄) (aπl: list _) ξll:
+    Forall2 ty.(ty_proph) aπl ξll → lapply aπl ./[𝔄] mjoin ξll.
+  Proof. 
+    intros ?. rewrite -(vec_to_list_to_vec aπl) -vec_to_list_apply. apply proph_dep_constr.
+    eapply ty_proph_weaken_big_sepL. eexists _. rewrite vec_to_list_to_vec. done.
   Qed.
 
   Lemma resolve_big_sepL_ty_own {𝔄} (ty: type 𝔄) Φ n (aπl: vec _ n) wll d tid F q E L :

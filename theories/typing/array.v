@@ -59,10 +59,7 @@ Section array.
   Qed.
 
   Global Instance array_ne {𝔄} n : NonExpansive (@array 𝔄 n).
-  Proof. solve_ne_type.
-    move => /= ??. do 3 f_equiv.
-    split; intros; (eapply Forall2_impl; [done|]); intros; by eapply ty_proph_ne. 
-  Qed.
+  Proof. solve_ne_type. Qed.
 End array.
 
 (* The notation in Rust is [ty; n], but it conflicts with lists in Coq *)
