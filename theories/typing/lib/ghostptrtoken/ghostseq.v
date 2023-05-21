@@ -159,8 +159,6 @@ Section seq.
     by eapply ty_proph_weaken_big_sepL'.
   Qed.
 
-  Global Instance ghostptrtoken_ty_ne {𝔄} : NonExpansive (@ghostseq_ty 𝔄).
-  Proof.
-    solve_ne_type. done.
-  Qed.
+  Global Instance ghostseq_ty_ne {𝔄} : NonExpansive (@ghostseq_ty 𝔄).
+  Proof. solve_ne_type. done. Qed.
 End seq.

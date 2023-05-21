@@ -43,10 +43,9 @@ Section ghostptrtoken_insertremove.
     iDestruct "uniq'" as (dv ζi [? Eq3]) "[Vo Bor]".
     move: Eq3. set ζ := PrVar _ ζi => Eq3.
     iMod (bor_acc_cons with "LFT Bor β") as "[(%&%&_& Pc & ↦token) ToBor]"; [done|].
-    iMod (uniq_strip_later with "Vo Pc") as (<- <-) "[Vo Pc]".
-    wp_seq.
-    rewrite split_mt_token. case dv as [|dv]. done.
-    simpl. iDestruct "↦token" as (aπl) "(%Eq1 & ↦l & ↦tys†)".
+    iMod (uniq_strip_later with "Vo Pc") as (<- <-) "[Vo Pc]". setoid_rewrite split_mt_token.
+    wp_seq. 
+    iDestruct "↦token" as (aπl) "(%Eq1&↦l&↦tys†)".
     remember ((list_to_gmap aπl) !! p) as vπ. symmetry in Heqvπ. destruct vπ as [vπ|]; last first.
     iMod (proph_obs_sat with "PROPH Obs") as %(πw&obs). done.
     exfalso. remember (equal_f Eq1 πw). clear Heqe.
@@ -55,7 +54,6 @@ Section ghostptrtoken_insertremove.
     rewrite e /alapply list_to_map_fmap
     lookup_fmap Heqvπ in obs. done.
     destruct (elem_of_list_to_map_2' _ _ _ Heqvπ) as (rπ&perm&reinsert).
-    unfold big_sepAL.
     iEval (rewrite perm 2! big_sepL_cons) in "↦tys†".
     iDestruct "↦tys†" as "((↦ty&↦tys)&(†&†s))".
     iMod (uniq_intro (𝔄:=listₛ (locₛ * 𝔄)) (alapply rπ) with "PROPH UNIQ") as (ζ'i) "[Vo' Pc']"; [done|].
@@ -100,18 +98,22 @@ Section ghostptrtoken_insertremove.
     intros -><-<- (->&v&Contains&Imp) [= ->->]. rewrite /alapply list_to_map_fmap lookup_fmap_Some Heqvπ in Contains. destruct Contains as (?&<-&[=<-]).  
     apply Imp. rewrite /alapply 2! list_to_map_fmap -fmap_insert reinsert. done.
     done.
-    - iNext. iSplitL "RPc ↦ty". iExists _, _. iFrame "RPc".
+    - destruct dv; [done|]. iSplitL "RPc ↦ty". iExists _, _. iFrame "RPc". iNext.
     iSplit. 
     iApply (persistent_time_receipt_mono with "⧖u"). lia.
     iApply (ty_own_mt_depth_mono with "↦ty"). lia.
-    iExists _, _. iFrame. iSplitR.
+    iExists _, _. iFrame. iSplitR. iNext.
     iApply (persistent_time_receipt_mono with "⧖"). lia.
-    iExists _. iFrame. iExists _. iFrame. done.
-    - iNext. iIntros "((%vπ'&%d'&>⧖d'&Pc1&↦ty)&(%mπ'&%d''&>⧖d''&Pc2&%vl&↦emp&↦tys))".
+    eassert _ as sizen0. shelve.
+    From lrust.typing.lib Require Import ghostptrtoken.heap_util.
+    rewrite split_mt_token. iExists _. 
+    iDestruct ((plain_entails_r (ghost_ptr_token_no_dup' _ _ _ _ sizen0)) with "↦tys") as "(↦tys&>%)". iFrame. done.
+    - iNext. iIntros "((%vπ'&%d'&>⧖d'&Pc1&↦ty)&(%mπ'&%d''&>⧖d''&Pc2&↦tys))". rewrite split_mt_token.
     iCombine "⧖d' ⧖d''" as "⧖d".
     iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖d")
-    as "⧖d"; [solve_ndisj|]. simpl.
-    iModIntro. iNext. destruct d''. done. simpl. iDestruct "↦tys" as "(%aπl'&(->&->)&↦tys&†s)".
+    as "⧖d"; [solve_ndisj|]. iDestruct "↦tys" as "(%aπl'&(>->&_)&$&↦tys)".
+    From iris.base_logic.lib Require Export fancy_updates.
+    iModIntro. iNext. 
     iExists (λ π, ((p, (vπ' π)) :: (alapply aπl' π))), _. iFrame.
     iSplitL "Pc1 Pc2 ToPc". iApply "ToPc".
     iDestruct (proph_ctrl_eqz' with "PROPH Pc1") as "Eqz1".
