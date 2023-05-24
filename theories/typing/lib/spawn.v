@@ -17,6 +17,7 @@ Section spawn.
   (* Rust's thread::JoinHandle<T> *)
   Program Definition join_handle {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
     ty_size := 1;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_proph Φπ _:= exists Φ, Φπ = const Φ;
     ty_own Φπ _ _ vl := [loc[l] := vl] ∃Φ, ⌜Φπ = const Φ⌝ ∗
       join_handle spawnN l (join_future ty Φ);
     ty_shr Φπ _ _ _ _ := ∃Φ, ⌜Φπ = const Φ⌝;
@@ -35,20 +36,21 @@ Section spawn.
   Next Obligation.
     iIntros (??????[|[[]|][]]) "*% _ _ join //". iIntros "$".
     iDestruct "join" as (?->) "join". iApply step_fupdN_full_intro.
-    iIntros "!>!>". iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
+    iIntros "!>!>". iExists [], 1%Qp. iSplitR. by iExists _. iSplitR; [done|]. iIntros "_!>".
     iExists _. by iFrame.
   Qed.
   Next Obligation.
-    iIntros "* _ _ _ _ (%&->) $ !>!>!>". iApply step_fupdN_full_intro.
+    iIntros "* _ _ _ _ % $ !>!>!>". iApply step_fupdN_full_intro.
     iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). by iIntros.
   Qed.
+  Next Obligation. move=>/=????[?->]. done. Qed.
 
   Global Instance join_handle_ne {𝔄} : NonExpansive (@join_handle 𝔄).
   Proof. rewrite /join_handle /join_future. solve_ne_type. Qed.
 
   Global Instance join_handle_type_contractive {𝔄} : TypeContractive (@join_handle 𝔄).
   Proof.
-    split; [by apply type_lft_morphism_id_like|done| |done]=>/= *.
+    split; [done|split; [by apply type_lft_morphism_id_like|done| repeat (intuition || eexists)]| |done]=>/= *.
     rewrite /join_future. do 15 f_equiv. by apply box_type_contractive.
   Qed.
 
@@ -78,8 +80,9 @@ Section spawn.
     subtype E L (join_handle ty) (join_handle ty') (forward_pred f).
   Proof.
     iIntros (Sub ?) "L". iDestruct (Sub with "L") as "#Sub". iIntros "!> E".
-    iDestruct ("Sub" with "E") as "#Incl". iPoseProof "Incl" as "#(%&?&_)".
-    do 2 (iSplit; [done|]). iSplit; iModIntro; last first.
+    iDestruct ("Sub" with "E") as "#Incl". iPoseProof "Incl" as "#([% _]&?&_)".
+    iSplit. iPureIntro. split; [done|]. intros ??(?&->). eexists _. fun_ext=>/=. done.
+    iSplit; [done|]. iSplit; iModIntro; last first.
     { iIntros "* (%&->)". iExists _. iPureIntro. by fun_ext=>/=. }
     iIntros (?? tid' [|[[]|][]]) "join //". iDestruct "join" as (?->) "join".
     iExists _. iSplit. { iPureIntro. by fun_ext=>/=. }

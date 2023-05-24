@@ -12,6 +12,7 @@ Section cell.
   (* Rust's cell::Cell<T> *)
   Program Definition cell {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
     ty_size := ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_proph Φπ _ := exists Φ, Φπ = const Φ;
     ty_own Φπ _ tid vl := ∃Φ (vπ: proph 𝔄) d, ⌜Φπ = const Φ⌝ ∗
       ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ty.(ty_own) vπ d tid vl;
     ty_shr Φπ _ κ tid l := ∃Φ, ⌜Φπ = const Φ⌝ ∗
@@ -37,12 +38,15 @@ Section cell.
   Qed.
   Next Obligation.
     iIntros "* _ _ _ (%&%&%&->&?) $ !>". iApply step_fupdN_full_intro.
-    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
+    iModIntro. iExists [], 1%Qp. iSplitR. by iExists _. iSplitR; [done|]. iIntros "_!>".
     iExists _, _, _. by iSplit.
   Qed.
   Next Obligation.
     iIntros "* _ _ _ _ (%&->&?) $ !>!>!>". iApply step_fupdN_full_intro.
-    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). by iIntros.
+    iModIntro. iExists [], 1%Qp. iSplitR. by iExists _. iSplitR; [done|]. by iIntros.
+  Qed.
+  Next Obligation.
+    move=>/=????[?->]. done.
   Qed.
 
   Global Instance cell_ne {𝔄} : NonExpansive (@cell 𝔄).
@@ -50,7 +54,8 @@ Section cell.
 
   Global Instance cell_type_ne {𝔄} : TypeNonExpansive (@cell 𝔄).
   Proof.
-    split; [by apply type_lft_morphism_id_like|done| |].
+    split; [done|split; [by apply type_lft_morphism_id_like|done|]| |].
+    - repeat (intuition || eexists).
     - move=> */=. by do 9 f_equiv.
     - move=> */=. do 13 (f_contractive || f_equiv). by simpl in *.
   Qed.
@@ -101,8 +106,9 @@ Section cell.
   Proof.
     move=> /eqtype_unfold Eq. iIntros (?) "L".
     iDestruct (Eq with "L") as "#Eq". iIntros "!> #E".
-    iDestruct ("Eq" with "E") as "(%&[_?]& #EqOwn & #EqShr)".
-    do 2 (iSplit; [done|]). iSplit; iModIntro.
+    iDestruct ("Eq" with "E") as "((%&%)&[_?]& #EqOwn & #EqShr)".
+    iSplit. iPureIntro. split; [done|]. intros ??(?&->). eexists _. done.
+    iSplit; [done|]. iSplit; iModIntro.
     - iIntros "* (%& %vπ' &%&->&?&?& ty)". iExists _, (f ∘ _), _.
       iSplit; [done|]. iSplit.
       { iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'. }

@@ -60,6 +60,7 @@ Section mutex.
   (* Rust's sync::Mutex<T> *)
   Program Definition mutex {𝔄} (ty: type 𝔄) : type (predₛ 𝔄) := {|
       ty_size := 1 + ty.(ty_size);  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+      ty_proph Φπ _ := exists Φ, Φπ = const Φ;
       ty_own Φπ _ tid vl := ∃Φ (b: bool) vl' (vπ: proph 𝔄) d,
         ⌜vl = #b :: vl' ∧ Φπ = const Φ⌝ ∗
         ⟨π, Φ (vπ π)⟩ ∗ ⧖(S d) ∗ ty.(ty_own) vπ d tid vl';
@@ -98,20 +99,22 @@ Section mutex.
   Qed.
   Next Obligation.
     iIntros "*% _ _ (%&%&%&%&%&[->->]&?) $ !>". iApply step_fupdN_full_intro.
-    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). iIntros "_!>".
+    iModIntro. iExists [], 1%Qp. iSplitR. by iExists _. iSplitR; [done|]. iIntros "_!>".
     iExists _, _, _, _, _. by iFrame.
   Qed.
   Next Obligation.
     iIntros "*% _ _ _ (%&%&->&?) $ !>!>!>". iApply step_fupdN_full_intro.
-    iModIntro. iExists [], 1%Qp. do 2 (iSplitR; [done|]). by iIntros.
+    iModIntro. iExists [], 1%Qp. iSplitR. by iExists _. iSplitR; [done|]. by iIntros.
   Qed.
+  Next Obligation. move=>????[?->]. done. Qed.
 
   Global Instance mutex_ne {𝔄} : NonExpansive (@mutex 𝔄).
   Proof. rewrite /mutex /mutex_body. solve_ne_type. Qed.
 
   Global Instance mutex_type_ne {𝔄} : TypeNonExpansive (@mutex 𝔄).
   Proof.
-    split; [by apply type_lft_morphism_id_like|by move=>/= ??->|..].
+    split; [by move=>/= ??->|split; [by apply type_lft_morphism_id_like|done|]| |].
+    - repeat (intuition || eexists).
     - move=>/= *. by do 13 f_equiv.
     - move=>/= *. do 7 f_equiv. { by apply equiv_dist, lft_incl_equiv_proper_r. }
       rewrite /mutex_body. do 12 (f_contractive || f_equiv). simpl in *. by apply dist_S.
@@ -141,8 +144,9 @@ Section mutex.
     eqtype E L ty ty' f g → subtype E L (mutex ty) (mutex ty') (.∘ g).
   Proof.
     move=> /eqtype_unfold Eq ?. iIntros "L". iDestruct (Eq with "L") as "#Eq".
-    iIntros "!> E". iDestruct ("Eq" with "E") as "(%EqSz & [#? #?] & #EqOwn &_)".
-    iSplit; [by rewrite/= EqSz|]. iSplit; [done|]. iSplit; iIntros "!> *".
+    iIntros "!> E". iDestruct ("Eq" with "E") as "([%EqSz %] & [#? #?] & #EqOwn &_)".
+    iSplit. iPureIntro. split; [by rewrite/= EqSz|]. intros ??(?&->). eexists _. done.
+    iSplit; [done|]. iSplit; iIntros "!> *".
     - iDestruct 1 as (?????[->->]) "(?& ⧖ & ty)". iExists _, _, _, (f ∘ _), _.
       iSplit; [done|]. iFrame "⧖". iSplitR "ty"; [|by iApply "EqOwn"].
       iApply proph_obs_eq; [|done]=>/= ?. by rewrite semi_iso'.

@@ -44,6 +44,7 @@ Section mutexguard.
   (* Rust's sync::MutexGuard<'a, T> *)
   Program Definition mutexguard {𝔄} (κ: lft) (ty: type 𝔄) : type (predₛ 𝔄) := {|
     ty_size := 1;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    ty_proph Φπ _ := exists Φ, Φπ = const Φ;
     (* One logical step is required for [ty_share] *)
     ty_own Φπ d tid vl := ⌜d > 0⌝ ∗ [loc[l] := vl] ∃Φ κ',
       ⌜Φπ = const Φ⌝ ∗ κ ⊑ κ' ∗ κ' ⊑ ty_lft ty ∗
@@ -100,12 +101,13 @@ Section mutexguard.
   Next Obligation.
     iIntros (???????[|[[]|][]]) "*% _ _ [% big] //". iDestruct "big" as (??->) "?".
     iIntros "$ !>". iApply step_fupdN_full_intro. iModIntro. iExists [], 1%Qp.
-    do 2 (iSplit; [done|]). iIntros "_!>". iSplit; [done|]. iExists _, _. by iFrame.
+    iSplitR. by iExists _. iSplitR; [done|]. iIntros "_!>". iSplit; [done|]. iExists _, _. by iFrame.
   Qed.
   Next Obligation.
     iIntros "*% _ _ _ (%&%&%&%&%&->&?) $ !>!>!>". iApply step_fupdN_full_intro.
-    iModIntro. iExists [], 1%Qp. do 2 (iSplit; [done|]). by iIntros.
+    iModIntro. iExists [], 1%Qp. iSplitR. by iExists _. iSplitR; [done|]. by iIntros.
   Qed.
+  Next Obligation. move=>?????[?->]. done. Qed.
 
   Global Instance mutexguard_ne {𝔄} κ : NonExpansive (mutexguard (𝔄:=𝔄) κ).
   Proof. rewrite /mutexguard /mutex_body. solve_ne_type. Qed.
@@ -113,7 +115,8 @@ Section mutexguard.
   Global Instance mutexguard_type_contractive {𝔄} κ :
     TypeContractive (mutexguard (𝔄:=𝔄) κ).
   Proof.
-    split; [by eapply type_lft_morphism_add_one|done| |].
+    split; [done|split; [by eapply type_lft_morphism_add_one|done|]| |].
+    - repeat (intuition || eexists).
     - move=>/= *. do 10 f_equiv. { by apply equiv_dist, lft_incl_equiv_proper_r. }
       rewrite /mutex_body.
       f_equiv; [do 2 f_equiv|]; f_contractive; do 9 f_equiv; by simpl in *.
@@ -158,7 +161,8 @@ Section mutexguard.
     move=> Lft /eqtype_unfold Eq ?. iIntros "L".
     iDestruct (Lft with "L") as "#Toκ'⊑κ". iDestruct (Eq with "L") as "#ToEq".
     iIntros "!> E". iDestruct ("Toκ'⊑κ" with "E") as "#κ'⊑κ".
-    iDestruct ("ToEq" with "E") as "(%&[#?#?]& #InOwn & #InShr)". iSplit; [done|].
+    iDestruct ("ToEq" with "E") as "([%%]&[#?#?]& #InOwn & #InShr)".
+    iSplit. iPureIntro. split; [done|]. intros ??(?&->). eexists _. done.
     iSplit; [by iApply lft_intersect_mono|]. iSplit; iModIntro.
     - iIntros (???[|[[]|][]]) "[% big] //".
       iDestruct "big" as (? κ''->) "(#?&#?& At & Mut)". iSplit; [done|]. iExists _, κ''.
