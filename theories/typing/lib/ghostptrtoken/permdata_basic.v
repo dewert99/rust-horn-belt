@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import typing zst.
+From lrust.typing Require Import typing zst ptr.
 From lrust.typing.lib.ghostptrtoken Require Import permdata.
 Set Default Proof Using "Type".
 
@@ -81,6 +81,39 @@ Section permdata_basic.
 
   Global Instance permdata_zst {𝔄} (ty: type 𝔄) : ZST (permdata_ty ty).
   Proof. done. Qed.
+
+  Lemma permdata_from_box {𝔄} (ty: type 𝔄) p E L :
+  tctx_incl E L +[p ◁ (box (box ty))] +[p ◁ (box ptr); null_val ◁ (box (permdata_ty ty))]
+    (λ post '-[x], ∀ l, post -[l; (l, x)]).
+  Proof. split. intros ????. do 2 f_equiv. split; intros; by [rewrite -H|rewrite H].
+    iIntros (??(bπ&[])?) "_ _ _ _ $ (box&true) Obs".
+    iDestruct "box" as ([[| |]|][|]?) "(#⧖&box)"; try done.
+    iDestruct "box" as "((%&↦l&box)&†l)". simpl.
+    set l' := match vl with | [] => null_loc | v :: _ => match v with | #l1 => match l1 with | LitLoc l2 => l2 | _ => null_loc end | _ => null_loc end end.
+    iAssert (▷⌜vl = [ #l']⌝)%I as "#vleq". iNext.
+    destruct n; try done. destruct vl as [|[[| |]|][|]]; done.
+    iExists (-[const l'; λ π, (l', bπ π)]); iFrame.
+    iModIntro. iSplit. rewrite tctx_elt_interp_zst tctx_hasty_val'; [|by rewrite H].
+    iSplitL "↦l †l"; iExists _; iFrame "⧖". iFrame. iNext. iExists _. iFrame. iExists _. iFrame "vleq". done.
+    iNext. iExists _, _. iSplit; [done|]. simpl. destruct n; try done. destruct vl as [|[[| |]|][|]]; done.
+    iApply (proph_obs_impl with "Obs")=>π/=. intuition.
+  Qed.
+
+  Lemma permdata_to_box {𝔄} (ty: type 𝔄) p p2 E L :
+  tctx_incl E L +[p ◁ (box ptr); p2 ◁ (box (permdata_ty ty))] +[p ◁ (box (box ty))] 
+    (λ post '-[l1; (l2, x)], l1 = l2 ∧ post -[x]).
+  Proof. split. solve_proper.
+    iIntros (??(lπ&pπ&[])?) "_ PROPH _ _ $ (ptr&perm&true) #Obs".
+    iExists (-[snd ∘ pπ]). iFrame.
+    iDestruct "ptr" as ([[| |]|][|]?) "(_&ptr)"; try done.
+    iDestruct "ptr" as "((%&↦l&ptr)&†l)". simpl.
+    iMod (proph_obs_sat with "PROPH Obs") as "(%&%sat)"; [done|].
+    iModIntro. iSplit. rewrite tctx_elt_interp_zst'' tctx_hasty_val'; [|done].
+    iDestruct "perm" as (???) "(⧖&box)". iExists _. iFrame. iNext.
+    iDestruct "ptr" as "(%&->&->)". iDestruct "box" as "(%&%&(_&->)&box)".
+    iExists _. iFrame. destruct sat as [<- _]. done.
+    iApply (proph_obs_impl with "Obs")=>π/=. destruct (pπ π). intuition.
+  Qed.
 End permdata_basic.
 
 Global Hint Resolve permdata_resolve | 5 : lrust_typing.

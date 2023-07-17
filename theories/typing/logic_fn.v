@@ -1,5 +1,5 @@
-From lrust.typing Require Export type.
-From lrust.typing Require Import ghost shr_bor uniq_bor own product sum array bool int.
+From lrust.typing Require Export type ghost.
+From lrust.typing Require Import shr_bor uniq_bor own product sum array bool int.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.

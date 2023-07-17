@@ -1,6 +1,7 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import array_util typing.
-From lrust.typing.lib.ghostptrtoken Require Import ghostptrtoken ghostseq_basic permdata_basic.
+From lrust.typing.lib.ghostptrtoken Require Import ghostseq_basic permdata_basic heap_util.
+From lrust.typing.lib.ghostptrtoken Require Export ghostptrtoken.
 Set Default Proof Using "Type".
 
 Open Scope nat.
@@ -59,27 +60,48 @@ Section ghostptrtoken_basic.
   Proof. move=> [??]. split; by apply token_subtype. Qed.
 
   (* Rust's GhostPtrToken::new *)
-  Definition ghostptrtoken_new: val :=
-    fn: [] :=
-      let: "r" := new [ #0] in
-      return: ["r"].
+  Definition ghostptrtoken_new: val := ghostseq_new.
 
   Lemma ghostptrtoken_new_type {𝔄} (ty: type 𝔄) :
-    typed_val ghostptrtoken_new (fn(∅) → ghostptrtoken_ty ty) (λ post _, post []).
-  Proof. Opaque ghostptrtoken_ty.
-    eapply type_fn; [apply _|]=> _ ???. simpl_subst.
-    iIntros (???) "_ #TIME _ _ _ Na L C _ Obs". iMod persistent_time_receipt_0 as "⧖".
-    wp_bind (new _). iApply (wp_persistent_time_receipt with "TIME ⧖"); [done|].
-    iApply wp_new; [done..|]. iIntros "!>" (l) "[† _] ⧖". wp_seq.
-    do 2 wp_seq.
-    rewrite cctx_interp_singleton.
-    iApply ("C" $! [# #_] -[const []] with "Na L [-Obs] Obs"). iSplit; [|done].
-    iExists _, _. do 2 (iSplit; [done|]). rewrite/= freeable_sz_full split_mt_token. 
-    iFrame "†". iNext. iExists []. iSplit. done.
-    rewrite heap_mapsto_vec_nil 2! big_sepL_nil.
-    iSplit; [done|done].
+    typed_val ghostptrtoken_new (fn(∅) → ghostptrtoken_ty ty) (λ post '-[], post []).
+  Proof. exact (ghostseq_new_type _). Qed.
+
+  Lemma uniq_ghostptrtoken_resolve {𝔄} E L κ (ty: type 𝔄) :
+    (ty_size ty > 0)%Z → lctx_lft_alive E L κ → resolve E L (&uniq{κ} (ghostptrtoken_ty ty)) (λ '(a, a'), a' = a ∧ NoDup a.*1).
+  Proof.
+    intros. apply (uniq_seq_resolve (λ (a: (locₛ * 𝔄)%ST), fst a)); [|done].
+    iIntros (???????) "(%&%&(_&->)&ty1)(%&%&(_&->)&ty2)".
+    destruct d; try done. destruct d'; try done. 
+    iDestruct "ty1" as "(↦1&†1)". iDestruct "ty2" as "(↦2&†2)".
+    iAssert (▷⌜l ≠ l0⌝)%I as "#neq". iNext. iIntros (->). iApply (no_duplicate_heap_mapsto_own with "↦1 ↦2"). done.
+    iSplitR. simpl. iIntros "!>!>!>". iApply step_fupdN_full_intro. iDestruct "neq" as "%". by iApply proph_obs_true.
+    iSplitL "↦1 †1"; iExists _, _; iFrame; done.
   Qed.
 End ghostptrtoken_basic.
+
+Section defs2.
+Context `{!typeG Σ}.
+
+Lemma ghost_ptr_token_no_dup {𝔄} (ty: type 𝔄) aπl d tid:
+    ([∗ list](l0, aπ)∈ aπl, [S(d') := d] ▷ (∃ vl : list val, l0 ↦∗ vl ∗ ty_own ty aπ d' tid vl)) -∗ ▷⌜(ty.(ty_size) > 0) → NoDup aπl.*1⌝.
+Proof.
+    iInduction aπl as [|[??]] "IH". rewrite NoDup_nil. iIntros. done.
+    simpl. iIntros "(↦1&↦l)". rewrite NoDup_cons.
+    destruct d; [done|]. iIntros "%". iSplit.
+    iIntros (?). rewrite elem_of_list_fmap in H; destruct H as ([??]&->&H); simpl.
+    iDestruct (big_sepL_elem_of _ _ _ H with "↦l") as "↦2". iNext.
+    iApply (no_duplicate_heap_mapsto_own with "↦1 ↦2"). lia.
+    iDestruct ("IH" with "↦l") as ">%". apply H in a. done. 
+Qed.
+
+Lemma ghost_ptr_token_no_dup' {𝔄} (ty: type 𝔄) aπl d tid:
+  (ty.(ty_size) > 0) → ([∗ list](l0, aπ)∈ aπl, [S(d') := d] ▷ (∃ vl : list val, l0 ↦∗ vl ∗ ty_own ty aπ d' tid vl)) -∗ ▷⌜NoDup aπl.*1⌝.
+Proof.
+    iIntros. iDestruct (ghost_ptr_token_no_dup with "[$]") as ">%X".
+    specialize (X H). done.
+Qed.
+
+End defs2.
 
 Global Hint Resolve token_resolve | 5 : lrust_typing.
 Global Hint Resolve token_resolve_just token_subtype token_eqtype : lrust_typing.

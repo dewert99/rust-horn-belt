@@ -69,15 +69,19 @@ theories/typing/borrow.v
 theories/typing/cont.v
 theories/typing/fixpoint.v
 theories/typing/type_sum.v
-theories/typing/ghost.v
 theories/typing/zst.v
+theories/typing/ghost.v
+theories/typing/logic_fn.v
 theories/typing/typing.v
 theories/typing/soundness.v
 # theories/typing/uniq_array_util.v
 theories/typing/ptr.v
 theories/typing/lib/ghostptrtoken/heap_util.v
-theories/typing/lib/ghostptrtoken/heap_util.v
 theories/typing/lib/ghostptrtoken/ghostseq.v
+theories/typing/lib/ghostptrtoken/ghostseq_basic.v
+theories/typing/lib/ghostptrtoken/permdata.v
+theories/typing/lib/ghostptrtoken/permdata_basic.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken.v
 theories/typing/lib/ghostptrtoken/ghostptrtoken_basic.v
 theories/typing/lib/ghostptrtoken/ghostptrtoken_insertremove.v
 theories/typing/lib/ghostptrtoken/ghostptrtoken_borrow_mut.v

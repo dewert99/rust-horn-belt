@@ -108,10 +108,6 @@ Lemma zip_fst_snd_fun {A B C} (f: C → list (A * B)) :
   zip ∘ (map fst ∘ f) ⊛ (map snd ∘ f) = f.
 Proof. fun_ext=>/= ?. apply zip_fst_snd. Qed.
 
-Definition mapply {K V B} `{Countable K} (fm: gmap K (B → V)) (x: B) : gmap K V := (.$ x) <$> fm.
-
-Definition mforall{A} `{Countable K} (Φ: A → Prop) (xm: gmap K A) : Prop := map_Forall (const Φ) xm.
-
 Definition llookup {A} (xl: list A) (i: fin (length xl)) : A :=
   list_to_vec xl !!! i.
 Infix "!!ₗ" := llookup (at level 20, right associativity).

@@ -41,29 +41,3 @@ Proof.
 Qed.
 
 End defs.
-
-From lrust.typing Require Import ghostptrtoken.ghostptrtoken.
-
-Section defs2.
-Context `{!typeG Σ}.
-
-Lemma ghost_ptr_token_no_dup {𝔄} (ty: type 𝔄) aπl d tid:
-    ([∗ list](l0, aπ)∈ aπl, [S(d') := d] ▷ (∃ vl : list val, l0 ↦∗ vl ∗ ty_own ty aπ d' tid vl)) -∗ ▷⌜(ty.(ty_size) > 0) → NoDup aπl.*1⌝.
-Proof.
-    iInduction aπl as [|[??]] "IH". rewrite NoDup_nil. iIntros. done.
-    simpl. iIntros "(↦1&↦l)". rewrite NoDup_cons.
-    destruct d; [done|]. iIntros "%". iSplit.
-    iIntros (?). rewrite elem_of_list_fmap in H; destruct H as ([??]&->&H); simpl.
-    iDestruct (big_sepL_elem_of _ _ _ H with "↦l") as "↦2". iNext.
-    iApply (no_duplicate_heap_mapsto_own with "↦1 ↦2"). lia.
-    iDestruct ("IH" with "↦l") as ">%". apply H in a. done. 
-Qed.
-
-Lemma ghost_ptr_token_no_dup' {𝔄} (ty: type 𝔄) aπl d tid:
-  (ty.(ty_size) > 0) → ([∗ list](l0, aπ)∈ aπl, [S(d') := d] ▷ (∃ vl : list val, l0 ↦∗ vl ∗ ty_own ty aπ d' tid vl)) -∗ ▷⌜NoDup aπl.*1⌝.
-Proof.
-    iIntros. iDestruct (ghost_ptr_token_no_dup with "[$]") as ">%X".
-    specialize (X H). done.
-Qed.
-
-End defs2.
