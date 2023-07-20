@@ -139,14 +139,15 @@ Section typing.
     (forallHL_1 (λ _ ty aπ, ∃ ξl, (ty_proph ty aπ ξl)) tyl aπl) 
     → ∃ ξl, (ty_proph tyr (λ π, f (papply aπl π)) ξl).
 
-  Fixpoint tctx_ghost {𝔄l} (tyl: typel 𝔄l) (pl: plist (const path) 𝔄l)
+  Fixpoint tctx_ghost {𝔄l} (tyl: typel 𝔄l) (pl: list path)
   : tctx ((ghostₛ 1)<$>𝔄l) :=
     match tyl, pl with 
       | +[], _ => +[]
-      | ty +:: tyl', p -::ps' => (p ◁ (box (ghost ty))) +:: tctx_ghost tyl' ps'
+      | ty +:: tyl', [] => (null_val ◁ (box (ghost ty))) +:: tctx_ghost tyl' []
+      | ty +:: tyl', p :: ps' => (p ◁ (box (ghost ty))) +:: tctx_ghost tyl' ps'
     end.
 
-  Lemma logic_fn_ghost_tctx_incl {𝔄l 𝔅} (pl: plist (const path) 𝔄l) (tyl: typel 𝔄l) (tyr: type 𝔅) f E L:
+  Lemma logic_fn_ghost_tctx_incl {𝔄l 𝔅} (pl: list path) (tyl: typel 𝔄l) (tyr: type 𝔅) f E L:
    logic_fn tyl tyr f → tctx_incl E L (null_val ◁ (box ()) +:: (tctx_ghost tyl pl)) +[null_val ◁ (box (ghost tyr))] (λ post '(_ -:: l), post (-[f (prenew' _ _ l)])).
   Proof. 
     unfold logic_fn. intros.
@@ -161,19 +162,19 @@ Section typing.
     f_equiv. f_equiv. intros ?. f_exact (H pπ H0). 
     f_equiv. f_equiv. fun_ext=>?. by rewrite /pπ prenew_apply'.
     clear H postπ f.
-    iInduction tyl as [|? ?] "IH"; destruct vπl. iPureIntro. constructor.
-    destruct pl; simpl. rewrite tctx_elt_interp_zst''.
-    iDestruct "ty" as "((%&%&_&_&_&>%fst)&ty)".
-    iDestruct ("IH" with "ty") as ">%rest".
-    iNext. iPureIntro. done.
+    iInduction tyl as [|? ?] "IH" forall(pl); destruct vπl. iPureIntro. constructor.
+    destruct pl; simpl; rewrite tctx_elt_interp_zst'';
+    iDestruct "ty" as "((%&%&_&_&_&>%fst)&ty)";
+    iDestruct ("IH" with "ty") as ">%rest";
+    iNext; iPureIntro; done.
   Qed.
 
-  Lemma logic_fn_ghost_tctx_incl' {𝔄 𝔄l 𝔅} (pl: plist (const path) (𝔄::𝔄l)) (ty: type 𝔄) (tyl: typel 𝔄l) (tyr: type 𝔅) f E L:
+  Lemma logic_fn_ghost_tctx_incl' {𝔄 𝔄l 𝔅} (pl: list path) (ty: type 𝔄) (tyl: typel 𝔄l) (tyr: type 𝔅) f E L:
    logic_fn (ty +:: tyl) tyr f → tctx_incl E L (tctx_ghost (ty +:: tyl) pl) +[null_val ◁ (box (ghost tyr))] (λ post l, post (-[f (prenew' _ _ l)])).
   Proof. intros ?.
-    destruct pl; simpl.
-    eapply tctx_incl_ext. eapply tctx_incl_trans; [|eapply (logic_fn_ghost_tctx_incl ((phd -:: ptl): plist _ (𝔄::𝔄l))); done].
-    apply (tctx_incl_frame_r +[_] +[_; _] _). apply ghost_dummy'.
+    eapply tctx_incl_ext. eapply tctx_incl_trans; [|eapply (logic_fn_ghost_tctx_incl pl); done].
+    destruct pl; simpl;
+    apply (tctx_incl_frame_r +[_] +[_; _] _); apply ghost_dummy'.
     move=>?[??]/=. done.
   Qed.
 

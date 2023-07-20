@@ -271,7 +271,7 @@ Section ghostseq_basic.
   Proof.
     eapply tctx_incl_ext. eapply tctx_incl_trans. eapply tctx_incl_tail. eapply copy_ghost. done. apply ghost_copy.
     eapply tctx_incl_trans. eapply (tctx_incl_app +[_; _] _ +[_] _). apply seq_split.
-    eapply (logic_fn_ghost_tctx_incl' (𝔄l:=[]) -[p2] _ +[]). eapply (plain_logic_fn +[_] _ (λ '-[x], (1: Zₛ))).
+    eapply (logic_fn_ghost_tctx_incl' [p2] _ +[]). eapply (plain_logic_fn +[_] _ (λ '-[x], (1: Zₛ))).
     eapply tctx_incl_trans. eapply tctx_incl_tail. eapply tctx_incl_trans. apply seq_split.
     eapply tctx_incl_trans. apply tctx_incl_swap. eapply tctx_incl_tail. apply seq_destruct_singleton. done.
     eapply (tctx_incl_frame_r +[_; _] +[_]). eapply seq_append.
