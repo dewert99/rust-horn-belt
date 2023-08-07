@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import uniq_util typing ptr zst.
+From lrust.typing Require Import uniq_util typing ptr zst always_true.
 From lrust.typing.lib.ghostptrtoken Require Import ghostptrtoken_basic heap_util ghostseq_basic.
 Set Default Proof Using "Type".
 
@@ -23,7 +23,7 @@ Section ghostptrtoken_merge.
     iApply ghost_read_delete; [done|]. iIntros. iApply typed_body_tctx_incl.
     eapply ghost_update; [done|solve_typing|]. eapply tctx_incl_trans. eapply seq_fappend. unfold ghostptrtoken_ty. eapply tctx_incl_trans. eapply ghost_dummy'.
     eapply tctx_incl_swap. iApply type_jump; [solve_typing|solve_extract|].
-    apply resolve_tctx_cons_hasty; [apply uniq_ghostptrtoken_resolve; [done|solve_typing]|apply resolve_tctx_nil].
+    apply resolve_tctx_cons_hasty. eapply uniq_resolve'; [eapply always_true_ghostptrtoken_nodup'; lia|solve_typing]. apply resolve_tctx_nil.
     move=>post [[??][?[]]]Impl[eq?]/=. rewrite eq in Impl. by apply Impl.
   Qed.
 End ghostptrtoken_merge.

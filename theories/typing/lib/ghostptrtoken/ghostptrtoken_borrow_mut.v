@@ -1,6 +1,6 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import uniq_util typing ptr.
-From lrust.typing.lib Require Import ghostptrtoken.ghostptrtoken.
+From lrust.typing.lib.ghostptrtoken Require Import ghostptrtoken heap_util.
 Set Default Proof Using "Type".
 
 Open Scope nat.
@@ -105,7 +105,6 @@ Section ghostptrtoken_insertremove.
     iExists _, _. iFrame. iSplitR. iNext.
     iApply (persistent_time_receipt_mono with "⧖"). lia.
     eassert _ as sizen0. shelve.
-    From lrust.typing.lib Require Import ghostptrtoken.heap_util.
     rewrite split_mt_token. iExists _. 
     iDestruct ((plain_entails_r (ghost_ptr_token_no_dup' _ _ _ _ sizen0)) with "↦tys") as "(↦tys&>%)". iFrame. done.
     - iNext. iIntros "((%vπ'&%d'&>⧖d'&Pc1&↦ty)&(%mπ'&%d''&>⧖d''&Pc2&↦tys))". rewrite split_mt_token.

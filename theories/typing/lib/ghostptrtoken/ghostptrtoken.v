@@ -1,6 +1,6 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import array_util typing.
-From lrust.typing.lib.ghostptrtoken Require Import permdata ghostseq.
+From lrust.typing.lib.ghostptrtoken Require Export permdata ghostseq.
 Set Default Proof Using "Type".
 
 Open Scope nat.

@@ -10,6 +10,7 @@ theories/util/vector.v
 theories/util/update.v
 theories/util/discrete_fun.v
 theories/util/fancy_lists.v
+theories/util/pairwise.v
 theories/prophecy/syn_type.v
 theories/prophecy/prophecy.v
 theories/lifetime/model/definitions.v
@@ -72,6 +73,8 @@ theories/typing/type_sum.v
 theories/typing/zst.v
 theories/typing/ghost.v
 theories/typing/logic_fn.v
+theories/typing/hints.v
+theories/typing/always_true.v
 theories/typing/typing.v
 theories/typing/soundness.v
 # theories/typing/uniq_array_util.v

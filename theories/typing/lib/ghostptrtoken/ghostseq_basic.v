@@ -1,6 +1,8 @@
+From lrust.util Require Export pairwise.
 From lrust.typing Require Export type.
-From lrust.typing Require Import array_util typing logic_fn.
-From lrust.typing.lib.ghostptrtoken Require Import ghostseq.
+From lrust.typing Require Import array_util typing logic_fn always_true.
+From lrust.typing.lib.ghostptrtoken Require Export ghostseq.
+From stdpp Require Import numbers.
 Set Default Proof Using "Type".
 
 Open Scope nat.
@@ -44,42 +46,7 @@ Section ghostseq_basic.
   Global Instance seq_sync {𝔄} (ty: type 𝔄) : Sync ty → Sync (ghostseq_ty ty).
   Proof. move=> ?>/=. by do 6 (f_equiv || move=>?). Qed.
 
-  Definition always_true {𝔄} (P: 𝔄 → Prop) (ty: type 𝔄) := (∀ vπ d tid vl F, (ty_own ty vπ d tid vl) -∗ (|={F}▷=>^d ⟨ π , P (vπ π) ⟩) ∗ (ty_own ty vπ d tid vl) ).
-
-  Lemma resolve_uniq_body' {𝔄} (P: 𝔄 → Prop) (ty: type 𝔄) vπ ξi d κ tid l E L q F :
-    always_true P ty → lctx_lft_alive E L κ → ↑lftN ∪ ↑prophN ⊆ F →
-    lft_ctx -∗ proph_ctx -∗ κ ⊑ ty_lft ty -∗ elctx_interp E -∗ llctx_interp L q -∗
-    uniq_body ty vπ ξi d κ tid l ={F}=∗ |={F}▷=>^(S d) |={F}=>
-      ⟨π, π (PrVar (𝔄 ↾ prval_to_inh vπ) ξi) = vπ π ∧ P (vπ π)⟩ ∗ llctx_interp L q.
-  Proof.
-    iIntros (H Alv ?) "#LFT PROPH In E L [Vo Bor] /=".
-    iMod (Alv with "E L") as (?) "[[κ κ₊] ToL]"; [solve_ndisj|].
-    iMod (bor_acc with "LFT Bor κ") as "[(%&%& ⧖ & Pc &%& ↦ & ty) ToBor]";
-      [solve_ndisj|]. iIntros "!>!>!>".
-    iDestruct (H with "ty") as "(Obs&ty)".
-    iMod (ty_own_proph with "LFT In ty κ₊") as "Upd"; [solve_ndisj|].
-    iDestruct (uniq_agree with "Vo Pc") as %[<-<-]. iCombine "Obs Upd" as "Upd".
-    iApply (step_fupdN_wand with "Upd"). iIntros "!> (Obs&>(%&%&%& ξl & Toty))".
-    iMod (uniq_resolve with "PROPH Vo Pc ξl") as "(Obs'& Pc & ξl)"; [solve_ndisj| |].
-    by eapply ty_proph_weaken. iCombine "Obs' Obs" as "$".
-    iMod ("Toty" with "ξl") as "[ty κ₊]".
-    iMod ("ToBor" with "[⧖ Pc ↦ ty]") as "[_ κ]".
-    { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. }
-    iApply "ToL". iFrame.
-  Qed.
-
-  Lemma uniq_resolve' {𝔄} (P: 𝔄 → Prop) E L κ (ty: type 𝔄) :
-    always_true P ty → lctx_lft_alive E L κ → resolve E L (&uniq{κ} ty) (λ '(a, a'), a' = a ∧ P a).
-  Proof.
-    move=>/= H??? vπ ?? vl ?. iIntros "LFT PROPH E L [In uniq]".
-    case vl as [|[[]|][]]=>//. iDestruct "uniq" as (??[Le Eq]) "uniq".
-    iMod (resolve_uniq_body' with "LFT PROPH In E L uniq") as "Upd"; [done..|].
-    iApply step_fupdN_nmono; [done|]. iApply (step_fupdN_wand with "Upd").
-    iIntros "!> >(?&$) !>". iApply proph_obs_eq; [|done]=>/= π.
-    move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.
-  Qed.
-
-  Lemma uniq_seq_resolve {𝔄 T} (f: 𝔄 → T) E L κ (ty: type 𝔄) :
+  (* Lemma uniq_seq_resolve {𝔄 T} (f: 𝔄 → T) E L κ (ty: type 𝔄) :
   (∀ vπ vπ' d d' tid tid' F, (ty_own ty vπ d tid []) -∗ (ty_own ty vπ' d' tid' []) -∗ (|={F}▷=>^d ⟨ π , f (vπ π) ≠ f (vπ' π)  ⟩) ∗ (ty_own ty vπ d tid []) ∗ (ty_own ty vπ' d' tid' []) )
     → lctx_lft_alive E L κ → resolve E L (&uniq{κ} (ghostseq_ty ty)) (λ '(a, a'), a' = a ∧ NoDup (f <$> a)).
   Proof.
@@ -96,7 +63,7 @@ Section ghostseq_basic.
     iDestruct ("IH" with "[ty1 tys]") as "(Obs'&($&$))". iFrame. iCombine "Obs Obs'" as "Obs".
     iApply (step_fupdN_wand with "Obs"); iIntros "(Obs&Obs')"; iCombine "Obs Obs'" as "Obs".
     iApply (proph_obs_impl with "Obs")=>π/=?. rewrite not_elem_of_cons. done.
-  Qed.
+  Qed. *)
 
   Lemma seq_resolve {𝔄} (ty: type 𝔄) Φ E L :
     resolve E L ty Φ → resolve E L (ghostseq_ty ty) (lforall Φ).
@@ -162,6 +129,71 @@ Section ghostseq_basic.
 
   Global Instance seq_zst {𝔄} (ty: type 𝔄) : ZST (ghostseq_ty ty).
   Proof. done. Qed.
+
+  Definition natQp (n: nat): Qp := (pos_to_Qp (Pos.of_nat n)).
+  Definition div_nat (q: Qp) (n: nat): Qp := q/(natQp n).
+  Lemma natQp1: (natQp 1) = 1%Qp.
+  Proof. vm_compute. done. Qed.
+  Lemma natQpS (n: nat): (natQp (S (S n))) = (1+(natQp (S n)))%Qp.
+  Proof. 
+    rewrite /natQp -2! Pos.of_nat_succ -Pos.succ_of_nat; [|done].
+    rewrite -Pos.of_nat_succ Pplus_one_succ_l pos_to_Qp_add. done.
+  Qed.
+
+  Lemma big_sepL_frac' {A} (x: A) (l: list A) (P: Qp → iProp Σ) `{!fractional.Fractional P} q q': P (q' + q * (natQp (S (length l))))%Qp ⊣⊢ P q' ∗ ([∗ list] _ ∈ (x :: l), P q).
+  Proof.
+    revert q'. induction l; intros; simpl. rewrite natQp1 Qp_mul_1_r H. f_equiv. rewrite bi.sep_emp. done.
+    rewrite natQpS Qp_mul_add_distr_l Qp_add_assoc IHl Qp_mul_1_r H bi.sep_assoc. simpl. done.
+  Qed.
+
+  Definition listQp (q: Qp) {A} (l: list A):= (div_nat q (S (length l))).
+
+  Lemma big_sepL_frac {A} (l: list A) (P: Qp → iProp Σ) `{!fractional.Fractional P} q: P q ⊣⊢ P (listQp q l) ∗ ([∗ list] _ ∈ l, P (listQp q l)).
+  Proof.
+    unfold listQp. destruct l. rewrite /div_nat natQp1 Qp_div_1. simpl. rewrite bi.sep_emp. done.
+    rewrite -big_sepL_frac'. simpl. 
+    rewrite -(Qp_mul_1_r (div_nat _ _)) -Qp_mul_assoc -Qp_mul_add_distr_l Qp_mul_1_l /div_nat natQpS Qp_mul_div_l. done.
+  Qed.
+
+  Program Global Instance flat_seq {𝔄} (ty: type 𝔄) `{!FlatOwn ty} : FlatOwn (ghostseq_ty ty) := {|
+    T := list (proph 𝔄);
+    ty_flat' alπ d tid q aπl vl := ⌜alπ = lapply aπl⌝ ∗ ([∗ list] aπ ∈ aπl, ty_flat ty aπ d tid (listQp q aπl) []);
+  |}%I.
+  Next Obligation. 
+    intros. simpl.  iIntros "#LFT (%&[->->]&tys)".
+    setoid_rewrite (big_sepL_frac aπl (λ q, q.[_])%I). iIntros "($&lfts)".
+    do 2 iExists' aπl. remember (listQp q aπl) as q'. clear Heqq'. iInduction aπl as [|] "IH"; simpl.
+    iModIntro. iApply (step_fupdN_full_intro). iModIntro. iSplit. simpl. done.
+    iIntros "(%&?)". iModIntro. iFrame. simpl. done.
+    iDestruct "tys" as "(ty&tys)". iDestruct "lfts" as "(lft&lfts)". iMod ("IH" with "tys lfts") as "Upd".
+    iMod (ty_own_flat with "LFT ty lft") as "Upd'". iCombine "Upd Upd'" as "Upd".
+    iModIntro. iApply (step_fupdN_wand with "Upd"). iIntros "(>((%&$)&W)&>$)".
+    iModIntro. iSplit. done. iIntros "(_&flat&flats)". iMod ("W" with "[$flats//]") as "((_&$)&$)".
+    iMod (ty_flat_own with "flat") as "($&$)". done.
+  Qed.
+  Next Obligation.
+    simpl. iIntros (?????? aπl ??) "(%&flats)". remember (listQp q aπl) as q'. clear Heqq'.
+    iExistsP aπl. setoid_rewrite (is_True_True H). clear H.
+    iInduction aπl as [|] "IH"; simpl. iExists [], 1%Qp. simpl. iFrame. iSplit. iPureIntro. eexists []. done. iIntros "$".
+    iDestruct "flats" as "(flat&flats)". iDestruct ("IH" with "flats") as "(%&%&(%&->&_&%)&ξll&W1)".
+    iDestruct (ty_flat_proph with "flat") as "(%&%&%&ξl&ToFlat)". iDestruct (proph_tok_combine with "ξl ξll") as "(%&ξll&Toξll)".
+    iExists _, _. iFrame. iSplit. iPureIntro. eexists (_ :: _). intuition. 
+    iIntros "ξll". iDestruct ("Toξll" with "ξll") as "(ξl&ξll)". iDestruct ("ToFlat" with "ξl") as "$".
+    iDestruct ("W1" with "ξll") as "(_&$)".
+  Qed.
+
+  Lemma always_true_from_pair_seq {𝔄} (ty: type 𝔄) `{!FlatOwn ty} R:
+    (always_true_pair ty R) → (always_true (ghostseq_ty ty) (PairWise R)).
+  Proof.
+    intros always. iIntros (?????) "/=(%aπl&(->&tys)&_)". simpl in aπl. remember (listQp q aπl). clear Heqq0. 
+    iInduction aπl as [|vπ aπl] "IH". iApply proph_obs_true=>π. constructor.
+    iDestruct "tys" as "(ty&tys)".  simpl. setoid_rewrite PairWise_cons.
+    iDestruct (proph_obs_and with "[#] [#]") as "#$"; [|iApply ("IH" with "tys")]. iClear "IH".
+    iInduction aπl as [|vπ' aπl] "IH". iApply proph_obs_true=>π. constructor.
+    iDestruct "tys" as "(ty'&tys)". simpl. setoid_rewrite list.Forall_cons.
+    iDestruct (proph_obs_and with "[#] [#]") as "#$";  [|iApply ("IH" with "ty tys")]. iClear "IH".
+    iApply (always with "ty ty'").
+  Qed.
 
   Lemma seq_append {𝔄} (ty: type 𝔄) p1 p2 E L :
   tctx_incl E L +[p1 ◁ (box (ghostseq_ty ty)); p2 ◁ (box (ghostseq_ty ty))] +[null_val ◁ (box (ghostseq_ty ty))]

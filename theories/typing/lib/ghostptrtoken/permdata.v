@@ -1,5 +1,5 @@
-From lrust.typing Require Export type.
-From lrust.typing Require Import zst typing.
+From lrust.typing Require Export zst type.
+From lrust.typing Require Import typing.
 Set Default Proof Using "Type".
 
 Open Scope nat.

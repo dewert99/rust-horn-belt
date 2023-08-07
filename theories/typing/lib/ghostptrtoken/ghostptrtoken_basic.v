@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import array_util typing.
+From lrust.typing Require Import array_util typing always_true.
 From lrust.typing.lib.ghostptrtoken Require Import ghostseq_basic permdata_basic heap_util.
 From lrust.typing.lib.ghostptrtoken Require Export ghostptrtoken.
 Set Default Proof Using "Type".
@@ -66,17 +66,15 @@ Section ghostptrtoken_basic.
     typed_val ghostptrtoken_new (fn(∅) → ghostptrtoken_ty ty) (λ post '-[], post []).
   Proof. exact (ghostseq_new_type _). Qed.
 
-  Lemma uniq_ghostptrtoken_resolve {𝔄} E L κ (ty: type 𝔄) :
-    (ty_size ty > 0)%Z → lctx_lft_alive E L κ → resolve E L (&uniq{κ} (ghostptrtoken_ty ty)) (λ '(a, a'), a' = a ∧ NoDup a.*1).
+  Lemma always_true_ghostptrtoken_nodup {𝔄} (ty: type 𝔄) `{!FlatOwn ty} :
+    ty.(ty_size) ≠ 0 → (always_true (ghostptrtoken_ty ty) (λ (a: list (loc * 𝔄)) , NoDup a.*1)).
   Proof.
-    intros. apply (uniq_seq_resolve (λ (a: (locₛ * 𝔄)%ST), fst a)); [|done].
-    iIntros (???????) "(%&%&(_&->)&ty1)(%&%&(_&->)&ty2)".
-    destruct d; try done. destruct d'; try done. 
-    iDestruct "ty1" as "(↦1&†1)". iDestruct "ty2" as "(↦2&†2)".
-    iAssert (▷⌜l ≠ l0⌝)%I as "#neq". iNext. iIntros (->). iApply (no_duplicate_heap_mapsto_own with "↦1 ↦2"). done.
-    iSplitR. simpl. iIntros "!>!>!>". iApply step_fupdN_full_intro. iDestruct "neq" as "%". by iApply proph_obs_true.
-    iSplitL "↦1 †1"; iExists _, _; iFrame; done.
+    intros. eapply always_true_mono; last first. 
+    eapply always_true_from_pair_seq, always_true_pair_permdata. done.
+    intros ?. rewrite -PairWise_NoDup PairWise_fmap. done.
   Qed.
+
+  Definition always_true_ghostptrtoken_nodup' {𝔄} (ty: type 𝔄) := @always_true_ghostptrtoken_nodup 𝔄 ty (flat_just ty).
 End ghostptrtoken_basic.
 
 Section defs2.

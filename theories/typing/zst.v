@@ -1,5 +1,6 @@
 From lrust.typing Require Export type.
 From lrust.typing Require Import typing.
+From lrust.typing Require Export hints.
 Set Default Proof Using "Type".
 
 Open Scope nat.
@@ -44,7 +45,7 @@ Section zst.
   Lemma tctx_elt_interp_zst'' {𝔄} (ty: type 𝔄) `{!ZST ty} vπ tid p:
     (tctx_elt_interp tid (p ◁ box ty) vπ) ⊣⊢ ∃(l: loc) d, ⌜eval_path p = Some #l⌝ ∧ ⧖(S d) ∗ ▷ ty.(ty_own) vπ d tid [].
   Proof. 
-    iSplit. iIntros "X". iDestruct "X" as ([[| |]|][|]) "(%&?&X)"; try done. iDestruct "X" as "(?&_)". rewrite zst_own_eqv. iExists _, _. iFrame. done.
+    iSplit. iIntros "(%&%&?&?&X)".  iDestruct "X" as (?->?[= ->]) "(?&_)". rewrite zst_own_eqv. iExists _, _. iFrame.
     iIntros "(%&%&%&?)". rewrite tctx_elt_interp_zst'. iExists _. done. done.
   Qed.
 
@@ -64,8 +65,7 @@ Section zst.
   Proof. intros Alv [P incl]. split. 
     intros ????. do 2 f_equiv. apply P. intros ?. f_equiv. by rewrite H.
     simpl. iIntros (??(vπ&rπ)?) "#LFT #PROPH #UNIQ #E (L&L') (ty&tyr) Obs".
-    iDestruct "ty" as ([[| |]|]??) "(_&κin&ty)"; try done. 
-    iDestruct "ty" as (??[? Eq]) "(Vo&Bor)"; try done.
+    iDestruct "ty" as (???) "(_&κin&ty)". iDestruct "ty" as (?[= ->]??[? Eq]) "(Vo&Bor)".
     iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
     iMod (bor_acc with "LFT Bor κ") as "[(%&% & >⧖ & Pc & ↦ty) ToBor]"; [done|].
     iMod (uniq_strip_later with "Vo Pc") as (<-<-) "[Vo Pc]".
@@ -130,7 +130,7 @@ Section zst.
 
   Local Instance box_zst_copy {𝔄} (ty: type 𝔄) `{!ZST ty} `{!Copy ty} vπ d tid vl : Persistent (ty_own (box ty) vπ d tid vl).
   Proof. eassert (_ -∗ _); [|done].
-    iIntros "x". destruct d; try done. destruct vl as [|[[| |]|][|]]; try done.
+    iIntros "x". iDestruct "x" as (?->?->) "x".
     simpl. rewrite zst_own_eqv. iDestruct "x" as "(#x&_)". iModIntro. iFrame "x".
     rewrite zero_size. done.
   Qed.
@@ -145,8 +145,8 @@ Section zst.
 
   Lemma ghost_dummy' {𝔄} (ty: type 𝔄) p E L:
    tctx_incl E L +[p ◁ (box ty)] +[null_val ◁ (box ()); p ◁ (box ty)] (λ post '-[x], post -[(); x]).
-  Proof. split. solve_proper. iIntros (??[?[]]?) "_ _ _ _ $ [ty?] Obs".
-    iDestruct "ty" as ([[| |]|][|]) "(%&#⧖&ty)"; try done.
+  Proof. split. solve_proper. iIntros (??[?[]]?) "_ _ _ _ $ [(%&%&%&#⧖&ty)?] Obs".
+    iDestruct "ty" as (?->?[=->]) "ty".
     iModIntro.
     iExists -[_; _]. iSplit. simpl. iFrame. rewrite tctx_elt_interp_zst tctx_hasty_val'; [|done]. 
     iSplit; iExists _; iFrame "⧖". iNext. iExists (const -[]). done. done.

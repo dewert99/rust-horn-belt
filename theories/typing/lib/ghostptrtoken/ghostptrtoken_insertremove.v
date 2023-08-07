@@ -1,28 +1,10 @@
-From lrust.typing Require Export type.
+From lrust.typing Require Export type always_true.
 From lrust.typing Require Import uniq_util typing ptr logic_fn.
 From lrust.typing.lib.ghostptrtoken Require Import ghostptrtoken_basic ghostseq_basic permdata_basic.
 Set Default Proof Using "Type".
 
 Open Scope nat.
 Implicit Type 𝔄 𝔅: syn_type.
-
-Section lft_contexts_addition.
-  Context `{!typeG Σ}.
-
-  Lemma lctx_lft_alive_intersect_list αl E L:
-    (∀ α, α ∈ αl → lctx_lft_alive E L α) →
-    lctx_lft_alive E L (lft_intersect_list αl).
-  Proof.
-    rewrite -Forall_forall. intros H. induction αl; inversion_clear H. apply lctx_lft_alive_static.
-    simpl. apply lctx_lft_alive_intersect. done. apply IHαl. done.
-  Qed.
-
-  Lemma elem_of_ty_outlives_E {𝔄} ϝ x (ty: type 𝔄) : x ∈ ty_lfts ty → ϝ ⊑ₑ x ∈ ty_outlives_E ty ϝ .
-  Proof.
-    intros. rewrite elem_of_list_fmap. eexists. done.
-  Qed.
-End lft_contexts_addition.
-Global Hint Resolve lctx_lft_alive_intersect_list elem_of_ty_outlives_E: lrust_typing.
 
 Section ghostptrtoken_insertremove.
   Context `{!typeG Σ}.
@@ -43,7 +25,7 @@ Section ghostptrtoken_insertremove.
     eapply tctx_incl_trans. eapply (tctx_incl_frame_l _ _ +[_]). eapply tctx_incl_trans. eapply permdata_from_box. eapply tctx_incl_swap.
     simpl. eapply (tctx_incl_frame_r +[_; _] +[_] +[_]). eapply seq_cons. done.
     iApply type_jump; [solve_typing|solve_extract|].
-    apply resolve_tctx_cons_hasty; [apply uniq_ghostptrtoken_resolve; [lia|solve_typing]|apply resolve_tctx_nil].
+    apply resolve_tctx_cons_hasty. eapply uniq_resolve'; [eapply always_true_ghostptrtoken_nodup'; lia|solve_typing]. apply resolve_tctx_nil.
     move=>post [[tc tf][v []]]Impl l' [eq nodup]/=. rewrite eq in Impl. apply Impl. done.
     apply not_elem_of_list_to_map_1. inversion_clear nodup. done.
   Qed.
@@ -104,6 +86,16 @@ Section ghostptrtoken_insertremove.
     intros ?. rewrite lookup_insert_ne in H7; [|done]. destruct (IHl H7) as (<-&<-). rewrite -insert_commute; done.
   Qed.
 
+  Lemma find_idx_delete' {K A} `{EqDecision K} `{FinMap K M} (l: list (K*A)) (k: K) (a: A):
+    NoDup l.*1 → ((list_to_map l): M A) !! k = Some a → (list_to_map (base.delete (find_idx (λ x, x.1 = k) l) l): M A) = (base.delete k (list_to_map l)) ∧ l !! (find_idx (λ x, x.1 = k) l) = Some (k, a).
+  Proof.
+    intros no_dup is_some. destruct (find_idx_delete l k a is_some) as [<- is_some2]. intuition.
+    rewrite delete_insert. done.
+    apply not_elem_of_list_to_map_1. clear is_some is_some2. induction l; simpl. apply not_elem_of_nil. 
+    inversion_clear no_dup. destruct (decide (a0.1 = k)) as [<-|]; simpl. done.
+    apply not_elem_of_cons. split. done. apply IHl. done.
+  Qed.
+
   Lemma find_logic {𝔄 𝔄'} (ty: type (𝔄*𝔄')) (ty': plain_type 𝔄) `{!EqDecision 𝔄} :
     (∀ vπ ξl, ty_proph ty vπ ξl → ∃ (x: 𝔄) (vπ': proph 𝔄'), vπ = (λ π, (x, vπ' π))) → logic_fn +[ghostseq.ghostseq_ty ty; (ty': type 𝔄)] int (λ '-[l; k], find_idx (λ (x: (𝔄*𝔄')) , x.1 = k) l).
   Proof. intros ? (?&?&[]) ((?&?&?&->&->&?)&(?&?&->)&[]). exists [].
@@ -117,17 +109,20 @@ Section ghostptrtoken_insertremove.
     fn: ["t"; "ptr"] :=
       Skip;;
       delete [ #1; "t"];;
+      Skip;;
       (Skip;;Skip);;
       (Skip;;Skip);;
       return: ["ptr"].
 
   (* Rust's GhostPtrToken::remove *)
   Lemma ghostptrtoken_remove_type {𝔄} (ty: type 𝔄) :
-    typed_val (ghostptrtoken_remove ty) (fn<α>(∅; &uniq{α} (ghostptrtoken_ty ty), ptr) → box ty)
-      (λ post '-[(al, al'); p], exists(a: 𝔄), ((list_to_gmap al) !! p = Some a) ∧ ((<[p:=a]>(list_to_gmap al') = (list_to_gmap al)) → post a)).
+    (ty.(ty_size) > 0) → typed_val (ghostptrtoken_remove ty) (fn<α>(∅; &uniq{α} (ghostptrtoken_ty ty), ptr) → box ty)
+      (λ post '-[(al, al'); p], exists(a: 𝔄), ((list_to_gmap al) !! p = Some a) ∧ (((list_to_gmap al') = (base.delete p (list_to_gmap al))) → post a)).
   Proof.
-    intros ?. eapply type_fn; [apply _|]=> α ??[l[l2[]]]. simpl_subst. via_tr_impl.
-    iApply ghost_read_delete; [done|]. iIntros. iApply ghost_new; [solve_typing|].
+    intros ??. eapply type_fn; [apply _|]=> α ??[l[l2[]]]. simpl_subst. via_tr_impl.
+    iApply ghost_read_delete; [done|]. iIntros.
+    iApply type_resolve'. eapply resolve_unblock_tctx_cons_keep_and_learn. eapply always_true_uniq. apply always_true_ghostptrtoken_nodup'. lia. solve_typing. solve_typing.
+    iApply ghost_new; [solve_typing|].
     iApply typed_body_tctx_incl. eapply tctx_incl_trans. eapply tctx_incl_tail. apply tctx_incl_swap. apply tctx_incl_swap.
     iApply ghost_new; [solve_typing|].
     iApply typed_body_tctx_incl. eapply tctx_incl_trans. eapply tctx_incl_tail. eapply tctx_incl_trans. apply tctx_incl_swap. eapply tctx_incl_tail. apply tctx_incl_swap.
@@ -137,9 +132,9 @@ Section ghostptrtoken_insertremove.
     eapply ghost_update; [done|solve_typing|]. 
     eapply tctx_incl_trans. eapply (tctx_incl_frame_r +[_; _]). eapply seq_remove. done. eapply tctx_incl_tail. eapply tctx_incl_trans. eapply tctx_incl_swap. eapply permdata_to_box. 
     iApply type_jump; [solve_typing|solve_extract|solve_typing].
-    rewrite /trans_upper /trans_tail. move=>post [[tc tf][l' []]] [v [lookup Impl]]/=.
-    eexists _, _. split. done. destruct (find_idx_delete _ _ _ lookup) as (?&->). split. done. split. done.
-    intros. apply Impl. rewrite H0 H. done.
+    rewrite /trans_upper /trans_tail. move=>post [[tc tf][l' []]] [v [lookup Impl]] no_dup/=.
+    eexists _, _. split. done. simpl in no_dup. destruct (find_idx_delete' _ _ _ no_dup lookup) as (?&->). split. done. split. done.
+    intros. apply Impl. rewrite H1 -H0. done.
   Qed.
     
 End ghostptrtoken_insertremove.

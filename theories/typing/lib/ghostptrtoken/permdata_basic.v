@@ -1,6 +1,6 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import typing zst ptr.
-From lrust.typing.lib.ghostptrtoken Require Import permdata.
+From lrust.typing Require Import typing zst ptr always_true.
+From lrust.typing.lib.ghostptrtoken Require Import permdata heap_util.
 Set Default Proof Using "Type".
 
 Open Scope nat.
@@ -37,6 +37,35 @@ Section permdata_basic.
   Lemma permdata_resolve_just {𝔄} (ty: type 𝔄) E L :
     resolve E L ty (const True) → resolve E L (permdata_ty ty) (const True).
   Proof. move=> ?. apply resolve_just. Qed.
+
+  Program Global Instance flat_permdata {𝔄} (ty: type 𝔄) `{!FlatOwn ty} : FlatOwn (permdata_ty ty) := {|
+    T := (loc * (proph 𝔄));
+    ty_flat' vπ d tid q '(l, vπ') vl := 
+      ⌜vl = [] ∧ vπ = λ π, (l, vπ' π)⌝ ∗
+        (ty_flat' (ty:=box ty) vπ' d tid q () [ #l]);
+  |}%I.
+  Next Obligation. 
+    intros. iIntros "LFT (%&%&%p&ty) lft". rewrite exist_pair.
+    do 2 (iExists' l; iExists' vπ').  setoid_rewrite (is_True_True p). setoid_rewrite bi.True_sep; [|typeclasses eauto..].
+    iDestruct (ty_own_flat' with "LFT ty lft") as "X". rewrite exist_nil. done.
+  Qed.
+  Next Obligation.
+    intros ??????[??]??. iIntros "((->&->)&flat)". iDestruct (ty_flat_proph' with "flat") as "(%&%&%&ξl&Toflat)".
+    iExists _, _. iSplit. iPureIntro. eexists _, _. intuition. done.
+    iFrame. iIntros "ξl". iDestruct ("Toflat" with "ξl") as "$". done.
+  Qed.
+
+  Lemma always_true_pair_permdata {𝔄} (ty: type 𝔄) `{!FlatOwn ty} :
+    ty.(ty_size) ≠ 0 → (always_true_pair (permdata_ty ty) (λ x1 x2, x1.1 ≠ x2.1)).
+  Proof.
+    intros sz ?*. setoid_rewrite exist_pair. iIntros "(%&%&ty&_) (%&%&ty'&_)". simpl.
+    iDestruct "ty" as "((->&->)&%&->&%&↦0&%&_&%&_)". iDestruct "ty'" as "((->&->)&%&->&%&↦1&%&_&%&_)".
+    destruct vl. rewrite -H in sz; simpl in sz; done. destruct vl0. rewrite -H0 in sz; simpl in sz; done.
+    do 2 rewrite heap_mapsto_vec_cons.
+    iDestruct "↦0" as "(↦0 & _)". iDestruct "↦1" as "(↦1 & _)".
+    destruct (decide (t = t0)) as [->|]. iDestruct (no_duplicate_heap_mapsto with "↦0 ↦1") as "[]".
+    iApply proph_obs_true=>π. done.
+  Qed.
 
   Lemma permdata_real {𝔄 𝔅} (ty: type 𝔄) (f: 𝔄 → 𝔅) E L :
     real E L ty f → real (𝔅:=locₛ * _) E L (permdata_ty ty) (prod_map id f).

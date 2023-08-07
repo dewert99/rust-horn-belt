@@ -1,5 +1,5 @@
-From lrust.typing Require Export type.
-From lrust.typing Require Import zst array_util typing.
+From lrust.typing Require Export zst type.
+From lrust.typing Require Import array_util typing.
 Set Default Proof Using "Type".
 
 Open Scope nat.
@@ -20,8 +20,8 @@ Section seq.
     - iIntros "big". iDestruct "big" as (?->) "(↦ & ?)".
       iExists []. iFrame "↦". iExists _. by iFrame.
   Qed.
-
-  Lemma ty_share_big_sepL' {𝔄} (ty: type 𝔄) E aπl d κ tid l q :
+  
+  Lemma ty_share_big_sepL' {𝔄} (ty: type 𝔄)  E aπl d κ tid l q :
     ↑lftN ⊆ E → lft_ctx -∗ κ ⊑ ty_lft ty -∗
     &{κ} ([∗ list] aπ ∈ aπl, ty.(ty_own) aπ d tid []) -∗ q.[κ]
       ={E}=∗ |={E}▷=>^d |={E}=>
@@ -30,14 +30,13 @@ Section seq.
     iIntros (?) "#LFT #In Bor κ".
     iMod (bor_big_sepL with "LFT Bor") as "Bors"; [done|].
     iInduction aπl as [|x] "IH" forall (q)=>/=.
-    { iApply step_fupdN_full_intro. by iFrame. }
+    { iApply step_fupdN_full_intro.  by iFrame. }
     iDestruct "κ" as "[κ κ₊]". iDestruct "Bors" as "[Bor Bors]".
     iMod (bor_acc with "LFT Bor κ") as "(ty&toBor)"; [done|].
-    assert (▷ ty_own ty x d tid [] ⊢ ■▷⌜ZST ty⌝) as zst1.
-    iIntros "ty". iApply plain. iModIntro. iDestruct (ty_size_eq with "ty") as "%".
+    assert (▷ ty_own ty x d tid [] ⊢ ▷⌜ZST ty⌝) as zst1.
+    iIntros "ty". iModIntro. iDestruct (ty_size_eq with "ty") as "%".
     rewrite nil_length in H0. done.
-    apply plainly_entails_l in zst1.
-    iDestruct (zst1 with "ty") as "(>%zst&ty)".
+    iDestruct (zst1 with "ty") as "#>%zst".
     iMod ("toBor" with "ty") as "(Bor&κ)".
     setoid_rewrite <- zst_own_eqv; [|exact zst..].
     iMod (ty_share with "LFT In Bor κ") as "Toshr"; [done|].
