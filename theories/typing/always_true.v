@@ -224,7 +224,7 @@ Qed.
     iIntros (Rslv ???) "LFT TIME PROPH _ E $ L /= T Obs".
     iDestruct (Rslv with "LFT PROPH E L T Obs") as ">(%&%&⧖&Upd)".
     iApply (wp_step_fupdN_persistent_time_receipt _ _ ∅ with "TIME ⧖ [Upd]")=>//.
-    { iApply step_fupdN_with_emp. by rewrite difference_empty_L. }
+    { iApply step_fupdN_with_emp. rewrite difference_empty_L. done. }
     wp_seq. iIntros "(?&?&Obs)". iModIntro. iExists _. iFrame.
   Qed.
 

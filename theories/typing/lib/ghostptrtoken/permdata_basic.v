@@ -135,14 +135,61 @@ Section permdata_basic.
     iIntros (??(lπ&pπ&[])?) "_ PROPH _ _ $ (ptr&perm&true) #Obs".
     iExists (-[snd ∘ pπ]). iFrame.
     iDestruct "ptr" as ([[| |]|][|]?) "(_&ptr)"; try done.
-    iDestruct "ptr" as "((%&↦l&ptr)&†l)". simpl.
+    iDestruct "ptr" as "((%&↦l&>(%&->&->))&†l)". simpl.
     iMod (proph_obs_sat with "PROPH Obs") as "(%&%sat)"; [done|].
     iModIntro. iSplit. rewrite tctx_elt_interp_zst'' tctx_hasty_val'; [|done].
     iDestruct "perm" as (???) "(⧖&box)". iExists _. iFrame. iNext.
-    iDestruct "ptr" as "(%&->&->)". iDestruct "box" as "(%&%&(_&->)&box)".
+    iDestruct "box" as "(%&%&(_&->)&box)".
     iExists _. iFrame. destruct sat as [<- _]. done.
     iApply (proph_obs_impl with "Obs")=>π/=. destruct (pπ π). intuition.
   Qed.
+
+  Lemma permdata_shr {𝔄} (ty: type 𝔄) κ p p2 E L :
+  tctx_incl E L +[p ◁ (box ptr); p2 ◁ (&shr{κ} (permdata_ty ty))] +[p ◁ (box (&shr{κ} ty))] 
+    (λ post '-[l1; (l2, x)], l1 = l2 ∧ post -[x]).
+  Proof. split. solve_proper.
+    iIntros (??(lπ&pπ&[])?) "_ PROPH _ _ $ (ptr&perm&true) #Obs".
+    iExists (-[snd ∘ pπ]). iFrame.
+    iDestruct "ptr" as ([[| |]|][|]?) "(_&ptr)"; try done.
+    iDestruct "ptr" as "((%&↦l&>(%&->&->))&†l)". simpl.
+    iMod (proph_obs_sat with "PROPH Obs") as "(%&%sat)"; [done|].
+    iModIntro. iSplit. iDestruct "perm" as (???) "(⧖&shr)".
+    iDestruct "shr" as (?->?[=->]??->?->) "shr".
+    rewrite tctx_hasty_val'; [|done]. iExists _. iFrame. iNext. iExists _. iFrame. destruct sat as [<- _]. done.
+    iApply (proph_obs_impl with "Obs")=>π/=. destruct (pπ π). intuition.
+  Qed.
+
+  (* Lemma permdata_uniq {𝔄} (ty: type 𝔄) κ p p2 E L :
+  lctx_lft_alive E L κ →
+  tctx_incl E L +[p ◁ (box ptr); p2 ◁ (&uniq{κ} (permdata_ty ty))] +[p ◁ (box (&uniq{κ} ty))] 
+    (λ post '-[l1; ((l2c, xc), (l2f, xf))], l1 = l2c ∧ (l2c = l2f → post -[(xc, xf)])).
+  Proof. intros Alv. split. intros ???(?&[[??][??]]&[]). rewrite H. done.
+    iIntros (??(lπ&pπ&[])?) "#LFT #PROPH #UNIQ E L (ptr&perm&true) Obs".
+    iMod (Alv with "E L") as (?) "[κ ToL]"; [done|].
+    simpl.
+    iDestruct "ptr" as ([[| |]|][|]?) "(_&ptr)"; try done.
+    iDestruct "ptr" as "((%&↦l&>(%&->&->))&†l)". simpl.
+    iDestruct "perm" as (???) "(_&αIn&uniq)". iDestruct "uniq" as (?[=->]??[? Eq]) "[ξVo ξBor]".
+    move: Eq. (set ξ := PrVar _ ξi)=> Eq. have ?: Inhabited 𝔄 := populate (pπ inhabitant).1.2.
+    iMod (bor_acc_cons with "LFT ξBor κ") as "[(%&% & >#⧖ & ξPc & %&↦&%&%&>[->->]&%&>->&box) ToBor]"; [done|].
+    iMod (uniq_strip_later with "ξVo ξPc") as (Eq'->) "[ξVo ξPc]".
+    rewrite (surjective_pairing_fun pπ) Eq Eq' /compose /s_comb /=.
+    iMod (uniq_intro vπ'0 with "PROPH UNIQ") as (ζi) "[ζVo ζPc]"; [done|].
+    set ζ := PrVar _ ζi.
+    iDestruct (uniq_proph_tok with "ζVo ζPc") as "(ζVo & ζ & ζPc)".
+    iMod (uniq_preresolve ξ [ζ] (λ π, (l1, π ζ)) with
+      "PROPH ξVo ξPc [$ζ]") as "(Obs' & (ζ&_) & ToξPc)"; [done| |done|].
+    { apply (proph_dep_prod [] [_]). done. apply proph_dep_one. }
+    iCombine "Obs' Obs" as "#Obs". iSpecialize ("ζPc" with "ζ").
+    iMod (proph_obs_sat with "PROPH Obs") as "(%&->&->&_)"; [done|].
+    iExists (-[(λ π, (vπ'0 π, π ζ))]). iFrame.
+    iMod ("ToBor" with "[ToξPc] [↦ ⧖ box ζPc]") as "[Bor κ]"; last first.
+    - iMod (bor_later_tok with "LFT Bor κ") as "?". done.
+      iMod ("ToL" with "κ") as "$". iApply fupd_frame_r. iSplit; last first. 
+      { iApply proph_obs_impl; [|done]=>/= π. move=>[->[_?]]. intuition. }
+      rewrite tctx_hasty_val'; [|done]. iExists' _. iFrame "⧖". iFrame. iExists' _. iFrame. simpl.
+      iExists' _. iExists' _. iFrame "ζVo" iNext.
+  Qed. *)
 End permdata_basic.
 
 Global Hint Resolve permdata_resolve | 5 : lrust_typing.

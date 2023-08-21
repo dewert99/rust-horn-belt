@@ -317,10 +317,22 @@ Section ghostseq_basic.
     rewrite Nat.add_comm in eq. rewrite -eq. remember (drop a s) as d; destruct d. done. injection td=><-. done. done. 
   Qed.
 
-      (* Lemma seq_perm {𝔄}  g ty E L :
-   (∀ x, f x ≡ₚ x) → subtype E L (ghostseq_ty ty) (ghostseq_ty ty) f.
-  Proof. move=> [??]. split; by apply seq_subtype. Qed. *)
-  
+  Lemma seq_shr_index {𝔄} (ty: type 𝔄) `{!ZST ty} α p1 p2 E L :
+  tctx_incl E L +[p1 ◁ (&shr{α} (ghostseq_ty ty)); p2 ◁ (box (ghost int))] +[p1 ◁ (&shr{α} (ty))]
+    (λ post '-[s; i], exists (n: nat) (v: 𝔄), (Z.of_nat n) = i ∧ s !! n = Some v ∧ post -[v]).
+  Proof. split. solve_proper.
+    iIntros (??(sπ&zπ&[])?) "_ PROPH _ _ $ (ty&tyz&?) #Obs".
+    rewrite tctx_elt_interp_zst''.
+    iDestruct "ty" as (???) "(⧖&shr)". iDestruct "shr" as (?->?[=->]?->) "shr".
+    iDestruct "tyz" as (???) "(_&>(_&%&%&->))". simpl.
+    iMod (proph_obs_sat with "PROPH Obs") as "(%&%&%&<-&%&_)"; [done|].
+    rewrite list_lookup_fmap in H1. remember (aπl !! n) as vπ. symmetry in Heqvπ. destruct vπ as [vπ|]; [| done].
+    iModIntro. iExists -[vπ]. iFrame. iSplit. rewrite tctx_hasty_val'; [|done]. iExists _. iFrame.
+    simpl. iDestruct (big_sepL_lookup with "shr") as "$". done.
+    iApply (proph_obs_impl with "Obs")=>π/=. intros (?&?&->%inj&?&?); [| typeclasses eauto].
+    rewrite list_lookup_fmap Heqvπ in H2. injection H2 as ->. done.
+  Qed.
+
   (* Rust's GhostSeq::new *)
   Definition ghostseq_new: val :=
     fn: [] :=

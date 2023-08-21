@@ -86,10 +86,9 @@ theories/typing/lib/ghostptrtoken/permdata.v
 theories/typing/lib/ghostptrtoken/permdata_basic.v
 theories/typing/lib/ghostptrtoken/ghostptrtoken.v
 theories/typing/lib/ghostptrtoken/ghostptrtoken_basic.v
-theories/typing/lib/ghostptrtoken/ghostptrtoken_insertremove.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken_grow.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken_index.v
 theories/typing/lib/ghostptrtoken/ghostptrtoken_borrow_mut.v
-theories/typing/lib/ghostptrtoken/ghostptrtoken_borrow.v
-theories/typing/lib/ghostptrtoken/ghostptrtoken_merge.v
 theories/typing/lib/gfp.v
 theories/typing/lib/panic.v
 theories/typing/lib/loop.v
