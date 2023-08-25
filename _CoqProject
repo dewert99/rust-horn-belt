@@ -88,7 +88,8 @@ theories/typing/lib/ghostptrtoken/ghostptrtoken.v
 theories/typing/lib/ghostptrtoken/ghostptrtoken_basic.v
 theories/typing/lib/ghostptrtoken/ghostptrtoken_grow.v
 theories/typing/lib/ghostptrtoken/ghostptrtoken_index.v
-theories/typing/lib/ghostptrtoken/ghostptrtoken_borrow_mut.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken_shrink_shr.v
+theories/typing/lib/ghostptrtoken/ghostptrtoken_take_mut.v
 theories/typing/lib/gfp.v
 theories/typing/lib/panic.v
 theories/typing/lib/loop.v

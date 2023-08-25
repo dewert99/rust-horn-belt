@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import uniq_util typing ptr.
+From lrust.typing Require Import uniq_util typing ptr always_true ghostptrtoken_basic.
 From lrust.typing.lib.ghostptrtoken Require Import ghostptrtoken heap_util.
 Set Default Proof Using "Type".
 
@@ -7,18 +7,18 @@ Open Scope nat.
 
 Implicit Type 𝔄 𝔅: syn_type.
 
-Section ghostptrtoken_insertremove.
+Section ghostptrtoken_take_mut.
   Context `{!typeG Σ}.
 
-  Definition ghostptrtoken_borrow_mut {𝔄} (ty: type 𝔄) : val :=
+  Definition ghostptrtoken_take_mut {𝔄} (ty: type 𝔄) : val :=
     fn: ["t"; "b"] :=
       delete [ #1; "t"];;
       Skip;;
       return: ["b"].
 
   (* Rust's GhostPtrToken::borrow_mut *)
-  Lemma ghostptrtoken_borrow_mut_type {𝔄} (ty: type 𝔄) (α β: lft):
-    typed_val (ghostptrtoken_borrow_mut ty) (fn(∅; &uniq{α} (&uniq{β} (ghostptrtoken_ty ty)), ptr) → &uniq{β} ty)
+  Lemma ghostptrtoken_take_mut_type {𝔄} (ty: type 𝔄) (α β: lft):
+    typed_val (ghostptrtoken_take_mut ty) (fn(∅; &uniq{α} (&uniq{β} (ghostptrtoken_ty ty)), ptr) → &uniq{β} ty)
       (λ post '-[((ol, ol'), (nl, nl')); ptr], exists v, (list_to_gmap ol) !! ptr = Some(v) ∧ (<[ptr:=v]>(list_to_gmap nl) = (list_to_gmap ol) → forall v', (ol' = (ptr,v')::nl') → post (v, v'))).
   Proof.
     fold of_syn_type. eapply type_fn; [apply _|]=> ???[ol[pl[]]]. simpl_subst.
@@ -103,15 +103,12 @@ Section ghostptrtoken_insertremove.
     iApply (persistent_time_receipt_mono with "⧖u"). lia.
     iApply (ty_own_mt_depth_mono with "↦ty"). lia.
     iExists _, _. iFrame. iSplitR. iNext.
-    iApply (persistent_time_receipt_mono with "⧖"). lia.
-    eassert _ as sizen0. shelve.
-    rewrite split_mt_token. iExists _. 
-    iDestruct ((plain_entails_r (ghost_ptr_token_no_dup' _ _ _ _ sizen0)) with "↦tys") as "(↦tys&>%)". iFrame. done.
+    iApply (persistent_time_receipt_mono with "⧖"). lia. 
+    rewrite split_mt_token. iExists _. iFrame. done. 
     - iNext. iIntros "((%vπ'&%d'&>⧖d'&Pc1&↦ty)&(%mπ'&%d''&>⧖d''&Pc2&↦tys))". rewrite split_mt_token.
     iCombine "⧖d' ⧖d''" as "⧖d".
     iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖d")
-    as "⧖d"; [solve_ndisj|]. iDestruct "↦tys" as "(%aπl'&(>->&_)&$&↦tys)".
-    From iris.base_logic.lib Require Export fancy_updates.
+    as "⧖d"; [solve_ndisj|]. iDestruct "↦tys" as "(%aπl'&>->&$&↦tys&†s)".
     iModIntro. iNext. 
     iExists (λ π, ((p, (vπ' π)) :: (alapply aπl' π))), _. iFrame.
     iSplitL "Pc1 Pc2 ToPc". iApply "ToPc".
@@ -121,18 +118,16 @@ Section ghostptrtoken_insertremove.
       iApply (proph_eqz_constr2 with "[Eqz1] Eqz2").
       iApply (proph_eqz_constr with "Eqz1").
     } { simpl. intros ? ([|aπ aπl'']&?&->&?&?). specialize (equal_f H1 inhabitant). done.
-    inversion_clear H2. eexists _, _, _, _. split. done. split.
+    inversion_clear H2. destruct H3 as (?&?&->&?). eexists _, _, _, _. split. done. split.
     rewrite H1. done. split. eexists. split; [|done]. fun_ext. 
     intros. simpl. unfold prod_map. f_equal. by injection (equal_f H1 inhabitant).
     eexists _, _. done. }
-    iExists _. iFrame. 
-    iExists _. iSplit. iPureIntro. split. done. apply functional_extensionality. intros π.
-    rewrite /alapply -/(prod_map id (.$ π) (p, vπ')) -fmap_cons. done.
-    iFrame. iNext. unfold big_sepAL.
-    rewrite big_sepL_cons. iSplitL "↦ty".
+    iExists ((_, _) :: _). iSplit. iPureIntro. fun_ext=>?//. iFrame. 
+    rewrite big_sepL_cons. simpl. iSplitL "↦ty".
     iApply (ty_own_mt_depth_mono with "↦ty"). lia.
-    iApply (big_sepL_mono with "↦tys"). iIntros (?[??]?) "↦ty".
+    iApply (big_sepL_mono with "↦tys"). iIntros (?[??]?) "↦ty". 
+    destruct d''; [done|]. simpl. iNext.
     iApply (ty_own_mt_depth_mono with "↦ty"). lia.
   Qed.
 
-End ghostptrtoken_insertremove.
+End ghostptrtoken_take_mut.
