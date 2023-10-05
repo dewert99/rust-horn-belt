@@ -1,33 +1,11 @@
 From lrust.typing Require Export type always_true.
 From lrust.typing Require Import uniq_util typing ptr logic_fn.
+From lrust.util Require Import list.
 From lrust.typing.lib.ghostptrtoken Require Import ghostptrtoken_basic ghostseq_basic permdata_basic.
 Set Default Proof Using "Type".
 
 Open Scope nat.
 Implicit Type 𝔄 𝔅: syn_type.
-
-Lemma filter_sublist {A} P `{!∀ x : A, Decision (P x)} (l: list A) :
-  filter P l `sublist_of` l.
-Proof.
-  induction l as [|x l IHl]; [done|]. rewrite filter_cons.
-  destruct (decide (P x));
-    [by apply sublist_skip|by apply sublist_cons].
-Qed.
-
-Lemma list_filter_fmap {A B} P `{!∀ x : A, Decision (P x)} (l: list B) (f: B → A): 
-  filter P (f <$> l) = f <$> (filter (P∘f) l).
-Proof.
-  induction l as [|x l IHl]; [done|]. rewrite fmap_cons 2! filter_cons. simpl.
-  destruct (decide (P (f x))); rewrite IHl; done.
-Qed.
-
-Lemma delete_list_to_map `{FinMap K M} {A} (k: K) (l: list (K * A)) : 
-  (base.delete k (list_to_map (M:=M A) l)) = (list_to_map (filter (λ '(k', _), k ≠ k') l)).
-Proof.
-  induction l as [|[k' x] l IHl]; simpl. apply delete_empty. rewrite filter_cons. destruct (decide (k ≠ k')).
-  simpl. rewrite -IHl delete_insert_ne; done.  destruct (decide (k = k')) as [->|?].
-  rewrite -IHl delete_insert_delete; done. done.
-Qed.
 
 Lemma double_neg P `{Decision P} : ¬¬P ↔ P.
 Proof. destruct (decide P); tauto. Qed.

@@ -180,42 +180,6 @@ Proof.
   intros. induction n. done. simpl. rewrite step_fupd_mask_mono'; [|done]. do 3 f_equiv. apply IHn.
 Qed.
 
-Lemma resolve_uniq_body' {𝔄} (P: 𝔄 → Prop) (ty: type 𝔄) `{!FlatOwn ty} vπ ξi d κ tid l E L q F :
-  lctx_lft_alive E L κ → ↑lftN ∪ ↑prophN ⊆ F → always_true ty P →
-  lft_ctx -∗ proph_ctx -∗ κ ⊑ ty_lft ty -∗ elctx_interp E -∗ llctx_interp L q -∗
-  uniq_body ty vπ ξi d κ tid l ={F}=∗ |={F}▷=>^(S d) |={F}=>
-    ⟨π, π (PrVar (𝔄 ↾ prval_to_inh vπ) ξi) = vπ π ∧ P (vπ π)⟩ ∗ llctx_interp L q.
-Proof.
-  iIntros (Alv ? always) "#LFT PROPH In #E L [Vo Bor] /=".
-  iMod (Alv with "E L") as (?) "[[κ κ₊] ToL]"; [solve_ndisj|].
-  iMod (bor_acc with "LFT Bor κ") as "[(%&%& ⧖ & Pc &%& ↦ & ty) ToBor]";
-    [solve_ndisj|]. iIntros "!>!>!>".
-  iMod (lft_incl_acc with "In κ₊") as "(%&lft&toκ₊)"; [solve_ndisj|].
-  iApply (fupd_mask_mono _); [|iDestruct (ty_own_flat with "LFT ty lft") as ">Upd"]; [solve_ndisj|].
-  iDestruct (uniq_agree with "Vo Pc") as %[<-<-].
-  iApply (step_fupdN_wand with "[Upd]"). iApply (step_fupdN_mask_mono' with "Upd"); solve_ndisj. iIntros "!> flat".
-  iMod (fupd_mask_mono with "flat") as "flat"; [solve_ndisj|]. iDestruct (always with "flat") as "#Obs".
-  iDestruct (ty_flat_proph with "flat") as "(%&%&%&ξl&Toflat)".
-  iMod (uniq_resolve with "PROPH Vo Pc ξl") as "(Obs'& Pc & ξl)"; [solve_ndisj| |].
-  by eapply ty_proph_weaken. iCombine "Obs' Obs" as "$".
-  iDestruct ("Toflat" with "ξl") as "flat". iDestruct (ty_flat_own with "flat") as "Toty". 
-  iMod (fupd_mask_mono with "Toty") as "[ty lft]"; [solve_ndisj|]. iMod ("toκ₊" with "lft") as "κ₊".
-  iMod ("ToBor" with "[⧖ Pc ↦ ty]") as "[_ κ]". 
-  { iNext. iExists _, _. iFrame "⧖ Pc". iExists _. iFrame. }
-  iApply "ToL". iFrame.
-Qed.
-
-Lemma uniq_resolve' {𝔄} (P: 𝔄 → Prop) E L κ (ty: type 𝔄) `{!FlatOwn ty} :
-  always_true ty P → lctx_lft_alive E L κ → resolve E L (&uniq{κ} ty) (λ '(a, a'), a' = a ∧ P a).
-Proof. unfold resolve.
-  move=>/= H??? vπ ?? vl ?. iIntros "LFT PROPH E L [In uniq]".
-  iDestruct "uniq" as (?->??[Le Eq]) "uniq".
-  iMod (resolve_uniq_body' with "LFT PROPH In E L uniq") as "Upd"; [done..|].
-  iApply step_fupdN_nmono; [done|]. iApply (step_fupdN_wand with "Upd").
-  iIntros "!> >(?&$) !>". iApply proph_obs_eq; [|done]=>/= π.
-  move: (equal_f Eq π)=>/=. by case (vπ π)=>/= ??->.
-Qed.
-
 
   Lemma type_resolve_instr' {𝔄l 𝔅l} κ (T: tctx 𝔄l) (T': tctx 𝔅l) tr E L :
     resolve_unblock_tctx E L κ T T' tr →

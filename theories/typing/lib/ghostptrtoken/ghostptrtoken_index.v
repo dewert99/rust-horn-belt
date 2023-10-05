@@ -1,78 +1,11 @@
 From lrust.typing Require Export type always_true.
 From lrust.typing Require Import uniq_util typing ptr logic_fn.
+From lrust.util Require Import list.
 From lrust.typing.lib.ghostptrtoken Require Import ghostptrtoken_basic ghostseq_basic permdata_basic.
 Set Default Proof Using "Type".
 
 Open Scope nat.
 Implicit Type 𝔄 𝔅: syn_type.
-
-Section index.
-  Definition find_idx {A} P `{∀ x, Decision (P x)} : list A → nat :=
-    fix go l :=
-    match l with
-    | [] => 0
-    | x :: l => if decide (P x) then 0 else S (go l)
-    end.
-  
-
-  Lemma find_idx_alt {A} P `{∀ x, Decision (P x)} (l: list A):
-    find_idx P l = match list_find P l with | Some x => x.1 | None => length l end.
-  Proof. 
-    induction l; simpl. done. destruct (decide (P a)); simpl. done. 
-    rewrite IHl. destruct (list_find P l); done.
-  Qed.
-
-  Lemma find_idx_spec' {A} P `{∀ x, Decision (P x)} (l: list A) (i: nat):
-  find_idx P l = i ↔
-    (i = length l ∨ ∃ x, l !! i = Some x ∧ P x) ∧ ∀ j y, l !! j = Some y → j < i → ¬P y.
-  Proof.
-    rewrite find_idx_alt. remember (list_find P l) as x. symmetry in Heqx. remember Heqx as eq. clear Heqeq. destruct x as [[??]|].
-    rewrite list_find_Some in Heqx. destruct Heqx as (?&?&?). split.  move=>/=<-. split. right. exists a. done. done.
-    intros ([|[?[??]]]&?). exfalso; eapply H4. exact H0. rewrite H3. eapply lookup_lt_Some. done. done.
-    assert (list_find P l = Some (i, x)). rewrite list_find_Some. done.
-    rewrite eq in H6. injection H6. done.
-    rewrite list_find_None Forall_forall in Heqx. split. intros. split. left. done. intros. apply Heqx. eapply elem_of_list_lookup_2. done.
-    intros ([|[?[??]]]&?). done. assert (list_find P l = Some (i, x)). rewrite list_find_Some. done.
-    rewrite eq in H3. done.
-  Qed.
-
-  Lemma find_idx_spec {A} P `{∀ x, Decision (P x)} (l: list A):
-    (find_idx P l = length l ∨ ∃ x, l !! find_idx P l = Some x ∧ P x) ∧ ∀ j y, l !! j = Some y → j < find_idx P l  → ¬P y.
-  Proof.
-    remember (find_idx P l) as f. symmetry in Heqf. rewrite find_idx_spec' in Heqf. done.
-  Qed.
-
-  Lemma find_idx_Some {A} P `{∀ x, Decision (P x)} (l: list A) (x: A):
-    l !! find_idx P l = Some x → P x.
-  Proof.
-    destruct (find_idx_spec P l) as [[|[?[??]]]?].
-    rewrite H0. intros. apply lookup_lt_Some in H2. lia. 
-    rewrite H0. intros [= ->]. done.
-  Qed.
-
-  Lemma find_idx_fmap {A B} P `{∀ x, Decision (P x)} (l: list B) (f: B → A): find_idx P (f<$>l) = find_idx (P ∘ f) l.
-  Proof.
-    rewrite 2! find_idx_alt list_find_fmap. remember (list_find (P ∘ f) l) as x. destruct x. done. rewrite fmap_length. done.
-  Qed.
-
-  Lemma find_idx_delete {K A} `{EqDecision K} `{FinMap K M} (l: list (K*A)) (k: K) (a: A):
-    ((list_to_map l): M A) !! k = Some a → <[k:=a]>(list_to_map (base.delete (find_idx (λ x, x.1 = k) l) l): M A) = (list_to_map l) ∧ l !! (find_idx (λ x, x.1 = k) l) = Some (k, a).
-  Proof.
-    induction l as [|[??]]; simpl. rewrite lookup_empty. done.
-    destruct (decide (k0 = k)) as [->|?]; simpl. rewrite lookup_insert. intros [= ->]. done.
-    intros ?. rewrite lookup_insert_ne in H7; [|done]. destruct (IHl H7) as (<-&<-). rewrite -insert_commute; done.
-  Qed.
-
-  Lemma find_idx_delete' {K A} `{EqDecision K} `{FinMap K M} (l: list (K*A)) (k: K) (a: A):
-    NoDup l.*1 → ((list_to_map l): M A) !! k = Some a → (list_to_map (base.delete (find_idx (λ x, x.1 = k) l) l): M A) = (base.delete k (list_to_map l)) ∧ l !! (find_idx (λ x, x.1 = k) l) = Some (k, a).
-  Proof.
-    intros no_dup is_some. destruct (find_idx_delete l k a is_some) as [<- is_some2]. intuition.
-    rewrite delete_insert. done.
-    apply not_elem_of_list_to_map_1. clear is_some is_some2. induction l; simpl. apply not_elem_of_nil. 
-    inversion_clear no_dup. destruct (decide (a0.1 = k)) as [<-|]; simpl. done.
-    apply not_elem_of_cons. split. done. apply IHl. done.
-  Qed.
-End index.
 
 Section find_logic.
   Context `{!typeG Σ}.

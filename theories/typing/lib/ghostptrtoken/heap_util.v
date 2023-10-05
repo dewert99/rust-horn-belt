@@ -33,6 +33,16 @@ Proof.
     iApply (no_duplicate_heap_mapsto with "↦0 ↦1").
 Qed.
 
+Lemma no_duplicate_freeable l n m: †{1}l…n -∗ †{1}l…m -∗ False.
+Proof.
+    iIntros "† †'". iCombine "† †'" as "tofalse".
+    rewrite heap_freeable_eq /heap_freeable_def -own_op -auth.auth_frag_op gmap.singleton_op -pair_op frac.frac_op.
+    iDestruct (own_valid with "tofalse") as "%tofalse". iPureIntro.
+    rewrite auth.auth_frag_valid gmap.singleton_valid pair_valid frac.frac_valid in tofalse.
+    destruct tofalse as [tofalse _]. by vm_compute in tofalse.
+Qed.
+
+
 Lemma plain_entails_r {P Q: iProp Σ} `{Plain _ Q} :
 ((P -∗ Q) → (P -∗ (P ∗ Q))).
 Proof.
