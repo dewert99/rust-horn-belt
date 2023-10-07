@@ -64,6 +64,11 @@ Section index.
     rewrite IHl. destruct (list_find P l); done.
   Qed.
 
+  Lemma list_find_ext {A} P `{∀ x, Decision (P x)} (Q : A → Prop) `{∀ x, Decision (Q x)} l :
+    (∀ x, P x ↔ Q x) →
+    find_idx P l = find_idx Q l.
+  Proof. intros. rewrite 2! find_idx_alt. erewrite list_find_ext. done. done.  Qed.
+
   Lemma find_idx_spec' {A} P `{∀ x, Decision (P x)} (l: list A) (i: nat):
   find_idx P l = i ↔
     (i = length l ∨ ∃ x, l !! i = Some x ∧ P x) ∧ ∀ j y, l !! j = Some y → j < i → ¬P y.

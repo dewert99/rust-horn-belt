@@ -1,5 +1,5 @@
 From lrust.typing Require Export type always_true.
-From lrust.typing Require Import uniq_util typing ptr logic_fn.
+From lrust.typing Require Import uniq_util typing ptr ghost_fn.
 From lrust.util Require Import list.
 From lrust.typing.lib.ghostptrtoken Require Import ghostptrtoken_basic ghostseq_basic permdata_basic.
 Set Default Proof Using "Type".

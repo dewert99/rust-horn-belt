@@ -58,6 +58,24 @@ Section ghost.
   Proof. split; intros; simpl; try done; setoid_rewrite H; done. Qed.
 End ghost.
 
+Inductive ghost_fn_type `{!typeG Σ} : syn_type → Type :=
+| g_const {𝔄} : type 𝔄 → ghost_fn_type 𝔄
+| g_fn {𝔄 𝔅} : type 𝔄 → ghost_fn_type 𝔅 → ghost_fn_type (𝔄→𝔅).
+
+Declare Scope ghost_fn_scope.
+Bind Scope ghost_fn_scope with ghost_fn_type.
+Delimit Scope ghost_fn_scope with G.
+Infix "→" := g_fn : ghost_fn_scope.
+Global Coercion g_const: type >-> ghost_fn_type.
+
+Fixpoint ghost_fn_proph' `{!typeG Σ} {𝔄} (vπ: (proph 𝔄)) (ty: ghost_fn_type 𝔄): Prop.
+  inversion ty. exact (∃ ξl, X.(ty_proph) vπ ξl). rewrite -H in vπ. exact (∀ ξl vπ', X.(ty_proph) vπ' ξl → ghost_fn_proph' _ _ _ (λ π, vπ π (vπ' π)) X0).
+Defined.
+
+Definition ghost_fn_proph `{!typeG Σ} {𝔄} ty vπ := ghost_fn_proph' (𝔄:=𝔄) vπ ty.
+
+Notation ghost_fn ty v := (ghost_fn_proph ty (λ _, v)).
+
 Section typing.
   Context `{!typeG Σ}.
 
@@ -134,10 +152,28 @@ Section typing.
     intros ?[? ?]. done.
   Qed.
 
-  Definition logic_fn {𝔄l 𝔅} (tyl: typel 𝔄l) (tyr: type 𝔅) (f: (plist of_syn_type 𝔄l) → 𝔅) :=
+  Fixpoint curry_syntype 𝔄l 𝔅 := match 𝔄l with
+    | 𝔄 :: 𝔄l => (𝔄→(curry_syntype 𝔄l 𝔅))%ST
+    | [] => 𝔅
+    end.
+
+  Definition curry_fn {𝔄l 𝔅} (f: (plist of_syn_type 𝔄l) → 𝔅): curry_syntype 𝔄l 𝔅.
+    induction 𝔄l. exact (f -[]). intros ?. apply IH𝔄l. intros. exact (f (X -:: X0)).
+  Defined.
+
+  Definition curry_ty {𝔄l 𝔅} (tyl: typel 𝔄l) (tyr: ghost_fn_type 𝔅): ghost_fn_type (curry_syntype 𝔄l 𝔅).
+    induction tyl. exact tyr. exact (f → IHtyl)%G.
+  Defined.
+
+  Local Definition ghost_fn' {𝔄l 𝔅} (tyl: typel 𝔄l) (tyr: type 𝔅) (fπ: proph ((plist of_syn_type 𝔄l) → 𝔅)) :=
     forall (aπl: (plist _ 𝔄l)), 
     (forallHL_1 (λ _ ty aπ, ∃ ξl, (ty_proph ty aπ ξl)) tyl aπl) 
-    → ∃ ξl, (ty_proph tyr (λ π, f (papply aπl π)) ξl).
+    → ∃ ξl, (ty_proph tyr (λ π, fπ π (papply aπl π)) ξl).
+  
+  Local Lemma ghost_fn_in {𝔄l 𝔅} (tyl: typel 𝔄l) (tyr: type 𝔅) fπ: ghost_fn_proph (curry_ty tyl tyr) (λ π, curry_fn (fπ π)) → ghost_fn' tyl tyr fπ.
+  Proof. 
+    induction tyl. intros ? [][]. done. intros ?[??][[??]?]. simpl. simpl in H. specialize (H _ _ H0). simpl in H. eapply IHtyl in H. eapply H. done.
+  Qed. 
 
   Fixpoint tctx_ghost {𝔄l} (tyl: typel 𝔄l) (pl: list path)
   : tctx ((ghostₛ 1)<$>𝔄l) :=
@@ -148,9 +184,9 @@ Section typing.
     end.
 
   Lemma logic_fn_ghost_tctx_incl {𝔄l 𝔅} (pl: list path) (tyl: typel 𝔄l) (tyr: type 𝔅) f E L:
-   logic_fn tyl tyr f → tctx_incl E L (null_val ◁ (box ()) +:: (tctx_ghost tyl pl)) +[null_val ◁ (box (ghost tyr))] (λ post '(_ -:: l), post (-[f (prenew' _ _ l)])).
+   ghost_fn (curry_ty tyl tyr) (curry_fn f) → tctx_incl E L (null_val ◁ (box ()) +:: (tctx_ghost tyl pl)) +[null_val ◁ (box (ghost tyr))] (λ post '(_ -:: l), post (-[f (prenew' _ _ l)])).
   Proof. 
-    unfold logic_fn. intros.
+    intros ?%ghost_fn_in. unfold ghost_fn' in H.
     (split; [solve_proper|]); iIntros (??[? vπl]?) "_ _ _ _ $ ty Obs"; iModIntro;  simpl.
     set pπ := ((prenew' _ _ vπl): plist (λ 𝔄, proph 𝔄) 𝔄l).
     iExists -[_]. iFrame "Obs". iSplit; [|done].
@@ -170,7 +206,7 @@ Section typing.
   Qed.
 
   Lemma logic_fn_ghost_tctx_incl' {𝔄 𝔄l 𝔅} (pl: list path) (ty: type 𝔄) (tyl: typel 𝔄l) (tyr: type 𝔅) f E L:
-   logic_fn (ty +:: tyl) tyr f → tctx_incl E L (tctx_ghost (ty +:: tyl) pl) +[null_val ◁ (box (ghost tyr))] (λ post l, post (-[f (prenew' _ _ l)])).
+    ghost_fn (curry_ty (ty +:: tyl) tyr) (curry_fn f) →  tctx_incl E L (tctx_ghost (ty +:: tyl) pl) +[null_val ◁ (box (ghost tyr))] (λ post l, post (-[f (prenew' _ _ l)])).
   Proof. intros ?.
     eapply tctx_incl_ext. eapply tctx_incl_trans; [|eapply (logic_fn_ghost_tctx_incl pl); done].
     destruct pl; simpl;

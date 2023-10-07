@@ -1,5 +1,5 @@
 From lrust.typing Require Export type always_true.
-From lrust.typing Require Import uniq_util typing ptr logic_fn.
+From lrust.typing Require Import uniq_util typing ptr lib_ghost_fn.
 From lrust.util Require Import list.
 From lrust.typing.lib.ghostptrtoken Require Import ghostptrtoken_basic ghostseq_basic permdata_basic.
 Set Default Proof Using "Type".
@@ -9,17 +9,22 @@ Implicit Type 𝔄 𝔅: syn_type.
 
 Section find_logic.
   Context `{!typeG Σ}.
-  Lemma find_logic {𝔄 𝔄'} (ty: type (𝔄*𝔄')) (ty': plain_type 𝔄) `{!EqDecision 𝔄} :
-    (∀ vπ ξl, ty_proph ty vπ ξl → ∃ (x: 𝔄) (vπ': proph 𝔄'), vπ = (λ π, (x, vπ' π))) → logic_fn +[ghostseq.ghostseq_ty ty; (ty': type 𝔄)] int (λ '-[l; k], find_idx (λ (x: (𝔄*𝔄')) , x.1 = k) l).
-  Proof. intros ? (?&?&[]) ((?&?&?&->&->&?)&(?&?&->)&[]). exists [].
-    revert x1 H0. simpl. induction x0 as [|fst rest]; intros; destruct x1; inversion_clear H0. exists 0%Z. done.
-    destruct (H _ _ H1) as (fst'&?&->).  simpl. destruct (decide (fst' = x2)). exists 0%Z. done.
-    destruct (IHrest x1 H2) as (res&eq). exists (Z.succ res). fun_ext=>π/=. specialize (equal_f eq π)=>/=<-. lia.
+
+  Lemma find_ghost_fn {𝔄 𝔄'} (ty: type 𝔄) (ty': type 𝔄') (f: 𝔄' → 𝔄 → Prop) `{!RelDecision f} :
+    (ghost_fn (ty' → ty → bool_ty) (λ x y, (bool_decide (f x y)))) → ghost_fn (ty' → ghostseq.ghostseq_ty ty → int) (λ k, find_idx (f k)).
+  Proof. 
+    fold of_syn_type. intros F. refine (λ k, _)%GB. eapply seq_ind_ghost_fn.
+    intros ? find. fold of_syn_type. refine (λ hd tl,  _)%GB.  erewrite functional_extensionality. 
+    refine (((ite_ghost_fn $ ((F $ k) $ hd)) $ %(0: Zₛ)) $ _)%GB. eapply succ_ghost_fn. eapply (find $ tl)%GB.
+    intros ?. simpl. rewrite /bool_decide /decide. destruct (decide_rel f (o x) (o0 x)); done.  eapply (%(0: Zₛ))%GB.
   Qed.
 
-  Lemma find_permdata_logic {𝔄} (ty: type 𝔄) :
-    logic_fn +[ghostptrtoken_ty ty; ptr] int (λ '-[l; k], find_idx (λ x , x.1 = k) l).
-  Proof. apply find_logic. intros ??(?&?&->&?). eexists _, _. done. Qed.
+  Lemma find_permdata_ghost_fn {𝔄} {ty: type 𝔄} :
+    ghost_fn (ptr → ghostptrtoken_ty ty → int) (λ k, find_idx (λ x , (x.1 = k))).
+  Proof.
+    fold of_syn_type. eapply (find_ghost_fn (permdata_ty ty) ptr). eapply plain_arg_ghost_fn=>l.
+    intros ??(?&?&->&?). erewrite functional_extensionality. eapply (% ((bool_decide (x = l)): boolₛ))%GB. done.
+  Qed.
 End find_logic.
 
 Section ghostptrtoken_borrow.
@@ -32,6 +37,7 @@ Section ghostptrtoken_borrow.
       (Skip;;Skip);;
       (Skip;;Skip);;
       return: ["p"].
+  Opaque ghost_fn_proph.
 
   (* Rust's GhostPtrToken::borrow_mut *)
   Lemma ghostptrtoken_borrow_type {𝔄} (ty: type 𝔄):
@@ -44,9 +50,9 @@ Section ghostptrtoken_borrow.
     iApply typed_body_tctx_incl. eapply tctx_incl_trans. eapply tctx_incl_tail. apply tctx_incl_swap. apply tctx_incl_swap.
     iApply ghost_new; [solve_typing|].
     iApply typed_body_tctx_incl. eapply tctx_incl_trans. eapply tctx_incl_swap. eapply tctx_incl_trans. eapply tctx_incl_tail. 
-    eapply tctx_incl_trans. eapply (tctx_incl_frame_r +[_; _]). eapply tctx_incl_trans. eapply tctx_incl_tail. eapply (logic_fn_ghost_tctx_incl' [_] _ +[]). apply shr_deref_logic_fn.
-    eapply tctx_incl_trans. apply tctx_incl_swap. eapply (logic_fn_ghost_tctx_incl' [_; _] _ +[_]).
-    apply find_permdata_logic. eapply tctx_incl_trans. eapply tctx_incl_swap. apply seq_shr_index. done. eapply permdata_shr.
+    eapply tctx_incl_trans. eapply (tctx_incl_frame_r +[_; _]).  eapply (logic_fn_ghost_tctx_incl' [_; _] _ +[_] int  (λ '-[x; y], _)).
+    apply (λ ptr token, ((find_permdata_ghost_fn $ (box_deref_ghost_fn $ ptr)) $ (shr_deref_ghost_fn $ token)))%GB. 
+    eapply tctx_incl_trans. eapply tctx_incl_swap. apply seq_shr_index. done. eapply permdata_shr.
     iApply type_jump; [solve_typing|solve_extract|solve_typing].
     rewrite /trans_upper /trans_tail. move=>post [s[l []]][v [lookup ?]]. simpl.
     eexists _, _. destruct (find_idx_delete _ _ _ lookup). intuition. rewrite H0. done. done.
@@ -77,15 +83,15 @@ Section ghostptrtoken_insertremove.
     iApply typed_body_tctx_incl. eapply tctx_incl_trans. eapply tctx_incl_tail. apply tctx_incl_swap. apply tctx_incl_swap.
     iApply ghost_new; [solve_typing|].
     iApply typed_body_tctx_incl. eapply tctx_incl_trans. eapply tctx_incl_tail. eapply tctx_incl_trans. apply tctx_incl_swap. eapply tctx_incl_tail. apply tctx_incl_swap.
-    eapply tctx_incl_trans. eapply (tctx_incl_frame_r +[_; _]). eapply tctx_incl_trans. eapply tctx_incl_tail. eapply (logic_fn_ghost_tctx_incl' [_] _ +[]). apply uniq_curr_logic_fn.
-    eapply tctx_incl_trans. apply tctx_incl_swap. eapply (logic_fn_ghost_tctx_incl' [_; _] _ +[_]).
-    apply find_logic. intros ??(?&?&->&?). eexists _, _. done. eapply tctx_incl_trans. eapply tctx_incl_swap.
+    eapply tctx_incl_trans. eapply (tctx_incl_frame_r +[_; _]). eapply (logic_fn_ghost_tctx_incl' [_; _] _ +[_] int  (λ '-[x; y], _)).
+    refine (λ ptr token, _)%GB. erewrite functional_extensionality. apply ((find_permdata_ghost_fn $ (box_deref_ghost_fn $ ptr)) $ (uniq_curr_ghost_fn $ token))%GB. intros x. simpl. remember (o x). remember (o0 x). done.
+    eapply tctx_incl_trans. eapply tctx_incl_swap.
     eapply ghost_update; [done|solve_typing|]. 
     eapply tctx_incl_trans. eapply (tctx_incl_frame_r +[_; _]). eapply seq_remove. done. eapply tctx_incl_tail. eapply tctx_incl_trans. eapply tctx_incl_swap. eapply permdata_to_box. 
     iApply type_jump; [solve_typing|solve_extract|solve_typing].
     rewrite /trans_upper /trans_tail. move=>post [[tc tf][l' []]] [v [lookup Impl]] no_dup/=.
-    eexists _, _. split. done. simpl in no_dup. destruct (find_idx_delete' _ _ _ no_dup lookup) as (?&->). split. done. split. done.
-    intros. apply Impl. rewrite H1 -H0. done.
+    eexists _, _. split. done. simpl in no_dup. destruct (find_idx_delete' _ _ _ no_dup lookup) as (?&?). split. done. split. done.
+    intros. apply Impl. rewrite H2 -H0. done.
   Qed.
     
 End ghostptrtoken_insertremove.
