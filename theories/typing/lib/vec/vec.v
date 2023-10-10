@@ -34,6 +34,8 @@ Section vec.
   (* Rust's Vec<T> *)
   Program Definition vec_ty {𝔄} (ty: type 𝔄) : type (listₛ 𝔄) := {|
     ty_size := 3;  ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_proph alπ ξl := exists (aπl: list (proph 𝔄)) ξll,
+      ξl = mjoin ξll /\ alπ = lapply aπl /\ Forall2 ty.(ty_proph) aπl ξll;
     ty_own alπ d tid vl :=
       [S(d') := d] ∃(l: loc) (len ex: nat) (aπl: vec (proph 𝔄) len),
         ⌜vl = [ #l; #len; #ex] ∧ alπ = lapply aπl⌝ ∗
@@ -81,9 +83,9 @@ Section vec.
     iIntros (????[|?]) "*% LFT In vec κ/="; [done|].
     iDestruct "vec" as (????[->->]) "(↦tys & ex & †)". iIntros "!>!>!>".
     iMod (ty_own_proph_big_sepL_mt with "LFT In ↦tys κ") as "Upd"; [done|].
-    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&%& ξl & Totys) !>".
+    iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&(%&%&%)& ξl & Totys) !>".
     iExists _, _. iSplit.
-    { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+    { iPureIntro. eexists _, _. done. }
     iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[tys $]". iModIntro.
     iExists _, _, _, _. by iFrame.
   Qed.
@@ -92,11 +94,14 @@ Section vec.
     iDestruct "vec" as (????->) "[? tys]". iIntros "!>!>!>".
     iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Toκ'"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Toκ'").
-    iIntros ">(%&%&%& ξl & Toκ') !>". iExists _, _. iSplit.
-    { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+    iIntros ">(%&%&(%&%&%)& ξl & Toκ') !>". iExists _, _. iSplit.
+    { iPureIntro. eexists _, _. done. }
     iIntros "{$ξl}ξl". by iMod ("Toκ'" with "ξl") as "$".
   Qed.
-
+  Next Obligation.
+    intros * (?&?&->&->&?). simpl. eapply ty_proph_weaken_big_sepL'. done.
+  Qed.
+   
   Global Instance vec_ty_ne {𝔄} : NonExpansive (@vec_ty 𝔄).
   Proof. solve_ne_type. Qed.
 End vec.

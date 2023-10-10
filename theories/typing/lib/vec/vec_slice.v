@@ -77,7 +77,7 @@ Section vec_slice.
       (aπζi.1 π, π (PrVar (𝔄 ↾ prval_to_inh aπζi.1) aπζi.2): 𝔄)) aπζil.
     iMod (uniq_preresolve ξ ζl (lapply aπl') with "PROPH Vo Pc ζl")
       as "(Obs' & ζl & ToPc)"; [done|..].
-    { rewrite -vec_to_list_apply. apply proph_dep_constr, proph_dep_prvars. }
+    { rewrite -vec_to_list_apply. simpl. apply proph_dep_constr, proph_dep_prvars. }
     iCombine "Obs' Obs" as "#?". iSpecialize ("VoPcs" with "ζl").
     iDestruct (big_sepL_sep with "VoPcs") as "[Vos Pcs]".
     iMod ("ToBor" $! (big_sepL _ _) with "[⧗ ↦₀ ↦₁ ↦₂ ex † ToPc] [↦tys Pcs]")
@@ -99,8 +99,7 @@ Section vec_slice.
       iMod (bi.later_exist_except_0 with "big") as (wπl ?) "(>⧖' & Eqzs & ↦tys)".
       iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖'") as "⧖'"; [solve_ndisj|].
       iIntros "!>!>". iExists (lapply wπl), _. iFrame "⧖'". iSplitL "Eqzs ToPc".
-      { iApply "ToPc". rewrite -!vec_to_list_apply.
-        iApply proph_eqz_constr. iApply (proph_eqz_prvars with "Eqzs"). }
+      { iApply "ToPc". iApply proph_eqz_vec_to_list. iApply (proph_eqz_prvars with "Eqzs"). }
       rewrite split_mt_vec. iExists _, _, _, _.
       rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil. by iFrame.
   Qed.

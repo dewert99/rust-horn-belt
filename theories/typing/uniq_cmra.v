@@ -185,6 +185,10 @@ Global Instance proph_ctrl_proper ξ :
   Proper (pointwise_relation _ (pointwise_relation _ (↔)) ==> (=) ==> (=) ==> (⊣⊢)) (proph_ctrl ξ).
 Proof. intros ?????->??->. unfold proph_ctrl. do 2 f_equiv. iSplit; iApply proph_eqz_mono; intros ??; by apply H. Qed.
 
+Lemma proph_ctrl_ne ξ n:
+  Proper (pointwise_relation _ (pointwise_relation _ (≡)) ==> (=) ==> (=) ==> (dist n)) (proph_ctrl ξ).
+Proof. intros ?????->??->. rewrite proph_ctrl_proper; done. Qed.
+
 End lemmas.
 
 Global Opaque uniq_ctx val_obs proph_ctrl.

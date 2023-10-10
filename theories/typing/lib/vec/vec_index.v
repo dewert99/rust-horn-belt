@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import array_util typing.
+From lrust.typing Require Import array_util typing uniq_array_util.
 From lrust.typing.lib.vec Require Import vec.
 Set Default Proof Using "Type".
 
@@ -96,7 +96,7 @@ Section vec_index.
       [done|done| |].
     { iApply step_fupdN_with_emp. rewrite difference_empty_L.
       iApply step_fupdN_nmono; [|iApply "Upd"]. lia. }
-    wp_seq. iIntros "[(%ξl &%&%& ξl & To↦tys) (%ξl' &%&%& ξl' & To↦tys')] !>". wp_seq.
+    wp_seq. iIntros "[(%ξl &%&(%&->&%)& ξl & To↦tys) (%ξl' &%&(%&->&%)& ξl' & To↦tys')] !>". wp_seq.
     iMod (uniq_intro (aπl !!! ifin) with "PROPH UNIQ") as (ζi) "[Vo' Pc']"; [done|].
     set ζ := PrVar _ ζi. iDestruct (uniq_proph_tok with "Vo' Pc'") as "(Vo' & ζ & Pc')".
     rewrite proph_tok_singleton.
@@ -104,8 +104,8 @@ Section vec_index.
     iDestruct (proph_tok_combine with "ξl ζξl") as (?) "[ξζξl Toξζξl]".
     iMod (uniq_preresolve ξ _ (lapply (vinsert ifin (.$ ζ) aπl))
       with "PROPH Vo Pc ξζξl") as "(Obs' & ξζξl & ToPc)"; [done| |].
-    { rewrite -vec_to_list_apply.
-      apply proph_dep_constr, proph_dep_vinsert=>//. apply proph_dep_one. }
+    { rewrite -proph_dep_vlapply. apply proph_dep_vinsert; [|apply proph_dep_one|]; 
+    rewrite proph_dep_vlapply; apply (ty_proph_weaken (vec_ty ty)); eexists _, _; done. }
     iCombine "Obs Obs'" as "#?". iClear "Obs".
     iDestruct ("Toξζξl" with "ξζξl") as "[ξl ζξl]".
     iDestruct ("Toζξl" with "ζξl") as "[ζ ξl']". iSpecialize ("Pc'" with "ζ").
@@ -128,12 +128,11 @@ Section vec_index.
       iMod (cumulative_persistent_time_receipt with "TIME ⧗ ⧖!")
         as "⧖!"; [solve_ndisj|]. iIntros "/=!>!>".
       iExists _, _. iFrame "⧖!". iDestruct ("ToPc" with "[Pc']") as "$".
-      { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
-        rewrite -vec_to_list_apply. iApply proph_eqz_constr.
-        by iApply proph_eqz_vinsert. }
+      { iDestruct (proph_ctrl_eqz' with "PROPH Pc'") as "Eqz".
+        iApply proph_eqz_vec_to_list. by iApply proph_eqz_vinsert'. }
       rewrite split_mt_vec. iExists _, _, _, _.
       rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil shift_loc_assoc.
-      iFrame "↦₀ ↦₁ ↦₂ ex†". iSplit; [by rewrite vec_to_list_apply|]. iNext.
+      iFrame "↦₀ ↦₁ ↦₂ ex†". iSplit; [done|]. iNext.
       iClear "#". rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iSplitL "↦tys".
       { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
       iSplitL "↦ty". { iStopProof. do 3 f_equiv. iApply ty_own_depth_mono. lia. }

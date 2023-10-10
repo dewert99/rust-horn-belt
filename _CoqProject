@@ -81,7 +81,7 @@ theories/typing/always_true.v
 theories/typing/uniq_resolve.v
 theories/typing/typing.v
 theories/typing/soundness.v
-# theories/typing/uniq_array_util.v
+theories/typing/uniq_array_util.v
 theories/typing/ptr.v
 theories/typing/lib/ghostptrtoken/heap_util.v
 theories/typing/lib/ghostptrtoken/ghostseq.v

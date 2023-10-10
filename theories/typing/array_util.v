@@ -16,6 +16,16 @@ Global Instance Forall2_proper {A B} :
   Proper (pointwise_relation _ (pointwise_relation _ (↔)) ==> (=) ==> (=) ==> (↔)) (@Forall2 A B).
 Proof. split; subst; induction 1; constructor; by firstorder auto. Qed.
 
+Global Instance Forall2_mono {A B} :
+Proper (pointwise_relation _ (pointwise_relation _ impl) ==> (=) ==> (=) ==> impl) (@Forall2 A B).
+Proof. intros ?????->??->?. eapply Forall2_impl; done.  Qed.
+
+Lemma fmap_lapply {A B} (f: A → B) (aπl: (list (proph A))) : fmap f ∘ lapply aπl = lapply (fmap (f ∘.) aπl).
+Proof. fun_ext=>/= ?. rewrite /lapply -2!list_fmap_compose. reflexivity. Qed.
+
+Lemma fmap_lapply_vmap {A B} (f: A → B) n (aπl: (vec (proph A) n)) : fmap f ∘ lapply aπl = lapply (vmap (f ∘.) aπl).
+Proof. rewrite fmap_lapply vec_to_list_map. done. Qed.
+
 Section array_util.
   Context `{!typeG Σ}.
 
@@ -246,5 +256,22 @@ Section array_util.
     iIntros "#? tys". iInduction aπl as [|] "IH" forall (l); [done|]=>/=.
     iDestruct "tys" as "[ty tys]". setoid_rewrite <-shift_loc_assoc_nat.
     iSplitL "ty"; by [iApply ty_shr_lft_mono|iApply "IH"].
+  Qed.
+
+  Lemma proph_dep_vlapply m {A n} (aπl: vec (proph A) n) ξl: vapply aπl ./{m} ξl ↔ lapply aπl ./{m} ξl.
+  Proof. 
+    rewrite -vec_to_list_apply. split; intros. apply proph_dep_constr. done.
+    eapply proph_dep_destr; [|done]. typeclasses eauto.
+  Qed.
+
+  Lemma proph_eqz_vinsert' {𝔄 n} i xπ yπ (zπl: vec (proph 𝔄) n) (P: (proph 𝔄) → _) :
+    xπ :={P}= yπ -∗
+    vapply (vinsert i xπ zπl) :={λ vπ ξl, exists ξll, ξl = mjoin ξll /\ Forall2 P (vfunsep vπ) ξll}= vapply (vinsert i yπ zπl).
+  Proof.
+    iIntros "Eqzs". iApply proph_eqz_mono; [|iApply proph_eqz_vinsert].
+    simpl. intros ? (?&->&?). rewrite semi_iso' vec_to_list_insert insert_take_drop in H.
+    apply Forall2_app_inv_l in H. destruct H as (?&?&?&?&->). inversion H0.
+    rewrite -join_app vapply_insert. simpl. setoid_rewrite vlookup_insert. eexists _, _, _. done.
+    rewrite vec_to_list_length. apply fin_to_nat_lt. done. 
   Qed.
 End array_util.

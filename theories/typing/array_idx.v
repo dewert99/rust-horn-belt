@@ -246,12 +246,7 @@ Section array_idx.
     - iIntros "!> big !>!>". iDestruct "big" as (??) "(⧖' & Pc' & ↦ty)".
       iCombine "⧖ ⧖'" as "⧖!"=>/=. iExists _, _. iFrame "⧖!".
       iDestruct ("ToPc" with "[Pc']") as "$".
-      { iDestruct (proph_ctrl_eqz' with "PROPH Pc'") as "Eqz".
-        iApply proph_eqz_mono; [|iApply proph_eqz_vinsert].
-        simpl. intros ? (?&->&?). rewrite semi_iso' vec_to_list_insert insert_take_drop in H2.
-        apply Forall2_app_inv_l in H2. destruct H2 as (?&?&?&?&->). inversion H3.
-        rewrite -join_app vapply_insert. simpl. setoid_rewrite vlookup_insert. eexists _, _, _. done.
-        rewrite vec_to_list_length. apply fin_to_nat_lt. done.  }
+      { iDestruct (proph_ctrl_eqz' with "PROPH Pc'") as "Eqz". by iApply proph_eqz_vinsert'. }
       iClear "#". rewrite split_mt_array semi_iso' vinsert_backmid -big_sepL_vbackmid.
       iSplitL "↦tys". { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
       iSplitL "↦ty". { iStopProof. do 3 f_equiv. iApply ty_own_depth_mono. lia. }

@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import typing uniq_array_util.
+From lrust.typing Require Import typing uniq_array_util uniq_bor.
 Set Default Proof Using "Type".
 
 Implicit Type 𝔄 𝔅: syn_type.
@@ -36,6 +36,8 @@ Section slice.
   (* Rust's &'a [T] *)
   Program Definition shr_slice {𝔄} (κ: lft) (ty: type 𝔄) : type (listₛ 𝔄) := {|
     st_size := 2;  st_lfts := κ :: ty.(ty_lfts);  st_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    st_proph alπ ξl := exists (aπl: list (proph 𝔄)) ξll,
+      ξl = mjoin ξll /\ alπ = (lapply aπl: (proph (listₛ 𝔄))) /\ Forall2 ty.(ty_proph) aπl ξll;
     st_own (alπ: proph (listₛ 𝔄)) d tid vl := [S(d') := d]
       ∃(l: loc) (n: nat) (aπl: vec (proph 𝔄) n),
         ⌜vl = [ #l; #n] ∧ alπ = lapply aπl⌝ ∗
@@ -54,11 +56,14 @@ Section slice.
     iDestruct (ty_shr_proph_big_sepL with "LFT [] [] tys κ'") as "Upd"; first done.
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_l]. }
     { iApply lft_incl_trans; by [|iApply lft_intersect_incl_r]. }
-    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξl q ?) "[ξl Upd]".
+    iApply (step_fupdN_wand with "Upd"). iNext. iMod 1 as (ξl q (?&?&?)) "[ξl Upd]".
     iModIntro. iExists ξl, q. iSplit.
-    { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+    { iPureIntro. eexists _, _. done. }
     iIntros "{$ξl}ξl". iMod ("Upd" with "ξl") as "$". iModIntro.
     iExists _, _, _. by iSplit.
+  Qed.
+  Next Obligation.
+    move=> ?????/=. intros (?&?&->&->&?). eapply ty_proph_weaken_big_sepL'. done.
   Qed.
 
   Global Instance shr_slice_ne {𝔄} κ : NonExpansive (@shr_slice 𝔄 κ).
@@ -82,6 +87,8 @@ Section slice.
   (* Rust's &'a mut [T] *)
   Program Definition uniq_slice {𝔄} (κ: lft) (ty: type 𝔄) : type (listₛ (𝔄 * 𝔄)) := {|
     ty_size := 2;  ty_lfts := κ :: ty.(ty_lfts);  ty_E := ty.(ty_E) ++ ty_outlives_E ty κ;
+    ty_proph alπ ξl := exists ξll ξl' (aπl: list (proph 𝔄)),
+      ξl = mjoin ξll ++ ξl' /\ map fst ∘ alπ = (lapply aπl: (proph (listₛ 𝔄))) /\ Forall2 ty.(ty_proph) aπl ξll /\ map snd ∘ alπ ./[𝔄] ξl';
     ty_own vπ d tid vl := κ ⊑ ty_lft ty ∗
       ∃(l: loc) (n d': nat) (aπξil: vec (proph 𝔄 * positive) n),
         let aaπl := vmap
@@ -90,7 +97,7 @@ Section slice.
         [∗ list] i ↦ aπξi ∈ aπξil, uniq_body ty aπξi.1 aπξi.2 d' κ tid (l +ₗ[ty] i);
     ty_shr vπ d κ' tid l' := [S(d') := d]
       ∃(l: loc) (n: nat) (aπl: vec (proph 𝔄) n) ξl,
-        ⌜map fst ∘ vπ = lapply aπl ∧ map snd ∘ vπ ./ ξl⌝ ∗
+        ⌜map fst ∘ vπ = lapply aπl ∧ map snd ∘ vπ ./[𝔄] ξl⌝ ∗
         &frac{κ'} (λ q, l' ↦{q} #l ∗ (l' +ₗ 1) ↦{q} #n) ∗ &frac{κ'} (λ q, q:+[ξl]) ∗
         ▷ [∗ list] i ↦ aπ ∈ aπl, ty.(ty_shr) aπ d' κ' tid (l +ₗ[ty] i);
   |}%I.
@@ -136,9 +143,7 @@ Section slice.
     { iApply lft_incl_trans; [done|]. iApply lft_intersect_incl_r. }
     iApply step_fupdN_nmono; [done|]. iApply (step_fupdN_wand with "Upd").
     iIntros "!> >(%&%& %Dep & ζξl & Touniqs) !>". iExists _, _. iFrame "ζξl". iSplit.
-    { iPureIntro. apply proph_dep_list_prod.
-      - apply (proph_dep_constr vec_to_list) in Dep. eapply proph_dep_eq; [done|].
-        fun_ext=>/= ?. by elim aπξil; [done|]=>/= ???->.
+    { iPureIntro. eexists _, _, _. intuition. 2:{done. } fun_ext=>π/=. by elim aπξil; [done|]=>/= ???->.
       - elim aπξil; [done|]=>/= ????.
         apply (proph_dep_constr2 _ _ _ [_]); [|done]. apply proph_dep_one. }
     iIntros "ζξl". iMod ("Touniqs" with "ζξl") as "[uniqs $]". iModIntro.
@@ -152,16 +157,20 @@ Section slice.
     iMod (lft_incl_acc with "In κ'₊") as (?) "[κ0 Toκ'₊]"; [done|].
     iMod (frac_bor_acc with "LFT Borξl κ0") as (?) "[>ξl Toκ0]"; [done|].
     iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
-    iIntros ">(%&%&%& ζl & Toshr) !>".
+    iIntros ">(%&%&(%&->&%)& ζl & Toshr) !>".
     iDestruct (proph_tok_combine with "ζl ξl") as (?) "[ζξl Toζξl]".
     iExists _, _. iFrame "ζξl". iSplit.
-    { iPureIntro. apply proph_dep_list_prod; [|done]. rewrite Eq.
-      rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+    { iPureIntro. eexists _, _, _. done. }
     iIntros "ζξl". iDestruct ("Toζξl" with "ζξl") as "[ζl ξl]".
     iMod ("Toshr" with "ζl") as "$". iMod ("Toκ0" with "ξl") as "κ0".
     by iMod ("Toκ'₊" with "κ0") as "$".
   Qed.
+  Next Obligation.
+    intros ?????(?&?&?&->&?&?&?). simpl. rewrite Nat.max_id. apply proph_dep_list_prod; [|done].
+    rewrite H. eapply ty_proph_weaken_big_sepL'. done.
+  Qed.
 
+  Local Instance proph_ctrl_ne' ξ n : Proper _ _ := proph_ctrl_ne ξ n.
   Global Instance uniq_slice_ne {𝔄} κ : NonExpansive (@uniq_slice 𝔄 κ).
   Proof. rewrite /uniq_slice /uniq_body. solve_ne_type. Qed.
 End slice.

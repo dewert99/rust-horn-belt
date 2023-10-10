@@ -1,7 +1,7 @@
 From lrust.util Require Export pairwise.
 From lrust.typing Require Export type ghost_fn.
 From lrust.typing Require Import array_util typing always_true option.
-From lrust.typing.lib Require Import option maybe_uninit list ghostptrtoken.ghostseq.
+From lrust.typing.lib Require Import option maybe_uninit list ghostptrtoken.ghostseq slice vec smallvec.
 From stdpp Require Import numbers.
 Set Default Proof Using "Type".
 
@@ -77,6 +77,18 @@ Section lib_ghost_fn.
     erewrite functional_extensionality; [|intros; rewrite /lapply list_lookup_fmap; simpl; reflexivity].
     destruct (x0 !! Z.to_nat x). inversion_clear H. eapply (ghost_fn_app some_ghost_fn). eexists _. done. apply none_ghost_fn.
   Qed.
+
+  Definition shr_slice_ghost_fn {𝔄} {ty: type 𝔄} {κ} : ghost_fn (shr_slice κ ty → ghostseq_ty ty) id := (λ x, x)%GB.
+  
+  Definition vec_ghost_fn {𝔄} {ty: type 𝔄} : ghost_fn (vec_ty ty → ghostseq_ty ty) id := (λ x, x)%GB.
+
+  Definition smallvec_ghost_fn {𝔄} {ty: type 𝔄} {n} : ghost_fn (smallvec n ty → ghostseq_ty ty) id := (λ x, x)%GB.
+
+  Lemma uniq_slice_curr_ghost_fn {𝔄} {ty: type 𝔄} {κ} : ghost_fn (uniq_slice κ ty → ghostseq_ty ty) (map fst).
+  Proof. intros ??(?&?&?&->&?&?&?). unfold compose in H. rewrite H. eexists _, _, _. done. Qed.
+
+  Lemma array_ghost_fn {𝔄} {ty: type 𝔄} {n} : ghost_fn ([ty;^ n] → ghostseq_ty ty) vec_to_list.
+  Proof. intros ??(?&->&?). eexists _, _, _. erewrite <- vec_to_list_apply. erewrite vapply_funsep. done. Qed.
 
 End lib_ghost_fn.
 

@@ -89,12 +89,9 @@ Section uniq_bor.
   Qed.
   Next Obligation. move=> /= ?????[?[?[->[??]]]]. apply proph_dep_prod. by eapply ty_proph_weaken. done. Qed.
 
+  Local Instance proph_ctrl_ne' ξ n : Proper _ _ := proph_ctrl_ne ξ n.
   Global Instance uniq_bor_ne {𝔄} κ : NonExpansive (@uniq_bor 𝔄 κ).
-  Proof.
-    solve_ne_type. 
-    intros *. simpl. unfold uniq_body. f_equiv; [by rewrite H|]; do 15 f_equiv. 
-    rewrite proph_ctrl_proper; [done| |done..]. intros ??. apply H. do 3 f_equiv. by eapply ty_own_ne.
-  Qed.
+  Proof. rewrite /uniq_bor /uniq_body; solve_ne_type. Qed.
 End uniq_bor.
 
 Notation "&uniq{ κ }" := (uniq_bor κ) (format "&uniq{ κ }") : lrust_type_scope.

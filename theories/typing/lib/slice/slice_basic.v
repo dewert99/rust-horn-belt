@@ -8,12 +8,16 @@ Implicit Type 𝔄 𝔅: syn_type.
 Section slice_basic.
   Context `{!typeG Σ}.
 
+  Local Instance proph_ctrl_ne' ξ n : Proper _ _ := proph_ctrl_ne ξ n.
   (* shr_slice *)
 
   Global Instance shr_slice_type_contractive {𝔄} κ :
     TypeContractive (shr_slice (𝔄:=𝔄) κ).
   Proof.
-    split; [by apply (type_lft_morphism_add_one κ)|done| |].
+    split; [done|split; [by apply (type_lft_morphism_add_one κ)|..]|..].
+    - intros. simpl. do 6 f_equiv. by apply Forall2_mono.
+    - intros ???(?&?&->&->&?). eexists _, _. split. exact H. 
+      intros. eexists _, _. done. 
     - move=> > EqSz */=. rewrite EqSz. by do 12 f_equiv.
     - move=> > EqSz */=. rewrite EqSz. do 16 (f_contractive || f_equiv). by simpl in *.
   Qed.
@@ -26,7 +30,7 @@ Section slice_basic.
 
   Lemma shr_slice_real {𝔄 𝔅} κ (ty: type 𝔄) E L (f: _ → 𝔅) :
     lctx_lft_alive E L κ → real E L ty f →
-    real (𝔅:=listₛ _) E L (shr_slice κ ty) (map f).
+    real (𝔅:=listₛ _) E L (shr_slice κ ty) (fmap f).
   Proof.
     move=> ??. apply simple_type_real=>/=.
     iIntros (???[|]???) "LFT E L big"; [done|]=>/=.
@@ -46,12 +50,12 @@ Section slice_basic.
     move=> Lft Sub. apply subtype_simple_type=>/=. iIntros (?) "L".
     iDestruct (Lft with "L") as "#Lft". iDestruct (Sub with "L") as "#Sub".
     iIntros "!> E". iDestruct ("Lft" with "E") as "#?".
-    iDestruct ("Sub" with "E") as "#(%&?&_& #?)". iSplit; [done|].
+    iDestruct ("Sub" with "E") as "#([% %]&?&_& #?)".
+    iSplit. iPureIntro. split; [done|]. intros ??(?&?&->&->&?). 
+    eexists _, _. intuition. apply fmap_lapply. eapply Forall2_fmap_l, Forall2_impl. done. done.
     iSplit; [by iApply lft_intersect_mono|]. iIntros (?[|]??) "big /="; [done|].
-    iDestruct "big" as (?? aπl[->->]) "tys". iExists _, _, _.
-    have ?: ∀(aπl: vec (proph 𝔄) _), map f ∘ lapply aπl = lapply (vmap (f ∘.) aπl).
-    { move=> ?. elim; [done|]=> ??? IH. fun_ext=>/= ?. f_equal. apply (equal_f IH). }
-    iSplit; [done|]. iApply incl_big_sepL_ty_shr; [done..|].
+    iDestruct "big" as (?? aπl[->->]) "tys". iExists _, _, _. rewrite fmap_lapply_vmap.
+    iSplit; [|]. done. iApply incl_big_sepL_ty_shr; [done..|].
     by iApply big_sepL_ty_shr_lft_mono.
   Qed.
   Lemma shr_slice_eqtype {𝔄 𝔅} κ κ' ty ty' (f: 𝔄 → 𝔅) g E L :
@@ -64,11 +68,14 @@ Section slice_basic.
   Global Instance uniq_slice_type_contractive {𝔄} κ :
     TypeContractive (uniq_slice (𝔄:=𝔄) κ).
   Proof.
-    split; [by apply (type_lft_morphism_add_one κ)|done| |].
+    split; [done|split; [by apply (type_lft_morphism_add_one κ)|..]|..].
+    - intros. simpl. do 9 f_equiv. by apply Forall2_mono.
+    - intros ???(?&?&?&->&?&?&?). eexists _, _. split. done.
+      intros. eexists _, _, _. done. 
     - move=> > EqSz EqLft */=. f_equiv.
       + apply equiv_dist. iDestruct EqLft as "#[??]".
         iSplit; iIntros "#In"; (iApply lft_incl_trans; [iApply "In"|done]).
-      + rewrite EqSz /uniq_body. do 23 (f_contractive || f_equiv). by simpl in *.
+      + rewrite EqSz /uniq_body. do 21 (f_contractive || f_equiv). assumption. do 2 f_equiv. by simpl in *.
     - move=> > EqSz */=. rewrite EqSz. do 17 (f_contractive || f_equiv). by simpl in *.
   Qed.
 
@@ -117,13 +124,15 @@ Section slice_basic.
   Proof.
     move=> In /eqtype_id_unfold Eqt ?. iIntros "L".
     iDestruct (Eqt with "L") as "#Eqt". iDestruct (In with "L") as "#In". iIntros "!> #E".
-    iSplit; [done|]. iDestruct ("Eqt" with "E") as (EqSz) "[[??][#EqOwn #EqShr]]".
+    iDestruct ("Eqt" with "E") as ([EqSz EqProph]) "[[??][#EqOwn #EqShr]]".
+    iSplit. iPureIntro. split; [done|]. intros ??(?&?&?&->&?&?).
+    eexists _, _, _. intuition. exact H. by eapply Forall2_proper.
     iSpecialize ("In" with "E"). iSplit; [by iApply lft_intersect_mono|].
     iSplit; iModIntro=>/=.
     - iIntros "* (#?&%&%&%&%&(->&->&%)& uniqs)". iSplitR.
       { iApply lft_incl_trans; [|done]. by iApply lft_incl_trans. }
       iExists _, _, _, _. iSplit; [done|]. rewrite -EqSz.
-      iApply (incl_big_sepL_uniq_body with "In EqOwn uniqs").
+      iApply (incl_big_sepL_uniq_body with "In EqOwn uniqs"). done.
     - iIntros (?[|?]???); [by iIntros|]. iDestruct 1 as (?????) "(?&?& tys)".
       iExists _, _, _, _. do 3 (iSplit; [done|]). iNext.
       rewrite !(big_sepL_forall (λ _ (_: proph _), _)) -EqSz. iIntros (???).

@@ -11,9 +11,12 @@ Section smallvec_basic.
 
   Global Instance smallvec_type_ne 𝔄 n : TypeNonExpansive (smallvec (𝔄:=𝔄) n).
   Proof.
-    split.
-    - by apply type_lft_morphism_id_like.
+    split; [|split|..].
     - by move=> ??/=->.
+    - by apply type_lft_morphism_id_like.
+    - move=>/= *. do 7 f_equiv. done.
+    - intros ???(?&?&->&->&?). eexists _, _. split. exact H. 
+      intros. eexists _, _. done. 
     - move=>/= > ->*. by do 21 f_equiv; [f_equiv|].
     - move=>/= > ->*. by do 16 f_equiv.
   Qed.
@@ -78,18 +81,18 @@ Section smallvec_basic.
     subtype E L ty ty' f → subtype E L (smallvec n ty) (smallvec n ty') (map f).
   Proof.
     iIntros (Sub ?) "L". iDestruct (Sub with "L") as "#Sub". iIntros "!> E".
-    iDestruct ("Sub" with "E") as "(%EqSz &?&#?&#?)".
-    have Eq: ∀(aπl: vec (proph 𝔄) _), map f ∘ lapply aπl = lapply (vmap (f ∘.) aπl).
-    { move=> ?. elim; [done|]=> ??? IH. fun_ext=>/= ?. f_equal. apply (equal_f IH). }
-    iSplit. { iPureIntro. rewrite/=. lia. } iSplit; [done|].
+    iDestruct ("Sub" with "E") as "((%EqSz&%EqProph) &?&#?&#?)".
+    iSplit. iPureIntro. split. rewrite/=. lia. intros ??(?&?&->&->&?).
+    eexists _, _. intuition. apply fmap_lapply. eapply Forall2_fmap_l, Forall2_impl. done. done.
+    iSplit; [done|].
     iSplit; iModIntro.
     - iDestruct 1 as (b ?????(->&?&->)) "big". iExists b, _, _, _, _, _. case b=>/=.
-      + iDestruct "big" as (???) "?". rewrite Eq -EqSz. iSplit; [done|].
+      + iDestruct "big" as (???) "?". rewrite fmap_lapply_vmap -EqSz. iSplit; [done|].
         iExists _, _. iSplit; [done|]. by iApply incl_big_sepL_ty_own.
-      + iDestruct "big" as "[↦tys ex†]". rewrite !trans_big_sepL_mt_ty_own Eq -EqSz.
+      + iDestruct "big" as "[↦tys ex†]". rewrite !trans_big_sepL_mt_ty_own fmap_lapply_vmap -EqSz.
         iSplit; [done|]. iFrame "ex†". iDestruct "↦tys" as (?) "[↦ ?]".
         iExists _. iFrame "↦". by iApply incl_big_sepL_ty_own.
-    - iDestruct 1 as (b ????->) "[↦ big]". iExists b, _, _, _, _. rewrite Eq.
+    - iDestruct 1 as (b ????->) "[↦ big]". iExists b, _, _, _, _. rewrite fmap_lapply_vmap.
       iSplit; [done|]. iFrame "↦". case b=>/=; by iApply incl_big_sepL_ty_shr.
   Qed.
   Lemma smallvec_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g n ty ty' E L :

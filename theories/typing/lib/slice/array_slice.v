@@ -70,7 +70,7 @@ Section array_slice.
     set aaπl := vmap (λ aπζi π,
       (aπζi.1 π, π (PrVar (𝔄 ↾ prval_to_inh aπζi.1) aπζi.2): 𝔄)) aπζil.
     iMod (uniq_preresolve ξ ζl (vapply aπl') with "PROPH Vo Pc ζl")
-      as "(Obs' & ζl & ToPc)"; [done|by apply proph_dep_prvars|].
+      as "(Obs' & ζl & ToPc)"; [done|simpl; by apply proph_dep_prvars|]. 
     iCombine "Obs' Obs" as "#?". iSpecialize ("VoPcs" with "ζl").
     iDestruct (big_sepL_sep with "VoPcs") as "[Vos Pcs]".
     iMod ("ToBor" $! (big_sepL _ _) with "[ToPc] [↦tys Pcs]") as "[Bor α]"; last first.

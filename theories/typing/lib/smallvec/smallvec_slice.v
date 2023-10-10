@@ -84,7 +84,7 @@ Section smallvec_slice.
       (aπζi.1 π, π (PrVar (𝔄 ↾ prval_to_inh aπζi.1) aπζi.2): 𝔄)) aπζil.
     iMod (uniq_preresolve ξ ζl (lapply aπl') with "PROPH Vo Pc ζl")
       as "(Obs' & ζl & ToPc)"; [done|..].
-    { rewrite -vec_to_list_apply. apply proph_dep_constr, proph_dep_prvars. }
+    { rewrite -vec_to_list_apply. simpl. apply proph_dep_constr, proph_dep_prvars. }
     iCombine "Obs' Obs" as "#?". iSpecialize ("VoPcs" with "ζl").
     iDestruct (big_sepL_sep with "VoPcs") as "[Vos Pcs]". case b=>/=.
     - iDestruct "big" as "[↦tys ↦tl]". wp_op. wp_write. do 2 wp_seq.
@@ -107,8 +107,7 @@ Section smallvec_slice.
         iDestruct (split_big_sepL_proph_ctrl_mt_ty_own with "PROPH ⧖ big") as "big".
         iMod (bi.later_exist_except_0 with "big") as (wπl ?) "(>⧖' & Eqzs & ↦tys)".
         iIntros "!>!>". iExists (lapply wπl), _. iFrame "⧖'". iSplitL "Eqzs ToPc".
-        { iApply "ToPc". rewrite -!vec_to_list_apply.
-          iApply proph_eqz_constr. iApply (proph_eqz_prvars with "Eqzs"). }
+        { iApply "ToPc". iApply proph_eqz_vec_to_list. iApply (proph_eqz_prvars with "Eqzs"). }
         rewrite split_mt_smallvec. iExists true, _, _, _, _=>/=.
         rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc. by iFrame.
     - iDestruct "big" as "(↦tl & ↦tys & †)". wp_op. wp_read. wp_write. do 2 wp_seq.
@@ -131,8 +130,7 @@ Section smallvec_slice.
         iDestruct (split_big_sepL_proph_ctrl_mt_ty_own with "PROPH ⧖ big") as "big".
         iMod (bi.later_exist_except_0 with "big") as (wπl ?) "(>⧖' & Eqzs & ↦tys)".
         iIntros "!>!>". iExists (lapply wπl), _. iFrame "⧖'". iSplitL "Eqzs ToPc".
-        { iApply "ToPc". rewrite -!vec_to_list_apply.
-          iApply proph_eqz_constr. iApply (proph_eqz_prvars with "Eqzs"). }
+        { iApply "ToPc". iApply proph_eqz_vec_to_list. iApply (proph_eqz_prvars with "Eqzs"). }
         rewrite split_mt_smallvec. iExists false, _, _, _, _=>/=.
         rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc. by iFrame.
   Qed.

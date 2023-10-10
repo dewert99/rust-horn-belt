@@ -1,5 +1,5 @@
 From lrust.typing Require Export type.
-From lrust.typing Require Import array_util typing.
+From lrust.typing Require Import array_util typing uniq_array_util.
 From lrust.typing.lib.smallvec Require Import smallvec.
 Set Default Proof Using "Type".
 
@@ -120,7 +120,7 @@ Section smallvec_index.
         [done|done| |].
       { iApply step_fupdN_with_emp. rewrite difference_empty_L.
         iApply step_fupdN_nmono; [|iApply "Upd"]. lia. }
-      wp_seq. iIntros "[(%ξl &%&%& ξl & To↦tys) (%ξl' &%&%& ξl' & To↦tys')] !>". wp_seq.
+      wp_seq. iIntros "[(%ξl &%&(%&->&%)& ξl & To↦tys) (%ξl' &%&(%&->&%)& ξl' & To↦tys')] !>". wp_seq.
       iMod (uniq_intro (aπl !!! ifin) with "PROPH UNIQ") as (ζi) "[Vo' Pc']"; [done|].
       set ζ := PrVar _ ζi. iDestruct (uniq_proph_tok with "Vo' Pc'") as "(Vo' & ζ & Pc')".
       rewrite proph_tok_singleton.
@@ -128,8 +128,8 @@ Section smallvec_index.
       iDestruct (proph_tok_combine with "ξl ζξl") as (?) "[ξζξl Toξζξl]".
       iMod (uniq_preresolve ξ _ (lapply (vinsert ifin (.$ ζ) aπl))
         with "PROPH Vo Pc ξζξl") as "(Obs' & ξζξl & ToPc)"; [done| |].
-      { rewrite -vec_to_list_apply.
-        apply proph_dep_constr, proph_dep_vinsert=>//. apply proph_dep_one. }
+      { rewrite -proph_dep_vlapply. apply proph_dep_vinsert; [|apply proph_dep_one|];
+      rewrite proph_dep_vlapply; apply (ty_proph_weaken (smallvec n ty)); eexists _, _; done. }
       iCombine "Obs Obs'" as "#?". iClear "Obs".
       iDestruct ("Toξζξl" with "ξζξl") as "[ξl ζξl]".
       iDestruct ("Toζξl" with "ζξl") as "[ζ ξl']". iSpecialize ("Pc'" with "ζ").
@@ -150,12 +150,11 @@ Section smallvec_index.
         iApply persistent_time_receipt_mono; [|done]. lia.
       + iIntros "!> (%&%& >⧖' & Pc' & ↦ty)". iCombine "⧖ ⧖'" as "⧖!". iIntros "/=!>!>".
         iExists _, _. iFrame "⧖!". iDestruct ("ToPc" with "[Pc']") as "$".
-        { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
-          rewrite -vec_to_list_apply. iApply proph_eqz_constr.
-          by iApply proph_eqz_vinsert. }
+        { iDestruct (proph_ctrl_eqz' with "PROPH Pc'") as "Eqz".
+          iApply proph_eqz_vec_to_list. by iApply proph_eqz_vinsert'. }
         rewrite split_mt_smallvec. iExists true, _, _, _, _=>/=.
         rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
-        iFrame "↦₀ ↦₁ ↦₂ ↦₃ ↦tl". iSplit; [by rewrite vec_to_list_apply|].
+        iFrame "↦₀ ↦₁ ↦₂ ↦₃ ↦tl". iSplit; [done|].
         iClear "#". rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iSplitL "↦tys".
         { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
         setoid_rewrite shift_loc_assoc. iSplitL "↦ty".
@@ -179,7 +178,7 @@ Section smallvec_index.
         [done|done| |].
       { iApply step_fupdN_with_emp. rewrite difference_empty_L.
         iApply step_fupdN_nmono; [|iApply "Upd"]. lia. }
-      wp_seq. iIntros "[(%ξl &%&%& ξl & To↦tys) (%ξl' &%&%& ξl' & To↦tys')] !>". wp_seq.
+      wp_seq. iIntros "[(%ξl &%&(%&->&%)& ξl & To↦tys) (%ξl' &%&(%&->&%)& ξl' & To↦tys')] !>". wp_seq.
       iMod (uniq_intro (aπl !!! ifin) with "PROPH UNIQ") as (ζi) "[Vo' Pc']"; [done|].
       set ζ := PrVar _ ζi. iDestruct (uniq_proph_tok with "Vo' Pc'") as "(Vo' & ζ & Pc')".
       rewrite proph_tok_singleton.
@@ -187,8 +186,8 @@ Section smallvec_index.
       iDestruct (proph_tok_combine with "ξl ζξl") as (?) "[ξζξl Toξζξl]".
       iMod (uniq_preresolve ξ _ (lapply (vinsert ifin (.$ ζ) aπl))
         with "PROPH Vo Pc ξζξl") as "(Obs' & ξζξl & ToPc)"; [done| |].
-      { rewrite -vec_to_list_apply.
-        apply proph_dep_constr, proph_dep_vinsert=>//. apply proph_dep_one. }
+        { rewrite -proph_dep_vlapply. apply proph_dep_vinsert; [|apply proph_dep_one|];
+        rewrite proph_dep_vlapply; apply (ty_proph_weaken (smallvec n ty)); eexists _, _; done. }
       iCombine "Obs Obs'" as "#?". iClear "Obs".
       iDestruct ("Toξζξl" with "ξζξl") as "[ξl ζξl]".
       iDestruct ("Toζξl" with "ζξl") as "[ζ ξl']". iSpecialize ("Pc'" with "ζ").
@@ -210,12 +209,11 @@ Section smallvec_index.
         iApply persistent_time_receipt_mono; [|done]. lia.
       + iIntros "!> (%&%& >⧖' & Pc' & ↦ty)". iCombine "⧖ ⧖'" as "⧖!". iIntros "/=!>!>".
         iExists _, _. iFrame "⧖!". iDestruct ("ToPc" with "[Pc']") as "$".
-        { iDestruct (proph_ctrl_eqz with "PROPH Pc'") as "Eqz".
-          rewrite -vec_to_list_apply. iApply proph_eqz_constr.
-          by iApply proph_eqz_vinsert. }
+        { iDestruct (proph_ctrl_eqz' with "PROPH Pc'") as "Eqz".
+          iApply proph_eqz_vec_to_list. by iApply proph_eqz_vinsert'. }
         rewrite split_mt_smallvec. iExists false, _, _, _, _=>/=.
         rewrite !heap_mapsto_vec_cons heap_mapsto_vec_nil !shift_loc_assoc.
-        iFrame "↦₀ ↦₁ ↦₂ ↦₃ ↦tl ex†". iSplit; [by rewrite vec_to_list_apply|].
+        iFrame "↦₀ ↦₁ ↦₂ ↦₃ ↦tl ex†". iSplit; [done|].
         iClear "#". rewrite vinsert_backmid -big_sepL_vbackmid Eqi. iSplitL "↦tys".
         { iStopProof. do 6 f_equiv. iApply ty_own_depth_mono. lia. }
         setoid_rewrite shift_loc_assoc. iSplitL "↦ty".

@@ -11,7 +11,10 @@ Section vec_basic.
 
   Global Instance vec_type_contractive 𝔄 : TypeContractive (vec_ty (𝔄:=𝔄)).
   Proof.
-    split; [by apply type_lft_morphism_id_like|done| |].
+    split; [done|split; [by apply type_lft_morphism_id_like|..]|..].
+    - move=>/= *. do 7 f_equiv. done.
+    - intros ???(?&?&->&->&?). eexists _, _. split. exact H. 
+      intros. eexists _, _. done. 
     - move=>/= > ->*. do 19 (f_contractive || f_equiv). by simpl in *.
     - move=>/= > ->*. do 16 (f_contractive || f_equiv). by simpl in *.
   Qed.
@@ -61,15 +64,15 @@ Section vec_basic.
     subtype E L ty ty' f → subtype E L (vec_ty ty) (vec_ty ty') (map f).
   Proof.
     iIntros (Sub ?) "L". iDestruct (Sub with "L") as "#Sub". iIntros "!> E".
-    iDestruct ("Sub" with "E") as "(%EqSz &?&#?&#?)".
-    have Eq: ∀(aπl: vec (proph 𝔄) _), map f ∘ lapply aπl = lapply (vmap (f ∘.) aπl).
-    { move=> ?. elim; [done|]=> ??? IH. fun_ext=>/= ?. f_equal. apply (equal_f IH). }
-    do 2 (iSplit; [done|]). iSplit; iIntros "!>" (?[|]) "* vec //=".
+    iDestruct ("Sub" with "E") as "((%EqSz&%EqProph) &?&#?&#?)".
+    iSplit. iPureIntro. split; [done|]. intros ??(?&?&->&->&?). 
+    eexists _, _. intuition. apply fmap_lapply. eapply Forall2_fmap_l, Forall2_impl. done. done.
+    iSplit; [done|]. iSplit; iIntros "!>" (?[|]) "* vec //=".
     - iDestruct "vec" as (????[->->]) "(↦tys & ex & †)". iExists _, _, _, _.
-      rewrite !trans_big_sepL_mt_ty_own Eq EqSz. iSplit; [done|]. iFrame "ex †".
+      rewrite !trans_big_sepL_mt_ty_own fmap_lapply_vmap EqSz. iSplit; [done|]. iFrame "ex †".
       iNext. iDestruct "↦tys" as (?) "[↦ ?]". iExists _. iFrame "↦".
       by iApply incl_big_sepL_ty_own.
-    - iDestruct "vec" as (????->) "[↦ ?]". iExists _, _, _, _. rewrite Eq.
+    - iDestruct "vec" as (????->) "[↦ ?]". iExists _, _, _, _. rewrite fmap_lapply_vmap.
       iSplit; [done|]. iFrame "↦". iNext. by iApply incl_big_sepL_ty_shr.
   Qed.
   Lemma vec_eqtype {𝔄 𝔅} (f: 𝔄 → 𝔅) g ty ty' E L :

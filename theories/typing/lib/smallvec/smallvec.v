@@ -76,6 +76,8 @@ Section smallvec.
   Program Definition smallvec {𝔄} (n: nat) (ty: type 𝔄) : type (listₛ 𝔄) := {|
     ty_size := 4 + n * ty.(ty_size);
     ty_lfts := ty.(ty_lfts);  ty_E := ty.(ty_E);
+    ty_proph alπ ξl := exists (aπl: list (proph 𝔄)) ξll,
+      ξl = mjoin ξll /\ alπ = lapply aπl /\ Forall2 ty.(ty_proph) aπl ξll;
     ty_own alπ d tid vl :=
       ∃(b: bool) (l: loc) (len ex: nat) wl (aπl: vec (proph 𝔄) len),
         ⌜vl = [ #b; #l; #len; #ex] ++ wl
@@ -131,16 +133,16 @@ Section smallvec.
     iIntros "*% LFT In svec κ". iDestruct "svec" as (b ?????(->&?&->)) "big". case b=>/=.
     - iDestruct "big" as (??->) "tys".
       iMod (ty_own_proph_big_sepL with "LFT In tys κ") as "Upd"; [done|].
-      iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&%& ξl & Totys) !>".
+      iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&(%&%&%)& ξl & Totys) !>".
       iExists _, _. iSplit.
-      { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+      { iPureIntro. eexists _, _. done. }
       iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[? $]". iModIntro.
       iExists true, _, _, _, _, _. iSplit; [done|]. iExists _, _. by iFrame.
     - iDestruct "big" as "(↦tys & ex & †)".
       iMod (ty_own_proph_big_sepL_mt with "LFT In ↦tys κ") as "Upd"; [done|].
-      iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&%& ξl & Totys) !>".
+      iApply (step_fupdN_wand with "Upd"). iIntros "!> >(%&%&(%&%&%)& ξl & Totys) !>".
       iExists _, _. iSplit.
-      { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+      { iPureIntro. eexists _, _. done. }
       iIntros "{$ξl}ξl". iMod ("Totys" with "ξl") as "[tys $]". iModIntro.
       iExists false, _, _, _, _, _. iSplit; [done|]. iFrame.
   Qed.
@@ -149,14 +151,18 @@ Section smallvec.
     case b=>/=.
     - iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Upd"; [done|].
       iIntros "!>!>". iApply (step_fupdN_wand with "Upd").
-      iIntros ">(%&%&%& ξl & Totys) !>". iExists _, _. iSplit.
-      { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+      iIntros ">(%&%&(%&%&%)& ξl & Totys) !>". iExists _, _. iSplit.
+      { iPureIntro. eexists _, _. done. }
       iIntros "{$ξl}ξl". by iMod ("Totys" with "ξl") as "[$$]".
     - iMod (ty_shr_proph_big_sepL with "LFT In In' tys κ'") as "Toκ'"; [done|].
       iIntros "!>!>". iApply (step_fupdN_wand with "Toκ'").
-      iIntros ">(%&%&%& ξl & Toκ') !>". iExists _, _. iSplit.
-      { iPureIntro. rewrite -vec_to_list_apply. by apply proph_dep_constr. }
+      iIntros ">(%&%&(%&%&%)& ξl & Toκ') !>". iExists _, _. iSplit.
+      { iPureIntro. eexists _, _. done. }
       iIntros "{$ξl}ξl". by iMod ("Toκ'" with "ξl") as "$".
+  Qed.
+  Next Obligation.
+  Proof.
+    intros ?????(?&?&->&->&?). simpl. eapply ty_proph_weaken_big_sepL'. done.
   Qed.
 
   Global Instance smallvec_ne {𝔄} n : NonExpansive (@smallvec 𝔄 n).
