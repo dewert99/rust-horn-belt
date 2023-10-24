@@ -1,13 +1,12 @@
 # RustHornBelt COQ DEVELOPMENT
 
-This is the Coq development for "RustHornBelt: A Semantic Foundation for
-Functional Verification of Rust Programs with Unsafe Code".
+This is the Coq development for "TODO_THESIS_TITLE".
 
 ## Prerequisites
 
 This version is known to compile with:
 
-- Coq 8.15.0
+- Coq 8.15.2
 - A development version of [Iris](https://gitlab.mpi-sws.org/iris/iris)
   (the version `dev.2022-04-12.0.a3bed7ea`)
 
@@ -29,9 +28,15 @@ To update, do `git pull`. After an update, the development may fail to compile
 because of outdated dependencies. To fix that, please run `opam update`
 followed by `make build-dep`.
 
+## IDE support with VS Code
+
+After building from source (see above) you can install and use the VS Code
+extension [VsCoq Legacy](https://marketplace.visualstudio.com/items?itemName=coq-community.vscoq1)
+to explore the proofs.
+
 ## Walkthrough
 
-We have a walkthrough ([walkthrough.md](walkthrough.md)) of RustHornBelt's Coq
+There is a walkthrough ([walkthrough.md](walkthrough.md)) of RustHornBelt's Coq
 development.
 
 It explains in detail how to verify integer addition, model `Vec`, verify
@@ -73,121 +78,44 @@ is structured as follows.
     with unsafe code from the Rust standard library and some user crates.
     Some libraries are not yet verified, being commented out in `_CoqProject`.
 
-### Key Type-Spec Rules --- from the RustHornBelt Paper
+## Key Modifications from the THESIS
 
-The following table contains the location of every rule mentioned in the
-RustHornBelt paper.
-The filenames are spread across `theories/typing/examples`, `theories/typing`,
-`theories/typing/lib` (and its subfolders), and `theories/prophecy`.
-
-| Proof Rule          | File              | Lemma                    |
-| ------------------- | ----------------- | ------------------------ |
-| Adequacy            | `soundness.v`     | `type_soundness`         |
-| **Basic**           |                   |                          |
-| MUTBOR              | `derived_rules.v` | `ty_uniq_bor`            |
-| MUTREF-WRITE        | `derived_rules.v` | `ty_uniq_ref_write`      |
-| MUTREF-BYE          | `derived_rules.v` | `ty_uniq_ref_bye`        |
-| ENDLFT              | `programs.v`      | `type_endlft`            |
-| **Prophecies**      |                   |                          |
-| PROPH-INTRO         | `prophecy.v`      | `proph_intro`            |
-| PROPH-FRACT         | `prophecy.v`      | `proph_tok_fractional`   |
-| PROPH-IMPL          | `prophecy.v`      | `proph_obs_impl`         |
-| PROPH-MERGE         | `prophecy.v`      | `proph_obs_and`          |
-| PROPH-TRUE          | `prophecy.v`      | `proph_obs_true`         |
-| PROPH-RESOLVE       | `prophecy.v`      | `proph_resolve`          |
-| PROPH-SAT           | `prophecy.v`      | `proph_obs_sat`          |
-| **Mutable Borrows** |                   |                          |
-| MUT-AGREE           | `uniq_cmra.v`     | `uniq_agree`             |
-| MUT-UPDATE          | `uniq_cmra.v`     | `uniq_update`            |
-| MUT-INTRO           | `uniq_cmra.v`     | `uniq_intro`             |
-| MUT-RESOLVE         | `uniq_cmra.v`     | `uniq_resolve`           |
-| **`Vec`**           |                   |                          |
-| `push`              | `vec_pushpop.v`   | `vec_push_type`          |
-| `pop`               | `vec_pushpop.v`   | `vec_pop_type`           |
-| `index_mut`         | `vec_index.v`     | `vec_index_uniq_type`    |
-| **`IterMut`**       |                   |                          |
-| `iter_mut`          | `vec_slice.v`     | `vec_as_uniq_slice_type` |
-| `next`              | `iter.v`          | `iter_uniq_next_type`    |
-| `inc_vec`           | `inc_vec.v`       | `inc_vec_type`           |
-| **`Cell`**          |                   |                          |
-| `new`               | `cell.v`          | `cell_new_type`          |
-| `get`               | `cell.v`          | `cell_get_type`          |
-| `set`               | `cell.v`          | `cell_set_type`          |
-| `inc_cell`          | `inc_cell.v`      | `inc_cell_type`          |
-| **`Mutex`**         |                   |                          |
-| `new`               | `mutex.v`         | `mutex_new_type`         |
-| `get_mut`           | `mutex.v`         | `mutex_get_uniq`         |
-
-### Key Type(-Spec) Rules --- from the RustBelt Paper
-
-The files in [typing](theories/typing) prove semantic versions of the proof
-rules given in the _RustBelt_ paper. Notice that mutable borrows are called
-"unique borrows" in the Coq development.
-
-| Proof Rule            | File            | Lemma                |
-| --------------------- | --------------- | -------------------- |
-| T-bor-lft (for shr)   | shr_bor.v       | shr_subtype          |
-| T-bor-lft (for mut)   | uniq_bor.v      | uniq_subtype         |
-| C-subtype             | type_context.v  | subtype_tctx_incl    |
-| C-copy                | type_context.v  | copy_tctx_incl       |
-| C-split-bor (for shr) | product_split.v | tctx_split_shr_prod  |
-| C-split-bor (for mut) | product_split.v | tctx_split_uniq_prod |
-| C-share               | borrow.v        | tctx_share           |
-| C-borrow              | borrow.v        | tctx_borrow          |
-| C-reborrow            | uniq_bor.v      | tctx_reborrow_uniq   |
-| Tread-own-copy        | own.v           | read_own_copy        |
-| Tread-own-move        | own.v           | read_own_move        |
-| Tread-bor (for shr)   | shr_bor.v       | read_shr             |
-| Tread-bor (for mut)   | uniq_bor.v      | read_uniq            |
-| Twrite-own            | own.v           | write_own            |
-| Twrite-bor            | uniq_bor.v      | write_uniq           |
-| S-num                 | int.v           | type_int_instr       |
-| S-nat-leq             | int.v           | type_le_instr        |
-| S-new                 | own.v           | type_new_instr       |
-| S-delete              | own.v           | type_delete_instr    |
-| S-deref               | programs.v      | type_deref_instr     |
-| S-assign              | programs.v      | type_assign_instr    |
-| F-consequence         | programs.v      | typed_body_impl      |
-| F-let                 | programs.v      | type_let'            |
-| F-letcont             | cont.v          | type_cont            |
-| F-jump                | cont.v          | type_jump            |
-| F-newlft              | programs.v      | type_newlft          |
-| F-endlft              | programs.v      | type_endlft          |
-| F-call                | function.v      | type_call            |
-
-Some of these lemmas are called `something'` because the version without the
-`'` is a derived, more specialized form used together with our `eauto`-based
-`solve_typing` tactic. You can see this tactic in action in the
-[examples](theories/typing/examples) subfolder.
-
-### Lifetime Logic Rules
-
-The files in [lifetime](theories/lifetime) prove the lifetime logic, with the
-core rules being proven in the [model](theories/lifetime/model) subfolder and
-then sealed behind a module signature in
-[lifetime.v](theories/lifetime/lifetime.v).
-
-| Proof Rule        | File                | Lemma                |
-| ----------------- | ------------------- | -------------------- |
-| LftL-begin        | model/creation.v    | lft_create           |
-| LftL-tok-fract    | model/primitive.v   | lft_tok_fractional   |
-| LftL-not-own-end  | model/primitive.v   | lft_tok_dead         |
-| LftL-end-persist  | model/definitions.v | lft_dead_persistent  |
-| LftL-borrow       | model/borrow.v      | bor_create           |
-| LftL-bor-split    | model/bor_sep.v     | bor_sep              |
-| LftL-bor-acc      | lifetime.v          | bor_acc              |
-| LftL-bor-shorten  | model/primitive.v   | bor_shorten          |
-| LftL-incl-isect   | model/primitive.v   | lft_intersect_incl_l |
-| LftL-incl-glb     | model/primitive.v   | lft_incl_glb         |
-| LftL-tok-inter    | model/primitive.v   | lft_tok_sep          |
-| LftL-end-inter    | model/primitive.v   | lft_dead_or          |
-| LftL-tok-unit     | model/primitive.v   | lft_tok_static       |
-| LftL-end-unit     | model/primitive.v   | lft_dead_static      |
-| LftL-reborrow     | lifetime.v          | rebor                |
-| LftL-bor-fracture | frac_borrow.v       | bor_fracture         |
-| LftL-fract-acc    | frac_borrow.v       | frac_bor_atomic_acc  |
-| LftL-bor-na       | na_borrow.v         | bor_na               |
-| LftL-na-acc       | na_borrow.v         | na_bor_acc           |
+### Chapter 3 Ghost Unsoundness
+ * Level definition: [`syn_type.v`](theories/prophecy/syn_type.v) `ghost_level`
+ * Updated resolution requirement: [`prophecy.v`](theories/prophecy/prophecy.v) `proph_resolve`
+ * Prophecy Predicate: [`type.v`](theories/typing/type.v) `ty_proph`
+ * Updated type requirements: [`type.v`](theories/typing/type.v)  `ty_own_proph`/`ty_shr_proph`/`ty_proph_weaken`
+   - All types needed to be updated to defined there prophecy predicate and prove that they meet these new requirements
+ * Ghost type ownership/prophecy predicate [`ghost.v`](theories/typing/ghost.v)  `ghost` (`st_own`/`st_proph`)
+ * Creating a ghost without consuming [`ghost.v`](theories/typing/ghost.v)  `ghost_new_instr`
+ * Ghost can be mapped by a ghost function [`ghost.v`](theories/typing/ghost.v) `logic_fn_ghost_tctx_incl`
+ * Basic operations in ghost functions [`ghost_fn.v`](theories/typing/ghost_fn.v)
+ * Library operations in ghost functions [`lib_ghost_fn.v`](theories/typing/lib/lib_ghost_fn.v)
+ 
+### Chapter 4 GhostPtrToken
+ * `GhostPtrToken` definition [`ghostptrtoken.v`](theories/typing/lib/ghostptrtoken/ghostptrtoken.v) `ghostptrtoken_ty`
+   - Note `GhostPtrToken<T>` is internally as an alias for `GhostSeq<PermData<T>`
+     - [`permdata.v`](theories/typing/lib/ghostptrtoken/permdata.v) `permdata_ty`
+     - [`ghostseq.v`](theories/typing/lib/ghostptrtoken/ghostseq.v) `ghostseq_ty`
+   - This breakdown is inspired by how `GhostPtrToken` would be implemented in [Verus](https://arxiv.org/pdf/2303.05491.pdf) and will hopefully make it easier to add similar types
+   - The Lemma [`ghostptrtoken.v`](theories/typing/lib/ghostptrtoken/ghostptrtoken.v) `ghostptrtoken_own_alt` proves an equivalent version of the ownership predicate
+ * `GhostPtrToken::new`: [`ghostseq_basic.v`](theories/typing/lib/ghostptrtoken/ghostseq_basic.v) `ghostseq_new_type` 
+   - Since `GhostPtrToken<T>` is an alias `GhostPtrToken::new` is just `GhostSeq::new`
+ * `GhostPtrToken::ptr_from_box`:  [`ghostptrtoken_grow.v`](theories/typing/lib/ghostptrtoken/ghostptrtoken_grow.v) `ghostptrtoken_insert_type` 
+ * `GhostPtrToken::ptr_to_box`:  [`ghostptrtoken_index.v`](theories/typing/lib/ghostptrtoken/ghostptrtoken_index.v) `ghostptrtoken_remove_type`
+ * `GhostPtrToken::ptr_as_ref`:  [`ghostptrtoken_index.v`](theories/typing/lib/ghostptrtoken/ghostptrtoken_index.v) `ghostptrtoken_borrow_type`
+ * `GhostPtrToken::ptr_as_mut`: Not proven since it can be implemented by using `GhostPtrToken::take_mut`
+ * `GhostPtrToken::shrink_token_ref`:  [`ghostptrtoken_shrink_shr.v`](theories/typing/lib/ghostptrtoken/ghostptrtoken_shrink_shr.v) `ghostptrtoken_merge_type` 
+ * `GhostPtrToken::merge`:  [`ghostptrtoken_grow.v`](theories/typing/lib/ghostptrtoken/ghostptrtoken_grow.v) `ghostptrtoken_shrink_shr_type` 
+ * `GhostPtrToken::take_mut` (With missing spec): [`ghostptrtoken_take_mut.v`](theories/typing/lib/ghostptrtoken/ghostptrtoken_take_mut.v) `ghostptrtoken_take_mut_type` 
+ * `GhostPtrTokenMut` definition
+   - Build using the [`uniq_alt_ty.v`](theories/typing/uniq_alt.v) `uniq_alt_ty` utility for weakening the ownership predicates of mutable references 
+   - Ownership predicate is [`ghostptrtoken_mut.v`](theories/typing/lib/ghostptrtoken/ghostptrtoken_mut.v) `ghostptrtoken_ty_uniq_alt_base`
+ * Creating `GhostPtrTokenMut` [`uniq_alt_ty.v`](theories/typing/uniq_alt.v) `uniq_alt_intro`
+ * `GhostPtrTokenMut::deref` [`uniq_alt_borrow.v`](theories/typing/uniq_alt_borrow.v) `alt_type_deref_shr_uniq`
+ * `GhostPtrTokenMut::deref_mut` [`uniq_alt_borrow.v`](theories/typing/uniq_alt_borrow.v) `alt_type_deref_uniq_uniq`
+ * `GhostPtrTokenMut::resolve` [`uniq_resolve.v`](theories/typing/uniq_resolve.v) `alt_uniq_resolve`
+ * `GhostPtrTokenMut::take_mut` [`ghostptrtoken_mut.v`](theories/typing/lib/ghostptrtoken/ghostptrtoken_mut.v) `ghostptrtoken_take_mut_type`
 
 ## For Developers: How to update the Iris dependency
 
