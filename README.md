@@ -1,6 +1,6 @@
 # RustHornBelt COQ DEVELOPMENT
 
-This is the Coq development for "Formal Specification and Verification Techniques for Mutable References and Advanced Aliasing in Rust".
+This is the Coq development for the thesis titled _Formal Specification and Verification Techniques for Mutable References and Advanced Aliasing in Rust_.
 
 ## Prerequisites
 
@@ -78,7 +78,7 @@ is structured as follows.
     with unsafe code from the Rust standard library and some user crates.
     Some libraries are not yet verified, being commented out in `_CoqProject`.
 
-## Key Modifications from the THESIS
+## Key Modifications from the Thesis
 
 ### Chapter 3 Ghost Unsoundness
  * Level definition: [`syn_type.v`](theories/prophecy/syn_type.v) `ghost_level`
