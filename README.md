@@ -1,6 +1,6 @@
 # RustHornBelt COQ DEVELOPMENT
 
-This is the Coq development for "TODO_THESIS_TITLE".
+This is the Coq development for "Formal Specification and Verification Techniques for Mutable References and Advanced Aliasing in Rust".
 
 ## Prerequisites
 
